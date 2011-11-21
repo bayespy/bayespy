@@ -4,20 +4,149 @@ import numpy as np
 import scipy as sp
 import scipy.linalg.decomp_cholesky as chol
 import scipy.special as special
-#from numpy import *
-#from scipy.special import digamma, gammaln
-#from scipy.linalg.decomp_cholesky import cho_factor, cho_solve
-# import pylab
 import matplotlib.pyplot as plt
 import time
 import profile
 
+def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
+
+    # Computes sum(arg[0]*arg[1]*arg[2]*..., axis=sum_axes) without
+    # explicitly computing the intermediate product
+
+    # Dimensionality of the result
+    max_dim = 0
+    for k in range(len(args)):
+        max_dim = max(max_dim, np.ndim(args[k]))
+
+    axes = list()
+    if axes_to_sum == None and axes_to_keep == None:
+        # Sum over all axes if none given
+        axes = [] #range(max_dim)
+    elif axes_to_sum != None:
+        if np.isscalar(axes_to_sum):
+            axes_to_sum = [axes_to_sum]
+        for i in range(max_dim):
+            if i not in axes_to_sum and (-max_dim+i) not in axes_to_sum:
+                axes.append(i)
+    elif axes_to_keep != None:
+        if np.isscalar(axes_to_keep):
+            axes_to_keep = [axes_to_keep]
+        for i in range(max_dim):
+            if i in axes_to_keep or (-max_dim+i) in axes_to_keep:
+                axes.append(i)
+    else:
+        raise Exception("You can't give both axes to sum and keep")
 
 
+    # Form a list of pairs: the array in the product and its axes
+    pairs = list()
+    for i in range(len(args)):
+        a = args[i]
+        a_dim = np.ndim(a)
+        pairs.append(a)
+        pairs.append(range(max_dim-a_dim, max_dim))
+
+    # Output axes are those which are not summed
+    #out_axes = list()
+    #out_axes = [i for i in range(max_dim) if not i in axis]
+    pairs.append(axes)
+
+    # Compute the sum-product
+    y = np.einsum(*pairs)
+
+    # Restore summed axes as singleton axes
+    if keepdims:
+        d = 0
+        s = ()
+        for k in range(max_dim):
+            if k in axes:
+                # Axis not summed
+                s = s + (np.shape(y)[d],)
+                d += 1
+            else:
+                # Axis was summed
+                s = s + (1,)
+        y = np.reshape(y, s)
+
+    return y
+
+
+def broadcasted_shape_from_arrays(*args):
+    # Computes the resulting shape if shapes a and b are broadcasted
+    # together
+
+    # The dimensionality (i.e., number of axes) of the result
+    dim = 0
+    for a in args:
+        dim = max(dim, np.ndim(a))
+    S = ()
+    for i in range(-dim,0):
+        s = 1
+        for a in args:
+            if -i <= np.ndim(a):
+                if s == 1:
+                    s = np.shape(a)[i]
+                elif np.shape(a)[i] != 1 and np.shape(a)[i] != s:
+                    raise Exception("Shapes do not broadcast")
+        S = S + (s,)
+    return S
+            
+def broadcasted_shape(a,b):
+    # Computes the resulting shape if shapes a and b are broadcasted
+    # together
+    l_max = max(len(a), len(b))
+    s = ()
+    for i in range(-l_max,0):
+        if -i > len(b):
+            s += (a[i],)
+        elif -i > len(a) or a[i] == 1 or a[i] == b[i]:
+            s += (b[i],)
+        elif b[i] == 1:
+            s += (a[i],)
+        else:
+            raise Exception("Shapes do not broadcast")
+    return s
+            
+    #s = [a[i] if -i>len(b) or b[i]==1 else b[i] for i in range(-l_max,0)]
+    #return tuple(s)
+    
+def add_leading_axes(x, n):
+    shape = (1,)*n + np.shape(x)
+    return np.reshape(x, shape)
+    
+def add_trailing_axes(x, n):
+    shape = np.shape(x) + (1,)*n
+    return np.reshape(x, shape)
+
+def add_axes(x, lead, trail):
+    shape = (1,)*lead + np.shape(x) + (1,)*trail
+    return np.reshape(x, shape)
+    
+    
 
 def nested_iterator(max_inds):
     s = (range(i) for i in max_inds)
     return itertools.product(*s)
+
+def squeeze_to_dim(X, dim):
+    s = tuple(range(np.ndim(X)-dim))
+    return np.squeeze(X, axis=s)
+
+
+def axes_to_collapse(shape_x, shape_to):
+    # Solves which axes of shape shape_x need to be collapsed in order
+    # to get the shape shape_to
+    s = ()
+    for j in range(-len(shape_x), 0):
+        if shape_x[j] != 1:
+            if -j > len(shape_to) or shape_to[j] == 1:
+                s += (j,)
+            elif shape_to[j] != shape_x[j]:
+                print('Shape from: ' + str(shape_x))
+                print('Shape to: ' + str(shape_to))
+                raise Exception('Incompatible shape to squeeze')
+    return tuple(s)
+
 
 def repeat_to_shape(A, s):
     # Current shape
@@ -49,29 +178,6 @@ def m_chol(C):
             raise Exception("Matrix not positive definite")
     return U
 
-def broadcasted_shape(a,b):
-    # Computes the resulting shape if shapes a and b are broadcasted
-    # together
-    l_max = max(len(a), len(b))
-    s = ()
-    ## print('a')
-    ## print(a)
-    ## print('b')
-    ## print(b)
-    for i in range(-l_max,0):
-        if -i > len(b):
-            s += (a[i],)
-        elif -i > len(a) or a[i] == 1 or a[i] == b[i]:
-            s += (b[i],)
-        elif b[i] == 1:
-            s += (a[i],)
-        else:
-            raise Exception("Shapes do not broadcast")
-    return s
-            
-    #s = [a[i] if -i>len(b) or b[i]==1 else b[i] for i in range(-l_max,0)]
-    #return tuple(s)
-    
 
 def m_chol_solve(U, B, out=None):
     # Allocate memory
@@ -123,25 +229,6 @@ def m_chol_solve(U, B, out=None):
         else:
             ind_out = tuple(ind_b) + (Ellipsis,)
 
-        ## print('B')
-        ## print(B.shape)
-        ## print('b')
-        ## print(b.shape)
-        ## print('orig b')
-        ## print(orig_shape)
-        ## print('ind b')
-        ## print(ind_b)
-        ## print('U')
-        ## print(U.shape)
-        ## print('Ui')
-        ## print(U[i].shape)
-        ## print('out')
-        ## print(out.shape)
-        ## print('ind out')
-        ## print(ind_out)
-        ## print('out(ind_out)')
-        ## print(out[ind_out].shape)
-        
         out[ind_out] = chol.cho_solve((U[i], False),
                                       b.T).T.reshape(orig_shape)
 
@@ -270,6 +357,7 @@ class Node:
         # Children
         self.children = list()
 
+
     def add_child(self, child, index):
         self.children.append((child, index))
 
@@ -279,7 +367,6 @@ class Node:
     def plate_multiplier(self, *args):
         # Check broadcasting of the shapes
         for arg in args:
-            #print(arg)
             broadcasted_shape(self.plates, arg)
             
         r = 1
@@ -293,28 +380,35 @@ class Node:
         return r
 
     def message_from_children(self):
-        #msg = [np.zeros(self.get_shape(i)) for i in range(len(self.dims))]
         msg = [np.array(0.0) for i in range(len(self.dims))]
+        total_mask = False
         for (child,index) in self.children:
-            m = child.message_to_parent(index)
+            (m, mask) = child.message_to_parent(index)
+            total_mask = np.logical_or(total_mask, mask)
             for i in range(len(self.dims)):
                 # Check broadcasting shapes
                 sh = broadcasted_shape(self.get_shape(i), np.shape(m[i]))
-                ## print('SHAPE IN NODE MESSAGE FROM CHILDREN')
-                ## print(sh)
                 try:
                     # Try exploiting broadcasting rules
                     msg[i] += m[i]
                 except ValueError:
                     msg[i] = msg[i] + m[i]
-                #msg[i] += m[i]
-        return msg
+
+        # TODO: Should the mask be returned also?
+        return (msg, total_mask)
 
     def message_from_parent(self):
         pass
 
+    def get_moments(self):
+        raise Exception('Not implemented')
+
+    ## def get_mask(self):
+    ##     raise Exception('Not implemented')
+
     def message_to_child(self):
-        raise Exception("Not implemented. Subclass should implement this!")
+        return self.get_moments()
+        # raise Exception("Not implemented. Subclass should implement this!")
 
     def message_to_parent(self, index):
         # In principle, a node could have multiple parental roles with
@@ -335,10 +429,38 @@ class Node:
                     u_parents.append(None)
 
             # Decompose our own message to parent[index]
-            m = self.message(index, u_parents)
-            # Sum over singleton dimensions
+            (m, my_mask) = self.get_message(index, u_parents)
+
+            # The parent we're sending the message to
+            parent = self.parents[index]
+
+            # Compute mask message
+            s = axes_to_collapse(np.shape(my_mask), parent.plates)
+            mask = np.any(my_mask, axis=s, keepdims=True)
+            mask = squeeze_to_dim(mask, len(parent.plates))
+            
+            # Compact the message to a proper shape
             for i in range(len(m)):
 
+                # Ignorations (add extra axes to broadcast properly).
+                # This sends zero messages to parent from such
+                # variables we are ignoring in this node. This is
+                # useful for handling missing data.
+
+                # Apply the mask to the message
+                # Sum the dimensions of the message matrix to match
+                # the dimensionality of the parents natural
+                # parameterization (as there may be less plates for
+                # parents)
+
+                shape_mask = np.shape(my_mask) + (1,) * len(parent.dims[i])
+                my_mask2 = np.reshape(my_mask, shape_mask)
+
+                #try:
+                m[i] = m[i] * my_mask2
+                #except:
+
+                shape_m = np.shape(m[i])
                 # If some dimensions of the message matrix were
                 # singleton although the corresponding dimension
                 # of the parents natural parameterization is not,
@@ -347,52 +469,40 @@ class Node:
                 # Plates in the message
                 dim_parent = len(self.parents[index].dims[i])
                 if dim_parent > 0:
-                    plates_m = np.shape(m[i])[:-dim_parent]
+                    plates_m = shape_m[:-dim_parent]
                 else:
-                    plates_m = np.shape(m[i])
-                plates_parent = self.parents[index].plates
-
-                ## print('parent index ' + str(index))
-                ## print('parent is ' + self.parents[index].name)
-                ## print('self is ' + self.name)
-                ## print('plates for self   ' + str(self.plates))
-                ## print('plates for parent ' + str(plates_parent))
-                ## print('plates for msg    ' + str(plates_m))
+                    plates_m = shape_m
+                #plates_parent = parent.plates
 
                 # Compute the multiplier (multiply by the number of
-                # plates if both the message and parent have single
-                # plates)
-                ## r = 1
-                ## for j in range(-len(self.plates),0):
-                ##     if ((-j > len(plates_m) or plates_m[j] == 1) and
-                ##         (-j > len(plates_parent) or plates_parent[j] == 1)):
-                ##         r *= self.plates[j]
-                m[i] *= self.plate_multiplier(plates_m, plates_parent)
+                # plates for which both the message and parent have
+                # single plates)
+                r = self.plate_multiplier(plates_m, parent.plates)
 
-                # Sum the dimensions of the message matrix to
-                # match the dimensionality of the parents natural
-                # parameterization (i.e., there may be less plates
-                # for parents)
+                shape_parent = parent.get_shape(i)
 
-                shape_parent = self.parents[index].get_shape(i)
-                #shape_self = self.get_shape(i)
-                shape_m = np.shape(m[i])
 
-                s = ()
-                for j in range(len(shape_m)):
-                    if j >= len(shape_parent) or shape_parent[-1-j] == 1:
-                        s += (len(shape_m)-j-1,)
-                m[i] = np.sum(m[i], axis=tuple(s), keepdims=True)
-                    
-                s = tuple(range(len(shape_m)-len(shape_parent)))
-                m[i] = np.squeeze(m[i], axis=s)
+                ## # Remove leading extra singleton axes
+                ## s = tuple(range(len(shape_m)-len(shape_parent)))
+                ## m[i] = np.squeeze(m[i], axis=s)
 
-            return m
+                s = axes_to_collapse(shape_m, shape_parent)
+                m[i] = np.sum(m[i], axis=s, keepdims=True)
+                ## print(self.name)
+                ## print(shape_parent)
+                ## print(shape_m)
+                ## print(np.shape(m[i]))
+                ## print(s)
+                ## print(r)
+                m[i] = squeeze_to_dim(m[i], len(shape_parent))
+                m[i] *= r
+
+            return (m, mask)
         else:
             # Unknown parent
             raise Exception("Unknown parent requesting a message")
 
-    def message(self, index, u_parents):
+    def get_message(self, index, u_parents):
         raise Exception("Not implemented.")
         pass
 
@@ -412,8 +522,10 @@ class NodeVariable(Node):
         # to explicityly have the dimensionalities dims and plates? Do
         # we need dims? Yes, because you need to be able to check what
         # plates are missing.
-        self.phi = [np.array(np.nan) for i in range(len(self.dims))]
-        self.u = [np.array(np.nan) for i in range(len(self.dims))]
+        self.phi = [np.array(0.0) for i in range(len(self.dims))]
+        self.u = [np.array(0.0) for i in range(len(self.dims))]
+        ## self.phi = [np.array(np.nan) for i in range(len(self.dims))]
+        ## self.u = [np.array(np.nan) for i in range(len(self.dims))]
         #self.u = list()
         #self.u = [None] * len(self.dims)
         
@@ -422,13 +534,23 @@ class NodeVariable(Node):
             #self.phi.append(np.zeros(self.plates+d))
             #self.u.append(np.zeros(self.plates+d))
 
-        self.g = np.nan
+        # Terms for the lower bound (G for latent and F for observed)
+        self.g = 0
+        self.f = 0
 
         # Not observed
-        self.fixed = False
+        self.observed = False
+
+        # By default, ignore all elements
+        self.mask = False
+
+    def get_message(self, index, u_parents):
+        return (self.message(index, u_parents),
+                self.mask)
+
 
     def update(self):
-        if not self.fixed:
+        if not np.all(self.observed):
 
             # Messages from parents
             u_parents = [parent.message_to_child() for parent in self.parents]
@@ -448,7 +570,12 @@ class NodeVariable(Node):
             # Update natural parameters using children (just add the
             # messages to phi)
             for (child,index) in self.children:
-                m = child.message_to_parent(index)
+                (m, mask) = child.message_to_parent(index)
+                # Combine masks
+                #
+                # TODO: Maybe you would like to compute a new mask
+                # at every update?
+                self.mask = np.logical_or(self.mask,mask)
                 for i in range(len(self.phi)):
                     try:
                         # Try exploiting broadcasting rules
@@ -479,8 +606,14 @@ class NodeVariable(Node):
     ##             if j > 
             
 
-    def message_to_child(self):
+    ## def get_mask(self):
+    ##     return self.mask
+    
+    def get_moments(self):
         return self.u
+
+    ## def message_to_child(self):
+    ##     return self.u
 
     def message(self, index, u_parents):
         raise Exception("Not implemented for " + str(self.__class__))
@@ -498,20 +631,86 @@ class NodeVariable(Node):
         pass
 
     def lower_bound_contribution(self):
-        # TODO: CHECK PLATES!!!
         # Messages from parents
         u_parents = [parent.message_to_child() for parent in self.parents]
         phi = self.compute_phi_from_parents(u_parents)
-        # NOTE: compute_g_from_parents and self.g should have been
-        # broadcasted properly to plates!!
+        # G from parents
         L = self.compute_g_from_parents(u_parents)
-        L -= self.g
-        for (phi_p, phi_q, u_q) in zip(phi, self.phi, self.u):
-            # This broadcasts to plates properly
-            L += np.sum((phi_p-phi_q) * u_q)
+        # L = g
+        # G for unobserved variables (ignored variables are handled
+        # properly automatically)
+        latent_mask = np.logical_not(self.observed)
+        #latent_mask = np.logical_and(self.mask, np.logical_not(self.observed))
+        L = L - self.g * latent_mask
+        # F for observed variables
+        L = L + self.f * self.observed
+        for (phi_p, phi_q, u_q, dims) in zip(phi, self.phi, self.u, self.dims):
+            # Form a mask which puts observed variables to zero and
+            # broadcasts properly
+            latent_mask = add_axes(latent_mask,
+                                   len(self.plates) - np.ndim(latent_mask),
+                                   len(dims))
+            axis_sum = tuple(range(-len(dims),0))
+            ## my_mask = add_axes(self.mask,
+            ##                    len(self.plates) - np.ndim(self.mask),
+            ##                    len(dims))
+            # Compute the term
+            Z = np.sum((phi_p - phi_q*latent_mask) * u_q,
+                       axis=axis_sum)
+            ## if len(dims) > 0:
+            ##     r = self.plate_multiplier(np.shape(Z)[:-len(dims)])
+            ## else:
+            ##     r = self.plate_multiplier(np.shape(Z))
+            #L += r * np.sum(Z)
+            L = L + Z
+
+        return (np.sum(L*self.mask)
+                * self.plate_multiplier(np.shape(L),
+                                        np.shape(self.mask)))
+            ## r = self.plate_multiplier(np.shape(phi_p)[:-trail],
+            ##                               np.shape(phi_q)[:-trail],
+            ##                               np.shape(latent_mask)[:-trail],
+            ##                               np.shape(u_q)[:-trail])
+            ## L += (np.sum((phi_p - phi_q*latent_mask) * u_q) 
+            ##       * r)
+        ## L = (np.sum(g*self.mask)
+        ##      * self.plate_multiplier(np.shape(g),
+        ##                              np.shape(self.mask)))
+        ## # G for unobserved variables (ignored variables are handled
+        ## # properly automatically)
+        ## latent_mask = np.logical_and(self.mask, np.logical_not(self.observed))
+        ## L -= (np.sum(self.g * latent_mask)
+        ##       * self.plate_multiplier(np.shape(self.g),
+        ##                               np.shape(latent_mask)))
+        ## # F for observed variables
+        ## L += (np.sum(self.f * self.observed)
+        ##       * self.plate_multiplier(np.shape(self.f),
+        ##                               np.shape(self.observed)))
+        ## for (phi_p, phi_q, u_q, dims) in zip(phi, self.phi, self.u, self.dims):
+        ##     # Form a mask which puts observed variables to zero and
+        ##     # broadcasts properly
+        ##     latent_mask = add_axes(latent_mask,
+        ##                            len(self.plates) - np.ndim(latent_mask),
+        ##                            len(dims))
+        ##     my_mask = add_axes(self.mask,
+        ##                        len(self.plates) - np.ndim(self.mask),
+        ##                        len(dims))
+        ##     # Compute the term
+        ##     Z = (phi_p*my_mask - phi_q*latent_mask) * u_q
+        ##     if len(dims) > 0:
+        ##         r = self.plate_multiplier(np.shape(Z)[:-len(dims)])
+        ##     else:
+        ##         r = self.plate_multiplier(np.shape(Z))
+        ##     L += r * np.sum(Z)
+        ##     ## r = self.plate_multiplier(np.shape(phi_p)[:-trail],
+        ##     ##                               np.shape(phi_q)[:-trail],
+        ##     ##                               np.shape(latent_mask)[:-trail],
+        ##     ##                               np.shape(u_q)[:-trail])
+        ##     ## L += (np.sum((phi_p - phi_q*latent_mask) * u_q) 
+        ##     ##       * r)
         return L
             
-    def fix_moments_and_g(self, u, minus_f):
+    def fix_moments_and_f(self, u, f, mask):
         #print(u)
         for (i,v) in enumerate(u):
             # This is what the dimensionality "should" be
@@ -525,17 +724,29 @@ class NodeVariable(Node):
                     msg += "\nExpected shape: " + str(s)
                     msg += "\nCheck plates."
                     raise Exception(msg)
-            self.phi[i] = 0
-            
-        self.u = u
-        self.fixed = True
-        self.g = minus_f
+            #self.phi[i] = 0
+
+        self.observed = mask
+        for i in range(len(self.u)):
+            obs_mask = add_axes(mask,
+                                len(self.plates) - np.ndim(mask),
+                                len(self.dims[i]))
+            self.u[i] = (obs_mask * u[i]
+                         + np.logical_not(obs_mask) * self.u[i])
+            #self.u[i][obs_mask] = u[i][obs_mask]
+        #self.u = u
+        # self.fixed = True
+        #self.g = minus_f
+        self.f = f
+        
+        # Observed nodes should not be ignored
+        self.mask = np.logical_or(self.mask, self.observed)
 
 
 class NodeConstant(NodeVariable):
     def __init__(self, u, **kwargs):
         NodeVariable.__init__(self, **kwargs)
-        self.fix_moments_and_g(u, 0)
+        self.fix_moments_and_f(u, 0, True)
 
 class NodeConstantScalar(NodeConstant):
     def __init__(self, a, **kwargs):
@@ -598,10 +809,11 @@ class NodeGamma(NodeVariable):
         gammaln_a = special.gammaln(a)
         b = u_parents[1][0]
         log_b = u_parents[1][1]
-        g = (np.sum(a*b)
-             * self.plate_multiplier(np.shape(a), np.shape(b)))
-        g -= (np.sum(gammaln_a)
-              * self.plate_multiplier(np.shape(gammaln_a)))
+        g = a * log_b - gammaln_a
+        ## g = (np.sum(a*log_b)
+        ##      * self.plate_multiplier(np.shape(a), np.shape(log_b)))
+        ## g -= (np.sum(gammaln_a)
+        ##       * self.plate_multiplier(np.shape(gammaln_a)))
         return g
         ## return np.sum(np.ones(self.plates) *
         ##               (u_parents[0][0] * u_parents[1][1]
@@ -614,11 +826,13 @@ class NodeGamma(NodeVariable):
         ## self.u[0] += self.phi[1] / (-self.phi[0])
         ## self.u[1] += digamma(self.phi[1]) - log(-self.phi[0])
         
-        self.g = (np.sum(self.phi[1] * log_b)
-                  * self.plate_multiplier(np.shape(self.phi[1]),
-                                          np.shape(log_b)))
-        self.g -= (np.sum(special.gammaln(self.phi[1]))
-                   * self.plate_multiplier(np.shape(self.phi[1])))
+        self.g = self.phi[1] * log_b - special.gammaln(self.phi[1])
+        ## self.g = (np.sum(self.phi[1] * log_b)
+        ##           * self.plate_multiplier(np.shape(self.phi[1]),
+        ##                                   np.shape(log_b)))
+        ## self.g -= (np.sum(special.gammaln(self.phi[1]))
+        ##            * self.plate_multiplier(np.shape(self.phi[1])))
+
         ## self.g = np.sum(np.ones(self.plates) *
         ##                 (self.phi[1] * log_b - special.gammaln(self.phi[1])))
 
@@ -665,11 +879,16 @@ class NodeNormal(NodeVariable):
         self.u[1] = self.u[0]**2 - 1 / (2*self.phi[1])
         ## self.u[0] += -self.phi[0] / (2*self.phi[1])
         ## self.u[1] += self.u[0]**2 - 1 / (2*self.phi[1])
-        self.g = (-0.5*np.sum(self.u[0]*self.phi[0])
-                  * self.plate_multiplier(np.shape(self.u[0]),
-                                          np.shape(self.phi[0])))
-        self.g += (0.5*np.sum(np.log(-2*self.phi[1]))
-                   * self.plate_multiplier(np.shape(self.phi[1])))
+
+        self.g = (-0.5 * self.u[0] * self.phi[0]
+                  + 0.5 * np.log(-2*self.phi[1]))
+
+        ## self.g = (-0.5*np.sum(self.u[0]*self.phi[0])
+        ##           * self.plate_multiplier(np.shape(self.u[0]),
+        ##                                   np.shape(self.phi[0])))
+        ## self.g += (0.5*np.sum(np.log(-2*self.phi[1]))
+        ##            * self.plate_multiplier(np.shape(self.phi[1])))
+
         ## self.g = (-0.5*np.sum(np.ones(self.plates)*self.u[0]*self.phi[0])
         ##           + 0.5*np.sum(np.ones(self.plates)*np.log(-2*self.phi[1])))
 
@@ -678,10 +897,13 @@ class NodeNormal(NodeVariable):
         mumu = u_parents[0][1]
         tau = u_parents[1][0]
         log_tau = u_parents[1][1]
-        g = (-0.5 * np.sum(mumu*tau)
-             * self.plate_multiplier(np.shape(mumu), np.shape(tau)))
-        g += (0.5 * np.sum(log_tau)
-              * self.plate_multiplier(np.shape(log_tau)))
+        g = -0.5 * mumu*tau + 0.5 * log_tau
+
+        ## g = (-0.5 * np.sum(mumu*tau)
+        ##      * self.plate_multiplier(np.shape(mumu), np.shape(tau)))
+        ## g += (0.5 * np.sum(log_tau)
+        ##       * self.plate_multiplier(np.shape(log_tau)))
+
         return g
         ## return np.sum(np.ones(self.plates) *
         ##               (-0.5*u_parents[0][1]*u_parents[1][0]
@@ -694,26 +916,12 @@ class NodeNormal(NodeVariable):
             #return [u_parents[1][0] * self.u[0] * np.ones(self.plates),
             #        -0.5 * u_parents[1][0] * np.ones(self.plates)]
         elif index == 1:
-            # The second element can be 0.5 or
-            # 0.5*ones(self.u[0].shape), how to implement it?
-            # Multiply before summing? That'd be broadcasting. :)
-            ## if self.u[0] == None:
-            ##     print('None u0')
-            ## if self.u[1] == None:
-            ##     print('None u1')
-            ## if u_parents[0][0] == None:
-            ##     print('None pu00')
-            ## if u_parents[0][1] == None:
-            ##     print('None pu01')
-                
             return [-0.5 * (self.u[1] - 2*self.u[0]*u_parents[0][0] + u_parents[0][1]),
                     0.5]
-            #return [-0.5 * (self.u[1] - 2*self.u[0]*u_parents[0][0] + u_parents[0][1]) * np.ones(self.plates),
-            #        0.5 * np.ones(self.plates)]
 
-    def observe(self, x):
-        g = 0.5 * np.log(2*np.pi) * self.plate_multiplier()#np.prod(self.plates)
-        self.fix_moments_and_g([x, x**2], g)
+    def observe(self, x, mask):
+        f = -0.5 * np.log(2*np.pi)
+        self.fix_moments_and_f([x, x**2], f, mask)
 
     def show(self):
         mu = self.u[0]
@@ -809,20 +1017,24 @@ class NodeGaussian(NodeVariable):
 
     def update_moments_and_g(self):
         L = m_chol(-self.phi[1])
+        # Moments
         self.u[0] = m_chol_solve(L, 0.5*self.phi[0])
-        #print(np.shape(self.u[0]))
         self.u[1] = (m_outer(self.u[0], self.u[0])
                      + 0.5 * m_chol_inv(L))
-        ## self.u[1] += (m_outer(self.u[0], self.u[0])
-        ##               + 0.5 * m_chol_inv(L))
-        self.g = (-0.5 * np.sum(self.u[0]*self.phi[0])
-                  * self.plate_multiplier(np.shape(self.u[0])[:-1],
-                                          np.shape(self.phi[0])[:-1]))
-        self.g += (0.5 * np.sum(m_chol_logdet(L))
-                   * self.plate_multiplier(np.shape(L)[:-2]))
-        # Cholesky factor L needs to be multiplied by two:
-        self.g += (0.5 * np.log(2) * self.dims[0][0]
-                   * self.plate_multiplier())
+        # G
+        self.g = (-0.5 * np.einsum('...i,...i', self.u[0], self.phi[0])
+                  + 0.5 * m_chol_logdet(L)
+                  + 0.5 * np.log(2) * self.dims[0][0])
+
+        ## self.g = (-0.5 * np.sum(self.u[0]*self.phi[0])
+        ##           * self.plate_multiplier(np.shape(self.u[0])[:-1],
+        ##                                   np.shape(self.phi[0])[:-1]))
+        ## self.g += (0.5 * np.sum(m_chol_logdet(L))
+        ##            * self.plate_multiplier(np.shape(L)[:-2]))
+        ## # Cholesky factor L needs to be multiplied by two:
+        ## self.g += (0.5 * np.log(2) * self.dims[0][0]
+        ##            * self.plate_multiplier())
+
         ## self.g = (-0.5 * np.sum(self.u[0]*self.phi[0])
         ##           + 0.5 * (np.sum(m_chol_logdet(L))
         ##                    + np.log(2) * np.prod(self.plates+self.dims[0])))
@@ -833,11 +1045,15 @@ class NodeGaussian(NodeVariable):
         mumu = u_parents[0][1]
         Lambda = u_parents[1][0]
         logdet_Lambda = u_parents[1][1]
-        g = (-0.5 * np.sum(np.einsum('...ij,...ij',mumu,Lambda))
-             * self.plate_multiplier(mumu.shape[:-2],
-                                     Lambda.shape[:-2]))
-        g += (0.5 * np.sum(logdet_Lambda)
-              * self.plate_multiplier(np.shape(logdet_Lambda)))
+        g = (-0.5 * np.einsum('...ij,...ij',mumu,Lambda)
+             + 0.5 * np.sum(logdet_Lambda))
+
+        ## g = (-0.5 * np.sum(np.einsum('...ij,...ij',mumu,Lambda))
+        ##      * self.plate_multiplier(mumu.shape[:-2],
+        ##                              Lambda.shape[:-2]))
+        ## g += (0.5 * np.sum(logdet_Lambda)
+        ##       * self.plate_multiplier(np.shape(logdet_Lambda)))
+
         return g
         ## return np.sum(np.ones(self.plates) *
         ##               (-0.5*np.einsum('...ij,...ij',u_parents[0][1],u_parents[1][0])
@@ -859,10 +1075,10 @@ class NodeGaussian(NodeVariable):
 
     def random(self):
         U = m_chol(-self.phi[1])
-        return self.u[0] + 0.5 * m_chol_solve(U,
-                                              np.random.normal(0,
-                                                               1,
-                                                               np.shape(self.u[0])))
+        return (self.u[0]
+                + 0.5 * m_chol_solve(U,
+                                     np.random.normal(0, 1,
+                                                      self.get_shape(0))))
 
     def show(self):
         mu = self.u[0]
@@ -917,7 +1133,7 @@ class NodeDot(Node):
         ## raise Exception('debuggin')
             
 
-    def compute_moments(self):
+    def get_moments(self):
         if len(self.parents) == 0:
             return [0, 0]
 
@@ -942,74 +1158,117 @@ class NodeDot(Node):
         return x
         
 
-        # TODO: Probably you could this more efficiently using einsum
-        # directly, without computing the large moment matrices!!!
+        ## # TODO: Probably you could this more efficiently using einsum
+        ## # directly, without computing the large moment matrices!!!
 
-        # Compute the moments of the products
-        x = [np.ones(self.d),
-             np.ones(self.d + self.d)]
-        ## x = [np.ones(self.get_shape(0) + self.d),
-        ##      np.ones(self.get_shape(1) + self.d + self.d)]
-        for parent in self.parents:
-            u = parent.message_to_child()
-            # Product of the means
-            try:
-                x[0] *= u[0]
-            except ValueError:
-                x[0] = x[0] * u[0]
-            # Product of the second moments
-            try:
-                x[1] *= u[1]
-            except ValueError:
-                x[1] = x[1] * u[1]
+        ## # Compute the moments of the products
+        ## x = [np.ones(self.d),
+        ##      np.ones(self.d + self.d)]
+        ## ## x = [np.ones(self.get_shape(0) + self.d),
+        ## ##      np.ones(self.get_shape(1) + self.d + self.d)]
+        ## for parent in self.parents:
+        ##     u = parent.message_to_child()
+        ##     # Product of the means
+        ##     try:
+        ##         x[0] *= u[0]
+        ##     except ValueError:
+        ##         x[0] = x[0] * u[0]
+        ##     # Product of the second moments
+        ##     try:
+        ##         x[1] *= u[1]
+        ##     except ValueError:
+        ##         x[1] = x[1] * u[1]
 
-        # Sum the "latent" dimension
-        x[0] = np.sum(x[0], axis=-1)
-        x[1] = np.sum(x[1], axis=(-2,-1))
+        ## # Sum the "latent" dimension
+        ## x[0] = np.sum(x[0], axis=-1)
+        ## x[1] = np.sum(x[1], axis=(-2,-1))
 
-        return x
+        ## return x
 
     def get_parameters(self):
         # Compute mean and variance
-        u = self.compute_moments()
+        u = self.get_moments()
         u[1] -= u[0]**2
         return u
         
 
-    def message_to_child(self):
-        return self.compute_moments()
+    #def message_to_child(self):
+        #return self.compute_moments()
 
             
-    def message(self, index, u_parents):
+    def get_message(self, index, u_parents):
         
-        m = self.message_from_children()
+        (m, mask) = self.message_from_children()
 
-        #print(np.shape(m[0]))
-        #print(np.shape(m[1]))
+        if True:
 
-        # TODO: You could sum some dimensions so that you don't need
-        # to store large m unless m actually is large
+            parent = self.parents[index]
+            
+            # Compute both messages
+            for i in range(2):
 
-        m[0] = np.repeat(m[0][...,np.newaxis], self.d, axis=-1)
-        m[1] = np.repeat(np.repeat(m[1][...,np.newaxis,np.newaxis],
-                                   self.d,
-                                   axis=-1),
-                         self.d,
-                         axis=-2)
-        for (i,u) in enumerate(u_parents):
-            if i != index:
-                try:
-                    m[0] *= u[0]
-                except ValueError:
-                    m[0] = m[0] * u[0]
+                # Add extra axes to the message from children
+                m_shape = np.shape(m[i]) + (1,) * (i+1)
+                m[i] = np.reshape(m[i], m_shape)
 
-                try:
-                    m[1] *= u[1]
-                except ValueError:
-                    m[1] = m[1] * u[1]
+                # Add extra axes to the mask from children
+                mask_shape = np.shape(mask) + (1,) * (i+1)
+                mask_i = np.reshape(mask, mask_shape)
 
-        return m
-        
+                # List of elements to multiply together
+                A = [m[i], mask_i]
+                for k in range(len(u_parents)):
+                    if k != index:
+                        A.append(u_parents[k][i])
+
+                # Find out which axes are summed over. Also, because
+                # we are summing over the dimensions already in this
+                # function (for efficiency), we need to cancel the
+                # effect of the plate-multiplier applied in the
+                # message_to_parent function.
+                full_shape = broadcasted_shape_from_arrays(*A)
+                axes = axes_to_collapse(full_shape, parent.get_shape(i))
+                r = 1
+                for j in axes:
+                    r *= full_shape[j]
+                
+                # Compute dot product
+                m[i] = sum_product(*A, axes_to_sum=axes, keepdims=True) / r
+
+            s = axes_to_collapse(np.shape(mask), parent.plates)
+            mask = np.any(mask, axis=s, keepdims=True)
+            mask = squeeze_to_dim(mask, len(parent.plates))
+
+            return (m, mask)
+
+
+        else:
+            
+            # TODO: You could sum some dimensions so that you don't need
+            # to store large m unless m actually is large
+
+            m[0] = m[0][...,np.newaxis]
+            m[1] = m[1][...,np.newaxis,np.newaxis]
+            ## m[0] = np.repeat(m[0][...,np.newaxis], self.d, axis=-1)
+            ## m[1] = np.repeat(np.repeat(m[1][...,np.newaxis,np.newaxis],
+            ##                            self.d,
+            ##                            axis=-1),
+            ##                  self.d,
+            ##                  axis=-2)
+            for (i,u) in enumerate(u_parents):
+                if i != index:
+                    try:
+                        m[0] *= u[0]
+                    except ValueError:
+                        m[0] = m[0] * u[0]
+
+                    try:
+                        m[1] *= u[1]
+                    except ValueError:
+                        m[1] = m[1] * u[1]
+
+            return (m, mask)
+
 
         
 
@@ -1056,11 +1315,12 @@ def test_pca():
     if dataset == 1:
         M = 10
         N = 100
+        D_y = 3
         D = 3
         # Generate data
-        w = np.random.normal(0, 1, size=(M,1,D))
-        x = np.random.normal(0, 1, size=(1,N,D))
-        f = np.einsum('...i,...i', w, x)
+        w = np.random.normal(0, 1, size=(M,1,D_y))
+        x = np.random.normal(0, 1, size=(1,N,D_y))
+        f = sum_product(w, x, axes_to_sum=[-1])#np.einsum('...i,...i', w, x)
         y = f + np.random.normal(0, 0.5, size=(M,N))
     elif dataset == 2:
         # Data from matlab comparison
@@ -1069,12 +1329,16 @@ def test_pca():
         D = np.genfromtxt('/home/jluttine/matlab/fa/data_pca_01_d.txt')
         (M,N) = np.shape(y)
 
-    # Construct the PCA model
+    # Construct the PCA model with ARD
 
+    # alpha = NodeGamma(1e-5, 1e-5, plates=(D,))
+    #Lambda = NodeWishart(D, (10**-10) * np.identity(D), plates=(), name='Lambda')
+    
     X = NodeGaussian(np.zeros(D), np.identity(D), name="X", plates=(1,N))
     X.update()
     X.u[0] = X.random()
 
+    #W = NodeGaussian(np.zeros(D), Lambda, name="W", plates=(M,1))
     W = NodeGaussian(np.zeros(D), np.identity(D), name="W", plates=(M,1))
     W.update()
     W.u[0] = W.random()
@@ -1085,6 +1349,7 @@ def test_pca():
     tau.update()
 
     Y = NodeNormal(WX, tau, name="Y", plates=(M,N))
+    Y.update()
 
     # Initialize (from prior)
 
@@ -1102,12 +1367,17 @@ def test_pca():
     ## tau.show()
     ## return
 
-    Y.observe(y)
+    #Y.update()
+    #mask = True
+    # mask = np.ones((M,N), dtype=np.bool)
+    mask = np.random.rand(M,N) < 1.0
+    mask[:,20:40] = False
+    Y.observe(y, mask)
 
     #try:
     # Inference
     L_last = -np.inf
-    for i in range(500):
+    for i in range(200):
         t = time.clock()
         X.update()
         #print("X")
@@ -1123,32 +1393,35 @@ def test_pca():
         L_W = W.lower_bound_contribution()
         L_tau = tau.lower_bound_contribution()
         L_Y = Y.lower_bound_contribution()
-        print("X: %f, W: %f, tau: %f, Y: %f" % (L_X, L_W, L_tau, L_Y))
+        #print("X: %f, W: %f, tau: %f, Y: %f" % (L_X, L_W, L_tau, L_Y))
         L = L_X + L_W + L_tau + L_Y
-        print("Iteration %d: loglike=%f (%f seconds)" % (i+1, L, time.clock()-t))
+        print("Iteration %d: loglike=%e (%.3f seconds)" % (i+1, L, time.clock()-t))
         if L_last > L:
             L_diff = (L_last - L)
             raise Exception("Lower bound decreased %e! Bug somewhere or numerical inaccuracy?" % L_diff)
         if L - L_last < 1e-8:
             print("Converged.")
-            break
+            #break
         L_last = L
 
     #return
 
-    plt.clf()
-    plt.subplot(2,1,1)
-    plt.plot(np.arange(N), y.T)
+    ## plt.clf()
+    ## plt.subplot(2,1,1)
+    ## plt.plot(np.arange(N), y.T)
 
-    plt.subplot(2,1,2)
-    yh = np.einsum('...i,...i', W.u[0], X.u[0])
-    plt.plot(np.arange(N), yh.T)
+    ## plt.subplot(2,1,2)
+    ## yh = np.einsum('...i,...i', W.u[0], X.u[0])
+    ## plt.plot(np.arange(N), yh.T)
 
     #print(shape(yh))
     plt.clf()
     WX_params = WX.get_parameters()
-    m_errorplot(np.arange(N), WX_params[0], 2*np.sqrt(WX_params[1]), 2*np.sqrt(WX_params[1]))
-    m_plot(np.arange(N), yh, 'k')
+    fh = WX_params[0] * np.ones(y.shape)
+    err_fh = 2*np.sqrt(WX_params[1]) * np.ones(y.shape)
+    m_errorplot(np.arange(N), fh, err_fh, err_fh)
+    #m_errorplot(np.arange(N), WX_params[0], 2*np.sqrt(WX_params[1]), 2*np.sqrt(WX_params[1]))
+    #m_plot(np.arange(N), yh, 'k')
     m_plot(np.arange(N), f, 'g')
     m_plot(np.arange(N), y, 'r+')
     #except Exception:
@@ -1156,11 +1429,10 @@ def test_pca():
       #  pass
         
     tau.show()
+
+    #print(X.mask)
     #print(tau.u[0])
 
-    print(X.phi[0].shape)
-    print(X.phi[1].shape)
-    #print(X.phi)
     
     #X.show()
     #W.show()
@@ -1261,7 +1533,7 @@ if __name__ == '__main__':
     plt.ion()
 
     test_pca()
-    #profile.run('test_pca()')
+    #profile.run('test_pca()', 'profile.tmp')
     #test_normal()
     #test_multivariate()
 
