@@ -35,7 +35,8 @@ def m_errorplot(x, Y, L, U):
                            Y[i]-L[i],
                            Y[i]+U[i],
                            facecolor=(0.6,0.6,0.6,1),
-                           edgecolor=(0,0,0,0))
+                           edgecolor=(0,0,0,0),
+                           linewidth=0)
         plt.plot(x, Y[i], color=(0,0,0,1))
         plt.ylabel(str(i))
 
@@ -46,27 +47,41 @@ def m_errorplot(x, Y, L, U):
 def test_gp():
 
     # Generate data
-    x = np.random.uniform(low=0, high=10, size=(10,))
+    x = np.random.uniform(low=0, high=10, size=(100,))
     f = np.sin(x*2*np.pi/5)
-    #y = f + np.random.normal(0, 0.2, np.shape(f))
+    f = f + np.random.normal(0, 0.2, np.shape(f))
     plt.clf()
     plt.plot(x,f,'r+')
     #plt.plot(x,y,'r+')
 
     # Construct model
-    K = NodeCovarianceFunctionSE(3, 3)
-    K_noise = NodeCovarianceFunctionDelta(3)
+    ls = NodeConstantScalar(1.1, name='lengthscale')
+    amp = NodeConstantScalar(1.0, name='amplitude')
+    noise = NodeConstantScalar(1.3, name='noise')
+    K = NodeCovarianceFunctionSE(amp, ls)
+    K_noise = NodeCovarianceFunctionDelta(noise)
     K_sum = NodeCovarianceFunctionSum(K, K_noise)
     M = NodeConstantGaussianProcess(lambda x: (x/10-2)*(x/10+1))
     F = NodeGaussianProcess(M, K_sum)
 
     # Inference
     F.observe(x, f)
+    vb_optimize_nodes(ls, amp, noise)
     F.update()
-    u = F.message_to_child()
+    u = F.get_parameters()
+
+    print('parameters')
+    print(ls.name)
+    print(ls.u[0])
+    print(amp.name)
+    print(amp.u[0])
+    print(noise.name)
+    print(noise.u[0])
+
+    #print(F.lower_bound_contribution())
 
     # Posterior predictions
-    xh = np.arange(-5, 20, 0.2)
+    xh = np.arange(-5, 20, 0.1)
     (fh, varfh) = u(xh, covariance=1)
 
     #print(fh)
@@ -75,7 +90,7 @@ def test_gp():
     errfh = np.sqrt(varfh)
     ## print(np.shape(xh))
     ## print(np.shape(fh))
-    ## print(np.shape(varfh))
+    #print(varfh[-1])
     ## print(np.shape(errfh))
     ## print(errfh)
     m_errorplot(xh, fh, errfh, errfh)
@@ -120,6 +135,7 @@ def test_pca():
     #Lambda.update()
     
     X = NodeGaussian(np.zeros(D), np.identity(D), name="X", plates=(1,N))
+
     X.update()
     X.u[0] = X.random()
 
@@ -129,9 +145,9 @@ def test_pca():
     W.update()
     W.u[0] = W.random()
 
-    WX = NodeDot(W,X)
+    WX = NodeDot(W,X,S,R)
 
-    tau = NodeGamma(1e-5, 1e-5, name="tau")
+    tau = NodeGamma(1e-5, 1e-5, name="tau", plates=(M,N))
     tau.update()
 
     Y = NodeNormal(WX, tau, name="Y", plates=(M,N))

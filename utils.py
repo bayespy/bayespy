@@ -5,6 +5,26 @@ import scipy.linalg.decomp_cholesky as decomp
 import scipy.linalg as linalg
 import scipy.special as special
 
+def check_gradient(x0, f, df, eps):
+    #f0 = f(x0)
+    grad = np.zeros(np.shape(x0))
+    
+    for ind in range(len(x0)):
+        xmin = x0.copy()
+        xmax = x0.copy()
+        xmin[ind] -= eps
+        xmax[ind] += eps
+        
+        fmin = f(xmin)
+        fmax = f(xmax)
+
+        grad[ind] = (fmax-fmin) / (2*eps)
+
+    print('x: ' + str(x0))
+    print('Numerical gradient: ' + str(grad))
+    print('Exact gradient: ' + str(df(x0)))
+    
+
 def is_numeric(a):
     if np.isscalar(a) or isinstance(a, list) or isinstance(a, np.ndarray):
         return True
@@ -169,6 +189,9 @@ def chol(C):
 def chol_solve(U, b):
     return decomp.cho_solve((U, False), b)
 
+def logdet_chol(U):
+    return 2*np.sum(np.log(np.diag(U)))
+    
 def m_chol(C):
     # Computes Cholesky decomposition for a collection of matrices.
     # The last two axes of C are considered as the matrix.

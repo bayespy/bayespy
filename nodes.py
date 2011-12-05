@@ -6,8 +6,117 @@ import scipy.linalg.decomp_cholesky as decomp
 import scipy.linalg as linalg
 import scipy.special as special
 import scipy.spatial.distance as distance
+import scipy.optimize as optimize
 
 from utils import *
+
+def vb_optimize(x0, set_values, lowerbound, gradient=None):
+    # Function for computing the lower bound
+    def func(x):
+        # Set the value of the nodes
+        #print('func')
+        set_values(x)
+        # Compute lower bound (and gradient terms)
+        return -lowerbound()
+        #return f
+
+    # Function for computing the gradient of the lower bound
+    def funcprime(x):
+        # Collect the gradients from the nodes
+        #print('funcprime')
+        set_values(x)
+        # Compute lower bound (and gradient terms)
+        #lowerbound()
+        return -gradient()
+        #return df
+
+    # Optimize
+    if gradient != None:
+        print('Checking gradient')
+        check_gradient(x0, func, funcprime, 1e-6)
+
+        xopt = optimize.fmin_bfgs(func, x0, fprime=funcprime, maxiter=100)
+        #xopt = optimize.fmin_ncg(func, x0, fprime=funcprime, maxiter=50)
+    else:
+        xopt = optimize.fmin_bfgs(func, x0, maxiter=100)
+        #xopt = optimize.fmin_ncg(func, x0, maxiter=50)
+
+    # Set optimal values to the nodes
+    print(xopt)
+    set_values(xopt)
+    
+
+# Optimizes the parameters of the given nodes.
+def vb_optimize_nodes(*nodes):
+
+    # Get cost functions
+    lbs = set()
+    for node in nodes:
+        # Add node's cost function
+        lbs |= node.get_all_vb_terms()
+        #.lower_bound_contribution)
+        # Add child nodes' cost functions
+        #for lb in node.get_children_vb_bound():
+            #lbs.add(lb)
+
+    # Uniqify nodes?
+    nodes = set(nodes)
+
+    # Get initial value and transformation/update function
+    ind = 0
+    ind_all = list()
+    transform_all = list()
+    gradient_all = list()
+    x0_all = np.array([])
+    for node in nodes:
+        (x0, transform, gradient) = node.start_optimization()
+        # Vector of initial values
+        x0 = np.atleast_1d(x0)
+        x0_all = np.concatenate((x0_all, x0))
+        # Indices of the vector elements that correspond to this node
+        sz = np.size(x0)
+        ind_all.append((ind, ind+sz))
+        ind += sz
+        # Function for setting the value of this node
+        transform_all.append(transform)
+        # Gradients
+        gradient_all.append(gradient)
+
+    # Function for changing the values of the nodes
+    def set_value(x):
+        #print(x)
+        #print(ind_all)
+        for (ind, transform) in zip(ind_all, transform_all):
+            # Transform/update variable
+            transform(x[ind[0]:ind[1]])
+
+    # Compute the lower bound (and the gradient)
+    def lowerbound():
+        l = 0
+        # TODO: Put gradients to zero!
+        for lb in lbs:
+            l += lb(gradient=False)
+        return l
+
+    # Compute (or get) the gradient
+    def gradient():
+        for lb in lbs:
+            lb(gradient=True)
+        dl = np.zeros(np.shape(x0_all))
+        for (ind, gradient) in zip(ind_all, gradient_all):
+            dl[ind[0]:ind[1]] = gradient()
+
+        #print('gradient')
+        #print(dl)
+        return dl
+            
+    #vb_optimize(x0_all, set_value, lowerbound)
+    vb_optimize(x0_all, set_value, lowerbound, gradient=gradient)
+        
+    for node in nodes:
+        node.stop_optimization()
+        
+
 
 # A node must have the following methods in order to communicate with
 # other nodes.
@@ -75,6 +184,18 @@ class Node:
             parent.add_child(self, index)
         # Children
         self.children = list()
+
+    def get_all_vb_terms(self):
+        vb_terms = self.get_vb_term()
+        for (child,index) in self.children:
+            vb_terms |= child.get_vb_term()
+        return vb_terms
+
+    def get_vb_term(self):
+        vb_terms = set()
+        for (child,index) in self.children:
+            vb_terms |= child.get_vb_term()
+        return vb_terms
 
 
     def add_child(self, child, index):
@@ -243,6 +364,9 @@ class NodeVariable(Node):
         # By default, ignore all elements
         self.mask = False
 
+    def get_vb_term(self):
+        return {self.lower_bound_contribution}
+
     def get_message(self, index, u_parents):
         return (self.message(index, u_parents),
                 self.mask)
@@ -290,6 +414,18 @@ class NodeVariable(Node):
     def get_moments(self):
         return self.u
 
+    def get_children_vb_bound(self):
+        raise Exception("Not implemented for " + str(self.__class__))
+        pass
+
+    def start_optimization(self):
+        raise Exception("Not implemented for " + str(self.__class__))
+        pass
+
+    def stop_optimization(self):
+        raise Exception("Not implemented for " + str(self.__class__))
+        pass
+
     def message(self, index, u_parents):
         raise Exception("Not implemented for " + str(self.__class__))
         pass
@@ -305,7 +441,7 @@ class NodeVariable(Node):
         raise Exception("Not implemented for " + str(self.__class__))
         pass
 
-    def lower_bound_contribution(self):
+    def lower_bound_contribution(self, gradient=False):
         # Messages from parents
         u_parents = [parent.message_to_child() for parent in self.parents]
         phi = self.compute_phi_from_parents(u_parents)
@@ -370,13 +506,52 @@ class NodeConstant(NodeVariable):
     def __init__(self, u, **kwargs):
         NodeVariable.__init__(self, **kwargs)
         self.fix_moments_and_f(u, 0, True)
+    def lower_bound_contribution(self, gradient=False):
+        return 0
 
 class NodeConstantScalar(NodeConstant):
     def __init__(self, a, **kwargs):
         NodeConstant.__init__(self,
                               [a],
                               plates=np.shape(a),
-                              dims=[()])
+                              dims=[()],
+                              **kwargs)
+
+    def start_optimization(self):
+        # FIXME: Set the plate sizes appropriately!!
+        x0 = self.u[0]
+        #self.gradient = np.zeros(np.shape(x0))
+        def transform(x):
+            # E.g., for positive scalars you could have exp here.
+            self.gradient = np.zeros(np.shape(x0))
+            self.u[0] = x
+        def gradient():
+            # This would need to apply the gradient of the
+            # transformation to the computed gradient
+            return self.gradient
+            
+        return (x0, transform, gradient)
+
+    def add_to_gradient(self, d):
+        #print('added to gradient in node')
+        self.gradient += d
+        #print(d)
+        #print('self:')
+        #print(self.gradient)
+
+    def message_to_child(self, gradient=False):
+        if gradient:
+            #print('node sending gradient')
+            return (self.u, [ [np.ones(np.shape(self.u)),
+                               #self.gradient] ])
+                               self.add_to_gradient] ])
+        else:
+            return self.u
+
+
+    def stop_optimization(self):
+        #raise Exception("Not implemented for " + str(self.__class__))
+        pass
 
 class NodeConstantGaussian(NodeConstant):
     def __init__(self, X, **kwargs):
