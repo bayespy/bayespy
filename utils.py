@@ -4,6 +4,128 @@ import scipy as sp
 import scipy.linalg.decomp_cholesky as decomp
 import scipy.linalg as linalg
 import scipy.special as special
+import scipy.optimize as optimize
+
+def vb_optimize(x0, set_values, lowerbound, gradient=None):
+    # Function for computing the lower bound
+    def func(x):
+        # Set the value of the nodes
+        #print('func')
+        set_values(x)
+        # Compute lower bound (and gradient terms)
+        return -lowerbound()
+        #return f
+
+    # Function for computing the gradient of the lower bound
+    def funcprime(x):
+        # Collect the gradients from the nodes
+        #print('funcprime')
+        set_values(x)
+        # Compute lower bound (and gradient terms)
+        #lowerbound()
+        return -gradient()
+        #return df
+
+    # Optimize
+    if gradient != None:
+        print('Checking gradient')
+        check_gradient(x0, func, funcprime, 1e-6)
+
+        xopt = optimize.fmin_bfgs(func, x0, fprime=funcprime, maxiter=100)
+        #xopt = optimize.fmin_ncg(func, x0, fprime=funcprime, maxiter=50)
+    else:
+        xopt = optimize.fmin_bfgs(func, x0, maxiter=100)
+        #xopt = optimize.fmin_ncg(func, x0, maxiter=50)
+
+    # Set optimal values to the nodes
+    print(xopt)
+    set_values(xopt)
+    
+
+# Optimizes the parameters of the given nodes.
+def vb_optimize_nodes(*nodes):
+
+    # Get cost functions
+    lbs = set()
+    for node in nodes:
+        # Add node's cost function
+        lbs |= node.get_all_vb_terms()
+        #.lower_bound_contribution)
+        # Add child nodes' cost functions
+        #for lb in node.get_children_vb_bound():
+            #lbs.add(lb)
+
+    # Uniqify nodes?
+    nodes = set(nodes)
+
+    # Get initial value and transformation/update function
+    ind = 0
+    ind_all = list()
+    transform_all = list()
+    gradient_all = list()
+    x0_all = np.array([])
+    for node in nodes:
+        (x0, transform, gradient) = node.start_optimization()
+        # Vector of initial values
+        x0 = np.atleast_1d(x0)
+        x0_all = np.concatenate((x0_all, x0))
+        # Indices of the vector elements that correspond to this node
+        sz = np.size(x0)
+        ind_all.append((ind, ind+sz))
+        ind += sz
+        # Function for setting the value of this node
+        transform_all.append(transform)
+        # Gradients
+        gradient_all.append(gradient)
+
+    # Function for changing the values of the nodes
+    def set_value(x):
+        #print(x)
+        #print(ind_all)
+        for (ind, transform) in zip(ind_all, transform_all):
+            # Transform/update variable
+            transform(x[ind[0]:ind[1]])
+
+    # Compute the lower bound (and the gradient)
+    def lowerbound():
+        l = 0
+        # TODO: Put gradients to zero!
+        for lb in lbs:
+            l += lb(gradient=False)
+        return l
+
+    # Compute (or get) the gradient
+    def gradient():
+        for lb in lbs:
+            lb(gradient=True)
+        dl = np.zeros(np.shape(x0_all))
+        for (ind, gradient) in zip(ind_all, gradient_all):
+            dl[ind[0]:ind[1]] = gradient()
+
+        #print('gradient')
+        #print(dl)
+        return dl
+            
+    #vb_optimize(x0_all, set_value, lowerbound)
+    vb_optimize(x0_all, set_value, lowerbound, gradient=gradient)
+        
+    for node in nodes:
+        node.stop_optimization()
+        
+# Computes log probability density function of the Gaussian
+# distribution
+def gaussian_logpdf(y_invcov_y,
+                    y_invcov_mu,
+                    mu_invcov_mu,
+                    logdetcov,
+                    D):
+
+    return (-0.5*D*np.log(2*np.pi)
+            -0.5*logdetcov
+            -0.5*y_invcov_y
+            +y_invcov_mu
+            -0.5*mu_invcov_mu)
+
 
 def check_gradient(x0, f, df, eps):
     #f0 = f(x0)

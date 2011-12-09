@@ -7,15 +7,23 @@ import profile
 
 
 import imp
-import gp
-import nodes
+#import gp
+#import nodes
 import utils
-imp.reload(gp)
-imp.reload(nodes)
+#imp.reload(gp)
+#imp.reload(nodes)
 imp.reload(utils)
-from gp import *
-from nodes import *
+#from gp import *
+#from nodes import *
 from utils import *
+
+
+import Nodes.ExponentialFamily as EF
+import Nodes.CovarianceFunctions as CF
+import Nodes.GaussianProcesses as GP
+imp.reload(EF)
+imp.reload(CF)
+imp.reload(GP)
 
 def m_plot(x, Y, style):
     Y = np.atleast_2d(Y)
@@ -29,14 +37,26 @@ def m_errorplot(x, Y, L, U):
     L = np.atleast_2d(L)
     U = np.atleast_2d(U)
     M = Y.shape[-2]
+    print(np.shape(Y))
+    print(np.shape(L))
+    print(np.shape(U))
+    print(np.shape(M))
     for i in range(M):
         plt.subplot(M,1,i+1)
+        lower = Y[i] - L[i]
+        upper = Y[i] + U[i]
+        #print(upper-lower)
+        #if np.any(lower>=upper):
+            #print('WTF?!')
         plt.fill_between(x,
-                           Y[i]-L[i],
-                           Y[i]+U[i],
-                           facecolor=(0.6,0.6,0.6,1),
-                           edgecolor=(0,0,0,0),
-                           linewidth=0)
+                         upper,
+                         lower,
+                         #where=(upper>=lower),
+                         facecolor=(0.6,0.6,0.6,1),
+                         edgecolor=(0,0,0,0),
+                         #edgecolor=(0.6,0.6,0.6,1),
+                         linewidth=0,
+                         interpolate=True)
         plt.plot(x, Y[i], color=(0,0,0,1))
         plt.ylabel(str(i))
 
@@ -47,22 +67,44 @@ def m_errorplot(x, Y, L, U):
 def test_gp():
 
     # Generate data
+    func = lambda x: np.sin(x*2*np.pi/5)
     x = np.random.uniform(low=0, high=10, size=(100,))
-    f = np.sin(x*2*np.pi/5)
+    f = func(x)
     f = f + np.random.normal(0, 0.2, np.shape(f))
     plt.clf()
     plt.plot(x,f,'r+')
     #plt.plot(x,y,'r+')
 
     # Construct model
-    ls = NodeConstantScalar(1.1, name='lengthscale')
-    amp = NodeConstantScalar(1.0, name='amplitude')
-    noise = NodeConstantScalar(1.3, name='noise')
-    K = NodeCovarianceFunctionSE(amp, ls)
-    K_noise = NodeCovarianceFunctionDelta(noise)
-    K_sum = NodeCovarianceFunctionSum(K, K_noise)
-    M = NodeConstantGaussianProcess(lambda x: (x/10-2)*(x/10+1))
-    F = NodeGaussianProcess(M, K_sum)
+    ls = EF.NodeConstantScalar(1.5, name='lengthscale')
+    amp = EF.NodeConstantScalar(2.0, name='amplitude')
+    noise = EF.NodeConstantScalar(0.3, name='noise')
+    K = CF.SquaredExponential(amp, ls)
+    K_noise = CF.Delta(noise)
+    K_sum = CF.SumCF(K, K_noise)
+
+    M = GP.Constant(lambda x: (x/10-2)*(x/10+1))
+
+    method = 'multi'
+
+    if method == 'sum':
+        # Sum GP
+        F = GP.GaussianProcess(M, K_sum)
+
+    elif method == 'multi':
+        # Joint for latent function and observation process
+        M_multi = GP.Multiple([M, M])
+
+        
+        K_multi = CF.Multiple([[K, K],[K,K_sum]])
+        
+        
+        F = GP.GaussianProcess(M_multi, K_multi)
+        # Observations are from the latter process:
+        xf = np.array([15])
+        xy = x
+        x = [xf, xy]
+        f = np.concatenate([func(xf), f])
 
     # Inference
     F.observe(x, f)
@@ -82,17 +124,20 @@ def test_gp():
 
     # Posterior predictions
     xh = np.arange(-5, 20, 0.1)
-    (fh, varfh) = u(xh, covariance=1)
+    if method == 'multi':
+        # Choose which process you want to examine:
+        (fh, varfh) = u([xh,[]], covariance=1)
+    else:
+        (fh, varfh) = u(xh, covariance=1)
 
     #print(fh)
-    #print(varfh)
+    print(np.shape(fh))
+    print(np.shape(varfh))
 
+    varfh[varfh<0] = 0
     errfh = np.sqrt(varfh)
-    ## print(np.shape(xh))
-    ## print(np.shape(fh))
-    #print(varfh[-1])
-    ## print(np.shape(errfh))
-    ## print(errfh)
+    #print(varfh)
+    #print(errfh)
     m_errorplot(xh, fh, errfh, errfh)
     
     return
