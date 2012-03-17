@@ -1,26 +1,19 @@
 
 import numpy as np
-import scipy as sp
+#import scipy as sp
 import matplotlib.pyplot as plt
 import time
 import profile
 
 
 import imp
-#import gp
-#import nodes
-import utils
-#imp.reload(gp)
-#imp.reload(nodes)
-imp.reload(utils)
-#from gp import *
-#from nodes import *
-from utils import *
 
+import utils
 
 import Nodes.ExponentialFamily as EF
 import Nodes.CovarianceFunctions as CF
 import Nodes.GaussianProcesses as GP
+imp.reload(utils)
 imp.reload(EF)
 imp.reload(CF)
 imp.reload(GP)
@@ -37,10 +30,10 @@ def m_errorplot(x, Y, L, U):
     L = np.atleast_2d(L)
     U = np.atleast_2d(U)
     M = Y.shape[-2]
-    print(np.shape(Y))
-    print(np.shape(L))
-    print(np.shape(U))
-    print(np.shape(M))
+    ## print(np.shape(Y))
+    ## print(np.shape(L))
+    ## print(np.shape(U))
+    ## print(np.shape(M))
     for i in range(M):
         plt.subplot(M,1,i+1)
         lower = Y[i] - L[i]
@@ -64,6 +57,75 @@ def m_errorplot(x, Y, L, U):
 
 # MULTIVARIATE GP!!
 
+def test_sparse_gp():
+    
+    ## Generate data
+
+    # Noisy observations from a sinusoid
+    N = 500
+    func = lambda x: np.sin(x*2*np.pi/5)
+    x = np.random.uniform(low=0, high=N/10, size=(500,))
+    f = func(x)
+    y = f + np.random.normal(0, 0.2, np.shape(f))
+
+    # Plot data
+    plt.clf()
+    plt.plot(x,y,'r+')
+
+    ## Construct model
+
+    # Covariance function stuff
+    ls = EF.NodeConstantScalar(3, name='lengthscale')
+    amp = EF.NodeConstantScalar(2.0, name='amplitude')
+    noise = EF.NodeConstantScalar(0.6, name='noise')
+    # Latent process covariance
+    #K_f = CF.SquaredExponential(amp, ls)
+    K_f = CF.PiecewisePolynomial2(amp, ls)
+    # Noise process covariance
+    K_noise = CF.Delta(noise)
+    # Observation process covariance
+    K_y = CF.Sum(K_f, K_noise)
+    # Joint covariance
+    #K_joint = CF.Multiple([[K_f, K_f],[K_f,K_y]], sparse=True)
+
+    # Mean function stuff
+    M = GP.Constant(lambda x: (x/10-2)*(x/10+1))
+    # Means for latent and observation processes
+    #M_multi = GP.Multiple([M, M])
+
+    # Gaussian process
+    F = GP.GaussianProcess(M, [[K_f, K_f], [K_f, K_y]])
+    #F = GP.GaussianProcess(M, [[K_f, K_f], [K_f, K_y]])
+    #F = GP.GaussianProcess(M_multi, K_joint)
+
+    ## Inference
+    
+    F.observe([[],x], y)
+    utils.vb_optimize_nodes(ls, amp, noise)
+    F.update()
+    u = F.get_parameters()
+
+    ## Show results
+
+    # Print hyperparameters
+    print('parameters')
+    print(ls.name, ls.u[0])
+    print(amp.name, amp.u[0])
+    print(noise.name, noise.u[0])
+
+    # Posterior predictions
+    xh = np.arange(np.min(x)-5, np.max(x)+10, 0.1)
+    (fh, varfh) = u([[],xh], covariance=1)
+    #(fh, varfh) = u([xh,[]], covariance=1)
+
+    # Plot predictive distribution
+    varfh[varfh<0] = 0
+    errfh = np.sqrt(varfh)
+    m_errorplot(xh, fh, errfh, errfh)
+    
+    return
+
+
 def test_gp():
 
     # Generate data
@@ -78,10 +140,10 @@ def test_gp():
     # Construct model
     ls = EF.NodeConstantScalar(1.5, name='lengthscale')
     amp = EF.NodeConstantScalar(2.0, name='amplitude')
-    noise = EF.NodeConstantScalar(0.3, name='noise')
+    noise = EF.NodeConstantScalar(0.6, name='noise')
     K = CF.SquaredExponential(amp, ls)
     K_noise = CF.Delta(noise)
-    K_sum = CF.SumCF(K, K_noise)
+    K_sum = CF.Sum(K, K_noise)
 
     M = GP.Constant(lambda x: (x/10-2)*(x/10+1))
 
@@ -95,20 +157,36 @@ def test_gp():
         # Joint for latent function and observation process
         M_multi = GP.Multiple([M, M])
 
+        K_zeros = CF.Zeros()
+
         
-        K_multi = CF.Multiple([[K, K],[K,K_sum]])
+        #K_multi = CF.Multiple([[K, K],[K,K_sum]])
+        K_multi1 = CF.Multiple([[K, K],[K,K]])
+        #K_multi2 = CF.Multiple([[None, None],[None, K_noise]])
+        K_multi2 = CF.Multiple([[K_zeros, K_zeros],[K_zeros,K_noise]])
         
-        
-        F = GP.GaussianProcess(M_multi, K_multi)
+        xp = np.arange(0,5,1)
+        F = GP.GaussianProcess(M_multi, K_multi1,
+                               k_sparse=K_multi2,
+                               #pseudoinputs=[[],xp])
+                               pseudoinputs=None)
+        #F = GP.GaussianProcess(M_multi, K_multi, pseudoinputs=[[],xp])
         # Observations are from the latter process:
-        xf = np.array([15])
-        xy = x
-        x = [xf, xy]
-        f = np.concatenate([func(xf), f])
+        #xf = np.array([])
+        #x_pseudo = [[], x]
+        #x_full = [np.array([15, 20]), []]
+        #xy = x
+        #x = [xf, xy]
+        #f = np.concatenate([func(xf), f])
+        #f_pseudo = f
+        #f_full = func(x_full)
+        x = [[], x]
+        
 
     # Inference
+    #F.observe(x_pseudo, f_pseudo, pseudo=True)
     F.observe(x, f)
-    vb_optimize_nodes(ls, amp, noise)
+    utils.vb_optimize_nodes(ls, amp, noise)
     F.update()
     u = F.get_parameters()
 
@@ -126,13 +204,14 @@ def test_gp():
     xh = np.arange(-5, 20, 0.1)
     if method == 'multi':
         # Choose which process you want to examine:
-        (fh, varfh) = u([xh,[]], covariance=1)
+        (fh, varfh) = u([[],xh], covariance=1)
+        #(fh, varfh) = u([xh,[]], covariance=1)
     else:
         (fh, varfh) = u(xh, covariance=1)
 
     #print(fh)
-    print(np.shape(fh))
-    print(np.shape(varfh))
+    #print(np.shape(fh))
+    #print(np.shape(varfh))
 
     varfh[varfh<0] = 0
     errfh = np.sqrt(varfh)
@@ -346,7 +425,8 @@ if __name__ == '__main__':
     # FOR INTERACTIVE SESSIONS, NON-BLOCKING PLOTTING:
     plt.ion()
 
-    test_gp()
+    test_sparse_gp()
+    #test_gp()
     #test_pca()
     #profile.run('test_pca()', 'profile.tmp')
     #test_normal()

@@ -74,7 +74,8 @@ class Node:
         self.parents = args
         # Inform parent nodes
         for (index,parent) in enumerate(self.parents):
-            parent.add_child(self, index)
+            if parent:
+                parent.add_child(self, index)
         # Children
         self.children = list()
 
@@ -395,12 +396,27 @@ class NodeVariable(Node):
         self.mask = np.logical_or(self.mask, self.observed)
 
 
-class NodeConstant(NodeVariable):
+class NodeConstant(Node):
     def __init__(self, u, **kwargs):
-        NodeVariable.__init__(self, **kwargs)
-        self.fix_moments_and_f(u, 0, True)
-    def lower_bound_contribution(self, gradient=False):
-        return 0
+        self.u = u
+        Node.__init__(self, **kwargs)
+
+    def message_to_child(self, gradient=False):
+        if gradient:
+            return (self.u, [])
+        else:
+            return self.u
+
+        #self.fix_moments_and_f(u, 0, True)
+    #def lower_bound_contribution(self, gradient=False):
+        #return 0
+
+## class NodeConstant(NodeVariable):
+##     def __init__(self, u, **kwargs):
+##         NodeVariable.__init__(self, **kwargs)
+##         self.fix_moments_and_f(u, 0, True)
+##     def lower_bound_contribution(self, gradient=False):
+##         return 0
 
 class NodeConstantScalar(NodeConstant):
     def __init__(self, a, **kwargs):
@@ -416,6 +432,7 @@ class NodeConstantScalar(NodeConstant):
         #self.gradient = np.zeros(np.shape(x0))
         def transform(x):
             # E.g., for positive scalars you could have exp here.
+            #print('NodeConstantScalar.transform')
             self.gradient = np.zeros(np.shape(x0))
             self.u[0] = x
         def gradient():
@@ -427,15 +444,17 @@ class NodeConstantScalar(NodeConstant):
 
     def add_to_gradient(self, d):
         #print('added to gradient in node')
+        #print('NodeConstantScalar.add_to_gradient')
         self.gradient += d
+        #print(self.gradient)
         #print(d)
         #print('self:')
         #print(self.gradient)
 
     def message_to_child(self, gradient=False):
         if gradient:
-            #print('node sending gradient')
-            return (self.u, [ [np.ones(np.shape(self.u)),
+            #print('node sending gradient', np.shape(self.u))
+            return (self.u, [ [np.ones(np.shape(self.u[0])),
                                #self.gradient] ])
                                self.add_to_gradient] ])
         else:

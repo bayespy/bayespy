@@ -5,7 +5,63 @@ import scipy.linalg.decomp_cholesky as decomp
 import scipy.linalg as linalg
 import scipy.special as special
 import scipy.optimize as optimize
+import scipy.sparse as sparse
+import scikits.sparse.cholmod as cholmod
 
+class CholeskyDense():
+    
+    def __init__(self, K):
+        self.U = decomp.cho_factor(K)
+    
+    def solve(self, b):
+        if sparse.issparse(b):
+            b = b.toarray()
+        return decomp.cho_solve(self.U, b)
+
+    def logdet(self):
+        return 2*np.sum(np.log(np.diag(self.U[0])))
+
+    def trace_solve_gradient(self, dK):
+        return np.trace(self.solve(dK))
+
+class CholeskySparse():
+    
+    def __init__(self, K):
+        self.LD = cholmod.cholesky(K)
+
+    def solve(self, b):
+        if sparse.issparse(b):
+            b = b.toarray()
+        return self.LD.solve_A(b)
+
+    def logdet(self):
+        return self.LD.logdet()
+        #np.sum(np.log(LD.D()))
+
+    def trace_solve_gradient(self, dK):
+        # Use the identity trace(K\dK)=sum(inv(K).*dK) by computing
+        # the sparse inverse (lower triangular part)
+        print("HERE 1\n")
+        print(self.LD.L())
+        iK = self.LD.spinv()
+        print(self.LD.L())
+        print(iK)
+        print("HERE 2\n")
+        #print(iK.todense())
+        # Multiply by two because of symmetry (remove diagonal once
+        # because it was taken into account twice)
+        return (2*np.multiply(iK, dK).sum()
+                - iK.diagonal().dot(dK.diagonal()))
+        #return np.trace(self.solve(dK))
+    
+def cholesky(K):
+    if isinstance(K, np.ndarray):
+        return CholeskyDense(K)
+    elif sparse.issparse(K):
+        return CholeskySparse(K)
+    else:
+        raise Exception("Unsupported covariance matrix type")
+    
 def vb_optimize(x0, set_values, lowerbound, gradient=None):
     # Function for computing the lower bound
     def func(x):
@@ -305,14 +361,33 @@ def repeat_to_shape(A, s):
                 A = np.repeat(A, s[i], axis=i)
     return A
 
+#def spinv_chol(L):
+    
+
 def chol(C):
-    return decomp.cho_factor(C)[0]
+    if sparse.issparse(C):
+        # Sparse Cholesky decomposition (returns a Factor object)
+        return cholmod.cholesky(C)
+    else:
+        # Dense Cholesky decomposition
+        return decomp.cho_factor(C)[0]
 
 def chol_solve(U, b):
-    return decomp.cho_solve((U, False), b)
+    if isinstance(U, np.ndarray):
+        if sparse.issparse(b):
+            b = b.toarray()
+        return decomp.cho_solve((U, False), b)
+    elif isinstance(U, cholmod.Factor):
+        if sparse.issparse(b):
+            b = b.toarray()
+        return U.solve_A(b)
 
 def logdet_chol(U):
-    return 2*np.sum(np.log(np.diag(U)))
+    if isinstance(U, np.ndarray):
+        return 2*np.sum(np.log(np.diag(U)))
+    elif isinstance(U, cholmod.Factor):
+        return np.sum(np.log(U.D()))
+    
     
 def m_chol(C):
     # Computes Cholesky decomposition for a collection of matrices.
