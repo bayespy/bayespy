@@ -241,25 +241,25 @@ def covfunc_pp2(theta, *inputs, gradient=False):
             gradient_lengthscale[ind] = np.zeros(np.shape(x)[:-1])
     
     else:
-        ## x1 = inputs[0] / (lengthscale)
-        ## if inputs[0] is inputs[1]:
-        ##     x2 = x1
-        ##     D2 = spdist.pdist(x1, 1.0, form="full", format="csc")
-        ## else:
-        ##     x2 = inputs[1] / (lengthscale)
-        ##     D2 = spdist.cdist(x1, x2, 1.0, format="csc")
-        ## r = np.sqrt(D2.data)
+        x1 = inputs[0] / (lengthscale)
+        if inputs[0] is inputs[1]:
+            x2 = x1
+            D2 = spdist.pdist(x1, 1.0, form="full", format="csc")
+        else:
+            x2 = inputs[1] / (lengthscale)
+            D2 = spdist.cdist(x1, x2, 1.0, format="csc")
+        r = np.sqrt(D2.data)
 
         # Compute (sparse) distance matrix
 
         #################
         ## OLD STUFF
-        x1 = inputs[0] / (lengthscale)
-        x2 = inputs[1] / (lengthscale)
-        D2 = squared_distance(x1, x2)
-        (i,j) = np.where(D2<1)
-        ij = np.vstack((i,j))
-        r = np.sqrt(D2[i,j])
+        #x1 = inputs[0] / (lengthscale)
+        #x2 = inputs[1] / (lengthscale)
+        #D2 = squared_distance(x1, x2)
+        #(i,j) = np.where(D2<1)
+        #ij = np.vstack((i,j))
+        #r = np.sqrt(D2[i,j])
         ##########################
         
         N1 = np.shape(x1)[0]
@@ -282,17 +282,17 @@ def covfunc_pp2(theta, *inputs, gradient=False):
                 ##       gradient_lengthscale[ind].__class__)
                 dk_i = (dk * r) * (-gradient_lengthscale[ind] / lengthscale)
                 if N1 >= 1 and N2 >= 1:
-                    gradient_lengthscale[ind] = sp.csc_matrix((dk_i, ij),
-                                                              shape=(N1,N2))
-                    ## gradient_lengthscale[ind] = sp.csc_matrix((dk_i, D2.indices, D2.indptr),
+                    ## gradient_lengthscale[ind] = sp.csc_matrix((dk_i, ij),
                     ##                                           shape=(N1,N2))
+                    gradient_lengthscale[ind] = sp.csc_matrix((dk_i, D2.indices, D2.indptr),
+                                                              shape=(N1,N2))
                 else:
                     gradient_lengthscale[ind] = np.empty((N1,N2))
             
         # Form sparse covariance matrix
         if N1 >= 1 and N2 >= 1:
-            K = sp.csc_matrix((k, ij), shape=(N1,N2))
-            ## K = sp.csc_matrix((k, D2.indices, D2.indptr), shape=(N1,N2))
+            ## K = sp.csc_matrix((k, ij), shape=(N1,N2))
+            K = sp.csc_matrix((k, D2.indices, D2.indptr), shape=(N1,N2))
         else:
             K = np.empty((N1, N2))
         #print(K.__class__)

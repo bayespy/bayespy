@@ -99,7 +99,6 @@ def test_sparse_gp():
     #F = GP.GaussianProcess(M_multi, K_joint)
 
     ## Inference
-    
     F.observe([[],x], y)
     utils.vb_optimize_nodes(ls, amp, noise)
     F.update()
