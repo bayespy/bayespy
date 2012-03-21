@@ -7,7 +7,10 @@ import scipy.linalg as linalg
 import scipy.special as special
 import scipy.spatial.distance as distance
 
-from utils import *
+import imp
+
+import utils
+imp.reload(utils)
 
 
 

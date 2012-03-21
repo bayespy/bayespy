@@ -39,20 +39,33 @@ class CholeskySparse():
         #np.sum(np.log(LD.D()))
 
     def trace_solve_gradient(self, dK):
+        # WTF?! numpy.multiply doesn't work for two sparse
+        # matrices.. It returns a result but it is incorrect!
+        
         # Use the identity trace(K\dK)=sum(inv(K).*dK) by computing
         # the sparse inverse (lower triangular part)
-        print("HERE 1\n")
-        print(self.LD.L())
+        #print("HERE 1\n")
+        #print(self.LD.L())
         iK = self.LD.spinv()
-        print(self.LD.L())
-        print(iK)
-        print("HERE 2\n")
+        #print(self.LD.L())
+        #print("Compare spinv to inv")
+        #print(iK.todense())
+        #print(self.LD.inv().todense())
+        #print("HERE 2\n")
         #print(iK.todense())
         # Multiply by two because of symmetry (remove diagonal once
         # because it was taken into account twice)
-        return (2*np.multiply(iK, dK).sum()
+        #print("Try this")
+        #print(self.LD.inv().todense())
+        #return np.multiply(self.LD.inv().todense(),dK.todense()).sum()
+        #return self.LD.inv().multiply(dK).sum() # THIS WORKS
+        #return np.multiply(self.LD.inv(),dK).sum() # THIS NOT WORK!! WTF??
+        return (2*iK.multiply(dK).sum()
                 - iK.diagonal().dot(dK.diagonal()))
+        #return (2*np.multiply(iK, dK).sum()
+        #        - iK.diagonal().dot(dK.diagonal())) # THIS NOT WORK!!
         #return np.trace(self.solve(dK))
+    
     
 def cholesky(K):
     if isinstance(K, np.ndarray):

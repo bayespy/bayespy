@@ -62,9 +62,9 @@ def test_sparse_gp():
     ## Generate data
 
     # Noisy observations from a sinusoid
-    N = 500
+    N = 1000
     func = lambda x: np.sin(x*2*np.pi/5)
-    x = np.random.uniform(low=0, high=N/10, size=(500,))
+    x = np.random.uniform(low=0, high=N/10, size=(N,))
     f = func(x)
     y = f + np.random.normal(0, 0.2, np.shape(f))
 
