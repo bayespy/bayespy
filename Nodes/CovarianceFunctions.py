@@ -75,8 +75,13 @@ def squared_distance(x1, x2):
     ## d = np.shape(x1)[-1]
     ## x1 = np.reshape(x1, (-1,d))
     ## x2 = np.reshape(x2, (-1,d))
-    # Compute squared Euclidean distance
-    D2 = dist.cdist(x1, x2, metric='sqeuclidean')
+    (m1,n1) = x1.shape
+    (m2,n2) = x2.shape
+    if m1 == 0 or m2 == 0:
+        D2 = np.empty((m1,m2))
+    else:
+        # Compute squared Euclidean distance
+        D2 = dist.cdist(x1, x2, metric='sqeuclidean')
     #D2 = np.asmatrix(D2)
     # Reshape the result
     #D2 = np.reshape(D2, sh1 + sh2)
@@ -95,16 +100,17 @@ def squared_distance(x1, x2):
 # value  ->  (value, [])
 
 def gp_standardize_input(x):
-    if np.ndim(x) == 1:
-        x = np.atleast_2d(x).T
-        #x = np.asmatrix(x).T
-    else:
+    if np.size(x) == 0:
+        x = np.reshape(x, (0,0))
+    elif np.ndim(x) == 0:
+        x = np.reshape(x, (1,1))
+    elif np.ndim(x) == 1:
+        x = np.reshape(x, (-1,1))
+    elif np.ndim(x) == 2:
         x = np.atleast_2d(x)
-        # x = np.asmatrix(x)
-    ## if np.ndim(x) == 0:
-    ##     x = add_trailing_axes(x, 2)
-    ## elif np.ndim(x) == 1:
-    ##     x = add_trailing_axes(x, 1)
+    else:
+        raise Exception("Standard GP inputs must be 2-dimensional")
+
     return x
 
 def gp_preprocess_inputs(*args):
@@ -461,6 +467,12 @@ class CovarianceFunction(ef.Node):
 
         ef.Node.__init__(self, *params, dims=[(np.inf, np.inf)], **kwargs)
 
+
+    def __call__(self, x1, x2):
+        """ Compute covariance matrix for inputs x1 and x2. """
+        covfunc = self.message_to_child()
+        return covfunc(x1, x2)[0]
+
     def message_to_child(self, gradient=False):
 
         params = [parent.message_to_child(gradient=gradient) for parent in self.parents]
@@ -557,12 +569,6 @@ class Sum(CovarianceFunction):
                     except:
                         # You have to do this way, for instance, if
                         # K_sum is sparse and K[0] is dense.
-                        ## print(K_sum)
-                        ## print(K[0])
-                        ## print(np.shape(K_sum))
-                        ## print(np.shape(K[0]))
-                        ## print(K_sum.__class__)
-                        ## print(K[0].__class__)
                         K_sum = K_sum + K[0]
 
             if gradient:
