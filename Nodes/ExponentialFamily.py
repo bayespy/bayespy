@@ -12,6 +12,33 @@ import imp
 import utils
 imp.reload(utils)
 
+## # Differentiate model and inference (and data).
+## #
+## # Pseudo code:
+
+## # Model:
+## mu = Gaussian(0, 1, plates=(10,))
+## tau = Gamma(0.1, 0.1, plates=(10,))
+## Y = Gaussian(X, tau, plates=(5,10))
+
+## # Data;
+## Y.observe(rand(5,10))
+
+## # Inference engine
+## Q = VB(X,tau,Y) # or Q = Gibbs(X,tau,Y) or Q = EP(..), Q = MAP(..)
+## # or
+## Q = VB()
+## Q.add(VBGaussian(X))
+## Q.add(VBGamma(tau))
+## Q.add(VBGaussian(Y))
+## # Inference algorithm
+## Q.inference(maxiter=100)
+## # or
+## for i in range(100):
+##     Q(X).update()
+##     Q(tau).update()
+    
+
 
 
 # A node must have the following methods in order to communicate with
