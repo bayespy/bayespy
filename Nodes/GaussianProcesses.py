@@ -160,8 +160,10 @@ def gp_posterior_moment_function(m, k, x, y, k_sparse=None, pseudoinputs=None, n
                         # This may consume A LOT of memory for sparse
                         # matrices.
                         k_h += np.asarray(K_xh.multiply(utils.chol_solve(U_lambda, K_xh))).sum(axis=0)
-                        
-                return [m_h, k_h]
+                # Ensure non-negative variances        
+                k_h[k_h<0] = 0
+                
+                return (m_h, k_h)
                     
             elif covariance == 2:
                 ## Compute full covariance matrix
@@ -175,9 +177,9 @@ def gp_posterior_moment_function(m, k, x, y, k_sparse=None, pseudoinputs=None, n
                 if pseudoinputs != None:
                     K_hh += K_xh.T.dot(utils.chol_solve(U_lambda, K_xh))
                     #K_hh += np.dot(K_xh.T, utils.chol_solve(U_lambda, K_xh))
-                return [m_h, K_hh]
+                return (m_h, K_hh)
         else:
-            return [m_h, None]
+            return (m_h, None)
 
 
     return get_moments
@@ -200,6 +202,21 @@ class Constant(EF.Node):
                 return [self.f(x), None]
 
         return func
+
+#class MultiDimensional(EF.NodeVariable):
+#    """ A multi-dimensional Gaussian process f(x). """
+
+class ToGaussian(EF.NodeVariable):
+
+    """ Deterministic node which transform a Gaussian process into
+    finite-dimensional Gaussian variable. """
+
+    def __init__(self, f, x, **kwargs):
+        EF.NodeVariable.__init__(self,
+                                 f,
+                                 x,
+                                 plates=
+                                 dims=
     
 # Deterministic node for creating a set of GPs which can be used as a
 # mean function to a general GP node.
@@ -300,6 +317,16 @@ class GaussianProcess(EF.NodeVariable):
                                  **kwargs)
             
 
+    def __call__(self, x, covariance=None):
+        if not covariance:
+            return self.u(x, covariance=False)[0]
+        elif covariance.lower() == 'vector':
+            return self.u(x, covariance=1)
+        elif covariance.lower() == 'matrix':
+            return self.u(x, covariance=2)
+        else:
+            raise Exception("Unknown covariance type requested")
+            
 
     def message_to_parent(self, index):
         if index == 0:

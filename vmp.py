@@ -3,7 +3,11 @@ import numpy as np
 #import scipy as sp
 import matplotlib.pyplot as plt
 import time
-import profile
+
+# Profiling stuff
+#import profile
+import cProfile
+import pstats
 
 
 import imp
@@ -83,9 +87,9 @@ def test_sparse_gp():
     ## Generate data
 
     # Noisy observations from a sinusoid
-    N = 500
-    func = lambda x: np.sin(x*2*np.pi/5)
-    x = np.random.uniform(low=0, high=N/10, size=(500,))
+    N = 10000
+    func = lambda x: np.sin(x*2*np.pi/20)
+    x = np.random.uniform(low=0, high=N, size=(N,))
     f = func(x)
     y = f + np.random.normal(0, 0.2, np.shape(f))
 
@@ -448,7 +452,8 @@ if __name__ == '__main__':
     test_sparse_gp()
     #test_gp()
     #test_pca()
-    #profile.run('test_pca()', 'profile.tmp')
+    #cProfile.run('test_sparse_gp()', 'profile.tmp')
+    #S = pstats.Stats('profile.tmp')
     #test_normal()
     #test_multivariate()
 

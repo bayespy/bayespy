@@ -8,6 +8,12 @@ import scipy.optimize as optimize
 import scipy.sparse as sparse
 import scikits.sparse.cholmod as cholmod
 
+def grid(x1, x2):
+    """ Returns meshgrid as a (M*N,2)-shape array. """
+    (X1, X2) = np.meshgrid(x1, x2)
+    return np.hstack((X1.reshape((-1,1)),X2.reshape((-1,1))))
+
+
 class CholeskyDense():
     
     def __init__(self, K):
@@ -39,20 +45,37 @@ class CholeskySparse():
         #np.sum(np.log(LD.D()))
 
     def trace_solve_gradient(self, dK):
+        # WTF?! numpy.multiply doesn't work for two sparse
+        # matrices.. It returns a result but it is incorrect!
+        
         # Use the identity trace(K\dK)=sum(inv(K).*dK) by computing
         # the sparse inverse (lower triangular part)
-        print("HERE 1\n")
-        print(self.LD.L())
-        iK = self.LD.spinv()
-        print(self.LD.L())
-        print(iK)
-        print("HERE 2\n")
+        #print("HERE 1\n")
+        #print(self.LD.L())
+        iK = self.LD.spinv(form='lower')
+        return (2*iK.multiply(dK).sum()
+                - iK.diagonal().dot(dK.diagonal()))
+        #print(self.LD.L())
+        #print("Compare spinv to inv")
+        #print(iK.todense())
+        #print(self.LD.inv().todense())
+        #print("HERE 2\n")
         #print(iK.todense())
         # Multiply by two because of symmetry (remove diagonal once
         # because it was taken into account twice)
-        return (2*np.multiply(iK, dK).sum()
-                - iK.diagonal().dot(dK.diagonal()))
+        #print("Try this")
+        #print(self.LD.inv().todense())
+        #return np.multiply(self.LD.inv().todense(),dK.todense()).sum()
+        #return self.LD.inv().multiply(dK).sum() # THIS WORKS
+        #return np.multiply(self.LD.inv(),dK).sum() # THIS NOT WORK!! WTF??
+        iK = self.LD.spinv()
+        return iK.multiply(dK).sum()
+        #return (2*iK.multiply(dK).sum()
+        #        - iK.diagonal().dot(dK.diagonal()))
+        #return (2*np.multiply(iK, dK).sum()
+        #        - iK.diagonal().dot(dK.diagonal())) # THIS NOT WORK!!
         #return np.trace(self.solve(dK))
+    
     
 def cholesky(K):
     if isinstance(K, np.ndarray):
