@@ -20,27 +20,31 @@ imp.reload(myplt)
 #imp.reload(CF)
 #imp.reload(GP)
 
-def pca_model(M, N, D):
-    # Construct the PCA model with ARD
+def gaussianmix_model(N, M, D):
+    # N = number of data vectors
+    # M = number of mixtures
+    # D = dimensionality
+    
+    # Construct the Gaussian mixture model
 
-    # ARD
-    alpha = EF.NodeGamma(1e-10, 1e-10, plates=(D,), name='alpha')
-    diag_alpha = EF.NodeWishartFromGamma(alpha)
-
-    # Loadings
-    W = EF.NodeGaussian(np.zeros(D), diag_alpha, name="W", plates=(M,1))
-
-    # States
-    X = EF.NodeGaussian(np.zeros(D), np.identity(D), name="X", plates=(1,N))
-
-    # PCA
-    WX = EF.NodeDot(W,X)
-
-    # Noise
-    tau = EF.NodeGamma(1e-5, 1e-5, name="tau", plates=(M,N))
-
-    # Noisy observations
-    Y = EF.NodeNormal(WX, tau, name="Y", plates=(M,N))
+    # M prior weights (for components)
+    rho = EF.Dirichlet(np.ones(M),
+                       name='rho')
+    # N M-dimensional weights (for data)
+    alpha = EF.Multinomial(rho,
+                           plates=(N,),
+                           name='alpha')
+    # M D-dimensional component means
+    X = EF.Gaussian(np.zeros(D), np.identity(D),
+                    plates=(M,),
+                    name='X')
+    # M D-dimensional component covariances
+    Sigma = EF.Wishart(1, np.identity(D),
+                       plates(M,),
+                       name='Sigma')
+    # N D-dimensional observation vectors
+    Y = EF.Mixture(X, alpha,
+                   name='Y')
 
     return (Y, WX, W, X, tau, alpha)
 

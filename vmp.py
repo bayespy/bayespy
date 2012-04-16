@@ -43,6 +43,22 @@ imp.reload(GP)
 # * * * * * GaussianVector
 # * Plotting
 
+# VB.update(W,X,tau, repeat=20)
+
+# Protocols:
+# Value
+# VB.GaussianScalar
+# VB.GaussianVector
+# VB.Gamma
+# EP.GaussianScalar
+# ...
+
+# input_protocols = [VB.GaussianScalar, VB.Gamma]
+# output_protocol = VB.GassianVector
+#
+# or do i need to check input protocols.. child checks parents' output
+# protocols and that's it.
+
 def m_plot(x, Y, style):
     Y = np.atleast_2d(Y)
     M = Y.shape[-2]

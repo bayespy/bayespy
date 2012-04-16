@@ -2,6 +2,7 @@
 import numpy as np
 import scipy.sparse as sp
 import matplotlib.pyplot as plt
+#from matplotlib.pyplot import *
 
 def matrixplot(A, colorbar=False):
     if sp.issparse(A):
@@ -27,23 +28,23 @@ def contourplot(x1, x2, y, colorbar=False, filled=True):
 def errorplot(y, error=None, x=None, lower=None, upper=None):
 
     # Default inputs
-    if not x:
+    if x is None:
         x = np.arange(np.size(y))
 
     # Parse errors (lower=lower/error/upper, upper=upper/error/lower)
-    if lower == None:
-        if error != None:
+    if lower is None:
+        if error is not None:
             lower = error
-        elif upper != None:
+        elif upper is not None:
             lower = upper
-    if upper == None:
-        if error != None:
+    if upper is None:
+        if error is not None:
             upper = error
-        elif lower != None:
+        elif lower is not None:
             upper = lower
 
     # Plot errors
-    if (lower != None) and (upper != None):
+    if (lower is not None) and (upper is not None):
         l = y - lower
         u = y + upper
         plt.fill_between(x,
@@ -56,12 +57,26 @@ def errorplot(y, error=None, x=None, lower=None, upper=None):
     # Plot function
     plt.plot(x, y, color=(0,0,0,1))
 
+#def multiplot(plot_function, *args, **kwargs):
+    
+
 def m_plot(x, Y, style):
     Y = np.atleast_2d(Y)
     M = Y.shape[-2]
     for i in range(M):
         plt.subplot(M,1,i+1)
         plt.plot(x, Y[i], style)
+
+## def multi_errorplot(Y, error=None, x=None, lower=None, upper=None):
+
+##     for m in range(M):
+##         for n in range(N):
+##             plt.subplot(M,N,m*N+n)
+##             errorplot(Y[m][n],
+##                       error=error[m][n],
+##                       x=x[m][n],
+##                       lower=lower[m][n],
+##                       upper=upper[m][n])
 
 def m_errorplot(x, Y, L, U):
     Y = np.atleast_2d(Y)

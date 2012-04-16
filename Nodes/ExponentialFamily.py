@@ -131,7 +131,7 @@ class Node:
     def plate_multiplier(self, *args):
         # Check broadcasting of the shapes
         for arg in args:
-            broadcasted_shape(self.plates, arg)
+            utils.broadcasted_shape(self.plates, arg)
             
         r = 1
         for j in range(-len(self.plates),0):
@@ -151,7 +151,7 @@ class Node:
             total_mask = np.logical_or(total_mask, mask)
             for i in range(len(self.dims)):
                 # Check broadcasting shapes
-                sh = broadcasted_shape(self.get_shape(i), np.shape(m[i]))
+                sh = utils.broadcasted_shape(self.get_shape(i), np.shape(m[i]))
                 try:
                     # Try exploiting broadcasting rules
                     msg[i] += m[i]
@@ -196,9 +196,9 @@ class Node:
             parent = self.parents[index]
 
             # Compute mask message
-            s = axes_to_collapse(np.shape(my_mask), parent.plates)
+            s = utils.axes_to_collapse(np.shape(my_mask), parent.plates)
             mask = np.any(my_mask, axis=s, keepdims=True)
-            mask = squeeze_to_dim(mask, len(parent.plates))
+            mask = utils.squeeze_to_dim(mask, len(parent.plates))
             
             # Compact the message to a proper shape
             for i in range(len(m)):
@@ -242,10 +242,10 @@ class Node:
                 shape_parent = parent.get_shape(i)
 
 
-                s = axes_to_collapse(shape_m, shape_parent)
+                s = utils.axes_to_collapse(shape_m, shape_parent)
                 m[i] = np.sum(m[i], axis=s, keepdims=True)
 
-                m[i] = squeeze_to_dim(m[i], len(shape_parent))
+                m[i] = utils.squeeze_to_dim(m[i], len(shape_parent))
                 m[i] *= r
 
             return (m, mask)
@@ -382,7 +382,7 @@ class NodeVariable(Node):
         for (phi_p, phi_q, u_q, dims) in zip(phi, self.phi, self.u, self.dims):
             # Form a mask which puts observed variables to zero and
             # broadcasts properly
-            latent_mask = add_axes(latent_mask,
+            latent_mask = utils.add_axes(latent_mask,
                                    len(self.plates) - np.ndim(latent_mask),
                                    len(dims))
             axis_sum = tuple(range(-len(dims),0))
@@ -414,7 +414,7 @@ class NodeVariable(Node):
 
         self.observed = mask
         for i in range(len(self.u)):
-            obs_mask = add_axes(mask,
+            obs_mask = utils.add_axes(mask,
                                 len(self.plates) - np.ndim(mask),
                                 len(self.dims[i]))
             self.u[i] = (obs_mask * u[i]
@@ -500,7 +500,7 @@ class NodeConstantGaussian(NodeConstant):
         X = np.atleast_1d(X)
         d = X.shape[-1]
         NodeConstant.__init__(self,
-                              [X, m_outer(X, X)],
+                              [X, utils.m_outer(X, X)],
                               plates=X.shape[:-1],
                               dims=[(d,), (d,d)],
                               **kwargs)
@@ -511,7 +511,7 @@ class NodeConstantWishart(NodeConstant):
         if Lambda.shape[-1] != Lambda.shape[-2]:
             raise Exception("Lambda not a square matrix.")
         NodeConstant.__init__(self,
-                              [Lambda, m_chol_logdet(m_chol(Lambda))],
+                              [Lambda, utils.m_chol_logdet(utils.m_chol(Lambda))],
                               plates=Lambda.shape[:-2],
                               dims=[Lambda.shape[-2:], ()],
                               **kwargs)
@@ -660,11 +660,11 @@ class NodeWishart(NodeVariable):
 
 
     def update_moments_and_g(self):
-        U = m_chol(-self.phi[0])
+        U = utils.m_chol(-self.phi[0])
         k = self.dims[0][0]
         #k = U[0].shape[0]
-        logdet_phi0 = m_chol_logdet(U)
-        self.u[0] = self.phi[1][...,np.newaxis,np.newaxis] * m_chol_inv(U)
+        logdet_phi0 = utils.m_chol_logdet(U)
+        self.u[0] = self.phi[1][...,np.newaxis,np.newaxis] * utils.m_chol_inv(U)
         self.u[1] = -logdet_phi0 + m_digamma(self.phi[1], k)
 
         ## self.u[0] = self.phi[1][...,np.newaxis,np.newaxis] * m_chol_inv(U)
@@ -712,19 +712,19 @@ class NodeGaussian(NodeVariable):
                               **kwargs)
 
     def compute_phi_from_parents(self, u_parents):
-        return [m_dot(u_parents[1][0], u_parents[0][0]),
+        return [utils.m_dot(u_parents[1][0], u_parents[0][0]),
                 -0.5 * u_parents[1][0]]
 
 
     def update_moments_and_g(self):
-        L = m_chol(-self.phi[1])
+        L = utils.m_chol(-self.phi[1])
         # Moments
-        self.u[0] = m_chol_solve(L, 0.5*self.phi[0])
-        self.u[1] = (m_outer(self.u[0], self.u[0])
-                     + 0.5 * m_chol_inv(L))
+        self.u[0] = utils.m_chol_solve(L, 0.5*self.phi[0])
+        self.u[1] = (utils.m_outer(self.u[0], self.u[0])
+                     + 0.5 * utils.m_chol_inv(L))
         # G
         self.g = (-0.5 * np.einsum('...i,...i', self.u[0], self.phi[0])
-                  + 0.5 * m_chol_logdet(L)
+                  + 0.5 * utils.m_chol_logdet(L)
                   + 0.5 * np.log(2) * self.dims[0][0])
 
 
@@ -741,24 +741,24 @@ class NodeGaussian(NodeVariable):
 
     def message(self, index, u_parents):
         if index == 0:
-            return [m_dot(u_parents[1][0], self.u[0]),
+            return [utils.m_dot(u_parents[1][0], self.u[0]),
                     -0.5 * u_parents[1][0]]
         elif index == 1:
-            xmu = m_outer(self.u[0], u_parents[0][0])
+            xmu = utils.m_outer(self.u[0], u_parents[0][0])
             return [-0.5 * (self.u[1] - xmu - xmu.swapaxes(-1,-2) + u_parents[0][1]),
                     0.5]
 
 
     def random(self):
-        U = m_chol(-self.phi[1])
+        U = utils.m_chol(-self.phi[1])
         return (self.u[0]
-                + 0.5 * m_chol_solve(U,
+                + 0.5 * utils.m_chol_solve(U,
                                      np.random.normal(0, 1,
                                                       self.get_shape(0))))
 
     def show(self):
         mu = self.u[0]
-        Cov = self.u[1] - m_outer(mu, mu)
+        Cov = self.u[1] - utils.m_outer(mu, mu)
         print("Gaussian(mu, Cov)")
         print("  mu = ")
         print(mu)
@@ -766,7 +766,7 @@ class NodeGaussian(NodeVariable):
         print(str(Cov))
 
     def observe(self, x):
-        self.fix_moments([x, m_outer(x,x)])
+        self.fix_moments([x, utils.m_outer(x,x)])
 
     ## # Pseudo for GPFA:
     ## k1 = gp_cov_se(magnitude=theta1, lengthscale=theta2)
@@ -947,19 +947,19 @@ class NodeDot(Node):
             # function (for efficiency), we need to cancel the
             # effect of the plate-multiplier applied in the
             # message_to_parent function.
-            full_shape = broadcasted_shape_from_arrays(*A)
-            axes = axes_to_collapse(full_shape, parent.get_shape(i))
+            full_shape = utils.broadcasted_shape_from_arrays(*A)
+            axes = utils.axes_to_collapse(full_shape, parent.get_shape(i))
             r = 1
             for j in axes:
                 r *= full_shape[j]
 
             # Compute dot product
-            m[i] = sum_product(*A, axes_to_sum=axes, keepdims=True) / r
+            m[i] = utils.sum_product(*A, axes_to_sum=axes, keepdims=True) / r
 
         # Compute the mask
-        s = axes_to_collapse(np.shape(mask), parent.plates)
+        s = utils.axes_to_collapse(np.shape(mask), parent.plates)
         mask = np.any(mask, axis=s, keepdims=True)
-        mask = squeeze_to_dim(mask, len(parent.plates))
+        mask = utils.squeeze_to_dim(mask, len(parent.plates))
 
         return (m, mask)
 
