@@ -18,6 +18,27 @@ imp.reload(EF)
 imp.reload(CF)
 imp.reload(GP)
 
+# * Model
+# * * Nodes
+# * * * GaussianScalar
+# * * * GaussianVector
+# * * * Gamma
+# * Inference
+# * * VB
+# * * * Nodes
+# * * * * GaussianScalar
+# * * * * GaussianVector
+# * * * * Gamma
+# * * * * Constant
+# * * * * Delta
+# * * EP
+# * * MCMC
+# * * * Nodes
+# * * * * Gibbs
+# * * * * * GaussianScalar
+# * * * * * GaussianVector
+# * Plotting
+
 def m_plot(x, Y, style):
     Y = np.atleast_2d(Y)
     M = Y.shape[-2]
