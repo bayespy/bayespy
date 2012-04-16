@@ -43,7 +43,7 @@ def gaussianmix_model(N, M, D):
                        plates(M,),
                        name='Sigma')
     # N D-dimensional observation vectors
-    Y = EF.Mixture(X, alpha,
+    Y = EF.Mixture(X, Sigma, alpha,
                    name='Y')
 
     return (Y, WX, W, X, tau, alpha)

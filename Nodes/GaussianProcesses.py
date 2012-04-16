@@ -206,17 +206,17 @@ class Constant(EF.Node):
 #class MultiDimensional(EF.NodeVariable):
 #    """ A multi-dimensional Gaussian process f(x). """
 
-class ToGaussian(EF.NodeVariable):
+## class ToGaussian(EF.NodeVariable):
 
-    """ Deterministic node which transform a Gaussian process into
-    finite-dimensional Gaussian variable. """
+##     """ Deterministic node which transform a Gaussian process into
+##     finite-dimensional Gaussian variable. """
 
-    def __init__(self, f, x, **kwargs):
-        EF.NodeVariable.__init__(self,
-                                 f,
-                                 x,
-                                 plates=
-                                 dims=
+##     def __init__(self, f, x, **kwargs):
+##         EF.NodeVariable.__init__(self,
+##                                  f,
+##                                  x,
+##                                  plates=
+##                                  dims=
     
 # Deterministic node for creating a set of GPs which can be used as a
 # mean function to a general GP node.
