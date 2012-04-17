@@ -26,13 +26,32 @@ imp.reload(GP)
 
 # MULTIVARIATE GP!!
 
+def gpfa_model(x_a, x_s, n_a, n_s, D):
+    # This?
+    for i in range(D):
+        amp[i] = EF.Delta(name='amplitude-'+str(i))
+        ls[i] = EF.Delta(name='lengthscale-'+str(i))
+        cf[i] = CF.PiecewisePolynomial2(amp[i], ls[i])
+    cf_a = CF.Multiple(cf)
+    a = GP.GaussianProcess(0, cf_a, name='a')
+    indices = np.arange(D*n_a).reshape((n_a,D))  # maybe some better way to express this?
+    x_A = [x_a] * D
+    A = GP.ProcessToVector(a, x_A, indices)
+    # This?
+    amp = EF.Delta(name='amplitude', plates=(D,))
+    ls = EF.Delta(name='lengthscale', plates=(D,))
+    cf = CF.PiecewisePolynomial2(amp, ls)
+    cf_a = CF.Multiple(cf)
+    a = GP.GaussianProcess(0, cf_a, name='a')
+    A = GP.ProcessToVector(a, x_a)
+
 def run():
     
     ## Generate data
 
     # Noisy observations from a sinusoid
-    N = 10000
-    func = lambda x: np.sin(x*2*np.pi/50)
+    N = 100
+    #func = lambda x: np.sin(x*2*np.pi/50)
     x = np.random.uniform(low=0, high=N, size=(N,))
     f = func(x)
     y = f + np.random.normal(0, 0.2, np.shape(f))

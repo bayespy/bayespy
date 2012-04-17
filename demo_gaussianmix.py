@@ -31,7 +31,7 @@ def gaussianmix_model(N, M, D):
     rho = EF.Dirichlet(np.ones(M),
                        name='rho')
     # N M-dimensional weights (for data)
-    alpha = EF.Multinomial(rho,
+    alpha = EF.Categorical(rho,
                            plates=(N,),
                            name='alpha')
     # M D-dimensional component means
@@ -45,6 +45,7 @@ def gaussianmix_model(N, M, D):
     # N D-dimensional observation vectors
     Y = EF.Mixture(X, Sigma, alpha,
                    name='Y')
+    # What is the output of mixture node??? Gaussian? :/
 
     return (Y, WX, W, X, tau, alpha)
 
