@@ -37,6 +37,12 @@ imp.reload(utils)
 ## for i in range(100):
 ##     Q(X).update()
 ##     Q(tau).update()
+
+
+
+# Gradients:
+#
+# ( (x1,...,xn), ( (dx1,...,dxn,callback), ..., (dx1,...,dxn,callback) ) )
     
 
 

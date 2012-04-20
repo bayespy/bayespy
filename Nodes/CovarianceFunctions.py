@@ -113,39 +113,67 @@ def gp_standardize_input(x):
 
     return x
 
-def gp_preprocess_inputs(*args):
-    args = list(args)
-    if len(args) < 1 or len(args) > 2:
-        raise Exception("Number of inputs must be one or two")
-    if len(args) == 2:
-        if args[0] is args[1]:
-            args[0] = gp_standardize_input(args[0])
-            args[1] = args[0]
-        else:
-            args[1] = gp_standardize_input(args[1])
-            args[0] = gp_standardize_input(args[0])
+def gp_preprocess_inputs(x1,x2=None):
+    #args = list(args)
+    #if len(args) < 1 or len(args) > 2:
+        #raise Exception("Number of inputs must be one or two")
+    if x2 is None:
+        x1 = gp_standardize_input(x1)
+        return x1
     else:
-        args[0] = gp_standardize_input(args[0])
+        if x1 is x2:
+            x1 = gp_standardize_input(x1)
+            x2 = x1
+        else:
+            x1 = gp_standardize_input(x1)
+            x2 = gp_standardize_input(x2)
+        return (x1, x2)
         
-    return args
+    #return args
+## def gp_preprocess_inputs(x1,x2=None):
+##     #args = list(args)
+##     #if len(args) < 1 or len(args) > 2:
+##         #raise Exception("Number of inputs must be one or two")
+##     if x2 is not None: len(args) == 2:
+##         if args[0] is args[1]:
+##             args[0] = gp_standardize_input(args[0])
+##             args[1] = args[0]
+##         else:
+##             args[1] = gp_standardize_input(args[1])
+##             args[0] = gp_standardize_input(args[0])
+##     else:
+##         args[0] = gp_standardize_input(args[0])
+        
+##     return args
 
-def covfunc_zeros(theta, *inputs, gradient=False):
+# TODO:
+# General syntax for these covariance functions:
+# covfunc(hyper1,
+#         hyper2,
+#         ...
+#         hyperN,
+#         x1,
+#         x2=None,
+#         gradient=list_of_booleans_for_each_hyperparameter)
+
+def covfunc_zeros(x1, x2=None, gradient=False):
 
     inputs = gp_preprocess_inputs(*inputs)
 
     # Compute distance and covariance matrix
-    if len(inputs) == 1:
+    if x2 is None:
+        x1 = gp_preprocess_inputs(x1)
         # Only variance vector asked
-        x = inputs[0]
-        N = np.shape(x)[0]
+        N = np.shape(x1)[0]
         # TODO: Use sparse matrices!
         K = np.zeros(N)
         #K = np.asmatrix(np.zeros((N,1)))
 
     else:
+        (x1,x2) = gp_preprocess_inputs(x1,x2)
         # Full covariance matrix asked
-        x1 = inputs[0]
-        x2 = inputs[1]
+        #x1 = inputs[0]
+        #x2 = inputs[1]
         # Number of inputs x1
         N1 = np.shape(x1)[0]
         N2 = np.shape(x2)[0]
@@ -154,33 +182,35 @@ def covfunc_zeros(theta, *inputs, gradient=False):
         K = np.zeros((N1,N2))
         #K = np.asmatrix(np.zeros((N1,N2)))
 
-    if gradient != False:
+    if gradient is not False:
         return (K, [])
     else:
         return K
 
-def covfunc_delta(theta, *inputs, gradient=False):
+def covfunc_delta(amplitude, x1, x2=None, gradient=False):
 
-    amplitude = theta[0]
+    #amplitude = theta[0]
 
-    if gradient:
-        gradient_amplitude = gradient[0]
-    else:
-        gradient_amplitude = []
+    ## if gradient:
+    ##     gradient_amplitude = gradient[0]
+    ## else:
+    ##     gradient_amplitude = []
 
-    inputs = gp_preprocess_inputs(*inputs)
+    ## inputs = gp_preprocess_inputs(*inputs)
 
     # Compute distance and covariance matrix
-    if len(inputs) == 1:
+    if x2 is None:
+        x1 = gp_preprocess_inputs(x1)
         # Only variance vector asked
-        x = inputs[0]
-        N = np.shape(x)[0]
+        #x = inputs[0]
+        N = np.shape(x1)[0]
         K = np.ones(N) * amplitude**2
 
     else:
+        (x1,x2) = gp_preprocess_inputs(x1,x2)
         # Full covariance matrix asked
-        x1 = inputs[0]
-        x2 = inputs[1]
+        #x1 = inputs[0]
+        #x2 = inputs[1]
         # Number of inputs x1
         N1 = np.shape(x1)[0]
 
@@ -208,66 +238,50 @@ def covfunc_delta(theta, *inputs, gradient=False):
 
     # Gradient w.r.t. amplitude
     if gradient:
-        for ind in range(len(gradient_amplitude)):
-            # FIXME: Broadcasting doesn't work with sparse matrices,
-            # so turn the array into a scalar.
-            gradient_amplitude[ind] = K * (gradient_amplitude[ind][0] *
-                                           (2/amplitude[0]))
-            #gradient_amplitude[ind] = K.multiply(gradient_amplitude[ind] * (2/amplitude))
-            ## gradient_amplitude[ind] = np.multiply(K,
-            ##                                       gradient_amplitude[ind] * (2/amplitude))
-
-    if gradient:
-        return (K, gradient)
+        # FIXME: Broadcasting doesn't work with sparse matrices,
+        # so turn the array into a scalar.
+        gradient_amplitude = K*(2/amplitude[0])
+        return (K, (gradient_amplitude,))
     else:
         return K
 
-def covfunc_pp2(theta, *inputs, gradient=False):
+def covfunc_pp2(amplitude, lengthscale, x1, x2, gradient=False):
 
-    amplitude = theta[0]
-    lengthscale = theta[1]
+    #amplitude = theta[0]
+    #lengthscale = theta[1]
 
-    if gradient:
-        gradient_amplitude = gradient[0]
-        gradient_lengthscale = gradient[1]
-    else:
-        gradient_amplitude = []
-        gradient_lengthscale = []
+    ## if gradient:
+    ##     gradient_amplitude = gradient[0]
+    ##     gradient_lengthscale = gradient[1]
+    ## else:
+    ##     gradient_amplitude = []
+    ##     gradient_lengthscale = []
 
-    inputs = gp_preprocess_inputs(*inputs)
+    ## inputs = gp_preprocess_inputs(*inputs)
 
     # Compute covariance matrix
-    if len(inputs) == 1:
-        x = inputs[0]
+    if x2 is None:
+        x1 = gp_preprocess_inputs(x1)
         # Compute variance vector
         K = np.ones(np.shape(x)[:-1])
         K *= amplitude**2
         # Compute gradient w.r.t. lengthscale
-        for ind in range(len(gradient_lengthscale)):
-            gradient_lengthscale[ind] = np.zeros(np.shape(x)[:-1])
+        if gradient:
+            gradient_lengthscale = np.zeros(np.shape(x1)[:-1])
     
     else:
-        x1 = inputs[0] / (lengthscale)
-        if inputs[0] is inputs[1]:
+        (x1,x2) = gp_preprocess_inputs(x1,x2)
+        # Compute (sparse) distance matrix
+        if x1 is x2:
+            x1 = inputs[0] / (lengthscale)
             x2 = x1
             D2 = spdist.pdist(x1, 1.0, form="full", format="csc")
         else:
+            x1 = inputs[0] / (lengthscale)
             x2 = inputs[1] / (lengthscale)
             D2 = spdist.cdist(x1, x2, 1.0, format="csc")
         r = np.sqrt(D2.data)
 
-        # Compute (sparse) distance matrix
-
-        #################
-        ## OLD STUFF
-        #x1 = inputs[0] / (lengthscale)
-        #x2 = inputs[1] / (lengthscale)
-        #D2 = squared_distance(x1, x2)
-        #(i,j) = np.where(D2<1)
-        #ij = np.vstack((i,j))
-        #r = np.sqrt(D2[i,j])
-        ##########################
-        
         N1 = np.shape(x1)[0]
         N2 = np.shape(x2)[0]
         
@@ -279,21 +293,12 @@ def covfunc_pp2(theta, *inputs, gradient=False):
         k *= amplitude**2
         # Compute gradient w.r.t. lengthscale
         if gradient:
-            dk *= amplitude**2
-            #print('her i aam', (N1, N2))
-            for ind in range(len(gradient_lengthscale)):
-                # FIXME: Check this gradient
-                ## print(np.shape(lengthscale))
-                ## print(np.shape(gradient_lengthscale[ind]),
-                ##       gradient_lengthscale[ind].__class__)
-                dk_i = (dk * r) * (-gradient_lengthscale[ind] / lengthscale)
-                if N1 >= 1 and N2 >= 1:
-                    ## gradient_lengthscale[ind] = sp.csc_matrix((dk_i, ij),
-                    ##                                           shape=(N1,N2))
-                    gradient_lengthscale[ind] = sp.csc_matrix((dk_i, D2.indices, D2.indptr),
-                                                              shape=(N1,N2))
-                else:
-                    gradient_lengthscale[ind] = np.empty((N1,N2))
+            if N1 >= 1 and N2 >= 1:
+                dk *= r * (-amplitude**2 / lengthscale)
+                gradient_lengthscale = sp.csc_matrix((dk, D2.indices, D2.indptr),
+                                                     shape=(N1,N2))
+            else:
+                gradient_lengthscale = np.empty((N1,N2))
             
         # Form sparse covariance matrix
         if N1 >= 1 and N2 >= 1:
@@ -305,83 +310,58 @@ def covfunc_pp2(theta, *inputs, gradient=False):
 
     # Gradient w.r.t. amplitude
     if gradient:
-        for ind in range(len(gradient_amplitude)):
-            # FIXME: Broadcasting doesn't work with sparse matrices,
-            # so turn the array into a scalar.
-            gradient_amplitude[ind] = K * (2 * gradient_amplitude[ind][0] / amplitude[0])
-            ## gradient_amplitude[ind] = np.multiply(K,
-            ##                                       2 * gradient_amplitude[ind] / amplitude)
+        gradient_amplitude = K * (2 / amplitude[0])
 
     # Return values
     if gradient:
-        return (K, gradient)
+        return (K, (gradient_amplitude, gradient_lengthscale))
     else:
         return K
 
 
-def covfunc_se(theta, *inputs, gradient=False):
-
-    amplitude = theta[0]
-    lengthscale = theta[1]
-
-    if gradient:
-        gradient_amplitude = gradient[0]
-        gradient_lengthscale = gradient[1]
-    else:
-        gradient_amplitude = []
-        gradient_lengthscale = []
-
-    inputs = gp_preprocess_inputs(*inputs)
+def covfunc_se(amplitude, lengthscale, x1, x2=None, gradient=False):
 
     # Compute covariance matrix
-    if len(inputs) == 1:
-        x = inputs[0]
+    if x2 is None
+        x1 = gp_preprocess_inputs(x1)
+        #x = inputs[0]
         # Compute variance vector
-        N = np.shape(x)[0]
+        N = np.shape(x1)[0]
         K = np.ones(N)
         np.multiply(K, amplitude**2, out=K)
-        #K *= amplitude**2
         # Compute gradient w.r.t. lengthscale
-        for ind in range(len(gradient_lengthscale)):
+        if gradient:
             # TODO: Use sparse matrices?
-            gradient_lengthscale[ind] = np.zeros(N)
+            gradient_lengthscale = np.zeros(N)
     else:
-        x1 = inputs[0] / (lengthscale)
-        x2 = inputs[1] / (lengthscale)
+        (x1,x2) = gp_preprocess_inputs(x1,x2)
+        x1 = x1 / (lengthscale)
+        x2 = x2 / (lengthscale)
         # Compute distance matrix
         K = squared_distance(x1, x2)
         # Compute gradient partly
         if gradient:
-            for ind in range(len(gradient_lengthscale)):
-                dl = (lengthscale**-1) * gradient_lengthscale[ind]
-                gradient_lengthscale[ind] = np.multiply(K, dl)
+            gradient_lengthscale = np.divide(K, lengthscale)
         # Compute covariance matrix
         gp_cov_se(K, overwrite=True)
         np.multiply(K, amplitude**2, out=K)
-        #K *= amplitude**2
         # Compute gradient w.r.t. lengthscale
         if gradient:
-            for ind in range(len(gradient_lengthscale)):
-                gradient_lengthscale[ind] *= K
+            gradient_lengthscale *= K
 
     # Gradient w.r.t. amplitude
     if gradient:
-        for ind in range(len(gradient_amplitude)):
-            da = 2 * gradient_amplitude[ind] / amplitude
-            gradient_amplitude[ind] = np.multiply(K, da)
-
-    #print('gradient in se', gradient)
+        gradient_amplitude = K * (2 / amplitude)
 
     # Return values
     if gradient:
-        return (K, gradient)
+        return (K, (gradient_amplitude, gradient_lengthscale))
     else:
         return K
 
 
 class CovarianceFunctionWrapper():
     def __init__(self, covfunc, *params):
-        self.laskuri = 0
         # Parse parameter values and their gradients to separate lists
         self.covfunc = covfunc
         self.params = list(params)
@@ -406,18 +386,8 @@ class CovarianceFunctionWrapper():
 
         if gradient:
 
-            #self.laskuri += 1
-            #print('Laskuri in fixed_covariance_function')
-            #print(self.laskuri)
-
-            #print(self.gradient_params)
-
             grads = [[grad[0] for grad in self.gradient_params[ind]]
                      for ind in range(len(self.gradient_params))]
-
-            #print('in covfuncwrap', grads)
-
-            #print(self.gradient_params)
 
             ## (K, dK) = self.covfunc(self.params,
             ##                        *inputs,
@@ -434,14 +404,8 @@ class CovarianceFunctionWrapper():
                     #grad[0] = dk
                     DK += [ [dk] + grad[1:] ]
 
-            #print(self.gradient_params)
-            #print(DK)
             K = [K]
-            #dK = []
-            #for grad in self.gradient_params:
-                #dK += grad
 
-            #print(self.gradient_params)
             return (K, DK)
 
         else:
@@ -550,12 +514,12 @@ class Sum(CovarianceFunction):
                                     *args,
                                     **kwargs)
 
-    def get_fixed_covariance_function(self, *covfuncs):
-        def cov(*inputs, gradient=False):
+    def get_fixed_covariance_function(self, *covfunc_parents):
+        def covfunc(*inputs, gradient=False):
             K_sum = None
             if gradient:
                 dK_sum = list()
-            for k in covfuncs:
+            for k in covfunc_parents:
                 if gradient:
                     (K, dK) = k(*inputs, gradient=gradient)
                     dK_sum += dK
@@ -577,7 +541,7 @@ class Sum(CovarianceFunction):
             else:
                 return [K_sum]
 
-        return cov
+        return covfunc
 
 
 class Delta(CovarianceFunction):
@@ -693,24 +657,9 @@ class Multiple(CovarianceFunction):
                         # Empty sparse matrices. Some weird stuff here
                         # because sparse matrices can't have zero
                         # length dimensions.
-                        #
                         Z = [[sp.csc_matrix(np.shape(K[i][j][0][0]))
                               for j in range(n_blocks)]
                               for i in range(n_blocks)]
-                        ## Z = [[None
-                        ##       for j in range(self.d)]
-                        ##       for i in range(self.d)]
-                        ## Z = [[sp.csc_matrix(np.shape(K[i][j][0][0]))
-                        ##       for j in range(self.d)
-                        ##       if np.shape(K[i][j][0])[1] != 0]
-                        ##       for i in range(self.d)
-                        ##       if np.shape(K[i][0][0])[0] != 0]
-                              ## if (np.shape(K[i][j][0][0])[0] > 0 and
-                              ##     np.shape(K[i][j][0][0])[1] > 0)
-                              ## else
-                              ## None
-                              ## for j in range(self.d)]
-                              ## for i in range(self.d)]
                     else:
                         # Empty dense matrices
                         Z = [[np.zeros(np.shape(K[i][j][0][0]))
@@ -723,8 +672,6 @@ class Multiple(CovarianceFunction):
                     dK = list()
                     for i in range(n_blocks):
                         for j in range(n_blocks):
-                    ## for i in range(self.d):
-                    ##     for j in range(self.d):
                             # Store the zero block
                             z_old = Z[i][j]
                             # Go through the gradients for the (i,j)
@@ -759,11 +706,6 @@ class Multiple(CovarianceFunction):
                         K = [[K[i][j][0][0]
                               for j in range(n_blocks)]
                               for i in range(n_blocks)]
-                        ## K = [[K[i][j][0][0]
-                        ##       for j in range(self.d)
-                        ##       if np.shape(K[i][j][0])[1] != 0]
-                        ##       for i in range(self.d)
-                        ##       if np.shape(K[i][0][0])[0] != 0]
                         K = sp.bmat(K).tocsc()
                     else:
                         # Form the full dense covariance matrix from
@@ -774,8 +716,6 @@ class Multiple(CovarianceFunction):
                               K[i][j][0][0].toarray()
                               for j in range(n_blocks)]
                               for i in range(n_blocks)]
-                              ## for j in range(self.d)]
-                              ## for i in range(self.d)]
                         K = np.asarray(np.bmat(K))
 
                 else:
@@ -791,11 +731,6 @@ class Multiple(CovarianceFunction):
                         K = [[K[i][j][0]
                               for j in range(n_blocks)]
                               for i in range(n_blocks)]
-                        ## K = [[K[i][j][0]
-                        ##       for j in range(self.d)
-                        ##       if np.shape(K[i][j][0])[1] != 0]
-                        ##       for i in range(self.d)
-                        ##       if np.shape(K[i][0][0])[0] != 0]
                         K = sp.bmat(K).tocsc()
                     else:
                         # Form the full dense covariance matrix from
@@ -806,8 +741,6 @@ class Multiple(CovarianceFunction):
                               K[i][j][0].toarray()
                               for j in range(n_blocks)]
                               for i in range(n_blocks)]
-                              ## for j in range(self.d)]
-                              ## for i in range(self.d)]
                         K = np.asarray(np.bmat(K))
 
 
