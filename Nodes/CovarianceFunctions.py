@@ -189,7 +189,8 @@ def covfunc_zeros(x1, x2=None, gradient=False):
 
 def covfunc_delta(amplitude, x1, x2=None, gradient=False):
 
-    #amplitude = theta[0]
+    # Make sure that amplitude is a scalar, not an array object
+    amplitude = utils.array_to_scalar(amplitude)
 
     ## if gradient:
     ##     gradient_amplitude = gradient[0]
@@ -220,33 +221,34 @@ def covfunc_delta(amplitude, x1, x2=None, gradient=False):
             # Delta covariance
             #
             # FIXME: Broadcasting doesn't work with sparse matrices,
-            # so turn the array into a scalar.
-            K = gp_cov_delta(N1) * amplitude[0]**2
+            # so must use scalar multiplication
+            K = gp_cov_delta(N1) * amplitude**2
             #K = gp_cov_delta(N1).multiply(amplitude**2)
         else:
             delta = False
             # Number of inputs x2
             N2 = np.shape(x2)[0]
             # Zero covariance
-            # TODO: Use sparse matrix here!
             if N1 > 0 and N2 > 0:
                 K = sp.csc_matrix((N1,N2))
             else:
                 K = np.zeros((N1,N2))
-            #print('there')
-            #K = np.zeros((N1,N2))
 
     # Gradient w.r.t. amplitude
     if gradient:
         # FIXME: Broadcasting doesn't work with sparse matrices,
-        # so turn the array into a scalar.
-        gradient_amplitude = K*(2/amplitude[0])
+        # so must use scalar multiplication
+        gradient_amplitude = K*(2/amplitude)
+        print("noise grad", gradient_amplitude)
         return (K, (gradient_amplitude,))
     else:
         return K
 
 def covfunc_pp2(amplitude, lengthscale, x1, x2, gradient=False):
 
+    # Make sure that hyperparameters are scalars, not an array objects
+    amplitude = utils.array_to_scalar(amplitude)
+    lengthscale = utils.array_to_scalar(lengthscale)
     #amplitude = theta[0]
     #lengthscale = theta[1]
 
@@ -310,10 +312,11 @@ def covfunc_pp2(amplitude, lengthscale, x1, x2, gradient=False):
 
     # Gradient w.r.t. amplitude
     if gradient:
-        gradient_amplitude = K * (2 / amplitude[0])
+        gradient_amplitude = K * (2 / amplitude)
 
     # Return values
     if gradient:
+        print("pp2 grad", gradient_lengthscale)
         return (K, (gradient_amplitude, gradient_lengthscale))
     else:
         return K
@@ -321,8 +324,12 @@ def covfunc_pp2(amplitude, lengthscale, x1, x2, gradient=False):
 
 def covfunc_se(amplitude, lengthscale, x1, x2=None, gradient=False):
 
+    # Make sure that hyperparameters are scalars, not an array objects
+    amplitude = utils.array_to_scalar(amplitude)
+    lengthscale = utils.array_to_scalar(lengthscale)
+
     # Compute covariance matrix
-    if x2 is None
+    if x2 is None:
         x1 = gp_preprocess_inputs(x1)
         #x = inputs[0]
         # Compute variance vector
@@ -355,6 +362,7 @@ def covfunc_se(amplitude, lengthscale, x1, x2=None, gradient=False):
 
     # Return values
     if gradient:
+        print("se grad", gradient_amplitude, gradient_lengthscale)
         return (K, (gradient_amplitude, gradient_lengthscale))
     else:
         return K
@@ -386,33 +394,58 @@ class CovarianceFunctionWrapper():
 
         if gradient:
 
-            grads = [[grad[0] for grad in self.gradient_params[ind]]
-                     for ind in range(len(self.gradient_params))]
+            ## grads = [[grad[0] for grad in self.gradient_params[ind]]
+            ##          for ind in range(len(self.gradient_params))]
 
             ## (K, dK) = self.covfunc(self.params,
             ##                        *inputs,
             ##                        gradient=self.gradient_params)
-            (K, dK) = self.covfunc(self.params,
-                                   *inputs,
-                                   gradient=grads)
+            arguments = tuple(self.params) + tuple(inputs)
+            (K, dK) = self.covfunc(*arguments,
+                                   gradient=True)
+            ## (K, dK) = self.covfunc(self.params,
+            ##                        *inputs,
+            ##                        gradient=grads)
 
-            #print(self.gradient_params)
-            # FIXME: This messes up self.gradient_params
             DK = []
             for ind in range(len(dK)):
-                for (grad, dk) in zip(self.gradient_params[ind], dK[ind]):
-                    #grad[0] = dk
-                    DK += [ [dk] + grad[1:] ]
+                # Gradient w.r.t. covariance function's ind-th
+                # hyperparameter
+                dk = dK[ind]
+                # Chain rule: Multiply by the gradient of the
+                # hyperparameter w.r.t. parent node and append the
+                # list DK:
+                # DK = [ (dx1_1, callback), ..., (dx1_n, callback) ]
+                for grad in self.gradient_params[ind]:
+                    #print(grad[0])
+                    #print(grad[1:])
+                    #print(dk)
+                    if sp.issparse(dk):
+                        print(dk.shape)
+                        print(grad[0].shape)
+                        DK += [ [dk.multiply(grad[0])] + grad[1:] ]
+                    else:
+                        DK += [ [np.multiply(dk,grad[0])] + grad[1:] ]
+                    #DK += [ [np.multiply(grad[0], dk)] + grad[1:] ]
+                ## DK += [ (np.multiply(grad, dk),) + grad[1:]
+                ##         for grad in self.gradient_params[ind] ]
+                
+                ## for grad in self.gradient_params[ind]:
+                ##     DK += ( (np.multiply(grad, dk),) + grad[1:] )
+            ## DK = []
+            ## for ind in range(len(dK)):
+            ##     for (grad, dk) in zip(self.gradient_params[ind], dK[ind]):
+            ##         DK += [ [dk] + grad[1:] ]
 
             K = [K]
 
             return (K, DK)
 
         else:
-            K = self.covfunc(self.params,
-                             *inputs,
+            arguments = tuple(self.params) + tuple(inputs)
+            #print(arguments)
+            K = self.covfunc(*arguments,
                              gradient=False)
-            #print(K.__class__)
             return [K]
 
 class CovarianceFunction(ef.Node):
@@ -522,7 +555,9 @@ class Sum(CovarianceFunction):
             for k in covfunc_parents:
                 if gradient:
                     (K, dK) = k(*inputs, gradient=gradient)
+                    print("dK in sum", dK)
                     dK_sum += dK
+                    #print("dK_sum in sum", dK_sum)
                 else:
                     K = k(*inputs, gradient=gradient)
                 if K_sum is None:
@@ -536,6 +571,7 @@ class Sum(CovarianceFunction):
                         K_sum = K_sum + K[0]
 
             if gradient:
+                #print("dK_sum on: ", dK_sum)
                 #print('covsum', dK_sum)
                 return ([K_sum], dK_sum)
             else:
@@ -635,6 +671,8 @@ class Multiple(CovarianceFunction):
                           for i in range(self.d)
                           if np.shape(K[i][0][0])[0] != 0]
                 n_blocks = len(K)
+                #print("nblocks", n_blocks)
+                #print("K", K)
 
                 # Check whether all blocks are sparse
                 is_sparse = True
@@ -688,6 +726,7 @@ class Multiple(CovarianceFunction):
                                         Z[i][j] = dk[0].toarray()
                                     else:
                                         Z[i][j] = dk[0]
+                                    #print("Z on:", Z)
                                     dk[0] = np.asarray(np.bmat(Z))
                                 # Append the computed gradient matrix
                                 # to the list of gradients

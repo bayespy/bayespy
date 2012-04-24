@@ -8,6 +8,12 @@ import scipy.optimize as optimize
 import scipy.sparse as sparse
 import scikits.sparse.cholmod as cholmod
 
+def array_to_scalar(x):
+    # This transforms an N-dimensional array to a scalar. It's most
+    # useful when you know that the array has only one element and you
+    # want it out as a scalar.
+    return np.ravel(x)[0]
+
 def grid(x1, x2):
     """ Returns meshgrid as a (M*N,2)-shape array. """
     (X1, X2) = np.meshgrid(x1, x2)

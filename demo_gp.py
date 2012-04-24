@@ -44,9 +44,9 @@ def run():
     ## Construct model
 
     # Covariance function stuff
-    ls = EF.NodeConstantScalar(3, name='lengthscale')
-    amp = EF.NodeConstantScalar(2.0, name='amplitude')
-    noise = EF.NodeConstantScalar(0.6, name='noise')
+    ls = EF.NodeConstantScalar(10, name='lengthscale')
+    amp = EF.NodeConstantScalar(1.0, name='amplitude')
+    noise = EF.NodeConstantScalar(0.2, name='noise')
     # Latent process covariance
     #K_f = CF.SquaredExponential(amp, ls)
     K_f = CF.SquaredExponential(amp, ls)
@@ -58,7 +58,7 @@ def run():
     #K_joint = CF.Multiple([[K_f, K_f],[K_f,K_y]], sparse=True)
 
     # Mean function stuff
-    M = GP.Constant(lambda x: (x/10-2)*(x/10+1))
+    M = GP.Constant(lambda x: np.zeros(np.shape(x)[0]))
     # Means for latent and observation processes
     #M_multi = GP.Multiple([M, M])
 
@@ -69,7 +69,7 @@ def run():
 
     ## Inference
     F.observe([[],x], y)
-    #utils.vb_optimize_nodes(ls, amp, noise)
+    utils.vb_optimize_nodes(ls, amp, noise)
     F.update()
     u = F.get_parameters()
 
@@ -82,15 +82,15 @@ def run():
     #print(noise.name, noise.u[0])
 
     # Posterior predictions
-    xh = np.arange(np.min(x)-5, np.max(x)+10, 0.1)
+    xh = np.arange(np.min(x)-5, np.max(x)+100, 0.1)
     (fh, varfh) = u([[],xh], covariance=1)
     #(fh, varfh) = u([xh,[]], covariance=1)
 
     # Plot predictive distribution
     varfh[varfh<0] = 0
     errfh = np.sqrt(varfh)
-    myplt.errorplot(xh, fh, errfh, errfh)
-    
+    myplt.errorplot(fh, x=xh, error=errfh)
+
     return
 
 

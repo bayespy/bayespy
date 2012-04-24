@@ -42,7 +42,7 @@ imp.reload(utils)
 
 # Gradients:
 #
-# ( (x1,...,xn), ( (dx1,...,dxn,callback), ..., (dx1,...,dxn,callback) ) )
+# ( (x1,...,xn), [ (dx1,...,dxn,callback), ..., (dx1,...,dxn,callback) ] )
     
 
 
