@@ -86,7 +86,7 @@ def run(M=10, N=100, D_y=3, D=5):
         L_tau = tau.lower_bound_contribution()
         L_Y = Y.lower_bound_contribution()
         L_alpha = alpha.lower_bound_contribution()
-        L = L_X + L_W + L_tau + L_Y
+        L = L_X + L_W + L_tau + L_Y + L_alpha
 
         # Check convergence
         print("Iteration %d: loglike=%e (%.3f seconds)" % (i+1, L, time.clock()-t))

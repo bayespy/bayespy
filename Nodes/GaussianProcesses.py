@@ -19,6 +19,13 @@ imp.reload(utils)
 imp.reload(EF)
 imp.reload(CF)
 
+class CovarianceMatrix
+    def cholesky(self):
+        pass
+
+def multiply(A, B):
+    return np.multiply(A,B)
+
 
 
 # m prior mean function

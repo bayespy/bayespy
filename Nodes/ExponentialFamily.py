@@ -404,7 +404,7 @@ class NodeVariable(Node):
                                         np.shape(self.mask)))
         return L
             
-    def fix_moments_and_f(self, u, f, mask):
+    def fix_moments_and_f(self, u, f, mask=1):
         #print(u)
         for (i,v) in enumerate(u):
             # This is what the dimensionality "should" be
@@ -823,6 +823,137 @@ class NodeGaussian(NodeVariable):
     ## kp[1][2](..., ...)
     ## kp[1][3](..., ...)
     ## kp[2][3](..., ...)
+
+class Dirichlet(NodeVariable):
+
+    # Gaussian(mu, inv(Lambda))
+
+    def __init__(self, alpha, plates=(), **kwargs):
+
+        # Check for constant alpha
+        if np.isscalar(alpha) or isinstance(alpha, np.ndarray):
+            gammaln_sum = special.gammaln(np.sum(alpha, axis=-1))
+            sum_gammaln = np.sum(special.gammaln(alpha), axis=-1)
+            z = gammaln_sum - sum_gammaln
+            d = np.shape(alpha)[-1]
+            alpha = NodeConstant([alpha, z],
+                                 plates=np.shape(alpha)[:-1],
+                                 dims=((d,), ()))
+
+        # Construct
+        NodeVariable.__init__(self, alpha,
+                              plates=plates,
+                              dims=alpha.dims[:1],
+                              **kwargs)
+
+    def compute_phi_from_parents(self, u_parents):
+        return [u_parents[0][0]]
+
+
+    def update_moments_and_g(self):
+        sum_gammaln = np.sum(special.gammaln(self.phi[0]), axis=-1)
+        gammaln_sum = special.gammaln(np.sum(self.phi[0], axis=-1))
+        psi_sum = special.psi(np.sum(self.phi[0], axis=-1))
+        
+        # Moments <log x>
+        self.u[0] = special.psi(self.phi[0]) - psi_sum
+        # G
+        self.g = gammaln_sum - sum_gammaln
+
+    def compute_g_from_parents(self, u_parents):
+        return u_parents[0][1]
+
+    def message(self, index, u_parents):
+        if index == 0:
+            return [self.u[0], 1]
+
+    def random(self):
+        raise NotImplementedError()
+
+    def show(self):
+        alpha = self.phi[0]
+        print("Dirichlet(alpha)")
+        print("  alpha = ")
+        print(alpha)
+
+    def observe(self, x):
+        raise NotImplementedError()
+        #self.fix_moments([x, utils.m_outer(x,x)])
+
+class ConstantDirichlet(NodeConstant):
+    def __init__(self, x, **kwargs):
+        x = np.atleast_1d(X)
+        d = x.shape[-1]
+        NodeConstant.__init__(self,
+                              [np.log(x)],
+                              plates=x.shape[:-1],
+                              dims=[(d,)],
+                              **kwargs)
+
+
+class Categorical(NodeVariable):
+
+    # Gaussian(mu, inv(Lambda))
+
+    def __init__(self, p, plates=(), **kwargs):
+
+        # Check for constant mu
+        if np.isscalar(p) or isinstance(p, np.ndarray):
+            p = ConstantDirichlet(p)
+
+        # Construct
+        NodeVariable.__init__(self, p,
+                              plates=plates,
+                              dims=p.dims,
+                              **kwargs)
+
+    def compute_phi_from_parents(self, u_parents):
+        return [u_parents[0][0]]
+
+
+    def update_moments_and_g(self):
+        p = np.exp(self.phi[0])
+        sum_p = np.sum(p, axis=-1, keepdims=True)
+        # Moments
+        self.u[0] = p / sum_p
+        # G
+        self.g = -np.log(sum_p)
+
+    def compute_g_from_parents(self, u_parents):
+        return 0 #-np.log(np.sum(np.exp(u_parents[0][0]), axis=-1))
+
+    def message(self, index, u_parents):
+        if index == 0:
+            return [self.u[0]]
+
+
+    def random(self):
+        raise NotImplementedError()
+
+    def show(self):
+        p = self.u[0] #np.exp(self.phi[0])
+        #p /= np.sum(p, axis=-1, keepdims=True)
+        print("Categorical(p)")
+        print("  p = ")
+        print(p)
+
+    def observe(self, x):
+        # TODO: You could check that x has proper dimensions
+        x = np.array(x, dtype=np.int)
+        
+        # Initial array of zeros
+        d = self.dims[0][0]
+        self.u[0] = np.zeros(np.shape(x)+(d,))
+        
+        # Compute indices
+        x += d*np.arange(np.size(x),dtype=int).reshape(np.shape(x))
+        x = x[...,np.newaxis]
+        # Set 1 to elements corresponding to the observations
+        np.put(self.u[0], x, 1)
+        self.show()
+        
+        self.fix_moments_and_f(self.u, 0)
+
 
 class NodeWishartFromGamma(Node):
     
