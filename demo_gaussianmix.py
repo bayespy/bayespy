@@ -1,78 +1,67 @@
 
 import numpy as np
-#import scipy as sp
 import matplotlib.pyplot as plt
-import plotting as myplt
 import time
-#import profile
-
-
-import imp
 
 import utils
-
+import plotting as myplt
 import Nodes.ExponentialFamily as EF
-#import Nodes.CovarianceFunctions as CF
-#import Nodes.GaussianProcesses as GP
-imp.reload(utils)
-imp.reload(EF)
-imp.reload(myplt)
-#imp.reload(CF)
-#imp.reload(GP)
 
-def gaussianmix_model(N, M, D):
+import imp
+imp.reload(utils)
+imp.reload(myplt)
+imp.reload(EF)
+
+def gaussianmix_model(N, K, D):
     # N = number of data vectors
-    # M = number of mixtures
+    # K = number of clusters
     # D = dimensionality
     
     # Construct the Gaussian mixture model
 
-    # M prior weights (for components)
-    rho = EF.Dirichlet(np.ones(M),
+    # K prior weights (for components)
+    rho = EF.Dirichlet(np.ones(K),
                        name='rho')
-    # N M-dimensional weights (for data)
+    # N K-dimensional weights (for data)
     alpha = EF.Categorical(rho,
                            plates=(N,),
                            name='alpha')
-    # M D-dimensional component means
+    # K D-dimensional component means
     X = EF.Gaussian(np.zeros(D), np.identity(D),
-                    plates=(M,),
+                    plates=(K,),
                     name='X')
-    # M D-dimensional component covariances
-    Sigma = EF.Wishart(1, np.identity(D),
-                       plates(M,),
+    # K D-dimensional component covariances
+    Sigma = EF.Wishart(D, np.identity(D),
+                       plates=(K,),
                        name='Sigma')
     # N D-dimensional observation vectors
-    Y = EF.Mixture(X, Sigma, alpha,
-                   name='Y')
-    # What is the output of mixture node??? Gaussian? :/
+    Y = EF.Mixture(EF.Gaussian)(alpha, X, Sigma, plates=(N,), name='Y')
+    # TODO: Plates should be learned automatically if not given (it
+    # would be the smallest shape broadcasted from the shapes of the
+    # parents)
 
-    return (Y, WX, W, X, tau, alpha)
+    return (Y, X, Sigma, alpha, rho)
 
 
-def run(M=10, N=100, D_y=3, D=5):
+def run(N=50, K=5, D=2):
     # Generate data
-    w = np.random.normal(0, 1, size=(M,1,D_y))
-    x = np.random.normal(0, 1, size=(1,N,D_y))
-    f = utils.sum_product(w, x, axes_to_sum=[-1])
-    y = f + np.random.normal(0, 0.5, size=(M,N))
+    y = np.random.normal(0, 0.5, size=(N,D))
 
     # Construct model
-    (Y, WX, W, X, tau, alpha) = pca_model(M, N, D)
+    (Y, X, Sigma, alpha, rho) = gaussianmix_model(N,K,D)
 
     # Initialize nodes (from prior and randomly)
-    alpha.update()
-    W.update()
-    X.update()
-    tau.update()
-    W.u[0] = W.random()
-    X.u[0] = X.random()
-    Y.update()
+    rho.initialize()
+    alpha.initialize()
+    Sigma.initialize()
+    X.initialize()
+    Y.initialize()
 
     # Data with missing values
-    mask = np.random.rand(M,N) < 0.4 # randomly missing
-    mask[:,20:40] = False # gap missing
-    Y.observe(y, mask)
+    ## mask = np.random.rand(M,N) < 0.4 # randomly missing
+    ## mask[:,20:40] = False # gap missing
+    # Y.observe(y, mask)
+    Y.observe(y)
 
     # Inference loop.
     L_last = -np.inf

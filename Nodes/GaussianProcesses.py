@@ -701,3 +701,55 @@ class GaussianProcess(EF.NodeVariable):
 # children, actually, it should not even have children!
 
 
+
+
+
+    ## # Pseudo for GPFA:
+    ## k1 = gp_cov_se(magnitude=theta1, lengthscale=theta2)
+    ## k2 = gp_cov_periodic(magnitude=.., lengthscale=.., period=..)
+    ## k3 = gp_cov_rq(magnitude=.., lengthscale=.., alpha=..)
+    ## f = NodeGPSet(0, [k1,k2,k3]) # assumes block diagonality
+    ## # f = NodeGPSet(0, [[k11,k12,k13],[k21,k22,k23],[k31,k32,k33]])
+    ## X = GaussianFromGP(f, [ [[t0,0],[t0,1],[t0,2]], [t1,0],[t1,1],[t1,2], ..])
+    ## ...
+    
+
+    ## # Construct a sum of GPs if interested only in the sum term
+    ## k1 = gp_cov_se(magnitude=theta1, lengthscale=theta2)
+    ## k2 = gp_cov_periodic(magnitude=.., lengthscale=.., period=..)
+    ## k = gp_cov_sum(k1, k2)
+    ## f = NodeGP(0, k)
+    ## f.observe(x, y)
+    ## f.update()
+    ## (mp, kp) = f.get_parameters()
+    
+    
+
+    ## # Construct a sum of GPs when interested also in the individual
+    ## # GPs:
+    ## k1 = gp_cov_se(magnitude=theta1, lengthscale=theta2)
+    ## k2 = gp_cov_periodic(magnitude=.., lengthscale=.., period=..)
+    ## k3 = gp_cov_delta(magnitude=theta3)
+    ## f = NodeGPSum(0, [k1,k2,k3])
+    ## x = np.array([1,2,3,4,5,6,7,8,9,10])
+    ## y = np.sin(x[0]) + np.random.normal(0, 0.1, (10,))
+    ## # Observe the sum (index 0)
+    ## f.observe((0,x), y)
+    ## # Inference
+    ## f.update()
+    ## (mp, kp) = f.get_parameters()
+    ## # Mean of the sum
+    ## mp[0](...)
+    ## # Mean of the individual terms
+    ## mp[1](...)
+    ## mp[2](...)
+    ## mp[3](...)
+    ## # Covariance of the sum
+    ## kp[0][0](..., ...)
+    ## # Other covariances
+    ## kp[1][1](..., ...)
+    ## kp[2][2](..., ...)
+    ## kp[3][3](..., ...)
+    ## kp[1][2](..., ...)
+    ## kp[1][3](..., ...)
+    ## kp[2][3](..., ...)

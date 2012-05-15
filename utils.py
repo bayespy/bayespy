@@ -297,10 +297,22 @@ def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
 
     return y
 
+def moveaxis(A, axis_from, axis_to):
+
+    """ Move the axis number axis_from to be the axis number axis_to. """
+    print('moveaxis', np.shape(A), axis_from, axis_to)
+    axes = np.arange(np.ndim(A))
+    axes[axis_from:axis_to] += 1
+    axes[axis_from:axis_to:-1] -= 1
+    axes[axis_to] = axis_from
+    return np.transpose(A, axes=axes)
+    
+
 
 def broadcasted_shape_from_arrays(*args):
-    # Computes the resulting shape if shapes a and b are broadcasted
-    # together
+
+    """ Computes the resulting shape if shapes a and b are broadcasted
+    together. """
 
     # The dimensionality (i.e., number of axes) of the result
     dim = 0
