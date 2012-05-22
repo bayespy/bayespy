@@ -31,7 +31,7 @@ def gaussianmix_model(N, K, D):
                     plates=(K,),
                     name='X')
     # K D-dimensional component covariances
-    Lambda = EF.Wishart(D, 0.1*np.identity(D),
+    Lambda = EF.Wishart(D, 10*np.identity(D),
                         plates=(K,),
                         name='Lambda')
     # N D-dimensional observation vectors
@@ -45,7 +45,7 @@ def gaussianmix_model(N, K, D):
 
 def run(N=50, K=5, D=2):
 
-    np.random.seed(2)
+    #np.random.seed(2)
     
     # Generate data
     y = np.random.normal(0, 0.5, size=(N,D))
@@ -70,7 +70,7 @@ def run(N=50, K=5, D=2):
     Y.observe(y)
 
     # Inference loop.
-    maxiter = 1000
+    maxiter = 200
     L_X = np.zeros(maxiter)
     L_Lambda = np.zeros(maxiter)
     L_alpha = np.zeros(maxiter)
