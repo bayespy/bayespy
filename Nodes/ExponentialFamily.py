@@ -126,22 +126,26 @@ class Node:
     def add_child(self, child, index):
         self.children.append((child, index))
 
+    def plates_to_parent(self, index):
+        return self.plates
+
     def get_shape(self, ind):
         return self.plates + self.dims[ind]
 
-    def plate_multiplier(self, *args):
+    @staticmethod
+    def plate_multiplier(plates, *args):
         # Check broadcasting of the shapes
         for arg in args:
-            utils.broadcasted_shape(self.plates, arg)
+            utils.broadcasted_shape(plates, arg)
             
         r = 1
-        for j in range(-len(self.plates),0):
+        for j in range(-len(plates),0):
             mult = True
             for arg in args:
                 if not (-j > len(arg) or arg[j] == 1):
                     mult = False
             if mult:
-                r *= self.plates[j]
+                r *= plates[j]
         return r
 
     def message_from_children(self):
@@ -161,9 +165,6 @@ class Node:
 
         # TODO: Should the mask be returned also?
         return (msg, total_mask)
-
-    def message_from_parent(self):
-        pass
 
     def get_moments(self):
         raise NotImplementedError()
@@ -219,6 +220,10 @@ class Node:
                 my_mask2 = np.reshape(my_mask, shape_mask)
 
                 #try:
+                ## print('ExpFam.msg_to_parent')
+                ## print(m.__class__)
+                ## print(my_mask2.__class__)
+                #print(my_mask2)
                 m[i] = m[i] * my_mask2
                 #except:
 
@@ -238,7 +243,8 @@ class Node:
                 # Compute the multiplier (multiply by the number of
                 # plates for which both the message and parent have
                 # single plates)
-                r = self.plate_multiplier(plates_m, parent.plates)
+                plates_self = self.plates_to_parent(index)
+                r = self.plate_multiplier(plates_self, plates_m, parent.plates)
 
                 shape_parent = parent.get_shape(i)
 
@@ -263,15 +269,18 @@ class ExponentialFamily(Node):
 
     # Overwrite this
     ndims = None
+    ndims_parents = None
 
-    @staticmethod
-    def compute_logpdf(u, phi, g, f):
+    @classmethod
+    def compute_logpdf(cls, u, phi, g, f):
         """ Compute E[log p(X)] given E[u], E[phi], E[g] and
         E[f]. Does not sum over plates."""
         L = g + f
-        for (phi_i, u_i, len_dims_i) in zip(phi, u, len_dims):
+        for (phi_i, u_i, ndims_i) in zip(phi, u, cls.ndims):
+        #for (phi_i, u_i, len_dims_i) in zip(phi, u, len_dims):
             # Axes to sum (dimensions of the variable, not the plates)
-            axis_sum = tuple(range(-len_dims_i,0))
+            axis_sum = tuple(range(-ndims_i,0))
+            #axis_sum = tuple(range(-len_dims_i,0))
             # Compute the term
             # TODO/FIXME: Use einsum!
             L = L + np.sum(phi_i * u_i, axis=axis_sum)
@@ -371,6 +380,7 @@ class ExponentialFamily(Node):
             # Update natural parameters using children (just add the
             # messages to phi)
             for (child,index) in self.children:
+                #print('ExpFam.update:', self.name)
                 (m, mask) = child.message_to_parent(index)
                 # Combine masks
                 #
@@ -378,11 +388,19 @@ class ExponentialFamily(Node):
                 # at every update?
                 self.mask = np.logical_or(self.mask,mask)
                 for i in range(len(self.phi)):
-                    try:
-                        # Try exploiting broadcasting rules
-                        self.phi[i] += m[i]
-                    except ValueError:
-                        self.phi[i] = self.phi[i] + m[i]
+                    ## try:
+                    ##     # Try exploiting broadcasting rules
+                    ##     #
+                    ##     # TODO/FIXME: This has the problem that if phi
+                    ##     # is updated from parents such that phi is a
+                    ##     # view into parent's moments thus modifying
+                    ##     # phi would modify parents moments.. Maybe one
+                    ##     # should check that nobody else is viewing
+                    ##     # phi?
+                    ##     self.phi[i] += m[i]
+                    ## except ValueError:
+                    ##     self.phi[i] = self.phi[i] + m[i]
+                    self.phi[i] = self.phi[i] + m[i]
 
             # Update moments
             self.update_u_and_g()
@@ -394,11 +412,19 @@ class ExponentialFamily(Node):
         # a bit easier elsewhere.
         for i in range(len(self.phi)):
             axes = len(self.plates) + self.ndims[i] - np.ndim(self.phi[i])
-            print('update_phi_from_parents:')
-            print(np.shape(self.phi[i]))
-            print(self.plates)
-            print(self.ndims[i])
-            self.phi[i] = utils.add_leading_axes(self.phi[i], axes)
+            ## print('update_phi_from_parents:')
+            ## print(np.shape(self.phi[i]))
+            ## print(self.plates)
+            ## print(self.dims[i])
+            if axes > 0:
+                # Add axes
+                self.phi[i] = utils.add_leading_axes(self.phi[i], axes)
+            elif axes < 0:
+                # Remove extra leading axes
+                first = -(len(self.plates)+self.ndims[i])
+                sh = np.shape(self.phi[i])[first:]
+                self.phi[i] = np.reshape(self.phi[i], sh)
+            #print(np.shape(self.phi[i]))
                                                  
         ## for i in range(len(self.phi)):
         ##     self.phi[i].fill(0)
@@ -448,6 +474,8 @@ class ExponentialFamily(Node):
                       u[ind],
                       where=u_mask)
 
+            self.g = g
+
     def lower_bound_contribution(self, gradient=False):
         # Compute E[ log p(X|parents) - log q(X) ] over q(X)q(parents)
         
@@ -479,7 +507,8 @@ class ExponentialFamily(Node):
             L = L + Z
 
         return (np.sum(L*self.mask)
-                * self.plate_multiplier(np.shape(L),
+                * self.plate_multiplier(self.plates,
+                                        np.shape(L),
                                         np.shape(self.mask)))
         #return L
             
@@ -748,6 +777,7 @@ class NodeNormal(ExponentialFamily):
 class Wishart(ExponentialFamily):
 
     ndims = (2, 0)
+    ndims_parents = [None, (2, 0)]
 
     @staticmethod
     def compute_g_from_parents(u_parents):
@@ -756,7 +786,9 @@ class Wishart(ExponentialFamily):
         logdet_V = u_parents[1][1]
         k = np.shape(V)[-1]
         #k = self.dims[0][0]
-        g = 0.5*n*logdet_V - 0.5*k*n*log(2) - multigammaln(n/2)
+        # TODO: Check whether this is correct:
+        #g = 0.5*n*logdet_V - special.multigammaln(n/2, k)
+        g = 0.5*n*logdet_V - 0.5*k*n*np.log(2) - special.multigammaln(n/2, k)
         return g
 
     @staticmethod
@@ -814,13 +846,14 @@ class Wishart(ExponentialFamily):
 class Gaussian(ExponentialFamily):
 
     ndims = (1, 2)
+    ndims_parents = [(1, 2), (2, 0)]
 
     @staticmethod
     def compute_phi_from_parents(u_parents):
-        print('in Gaussian.compute_phi_from_parents')
-        print(u_parents)
-        print(np.shape(u_parents[1][0]))
-        print(np.shape(u_parents[0][0]))
+        ## print('in Gaussian.compute_phi_from_parents')
+        ## print(u_parents)
+        ## print(np.shape(u_parents[1][0]))
+        ## print(np.shape(u_parents[0][0]))
         return [utils.m_dot(u_parents[1][0], u_parents[0][0]),
                 -0.5 * u_parents[1][0]]
 
@@ -831,11 +864,14 @@ class Gaussian(ExponentialFamily):
         Lambda = u_parents[1][0]
         logdet_Lambda = u_parents[1][1]
         g = (-0.5 * np.einsum('...ij,...ij',mumu,Lambda)
-             + 0.5 * np.sum(logdet_Lambda))
+             + 0.5 * logdet_Lambda)
+        ## g = (-0.5 * np.einsum('...ij,...ij',mumu,Lambda)
+        ##      + 0.5 * np.sum(logdet_Lambda))
         return g
 
     @staticmethod
     def compute_u_and_g(phi, mask=True):
+        #print(-phi[1])
         L = utils.m_chol(-phi[1])
         k = np.shape(phi[0])[-1]
         # Moments
@@ -872,8 +908,8 @@ class Gaussian(ExponentialFamily):
     def compute_dims(*parents):
         """ Compute the dimensions of phi and u. """
         # Has the same dimensionality as the first parent.
-        print('in gaussian compute dims: parent.dims:', parents[0].dims)
-        print('in gaussian compute dims: parent.u:', parents[0].u)
+        ## print('in gaussian compute dims: parent.dims:', parents[0].dims)
+        ## print('in gaussian compute dims: parent.u:', parents[0].u)
         return parents[0].dims
 
     # Gaussian(mu, inv(Lambda))
@@ -899,11 +935,28 @@ class Gaussian(ExponentialFamily):
                          **kwargs)
 
     def random(self):
+        # TODO/FIXME: You shouldn't draw random values for
+        # observed/fixed elements!
         U = utils.m_chol(-self.phi[1])
         return (self.u[0]
                 + 0.5 * utils.m_chol_solve(U,
                                      np.random.normal(0, 1,
                                                       self.get_shape(0))))
+
+    def initialize_random_mean(self):
+        # First, initialize the distribution
+        self.initialize()
+        
+        if not np.all(self.observed):
+            # Draw a random sample
+            x = self.random()
+
+            # Update parameter for the mean using the sample
+            self.phi[0] = -2*utils.m_dot(self.phi[1], x)
+
+            # Update moments
+            self.update_u_and_g()
+            
 
     def show(self):
         mu = self.u[0]
@@ -934,6 +987,7 @@ class Dirichlet(ExponentialFamily):
     @staticmethod
     def compute_phi_from_parents(u_parents):
         return [u_parents[0][0]]
+        #return [u_parents[0][0].copy()]
 
     @staticmethod
     def compute_g_from_parents(u_parents):
@@ -950,6 +1004,7 @@ class Dirichlet(ExponentialFamily):
         u = [u0]
         # G
         g = gammaln_sum - sum_gammaln
+
         return (u, g)
 
     @staticmethod
@@ -987,7 +1042,7 @@ class Dirichlet(ExponentialFamily):
 
     def show(self):
         alpha = self.phi[0]
-        print("Dirichlet(alpha)")
+        print("%s ~ Dirichlet(alpha)" % self.name)
         print("  alpha = ")
         print(alpha)
 
@@ -1007,26 +1062,27 @@ def Categorical(p, **kwargs):
         ndims = (1,)
 
         @staticmethod
-        def compute_logpdf(u, u_parents):
-            return np.einsum(u[0], u_parents[0][0], axis=-1)
-
-        @staticmethod
         def compute_phi_from_parents(u_parents):
             return [u_parents[0][0]]
 
         @staticmethod
         def compute_g_from_parents(u_parents):
-            return 0 #-np.log(np.sum(np.exp(u_parents[0][0]), axis=-1))
+            return 0
 
         @staticmethod
         def compute_u_and_g(phi, mask=True):
-            p = np.exp(phi[0])
+            # For numerical reasons, scale contributions closer to
+            # one, i.e., subtract the maximum of the log-contributions.
+            max_phi = np.max(phi[0], axis=-1, keepdims=True)
+            p = np.exp(phi[0]-max_phi)
             sum_p = np.sum(p, axis=-1, keepdims=True)
             # Moments
             u0 = p / sum_p
             u = [u0]
             # G
-            g = -np.log(sum_p)
+            g = -np.log(sum_p) - max_phi
+            g = np.squeeze(g, axis=-1)
+            #print('Categorical.compute_u_and_g, g:', np.sum(g), np.shape(g), np.sum(max_phi))
             return (u, g)
 
         @staticmethod
@@ -1044,8 +1100,9 @@ def Categorical(p, **kwargs):
         @staticmethod
         def compute_message(index, u, u_parents):
             """ . """
+            #print('message in categorical:', u[0])
             if index == 0:
-                return (u[0],)
+                return [ u[0].copy() ]
 
         @staticmethod
         def compute_dims(*parents):
@@ -1070,7 +1127,7 @@ def Categorical(p, **kwargs):
         def show(self):
             p = self.u[0] #np.exp(self.phi[0])
             #p /= np.sum(p, axis=-1, keepdims=True)
-            print("Categorical(p)")
+            print("%s ~ Categorical(p)" % self.name)
             print("  p = ")
             print(p)
 
@@ -1084,22 +1141,26 @@ def Categorical(p, **kwargs):
 
 def Mixture(distribution, cluster_plate=-1):
 
+    if cluster_plate >= 0:
+        raise Exception("Give negative value for axis index cluster_plates")
+
     class _Mixture(ExponentialFamily):
 
         ndims = distribution.ndims
 
         @staticmethod
         def compute_phi_from_parents(u_parents):
+
             # Compute weighted average of the parameters
 
-            #print('Mixture.compute_phi_from_parents', u_parents)
-
             # Cluster parameters
-            phi = distribution.compute_phi_from_parents(u_parents[1:])
+            Phi = distribution.compute_phi_from_parents(u_parents[1:])
             # Contributions/weights/probabilities
-            p = u_parents[0][0]
+            P = u_parents[0][0]
+
+            phi = list()
             
-            for ind in range(len(phi)):
+            for ind in range(len(Phi)):
                 # Compute element-wise product and then sum over K clusters.
                 # Note that the dimensions aren't perfectly aligned because
                 # the cluster dimension (K) may be arbitrary for phi, and phi
@@ -1112,87 +1173,193 @@ def Mixture(distribution, cluster_plate=-1):
                 # equal to one. Probably, shape(phi) has lots of missing
                 # dimensions and/or dimensions that are one.
 
-                # The number of dimensions for the phi parameter
-                # dimensions, for instance, phi for Gaussian has one
-                # (1) axis for mean vector and two (2) axes for
-                # precision matrix, thus ndims=(1,2).
-                axes_phi = distribution.ndims[ind]
-                #phi[ind] = utils.add_leading_axes(phi[ind], np.ndim(phi[ind]))
-                # Move cluster axis to be the last
                 if cluster_plate < 0:
-                    cluster_axis = cluster_plate - axes_phi
-                else:
-                    cluster_axis = cluster_plate
-                phi[ind] = utils.moveaxis(phi[ind], cluster_axis, -1)
-                # For broadcasting, add new axes to p
-                p = utils.add_trailing_axes(p, axes_phi)
-                # Move cluster axis to be the last
-                p = utils.moveaxis(p, -axes_phi-1, -1)
-                # Product and then sum over the clusters (last axis)
+                    cluster_axis = cluster_plate - distribution.ndims[ind]
+                #else:
+                #    cluster_axis = cluster_plate
+
+                # Move cluster axis to the last:
+                # Shape(phi)    = [Nn,..,N0,Dd,..,D0,K]
+                phi.append(utils.moveaxis(Phi[ind], cluster_axis, -1))
+
+                # Add axes to p:
+                # Shape(p)      = [Nn,..,N0,K,1,..,1]
+                p = utils.add_trailing_axes(P, distribution.ndims[ind])
+                # Move cluster axis to the last:
+                # Shape(p)      = [Nn,..,N0,1,..,1,K]
+                p = utils.moveaxis(p, -(distribution.ndims[ind]+1), -1)
+                #print('Mixture.compute_phi, p:', np.sum(p, axis=-1))
+                #print('mixture.compute_phi shapes:')
+                #print(np.shape(p))
+                #print(np.shape(phi[ind]))
+                
+                # Now the shapes broadcast perfectly and we can sum
+                # p*phi over the last axis:
+                # Shape(result) = [Nn,..,N0,Dd,..,D0]
                 phi[ind] = utils.sum_product(p, phi[ind], axes_to_sum=-1)
-                ## phi[ind] = np.einsum(phi, [Ellipsis,0],
-                ##                      p, [Ellipsis,0],
-                ##                      [Ellipsis])
+                
             return phi
 
         @staticmethod
         def compute_g_from_parents(u_parents):
-            # Compute g for clusters
+
+            # Compute weighted average of g of the clusters.
+
+            # Shape(g)      = [Nn,..,K,..,N0]
+            # Shape(p)      = [Nn,..,N0,K]
+            # Shape(result) = [Nn,..,N0]
+
+            # Compute g for clusters:
+            # Shape(g)      = [Nn,..,K,..,N0]
             g = distribution.compute_g_from_parents(u_parents[1:])
-            # Move cluster axis to last
-            g = utils.moveaxis(g, cluster_axis, -1)
-            # Cluster contributions/probabilities/weights
+            
+            # Move cluster axis to last:
+            # Shape(g)      = [Nn,..,N0,K]
+            g = utils.moveaxis(g, cluster_plate, -1)
+
+            # Cluster assignments/contributions/probabilities/weights:
+            # Shape(p)      = [Nn,..,N0,K]
             p = u_parents[0][0]
-            # Weighted average of g over the clusters
-            g = utils.sum_product(p, g, axis_to_sum=-1)
+            
+            # Weighted average of g over the clusters. As p and g are
+            # properly aligned, you can just sum p*g over the last
+            # axis and utilize broadcasting:
+            # Shape(result) = [Nn,..,N0]
+            #print('mixture.compute_g_from_parents p and g:', np.shape(p), np.shape(g))
+            g = utils.sum_product(p, g, axes_to_sum=-1)
+
+            #print('mixture.compute_g_from_parents g:', np.sum(g), np.shape(g))
+
             return g
 
         @staticmethod
         def compute_u_and_g(phi, mask=True):
+            #print('mixture.compute_u_and_g')
             return distribution.compute_u_and_g(phi, mask=mask)
 
         @staticmethod
         def compute_fixed_u_and_f(x):
             """ Compute u(x) and f(x) for given x. """
+            #print('mixture.compute_fixed_u_and_f')
             return distribution.compute_fixed_u_and_f(x)
             #raise NotImplementedError()
 
         @staticmethod
         def compute_message(index, u, u_parents):
             """ . """
+
+            #print('Mixture.compute_message:')
+            
             if index == 0:
-                # Compute log pdf for each element
-                print('Mixture.message, u_parents:', u_parents)
-                print('Mixture.distribution:', distribution)
-                print(self.parents[0].__class__)
-                print(self.parents[1].__class__)
-                print(self.parents[2].__class__)
-                phi = distribution.compute_phi_from_parents(u_parents[1:])
+
+                # Shape(phi)    = [Nn,..,K,..,N0,Dd,..,D0]
+                # Shape(L)      = [Nn,..,K,..,N0]
+                # Shape(u)      = [Nn,..,N0,Dd,..,D0]
+                # Shape(result) = [Nn,..,N0,K]
+
+                # Compute g:
+                # Shape(g)      = [Nn,..,K,..,N0]
                 g = distribution.compute_g_from_parents(u_parents[1:])
-                L = distribution.compute_logpdf(u, phi, g, 0)
+                # Reshape(g):
+                # Shape(g)      = [Nn,..,N0,K]
+                g = utils.moveaxis(g, cluster_plate, -1)
+
+                # Compute phi:
+                # Shape(phi)    = [Nn,..,K,..,N0,Dd,..,D0]
+                phi = distribution.compute_phi_from_parents(u_parents[1:])
+                # Reshape phi:
+                # Shape(phi)    = [Nn,..,N0,K,Dd,..,D0]
+                for ind in range(len(phi)):
+                    phi[ind] = utils.moveaxis(phi[ind],
+                                              cluster_plate-distribution.ndims[ind],
+                                              -1-distribution.ndims[ind])
+
+                # Reshape u:
+                # Shape(u)      = [Nn,..,N0,1,Dd,..,D0]
+                u_self = list()
+                for ind in range(len(u)):
+                    u_self.append(np.expand_dims(u[ind],
+                                                 axis=(-1-distribution.ndims[ind])))
+                    
+                # Compute logpdf:
+                # Shape(L)      = [Nn,..,N0,K]
+                L = distribution.compute_logpdf(u_self, phi, g, 0)
+                
                 # Sum over other than the cluster dimensions? No!
                 # Hmm.. I think the message passing method will do
                 # that automatically
-                #L = np.sum(L, ...)
+
+                ## print(np.shape(phi[0]))
+                ## print(np.shape(u_self[0]))
+                ## print(np.shape(g))
+                ## print(np.shape(L))
+                
                 return [L]
 
             elif index >= 1:
+
+                # Parent index for the distribution used for the
+                # mixture
+                index = index - 1
+
+                # Reshape u:
+                # Shape(u)      = [Nn,..1,..,N0,Dd,..,D0]
+                u_self = list()
+                for ind in range(len(u)):
+                    if cluster_plate < 0:
+                        cluster_axis = cluster_plate - distribution.ndims[ind]
+                    else:
+                        cluster_axis = cluster_plate
+                    u_self.append(np.expand_dims(u[ind], axis=cluster_axis))
+                    
+                # Message from the mixed distribution
+                m = distribution.compute_message(index, u_self, u_parents[1:])
+
                 # Weigh the messages with the responsibilities
-                #
-                # FIXME: This isn't this simple because there is an
-                # axis for the clusters..
-                m = distribution.compute_message(index-1, u, u_parents[1:])
                 for i in range(len(m)):
-                    # Responsibility for cluster i is the first
-                    # parent's first moment's i-th element
+
+                    # Shape(m)      = [Nn,..,K,..,N0,Dd,..,D0]
+                    # Shape(p)      = [Nn,..,N0,K]
+                    # Shape(result) = [Nn,..,K,..,N0,Dd,..,D0]
+                    
+                    # Number of axes for the variable dimensions for
+                    # the parent message.
+                    D = distribution.ndims_parents[index][i]
+
+                    # Responsibilities for clusters are the first
+                    # parent's first moment:
+                    # Shape(p)      = [Nn,..,N0,K]
+                    p = u_parents[0][0]
+                    # Move the cluster axis to the proper place:
+                    # Shape(p)      = [Nn,..,K,..,N0]
+                    p = utils.moveaxis(p, -1, cluster_plate)
+                    # Add axes for variable dimensions to the contributions
+                    # Shape(p)      = [Nn,..,K,..,N0,1,..,1]
+                    p = utils.add_trailing_axes(p, D)
+
+                    if cluster_plate < 0:
+                        # Add the variable dimensions
+                        cluster_axis = cluster_plate - D
+
+                    # Add axis for clusters:
+                    # Shape(m)      = [Nn,..,1,..,N0,Dd,..,D0]
+                    #m[i] = np.expand_dims(m[i], axis=cluster_axis)
+                        
                     #
                     # TODO: You could do summing here already so that
                     # you wouldn't compute huge matrices as
                     # intermediate result. Use einsum.
-                    print('Mixture.compute_message:')
-                    print(np.shape(m[i]))
-                    print(np.shape(u_parents[0][0][i]))
-                    m[i] = m[i] * u_parents[0][0][i]
+
+                    ## print(np.shape(m[i]))
+                    ## print(np.shape(p))
+
+                    # Compute the message contributions for each
+                    # cluster:
+                    # Shape(result) = [Nn,..,K,..,N0,Dd,..,D0]
+                    m[i] = m[i] * p
+
+                    #print(np.shape(m[i]))
+                    
                 return m
 
         @staticmethod
@@ -1208,6 +1375,24 @@ def Mixture(distribution, cluster_plate=-1):
             super().__init__(z, *args,
                              **kwargs)
 
+        def plates_to_parent(self, index):
+            if index == 0:
+                return self.plates
+            else:
+                if cluster_plate < 0:
+                    plates = list(self.plates)
+                    if cluster_plate < 0:
+                        k = len(self.plates) + cluster_plate + 1
+                    else:
+                        k = cluster_plate
+                    plates.insert(k, self.parents[0].dims[0][0])
+                    plates = tuple(plates)
+                    #print('plates_to_parent', cluster_plate,  plates)
+                    ## plates = (self.plates[:cluster_plate] +
+                    ##           self.parents[0].dims[0] +
+                    ##           self.plates[cluster_plate:])
+                return plates
+            
     return _Mixture
 
     ## def show(self):

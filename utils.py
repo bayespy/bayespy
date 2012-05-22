@@ -300,7 +300,7 @@ def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
 def moveaxis(A, axis_from, axis_to):
 
     """ Move the axis number axis_from to be the axis number axis_to. """
-    print('moveaxis', np.shape(A), axis_from, axis_to)
+    #print('moveaxis', np.shape(A), axis_from, axis_to)
     axes = np.arange(np.ndim(A))
     axes[axis_from:axis_to] += 1
     axes[axis_from:axis_to:-1] -= 1
@@ -343,7 +343,7 @@ def broadcasted_shape(a,b):
         elif b[i] == 1:
             s += (a[i],)
         else:
-            raise Exception("Shapes do not broadcast")
+            raise Exception("Shapes %s and %s do not broadcast" % (a,b))
     return s
             
     

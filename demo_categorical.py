@@ -14,40 +14,40 @@ imp.reload(EF)
 
 def categorical_model(M, D):
 
-    alpha = EF.Dirichlet(1*np.ones(D))
-    p = EF.Categorical(alpha, plates=(M,))
-    return (p, alpha)
+    p = EF.Dirichlet(1*np.ones(D), name='p')
+    z = EF.Categorical(p, plates=(M,), name='z')
+    return (z, p)
 
 
-def run(M=10, D=4):
+def run(M=30, D=5):
 
     # Generate data
     y = np.random.randint(D, size=(M,))
 
     # Construct model
-    (p, alpha) = categorical_model(M, D)
+    (z, p) = categorical_model(M, D)
 
     # Initialize nodes
-    alpha.update()
     p.update()
+    z.update()
 
     # Observe the data with randomly missing values
     mask = np.random.rand(M) < 0.5 # randomly missing
-    p.observe(y, mask)
+    z.observe(y, mask)
 
     # Inference loop.
     L_last = -np.inf
-    for i in range(10):
+    for i in range(100):
         t = time.clock()
 
         # Update nodes
         p.update()
-        alpha.update()
+        z.update()
 
         # Compute lower bound
         L_p = p.lower_bound_contribution()
-        L_alpha = alpha.lower_bound_contribution()
-        L = L_p + L_alpha
+        L_z = z.lower_bound_contribution()
+        L = L_p + L_z
 
         # Check convergence
         print("Iteration %d: loglike=%e (%.3f seconds)" % (i+1, L, time.clock()-t))
@@ -60,8 +60,8 @@ def run(M=10, D=4):
         L_last = L
 
 
+    z.show()
     p.show()
-    alpha.show()
 
 if __name__ == '__main__':
     run()
