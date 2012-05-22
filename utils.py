@@ -233,9 +233,9 @@ def check_gradient(x0, f, df, eps):
     
 
 def is_numeric(a):
-    if np.isscalar(a) or isinstance(a, list) or isinstance(a, np.ndarray):
-        return True
-
+    return (np.isscalar(a) or
+            isinstance(a, list) or
+            isinstance(a, np.ndarray))
 
 def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
 
