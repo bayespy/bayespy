@@ -20,18 +20,18 @@ def gaussianmix_model(N, K, D):
     # Construct the Gaussian mixture model
 
     # K prior weights (for components)
-    alpha = EF.Dirichlet(0.1*np.ones(K),
+    alpha = EF.Dirichlet(1*np.ones(K),
                          name='alpha')
     # N K-dimensional cluster assignments (for data)
     z = EF.Categorical(alpha,
                        plates=(N,),
                        name='z')
     # K D-dimensional component means
-    X = EF.Gaussian(np.zeros(D), 10*np.identity(D),
+    X = EF.Gaussian(np.zeros(D), 0.01*np.identity(D),
                     plates=(K,),
                     name='X')
     # K D-dimensional component covariances
-    Lambda = EF.Wishart(D, 10*np.identity(D),
+    Lambda = EF.Wishart(D, 0.01*np.identity(D),
                         plates=(K,),
                         name='Lambda')
     # N D-dimensional observation vectors
@@ -45,19 +45,36 @@ def gaussianmix_model(N, K, D):
 
 def run(N=50, K=5, D=2):
 
-    #np.random.seed(2)
+    plt.ion()
+    #17,31
+    #np.random.seed(31)
     
     # Generate data
-    y = np.random.normal(0, 0.5, size=(N,D))
+    N1 = np.floor(0.5*N)
+    N2 = N - N1
+    y = np.vstack([np.random.normal(0, 0.5, size=(N1,D)),
+                   np.random.normal(10, 0.5, size=(N2,D))])
 
+    
     # Construct model
     (Y, X, Lambda, z, alpha) = gaussianmix_model(N,K,D)
 
     # Initialize nodes (from prior and randomly)
-    alpha.initialize()
-    z.initialize()
-    Lambda.initialize()
-    X.initialize_random_mean()
+    alpha.initialize_from_prior()
+    z.initialize_from_prior()
+    Lambda.initialize_from_parameters(D, 10*np.identity(D))
+
+    X.initialize_from_prior()
+    X.initialize_from_parameters(X.random(), np.identity(D))
+
+    ## X.initialize_from_parameters(np.random.permutation(y)[:K],
+    ##                              0.01*np.identity(D))
+
+    #X.initialize_from_random()
+    # Initialize means by selecting random data points
+    #X.initialize_from_value(np.random.permutation(y)[:K])
+    #return
+    #X.initialize_random_mean()
     #Y.initialize()
 
     ## X.show()
@@ -67,10 +84,31 @@ def run(N=50, K=5, D=2):
     ## mask = np.random.rand(M,N) < 0.4 # randomly missing
     ## mask[:,20:40] = False # gap missing
     # Y.observe(y, mask)
+    ## alpha.show()
+    ## Lambda.show()
+    ## z.show()
+    X.show()
+    #return
+
     Y.observe(y)
 
+    ## z.update()
+    ## X.update()
+    ## alpha.update()
+
+    ## X.show()
+    ## alpha.show()
+    #Lambda.show()
+    #return
+
+    ## X.show()
+    ## Lambda.show()
+    ## z.update()
+    ## z.show()
+    ## return
+
     # Inference loop.
-    maxiter = 200
+    maxiter = 100
     L_X = np.zeros(maxiter)
     L_Lambda = np.zeros(maxiter)
     L_alpha = np.zeros(maxiter)
@@ -87,6 +125,10 @@ def run(N=50, K=5, D=2):
         X.update()
         Lambda.update()
 
+        #Y.show()
+
+        #z.show()
+
         # Compute lower bound
         L_X[i] = X.lower_bound_contribution()
         L_Lambda[i] = Lambda.lower_bound_contribution()
@@ -95,29 +137,56 @@ def run(N=50, K=5, D=2):
         L_Y[i] = Y.lower_bound_contribution()
         L[i] = L_X[i] + L_Lambda[i] + L_alpha[i] + L_z[i] + L_Y[i]
 
+        #print('terms:', L_X[i], L_Lambda[i], L_alpha[i], L_z[i], L_Y[i])
+
         # Check convergence
         print("Iteration %d: loglike=%e (%.3f seconds)" % (i+1, L[i], time.clock()-t))
-        if L_last - L[i] > 1e-12:
+        if L_last - L[i] > 1e-6:
             L_diff = (L_last - L[i])
-            raise Exception("Lower bound decreased %e! Bug somewhere or numerical inaccuracy?" % L_diff)
+            print("Lower bound decreased %e! Bug somewhere or numerical inaccuracy?" % L_diff)
+            #raise Exception("Lower bound decreased %e! Bug somewhere or numerical inaccuracy?" % L_diff)
         if L[i] - L_last < 1e-12:
             print("Converged.")
             #break
         L_last = L[i]
 
+    # Predictive stuff
+    zh = EF.Categorical(alpha, name='zh')
+    Yh = EF.Mixture(EF.Gaussian)(zh, X, Lambda, name='Yh')
+    # TODO/FIXME: Messages to parents should use the masks such that
+    # children don't need to be initialized!
+    zh.initialize_from_prior()
+    Yh.initialize_from_prior()
+    zh.update()
+    #zh.show()
+    N1 = 400
+    N2 = 400
+    x1 = np.linspace(-3, 15, N1)
+    x2 = np.linspace(-3, 15, N2)
+    xh = utils.grid(x1, x2)
+    lpdf = Yh.integrated_logpdf_from_parents(xh, 0)
+    pdf = np.reshape(np.exp(lpdf), (N2,N1))
+    #print(pdf)
+    #plt.clf()
+    plt.clf()
+    #plt.imshow(x1, x2, pdf)
+    plt.contourf(x1, x2, pdf, 100)
+    plt.scatter(y[:,0], y[:,1])
+    print('integrated pdf:', np.sum(pdf)*(18*18)/(N1*N2))
+    #return
+
     X.show()
-    #Lambda.show()
-    #alpha.show()
-    
     alpha.show()
 
     #print(y)
     #print(Y.u[0])
 
-    plt.ion()
-    plt.clf()
-    ax = plt.plot(np.vstack([L_X, L_Lambda, L_z, L_alpha, L_Y]).T)
-    plt.legend(ax)
+    ## plt.clf()
+    ## f = np.vstack([L_X, L_Lambda, L_z, L_alpha, L_Y]).T
+    ## f = np.diff(f, axis=0)
+    ## ax = plt.plot(f[30:])
+    ## plt.legend(ax)
+
     ## plt.figure()
     ## plt.clf()
     ## WX_params = WX.get_parameters()

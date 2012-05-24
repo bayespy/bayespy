@@ -77,6 +77,11 @@ imp.reload(utils)
 
 class Node:
 
+    @staticmethod
+    def compute_fixed_moments(x):
+        """ Compute moments for fixed x. """
+        raise NotImplementedError()
+
     # Proposed functions:
     def logpdf_integrated(self):
         # The log pdf when this node is integrated out (useful for
@@ -85,7 +90,7 @@ class Node:
 
     def random(self):
         # Draw a random variable from the node
-        return
+        raise NotImplementedError()
 
     def gibbs_sampling(self):
         # Hmm.. For Gibbs and for generating samples from the model?
@@ -173,6 +178,15 @@ class Node:
         return self.get_moments()
         # raise Exception("Not implemented. Subclass should implement this!")
 
+    def moments_from_parents(self, exclude=()):
+        u_parents = list()
+        for (i,parent) in enumerate(self.parents):
+            if not i in exclude:
+                u_parents.append(parent.message_to_child())
+            else:
+                u_parents.append(None)
+        return u_parents
+
     def message_to_parent(self, index):
         # In principle, a node could have multiple parental roles with
         # respect to a single node, that is, there can be duplicates
@@ -183,16 +197,14 @@ class Node:
         # role?? Maybe there should at least be an ID for each
         # connection.
         if index < len(self.parents):
-            # Get moments from parents
-            u_parents = list()
-            for (i,parent) in enumerate(self.parents):
-                if i != index:
-                    u_parents.append(parent.message_to_child())
-                else:
-                    u_parents.append(None)
+
+            # Get parents' moments
+            u_parents = self.moments_from_parents(exclude=(index,))
 
             # Decompose our own message to parent[index]
             (m, my_mask) = self.get_message(index, u_parents)
+
+            #print('message_to_parent', self.name, index, m)
 
             # The parent we're sending the message to
             parent = self.parents[index]
@@ -275,6 +287,9 @@ class ExponentialFamily(Node):
     def compute_logpdf(cls, u, phi, g, f):
         """ Compute E[log p(X)] given E[u], E[phi], E[g] and
         E[f]. Does not sum over plates."""
+
+        # TODO/FIXME: Should I take into account what is latent or
+        # observed, or what is even totally ignored (by the mask).
         L = g + f
         for (phi_i, u_i, ndims_i) in zip(phi, u, cls.ndims):
         #for (phi_i, u_i, len_dims_i) in zip(phi, u, len_dims):
@@ -316,6 +331,11 @@ class ExponentialFamily(Node):
         """ Compute the dimensions of phi and u. """
         raise NotImplementedError()
 
+    @staticmethod
+    def compute_dims_from_values(x):
+        """ Compute the dimensions of phi and u. """
+        raise NotImplementedError()
+
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args,
@@ -333,8 +353,12 @@ class ExponentialFamily(Node):
         # plates are missing.
         #self.phi = [np.array([]) for i in range(len(self.dims))]
         #self.u = [np.array([]) for i in range(len(self.dims))]
-        self.phi = [np.array(0.0) for i in range(len(self.dims))]
-        self.u = [np.array(0.0) for i in range(len(self.dims))]
+        #self.phi = [np.array(0.0) for i in range(len(self.dims))]
+        #self.u = [np.array(0.0) for i in range(len(self.dims))]
+        axes = len(self.plates)*(1,)
+        self.phi = [utils.nans(axes+dim) for dim in self.dims]
+        self.u = [utils.nans(axes+dim) for dim in self.dims]
+#        self.u = [np.array(0.0) for i in range(len(self.dims))]
 
         # Terms for the lower bound (G for latent and F for observed)
         self.g = 0
@@ -343,7 +367,7 @@ class ExponentialFamily(Node):
         # Not observed
         self.observed = False
 
-        # By default, ignore all elements
+        # By default, ignore all plates
         self.mask = False
 
     def get_vb_term(self):
@@ -355,18 +379,43 @@ class ExponentialFamily(Node):
         ## return (self.message(index, u_parents),
         ##         self.mask)
 
-    def initialize(self):
+    def initialize_from_prior(self):
         if not np.all(self.observed):
 
             # Messages from parents
-            u_parents = [parent.message_to_child() for parent in self.parents]
-                
+            #u_parents = [parent.message_to_child() for parent in self.parents]
+            u_parents = self.moments_from_parents()
+
             # Update natural parameters using parents
             self.update_phi_from_parents(u_parents)
 
             # Update moments
-            self.update_u_and_g()
+            (u, g) = self.compute_u_and_g(self.phi, mask=True)
+            self.update_u_and_g(u, g, mask=True)
 
+
+    def initialize_from_parameters(self, *args):
+        # Get the moments of the parameters if they were fixed to the
+        # given values.
+        u_parents = list()
+        for (ind, x) in enumerate(args):
+            (u, _) = self.parents[ind].compute_fixed_u_and_f(x)
+            u_parents.append(u)
+        # Update natural parameters
+        self.update_phi_from_parents(u_parents)
+        # Update moments
+        # TODO/FIXME: Use the mask of observations!
+        (u, g) = self.compute_u_and_g(self.phi, mask=True)
+        self.update_u_and_g(u, g, mask=True)
+
+    ## def initialize_from_value(self, x):
+    ##     # Update moments from value
+    ##     (u, f) = self.compute_fixed_u_and_f(x)
+    ##     self.update_u_and_g(u, np.nan, mask=True)
+
+    ## def initialize_from_random(self):
+    ##     self.initialize_from_prior()
+    ##     self.initialize_from_value(self.random())
 
     def update(self):
         if not np.all(self.observed):
@@ -377,11 +426,15 @@ class ExponentialFamily(Node):
             # Update natural parameters using parents
             self.update_phi_from_parents(u_parents)
 
+            #print('update, phi', self.name, self.phi)
             # Update natural parameters using children (just add the
             # messages to phi)
             for (child,index) in self.children:
                 #print('ExpFam.update:', self.name)
+
+                # TODO/FIXME: These m are nans..
                 (m, mask) = child.message_to_parent(index)
+
                 # Combine masks
                 #
                 # TODO: Maybe you would like to compute a new mask
@@ -400,14 +453,20 @@ class ExponentialFamily(Node):
                     ##     self.phi[i] += m[i]
                     ## except ValueError:
                     ##     self.phi[i] = self.phi[i] + m[i]
+                    #print('update2, phi', i, self.name, self.phi, m[i])
                     self.phi[i] = self.phi[i] + m[i]
 
+            # Mask for plates to update (i.e., unobserved plates)
+            update_mask = np.logical_not(self.observed)
+            # Compute u and g
+            (u, g) = self.compute_u_and_g(self.phi, mask=update_mask)
             # Update moments
-            self.update_u_and_g()
+            self.update_u_and_g(u, g, mask=update_mask)
 
     def update_phi_from_parents(self, u_parents):
         # This makes correct broadcasting
         self.phi = self.compute_phi_from_parents(u_parents)
+        #print('update_phi, phi', self.phi)
         # Make sure phi has the correct number of axes. It makes life
         # a bit easier elsewhere.
         for i in range(len(self.phi)):
@@ -449,19 +508,13 @@ class ExponentialFamily(Node):
     def message(self, index, u_parents):
         raise NotImplementedError("Not implemented for " + str(self.__class__))
 
-    def update_u_and_g(self):
-
-        # Mask for plates to update (i.e., unobserved plates)
-        update_mask = np.logical_not(self.observed)
-        # Compute u and g
-        (u, g) = self.compute_u_and_g(self.phi, mask=update_mask)
-
+    def update_u(self, u, mask=True):
         # Store the computed moments u but do not change moments for
         # observations, i.e., utilize the mask.
         for ind in range(len(u)):
             # Add axes to the mask for the variable dimensions (mask
             # contains only axes for the plates).
-            u_mask = utils.add_trailing_axes(update_mask, self.ndims[ind])
+            u_mask = utils.add_trailing_axes(mask, self.ndims[ind])
 
             # Enlarge self.u[ind] as necessary so that it can store the
             # broadcasted result.
@@ -474,7 +527,52 @@ class ExponentialFamily(Node):
                       u[ind],
                       where=u_mask)
 
-            self.g = g
+            # Make sure u has the correct number of dimensions:
+            shape = self.get_shape(ind)
+            ndim = len(shape)
+            ndim_u = np.ndim(self.u[ind])
+            if ndim > ndim_u:
+                self.u[ind] = utils.add_leading_axes(u[ind], ndim - ndim_u)
+            elif ndim < np.ndim(self.u[ind]):
+                raise Exception("Weird, this shouldn't happen.. :)")
+
+
+    def update_u_and_g(self, u, g, mask=True):
+
+        self.update_u(u, mask=mask)
+        # TODO/FIXME: Apply mask to g too!!
+        self.g = g
+        
+
+        ## # Store the computed moments u but do not change moments for
+        ## # observations, i.e., utilize the mask.
+        ## for ind in range(len(u)):
+        ##     # Add axes to the mask for the variable dimensions (mask
+        ##     # contains only axes for the plates).
+        ##     u_mask = utils.add_trailing_axes(mask, self.ndims[ind])
+
+        ##     # Enlarge self.u[ind] as necessary so that it can store the
+        ##     # broadcasted result.
+        ##     sh = utils.broadcasted_shape_from_arrays(self.u[ind], u[ind], u_mask)
+        ##     self.u[ind] = utils.repeat_to_shape(self.u[ind], sh)
+
+        ##     # Use mask to update only unobserved plates and keep the
+        ##     # observed as before
+        ##     np.copyto(self.u[ind],
+        ##               u[ind],
+        ##               where=u_mask)
+
+        ##     # TODO/FIXME: Apply mask to g too!!
+        ##     self.g = g
+
+        ##     # Make sure u has the correct number of dimensions:
+        ##     shape = self.get_shape(ind)
+        ##     ndim = len(shape)
+        ##     ndim_u = np.ndim(self.u[ind])
+        ##     if ndim > ndim_u:
+        ##         self.u[ind] = utils.add_leading_axes(u[ind], ndim - ndim_u)
+        ##     elif ndim < np.ndim(self.u[ind]):
+        ##         raise Exception("Weird, this shouldn't happen.. :)")
 
     def lower_bound_contribution(self, gradient=False):
         # Compute E[ log p(X|parents) - log q(X) ] over q(X)q(parents)
@@ -501,8 +599,11 @@ class ExponentialFamily(Node):
             axis_sum = tuple(range(-len(dims),0))
 
             # Compute the term
-            Z = np.sum((phi_p - phi_q*latent_mask) * u_q,
-                       axis=axis_sum)
+            phi_q = np.where(latent_mask, phi_q, 0)
+            # TODO/FIXME: Use einsum here?
+            Z = np.sum((phi_p-phi_q) * u_q, axis=axis_sum)
+            ## Z = np.sum((phi_p - phi_q*latent_mask) * u_q,
+            ##            axis=axis_sum)
 
             L = L + Z
 
@@ -512,7 +613,7 @@ class ExponentialFamily(Node):
                                         np.shape(self.mask)))
         #return L
             
-    def fix_u_and_f(self, u, f, mask=1):
+    def fix_u_and_f(self, u, f, mask=True):
         #print(u)
         for (i,v) in enumerate(u):
             # This is what the dimensionality "should" be
@@ -526,26 +627,62 @@ class ExponentialFamily(Node):
                 raise Exception(msg)
             #self.phi[i] = 0
 
-        self.observed = mask
-        for i in range(len(self.u)):
-            obs_mask = utils.add_axes(mask,
-                                len(self.plates) - np.ndim(mask),
-                                len(self.dims[i]))
-            self.u[i] = (obs_mask * u[i]
-                         + np.logical_not(obs_mask) * self.u[i])
 
+        self.update_u(u, mask=mask)
+        
+        ## for i in range(len(self.u)):
+        ##     obs_mask = utils.add_axes(mask,
+        ##                         len(self.plates) - np.ndim(mask),
+        ##                         len(self.dims[i]))
+
+        ##     # TODO/FIXME: Use copyto!
+        ##     self.u[i] = (obs_mask * u[i]
+        ##                  + np.logical_not(obs_mask) * self.u[i])
+
+        # TODO/FIXME: Use the mask?
         self.f = f
         
-        # Observed nodes should not be ignored
-        self.mask = np.logical_or(self.mask, self.observed)
-
-    def observe(self, x, mask=1):
+    def observe(self, x, mask=True):
         (u, f) = self.compute_fixed_u_and_f(x)
         #print(u)
         self.fix_u_and_f(u, f, mask=mask)
+
+        # Observed nodes should not be ignored
+        self.observed = mask
+        self.mask = np.logical_or(self.mask, self.observed)
+
+        #print('observe', self.name, self.u)
         ## print(x)
         ## print(mask)
         ## print(u)
+
+    def integrated_logpdf_from_parents(self, index):
+
+        """ Approximates the posterior predictive pdf \int
+        p(x|parents) q(parents) dparents in log-scale as \int
+        q(parents_i) exp( \int q(parents_\i) \log p(x|parents)
+        dparents_\i ) dparents_i."""
+
+        raise NotImplementedError()
+
+def Constant(distribution):
+    class _Constant(Node):
+
+        @staticmethod
+        def compute_fixed_u_and_f(x):
+            """ Compute u(x) and f(x) for given x. """
+            return distribution.compute_fixed_u_and_f(x)
+        
+        def __init__(self, x, **kwargs):
+            self.u = distribution.compute_fixed_moments(x)
+            dims = distribution.compute_dims_from_values(x)
+            super().__init__(dims=dims, **kwargs)
+            
+        def get_moments(self):
+            return self.u
+        
+    return _Constant
+        
 
 class NodeConstant(Node):
     def __init__(self, u, **kwargs):
@@ -570,6 +707,11 @@ class NodeConstant(Node):
 ##         return 0
 
 class NodeConstantScalar(NodeConstant):
+    @staticmethod
+    def compute_fixed_u_and_f(x):
+        """ Compute u(x) and f(x) for given x. """
+        return ([x], 0)
+
     def __init__(self, a, **kwargs):
         NodeConstant.__init__(self,
                               [a],
@@ -616,26 +758,34 @@ class NodeConstantScalar(NodeConstant):
         #raise Exception("Not implemented for " + str(self.__class__))
         pass
 
-class NodeConstantGaussian(NodeConstant):
-    def __init__(self, X, **kwargs):
-        X = np.atleast_1d(X)
-        d = X.shape[-1]
-        NodeConstant.__init__(self,
-                              [X, utils.m_outer(X, X)],
-                              plates=X.shape[:-1],
-                              dims=[(d,), (d,d)],
-                              **kwargs)
+## class NodeConstantGaussian(NodeConstant):
+##     def __init__(self, X, **kwargs):
+##         X = np.atleast_1d(X)
+##         d = X.shape[-1]
+##         NodeConstant.__init__(self,
+##                               [X, utils.m_outer(X, X)],
+##                               plates=X.shape[:-1],
+##                               dims=[(d,), (d,d)],
+##                               **kwargs)
         
-class NodeConstantWishart(NodeConstant):
-    def __init__(self, Lambda, **kwargs):
-        Lambda = np.atleast_2d(Lambda)
-        if Lambda.shape[-1] != Lambda.shape[-2]:
-            raise Exception("Lambda not a square matrix.")
-        NodeConstant.__init__(self,
-                              [Lambda, utils.m_chol_logdet(utils.m_chol(Lambda))],
-                              plates=Lambda.shape[:-2],
-                              dims=[Lambda.shape[-2:], ()],
-                              **kwargs)
+## class NodeConstantWishart(NodeConstant):
+##     @staticmethod
+##     def compute_fixed_u_and_f(Lambda):
+##         """ Compute u(x) and f(x) for given x. """
+##         u = [Lambda,
+##              utils.m_chol_logdet(utils.m_chol(Lambda))]
+##         f = 0
+##         return (u, f)
+
+##     def __init__(self, Lambda, **kwargs):
+##         Lambda = np.atleast_2d(Lambda)
+##         if Lambda.shape[-1] != Lambda.shape[-2]:
+##             raise Exception("Lambda not a square matrix.")
+##         NodeConstant.__init__(self,
+##                               [Lambda, utils.m_chol_logdet(utils.m_chol(Lambda))],
+##                               plates=Lambda.shape[:-2],
+##                               dims=[Lambda.shape[-2:], ()],
+##                               **kwargs)
 
 
 # Gamma(a, b)
@@ -780,6 +930,14 @@ class Wishart(ExponentialFamily):
     ndims_parents = [None, (2, 0)]
 
     @staticmethod
+    def compute_fixed_moments(Lambda):
+        """ Compute moments for fixed x. """
+        ldet = utils.m_chol_logdet(utils.m_chol(Lambda))
+        u = [Lambda,
+             ldet]
+        return u
+
+    @staticmethod
     def compute_g_from_parents(u_parents):
         n = u_parents[0][0]
         V = u_parents[1][0]
@@ -809,6 +967,16 @@ class Wishart(ExponentialFamily):
         return (u, g)
 
     @staticmethod
+    def compute_fixed_u_and_f(Lambda):
+        """ Compute u(x) and f(x) for given x. """
+        k = np.shape(Lambda)[-1]
+        ldet = utils.m_chol_logdet(utils.m_chol(Lambda))
+        u = [Lambda,
+             ldet]
+        f = -(k+1)/2 * ldet
+        return (u, f)
+
+    @staticmethod
     def message(index, u, u_parents):
         if index == 0:
             raise Exception("No analytic solution exists")
@@ -822,6 +990,12 @@ class Wishart(ExponentialFamily):
         # Has the same dimensionality as the second parent.
         return parents[1].dims
 
+    @staticmethod
+    def compute_dims_from_values(x):
+        """ Compute the dimensions of phi and u. """
+        d = np.shape(x)[-1]
+        return [(d,d), ()]
+
     # Wishart(n, inv(V))
 
     def __init__(self, n, V, plates=(), **kwargs):
@@ -832,12 +1006,12 @@ class Wishart(ExponentialFamily):
             
         # Check for constant V
         if np.isscalar(V) or isinstance(V, np.ndarray):
-            V = NodeConstantWishart(V)
+            V = Constant(Wishart)(V)
 
         ExponentialFamily.__init__(self, n, V, plates=plates, **kwargs)
         
     def show(self):
-        print("Wishart(n, A)")
+        print("%s ~ Wishart(n, A)" % self.name)
         print("  n =")
         print(2*self.phi[1])
         print("  A =")
@@ -847,6 +1021,13 @@ class Gaussian(ExponentialFamily):
 
     ndims = (1, 2)
     ndims_parents = [(1, 2), (2, 0)]
+    # Observations are vectors (1-D):
+    ndim_observations = 1
+
+    @staticmethod
+    def compute_fixed_moments(x):
+        """ Compute moments for fixed x. """
+        return [x, utils.m_outer(x,x)]
 
     @staticmethod
     def compute_phi_from_parents(u_parents):
@@ -912,17 +1093,23 @@ class Gaussian(ExponentialFamily):
         ## print('in gaussian compute dims: parent.u:', parents[0].u)
         return parents[0].dims
 
+    @staticmethod
+    def compute_dims_from_values(x):
+        """ Compute the dimensions of phi and u. """
+        d = np.shape(x)[-1]
+        return [(d,), (d,d)]
+
     # Gaussian(mu, inv(Lambda))
 
     def __init__(self, mu, Lambda, plates=(), **kwargs):
 
         # Check for constant mu
         if np.isscalar(mu) or isinstance(mu, np.ndarray):
-            mu = NodeConstantGaussian(mu)
+            mu = Constant(Gaussian)(mu)
 
         # Check for constant Lambda
         if np.isscalar(Lambda) or isinstance(Lambda, np.ndarray):
-            Lambda = NodeConstantWishart(Lambda)
+            Lambda = Constant(Wishart)(Lambda)
 
         # You could check whether the dimensions of mu and Lambda
         # match (and Lambda is square)
@@ -937,31 +1124,39 @@ class Gaussian(ExponentialFamily):
     def random(self):
         # TODO/FIXME: You shouldn't draw random values for
         # observed/fixed elements!
-        U = utils.m_chol(-self.phi[1])
-        return (self.u[0]
-                + 0.5 * utils.m_chol_solve(U,
-                                     np.random.normal(0, 1,
-                                                      self.get_shape(0))))
 
-    def initialize_random_mean(self):
-        # First, initialize the distribution
-        self.initialize()
+        # Note that phi[1] is -0.5*inv(Cov)
+        U = utils.m_chol(-2*self.phi[1])
+        mu = self.u[0]
+        z = np.random.normal(0, 1, self.get_shape(0))
+        # Compute mu + U'*z
+        #return mu + np.einsum('...ij,...i->...j', U, z)
+        #scipy.linalg.solve_triangular(a, b, trans=0, lower=False, unit_diagonal=False, overwrite_b=False, debug=False)
+        #print('gaussian.random', np.shape(mu), np.shape(z))
+        z = utils.m_solve_triangular(U, z, trans='T', lower=False)
+        return mu + z
+        #return self.u[0] + utils.m_chol_solve(U, z)
+
+    ## def initialize_random_mean(self):
+    ##     # First, initialize the distribution from prior?
+    ##     self.initialize_from_prior()
         
-        if not np.all(self.observed):
-            # Draw a random sample
-            x = self.random()
+    ##     if not np.all(self.observed):
+    ##         # Draw a random sample
+    ##         x = self.random()
 
-            # Update parameter for the mean using the sample
-            self.phi[0] = -2*utils.m_dot(self.phi[1], x)
+    ##         # Update parameter for the mean using the sample
+    ##         self.phi[0] = -2*utils.m_dot(self.phi[1], x)
 
-            # Update moments
-            self.update_u_and_g()
+    ##         # Update moments
+    ##         (u, g) = self.compute_u_and_g(self.phi, mask=True)
+    ##         self.update_u_and_g(u, g, mask=True)
             
 
     def show(self):
         mu = self.u[0]
         Cov = self.u[1] - utils.m_outer(mu, mu)
-        print("Gaussian(mu, Cov)")
+        print("%s ~ Gaussian(mu, Cov)" % self.name)
         print("  mu = ")
         print(mu)
         print("  Cov = ")
@@ -1203,7 +1398,7 @@ def Mixture(distribution, cluster_plate=-1):
         @staticmethod
         def compute_g_from_parents(u_parents):
 
-            # Compute weighted average of g of the clusters.
+            # Compute weighted average of g over the clusters.
 
             # Shape(g)      = [Nn,..,K,..,N0]
             # Shape(p)      = [Nn,..,N0,K]
@@ -1234,15 +1429,12 @@ def Mixture(distribution, cluster_plate=-1):
 
         @staticmethod
         def compute_u_and_g(phi, mask=True):
-            #print('mixture.compute_u_and_g')
             return distribution.compute_u_and_g(phi, mask=mask)
 
         @staticmethod
         def compute_fixed_u_and_f(x):
             """ Compute u(x) and f(x) for given x. """
-            #print('mixture.compute_fixed_u_and_f')
             return distribution.compute_fixed_u_and_f(x)
-            #raise NotImplementedError()
 
         @staticmethod
         def compute_message(index, u, u_parents):
@@ -1299,7 +1491,7 @@ def Mixture(distribution, cluster_plate=-1):
             elif index >= 1:
 
                 # Parent index for the distribution used for the
-                # mixture
+                # mixture.
                 index = index - 1
 
                 # Reshape u:
@@ -1393,6 +1585,69 @@ def Mixture(distribution, cluster_plate=-1):
                     ##           self.plates[cluster_plate:])
                 return plates
             
+        def integrated_logpdf_from_parents(self, x, index):
+
+            """ Approximates the posterior predictive pdf \int
+            p(x|parents) q(parents) dparents in log-scale as \int
+            q(parents_i) exp( \int q(parents_\i) \log p(x|parents)
+            dparents_\i ) dparents_i."""
+
+            if index == 0:
+                # Integrate out the cluster assignments
+
+                # First, integrate the cluster parameters in log-scale
+                
+                # compute_logpdf(cls, u, phi, g, f):
+
+                # Shape(x) = [M1,..,Mm,N1,..,Nn,D1,..,Dd]
+                # Add the cluster axis to x:
+                # Shape(x) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
+                cluster_axis = cluster_plate - distribution.ndim_observations
+                x = np.expand_dims(x, axis=cluster_axis)
+
+                u_parents = self.moments_from_parents()
+                
+                # Shape(u) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
+                # Shape(f) = [M1,..,Mm,N1,..,1,..,Nn]
+                (u, f) = distribution.compute_fixed_u_and_f(x)
+                # Shape(phi) = [N1,..,K,..,Nn,D1,..,Dd]
+                phi = distribution.compute_phi_from_parents(u_parents[1:])
+                # Shape(g) = [N1,..,K,..,Nn]
+                g = distribution.compute_g_from_parents(u_parents[1:])
+                # Shape(lpdf) = [M1,..,Mm,N1,..,K,..,Nn]
+                lpdf = distribution.compute_logpdf(u, phi, g, f)
+
+                # From logpdf to pdf, but avoid over/underflow
+                lpdf_max = np.max(lpdf, axis=cluster_plate, keepdims=True)
+                pdf = np.exp(lpdf-lpdf_max)
+
+                # Move cluster axis to be the last:
+                # Shape(pdf) = [M1,..,Mm,N1,..,Nn,K]
+                pdf = utils.moveaxis(pdf, cluster_plate, -1)
+
+                #print('integrated_logpdf', pdf)
+                
+                # Cluster assignments/probabilities/weights
+                # Shape(p) = [N1,..,Nn,K]
+                p = u_parents[0][0]
+
+                #self.parents[0].show()
+                #print('integrated_logpdf, p:', p)
+                
+                # Weighted average. TODO/FIXME: Use einsum!
+                # Shape(pdf) = [M1,..,Mm,N1,..,Nn]
+                pdf = np.sum(pdf * p, axis=cluster_plate)
+
+                #print('integrated_logpdf', pdf)
+                
+                # Back to log-scale (add the overflow fix!)
+                lpdf_max = np.squeeze(lpdf_max, axis=cluster_plate)
+                lpdf = np.log(pdf) + lpdf_max
+
+                return lpdf
+
+            raise NotImplementedError()
+        
     return _Mixture
 
     ## def show(self):
