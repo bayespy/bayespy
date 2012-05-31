@@ -1,16 +1,16 @@
 
 from nodes.node import Node
 
-from .exponential_family import (variable,
-                                 constant,
-                                 gaussian,
-                                 wishart,
-                                 normal,
-                                 gamma,
-                                 dirichlet,
-                                 categorical,
-                                 dot,
-                                 mixture)
+from .variables import (variable,
+                        constant,
+                        gaussian,
+                        wishart,
+                        normal,
+                        gamma,
+                        dirichlet,
+                        categorical,
+                        dot,
+                        mixture)
 
 import imp
 
