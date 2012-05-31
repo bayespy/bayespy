@@ -4,6 +4,42 @@ import scipy.sparse as sp
 import matplotlib.pyplot as plt
 #from matplotlib.pyplot import *
 
+def gaussian_mixture(w, mu, Sigma):
+    pass
+
+def gaussian_mixture_logpdf(x, w, mu, Sigma):
+    # Shape(x)      = (N, D)
+    # Shape(w)      = (K,)
+    # Shape(mu)     = (K, D)
+    # Shape(Sigma)  = (K, D, D)
+    # Shape(result) = (N,)
+
+    # Dimensionality
+    D = np.shape(x)[-1]
+
+    # Cholesky decomposition of the covariance matrix
+    U = utils.m_chol(Sigma)
+
+    # Reshape x:
+    # Shape(x)     = (N, 1, D)
+    x = np.expand_dims(x, axis=-2)
+
+    # (x-mu) and (x-mu)'*inv(Sigma)*(x-mu):
+    # Shape(v)     = (N, K, D)
+    # Shape(z)     = (N, K)
+    v = x - mu
+    z = np.einsum('...i,...i', v, utils.m_chol_solve(U, v))
+
+    # Log-determinant of Sigma:
+    # Shape(ldet)  = (K,)
+    ldet = utils.m_chol_logdet(U)
+
+    # Compute log pdf for each cluster:
+    # Shape(lpdf)  = (N, K)
+    lpdf = utils.gaussian_logpdf(z, 0, 0, ldet, D)
+    
+    
+
 def matrixplot(A, colorbar=False):
     if sp.issparse(A):
         A = A.toarray()

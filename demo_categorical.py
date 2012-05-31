@@ -37,7 +37,7 @@ def run(M=30, D=5):
 
     # Inference loop.
     L_last = -np.inf
-    for i in range(100):
+    for i in range(10):
         t = time.clock()
 
         # Update nodes

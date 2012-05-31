@@ -5,7 +5,8 @@ import time
 
 import utils
 import plotting as myplt
-import Nodes.ExponentialFamily as EF
+import nodes as EF
+#import nodes.exponential_family as EF
 
 import imp
 imp.reload(utils)
@@ -108,7 +109,7 @@ def run(N=50, K=5, D=2):
     ## return
 
     # Inference loop.
-    maxiter = 100
+    maxiter = 30
     L_X = np.zeros(maxiter)
     L_Lambda = np.zeros(maxiter)
     L_alpha = np.zeros(maxiter)
