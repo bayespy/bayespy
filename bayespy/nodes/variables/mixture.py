@@ -6,10 +6,7 @@ import scipy.linalg as linalg
 import scipy.special as special
 import scipy.spatial.distance as distance
 
-import imp
-
-import utils
-imp.reload(utils)
+import bayespy.utils as utils
 
 from .variable import Variable
 from .constant import Constant

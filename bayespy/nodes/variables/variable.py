@@ -1,6 +1,6 @@
 import numpy as np
 
-import utils
+import bayespy.utils as utils
 
 from ..node import Node
 
