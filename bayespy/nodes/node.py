@@ -1,7 +1,8 @@
 
 import numpy as np
 
-import utils
+from .. import utils
+#import utils
 
 ## # Differentiate model and inference (and data).
 ## #
