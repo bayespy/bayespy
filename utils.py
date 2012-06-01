@@ -497,6 +497,7 @@ def m_chol(C):
     # The last two axes of C are considered as the matrix.
     C = np.atleast_2d(C)
     U = np.empty(np.shape(C))
+    #print('m_chol', C)
     for i in nested_iterator(np.shape(U)[:-2]):
         try:
             U[i] = decomp.cho_factor(C[i])[0]
@@ -507,6 +508,9 @@ def m_chol(C):
 
 
 def m_chol_solve(U, B, out=None):
+
+    #print('m_chol_solve', B)
+    
     # Allocate memory
     U = np.atleast_2d(U)
     B = np.atleast_1d(B)
