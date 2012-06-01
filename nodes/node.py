@@ -1,16 +1,7 @@
 
-import itertools
 import numpy as np
-import scipy as sp
-import scipy.linalg.decomp_cholesky as decomp
-import scipy.linalg as linalg
-import scipy.special as special
-import scipy.spatial.distance as distance
-
-import imp
 
 import utils
-imp.reload(utils)
 
 ## # Differentiate model and inference (and data).
 ## #
@@ -236,7 +227,8 @@ class Node:
                 ## print(m.__class__)
                 ## print(my_mask2.__class__)
                 #print(my_mask2)
-                m[i] = m[i] * my_mask2
+                m[i] = np.where(my_mask2, m[i], 0)
+                #m[i] = m[i] * my_mask2
                 #except:
 
                 shape_m = np.shape(m[i])
@@ -411,42 +403,5 @@ class NodeConstantScalar(NodeConstant):
 
 
 
-
-
-class NodeWishartFromGamma(Node):
-    
-    def __init__(self, alpha, **kwargs):
-
-        # Check for constant n
-        if np.isscalar(alpha) or isinstance(alpha, np.ndarray):            
-            alpha = NodeConstantGamma(alpha)
-
-        #ExponentialFamily.__init__(self, n, V, plates=plates, dims=V.dims, **kwargs)
-        k = alpha.plates[-1]
-        Node.__init__(self,
-                      alpha,
-                      plates=alpha.plates[:-1],
-                      dims=[(k,k),()],
-                      **kwargs)
-        
-    def get_moments(self):
-        u = self.parents[0].message_to_child()
-
-        return [np.identity(self.dims[0][0]) * u[0][...,np.newaxis],
-                np.sum(u[1], axis=(-1))]
-
-    def get_message(self, index, u_parents):
-        
-        (m, mask) = self.message_from_children()
-
-        # Take the diagonal
-        m[0] = np.einsum('...ii->...i', m[0])
-        m[1] = np.reshape(m[1], np.shape(m[1]) + (1,))
-        # m[1] is ok
-
-        mask = mask[...,np.newaxis]
-
-        return (m, mask)
-        
 
 

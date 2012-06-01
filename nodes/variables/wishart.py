@@ -1,15 +1,5 @@
-import itertools
 import numpy as np
-import scipy as sp
-import scipy.linalg.decomp_cholesky as decomp
-import scipy.linalg as linalg
-import scipy.special as special
-import scipy.spatial.distance as distance
-
-import imp
-
 import utils
-imp.reload(utils)
 
 from .variable import Variable
 from .constant import Constant
@@ -49,6 +39,19 @@ class Wishart(Variable):
 
     # Observations/values are 2-D matrices
     ndim_observations = 2
+
+    #parameter_distributions = (WishartPrior, Wishart)
+    
+    ## @staticmethod
+    ## def compute_fixed_parameter_moments(*args):
+    ##     """ Compute the moments of the distribution parameters for
+    ##     fixed values."""
+    ##     n = args[0]
+    ##     V = args[1]
+    ##     k = np.shape(V)[-1]
+    ##     u_n = WishartPrior(k).compute_fixed_moments(n)
+    ##     u_V = Wishart.compute_fixed_moments(V)
+    ##     return (u_n, u_V)
 
     @staticmethod
     def compute_fixed_moments(Lambda):
@@ -126,12 +129,15 @@ class Wishart(Variable):
         if np.isscalar(V) or isinstance(V, np.ndarray):
             V = Constant(Wishart)(V)
 
+        k = V.dims[0][-1]
+        
         # Check for constant n
         if np.isscalar(n) or isinstance(n, np.ndarray):
-            k = V.dims[0][-1]
             n = Constant(WishartPrior(k))(n)
             #n = NodeConstantScalar(n)
-            
+
+        self.parameter_distributions = (WishartPrior(k), Wishart)
+        
         super().__init__(n, V, plates=plates, **kwargs)
         
     def show(self):
@@ -140,3 +146,4 @@ class Wishart(Variable):
         print(2*self.phi[1])
         print("  A =")
         print(0.5 * self.u[0] / self.phi[1][...,np.newaxis,np.newaxis])
+

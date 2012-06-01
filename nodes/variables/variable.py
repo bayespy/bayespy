@@ -1,17 +1,9 @@
-import itertools
 import numpy as np
-import scipy as sp
-import scipy.linalg.decomp_cholesky as decomp
-import scipy.linalg as linalg
-import scipy.special as special
-import scipy.spatial.distance as distance
-
-import imp
 
 import utils
-imp.reload(utils)
 
 from ..node import Node
+
 
 # nodes/
 #   gp/
@@ -34,11 +26,19 @@ from ..node import Node
 #print(Node)
 #print(Node.Node)
 
+# MAP/ML:
+# X = MAP(prior=Gaussian(mu,Cov))
+# X = ML()
+# or:
+# X = Delta(prior=Gaussian(mu,Cov))
+
 class Variable(Node):
 
     # Overwrite this
     ndims = None
     ndims_parents = None
+    parameter_distributions = None
+    
 
     @classmethod
     def compute_logpdf(cls, u, phi, g, f):
@@ -57,6 +57,13 @@ class Variable(Node):
             # TODO/FIXME: Use einsum!
             L = L + np.sum(phi_i * u_i, axis=axis_sum)
         return L
+
+    @staticmethod
+    def compute_fixed_parameter_moments(*args):
+        """ Compute the moments of the distribution parameters for
+        fixed values."""
+        raise NotImplementedError()
+
 
     @staticmethod
     def compute_phi_from_parents(u_parents):
@@ -154,10 +161,12 @@ class Variable(Node):
     def initialize_from_parameters(self, *args):
         # Get the moments of the parameters if they were fixed to the
         # given values.
+        #u_parents = self.compute_fixed_parameter_moments(*args)
         u_parents = list()
         for (ind, x) in enumerate(args):
             #print(self.parents[ind].__class__)
-            u = self.parents[ind].compute_fixed_moments(x)
+            u = self.parameter_distributions[ind].compute_fixed_moments(x)
+            #u = self.parents[ind].compute_fixed_moments(x)
             #(u, _) = self.parents[ind].compute_fixed_u_and_f(x)
             u_parents.append(u)
         # Update natural parameters
@@ -346,27 +355,24 @@ class Variable(Node):
         # properly automatically)
         latent_mask = np.logical_not(self.observed)
         #latent_mask = np.logical_and(self.mask, np.logical_not(self.observed))
-        L = L - self.g * latent_mask
-        # F for observed variables
-        L = L + self.f * self.observed
+        # F for observed, G for latent
+        L = L + np.where(self.observed, self.f, -self.g)
         for (phi_p, phi_q, u_q, dims) in zip(phi, self.phi, self.u, self.dims):
             # Form a mask which puts observed variables to zero and
             # broadcasts properly
-            latent_mask = utils.add_axes(latent_mask,
+            latent_mask_i = utils.add_axes(latent_mask,
                                    len(self.plates) - np.ndim(latent_mask),
                                    len(dims))
             axis_sum = tuple(range(-len(dims),0))
 
             # Compute the term
-            phi_q = np.where(latent_mask, phi_q, 0)
+            phi_q = np.where(latent_mask_i, phi_q, 0)
             # TODO/FIXME: Use einsum here?
             Z = np.sum((phi_p-phi_q) * u_q, axis=axis_sum)
-            ## Z = np.sum((phi_p - phi_q*latent_mask) * u_q,
-            ##            axis=axis_sum)
 
             L = L + Z
 
-        return (np.sum(L*self.mask)
+        return (np.sum(np.where(self.mask, L, 0))
                 * self.plate_multiplier(self.plates,
                                         np.shape(L),
                                         np.shape(self.mask)))

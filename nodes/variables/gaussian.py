@@ -1,17 +1,6 @@
-import itertools
 import numpy as np
-import scipy as sp
-import scipy.linalg.decomp_cholesky as decomp
-import scipy.linalg as linalg
-import scipy.special as special
-import scipy.spatial.distance as distance
-
-import imp
-
 import utils
-imp.reload(utils)
 
-#import Variable, Constant, Wishart
 from .variable import Variable
 from .constant import Constant
 from .wishart import Wishart
@@ -22,6 +11,17 @@ class Gaussian(Variable):
     ndims_parents = [(1, 2), (2, 0)]
     # Observations are vectors (1-D):
     ndim_observations = 1
+
+    
+    ## @staticmethod
+    ## def compute_fixed_parameter_moments(*args):
+    ##     """ Compute the moments of the distribution parameters for
+    ##     fixed values."""
+    ##     mu = args[0]
+    ##     Lambda = args[1]
+    ##     u_mu = Gaussian.compute_fixed_moments(mu)
+    ##     u_Lambda = Wishart.compute_fixed_moments(Lambda)
+    ##     return (u_mu, u_Lambda)
 
     @staticmethod
     def compute_fixed_moments(x):
@@ -102,6 +102,8 @@ class Gaussian(Variable):
 
     def __init__(self, mu, Lambda, plates=(), **kwargs):
 
+        self.parameter_distributions = (Gaussian, Wishart)
+        
         # Check for constant mu
         if np.isscalar(mu) or isinstance(mu, np.ndarray):
             mu = Constant(Gaussian)(mu)

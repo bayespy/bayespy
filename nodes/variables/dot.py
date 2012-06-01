@@ -87,12 +87,72 @@ class Dot(Node):
         for i in range(2):
 
             # Add extra axes to the message from children
-            m_shape = np.shape(m[i]) + (1,) * (i+1)
-            m[i] = np.reshape(m[i], m_shape)
+            #m_shape = np.shape(m[i]) + (1,) * (i+1)
+            #m[i] = np.reshape(m[i], m_shape)
+
+            # Put masked elements to zero
+            np.copyto(m[i], 0, where=np.logical_not(mask))
+                
+            # Add extra axes to the mask from children
+            #mask_shape = np.shape(mask) + (1,) * (i+1)
+            #mask_i = np.reshape(mask, mask_shape)
+
+            #mask_i = mask
+            m[i] = utils.add_trailing_axes(m[i], i+1)
+            #for k in range(i+1):
+                #m[i] = np.expand_dims(m[i], axis=-1)
+                #mask_i = np.expand_dims(mask_i, axis=-1)
+
+            # List of elements to multiply together
+            A = [m[i]]
+            for k in range(len(u_parents)):
+                if k != index:
+                    A.append(u_parents[k][i])
+
+            # Find out which axes are summed over. Also, 
+            full_shape = utils.broadcasted_shape_from_arrays(*A)
+            axes = utils.axes_to_collapse(full_shape, parent.get_shape(i))
+            # Compute the multiplier for cancelling the
+            # plate-multiplier.  Because we are summing over the
+            # dimensions already in this function (for efficiency), we
+            # need to cancel the effect of the plate-multiplier
+            # applied in the message_to_parent function.
+            r = 1
+            for j in axes:
+                r *= full_shape[j]
+
+            # Compute dot product (and cancel plate-multiplier)
+            m[i] = utils.sum_product(*A, axes_to_sum=axes, keepdims=True) / r
+
+        # Compute the mask
+        s = utils.axes_to_collapse(np.shape(mask), parent.plates)
+        mask = np.any(mask, axis=s, keepdims=True)
+        mask = utils.squeeze_to_dim(mask, len(parent.plates))
+
+        return (m, mask)
+
+
+    def OLD_get_message(self, index, u_parents):
+        
+        (m, mask) = self.message_from_children()
+
+        parent = self.parents[index]
+
+        # Compute both messages
+        for i in range(2):
+
+            # Add extra axes to the message from children
+            #m_shape = np.shape(m[i]) + (1,) * (i+1)
+            #m[i] = np.reshape(m[i], m_shape)
 
             # Add extra axes to the mask from children
             mask_shape = np.shape(mask) + (1,) * (i+1)
             mask_i = np.reshape(mask, mask_shape)
+
+            mask_i = mask
+            for k in range(i+1):
+                m[i] = np.expand_dims(m[i], axis=-1)
+                mask_i = np.expand_dims(mask_i, axis=-1)
 
             # List of elements to multiply together
             A = [m[i], mask_i]

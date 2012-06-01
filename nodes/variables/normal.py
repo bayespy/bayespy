@@ -63,6 +63,7 @@ class Normal(Variable):
     @staticmethod
     def compute_dims(*parents):
         """ Compute the dimensions of phi/u. """
+        # Both moments are scalars, thus, shapes are ()
         return [(), ()]
 
     # Normal(mu, 1/tau)

@@ -8,10 +8,32 @@ import plotting as myplt
 import nodes as EF
 #import nodes.exponential_family as EF
 
+## import imp
+## imp.reload(utils)
+## imp.reload(myplt)
+## imp.reload(EF)
+
+# Reload everything (helpful for interactive sessions)
 import imp
+import nodes
+import nodes.node
+import nodes.variables
+import nodes.variables.variable
+import nodes.variables.wishart
+import nodes.variables.gaussian
+import nodes.variables.mixture
+import nodes.variables.dirichlet
+import nodes.variables.categorical
 imp.reload(utils)
-imp.reload(myplt)
-imp.reload(EF)
+imp.reload(nodes)
+imp.reload(nodes.node)
+imp.reload(nodes.variables)
+imp.reload(nodes.variables.variable)
+imp.reload(nodes.variables.wishart)
+imp.reload(nodes.variables.gaussian)
+imp.reload(nodes.variables.mixture)
+imp.reload(nodes.variables.dirichlet)
+imp.reload(nodes.variables.categorical)
 
 def gaussianmix_model(N, K, D):
     # N = number of data vectors
@@ -182,11 +204,11 @@ def run(N=50, K=5, D=2):
     #print(y)
     #print(Y.u[0])
 
-    ## plt.clf()
-    ## f = np.vstack([L_X, L_Lambda, L_z, L_alpha, L_Y]).T
-    ## f = np.diff(f, axis=0)
-    ## ax = plt.plot(f[30:])
-    ## plt.legend(ax)
+    plt.clf()
+    f = np.vstack([L_X, L_Lambda, L_z, L_alpha, L_Y, L]).T
+    #f = np.diff(f, axis=0)
+    ax = plt.plot(f)
+    plt.legend(ax)
 
     ## plt.figure()
     ## plt.clf()

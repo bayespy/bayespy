@@ -81,8 +81,8 @@ def errorplot(y, error=None, x=None, lower=None, upper=None):
 
     # Plot errors
     if (lower is not None) and (upper is not None):
-        print(np.max(lower))
-        print(np.max(upper))
+        #print(np.max(lower))
+        #print(np.max(upper))
         l = y - lower
         u = y + upper
         plt.fill_between(x,
