@@ -84,7 +84,7 @@ def run(M=10, N=100, D_y=3, D=5):
     Y.observe(y, mask)
 
     # Inference loop.
-    maxiter = 100
+    maxiter = 10000
     L_X = np.zeros(maxiter)
     L_W = np.zeros(maxiter)
     L_tau = np.zeros(maxiter)
