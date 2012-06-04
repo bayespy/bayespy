@@ -1,15 +1,4 @@
-import itertools
 import numpy as np
-import scipy as sp
-import scipy.linalg.decomp_cholesky as decomp
-import scipy.linalg as linalg
-import scipy.special as special
-import scipy.spatial.distance as distance
-
-import imp
-
-import utils
-imp.reload(utils)
 
 from .variable import Variable
 from .constant import Constant

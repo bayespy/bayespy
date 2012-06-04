@@ -6,7 +6,7 @@ import scipy.linalg as linalg
 import scipy.special as special
 import scipy.optimize as optimize
 import scipy.sparse as sparse
-import scikits.sparse.cholmod as cholmod
+#import scikits.sparse.cholmod as cholmod
 
 def nans(size=()):
     return np.tile(np.nan, size)

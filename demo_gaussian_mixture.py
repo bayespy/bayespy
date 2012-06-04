@@ -3,9 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-import utils
-import plotting as myplt
-import nodes as EF
+import bayespy.utils as utils
+import bayespy.plotting as myplt
+import bayespy.nodes as EF
 #import nodes.exponential_family as EF
 
 ## import imp
@@ -15,25 +15,25 @@ import nodes as EF
 
 # Reload everything (helpful for interactive sessions)
 import imp
-import nodes
-import nodes.node
-import nodes.variables
-import nodes.variables.variable
-import nodes.variables.wishart
-import nodes.variables.gaussian
-import nodes.variables.mixture
-import nodes.variables.dirichlet
-import nodes.variables.categorical
+import bayespy.nodes
+import bayespy.nodes.node
+import bayespy.nodes.variables
+import bayespy.nodes.variables.variable
+import bayespy.nodes.variables.wishart
+import bayespy.nodes.variables.gaussian
+import bayespy.nodes.variables.mixture
+import bayespy.nodes.variables.dirichlet
+import bayespy.nodes.variables.categorical
 imp.reload(utils)
-imp.reload(nodes)
-imp.reload(nodes.node)
-imp.reload(nodes.variables)
-imp.reload(nodes.variables.variable)
-imp.reload(nodes.variables.wishart)
-imp.reload(nodes.variables.gaussian)
-imp.reload(nodes.variables.mixture)
-imp.reload(nodes.variables.dirichlet)
-imp.reload(nodes.variables.categorical)
+imp.reload(bayespy.nodes)
+imp.reload(bayespy.nodes.node)
+imp.reload(bayespy.nodes.variables)
+imp.reload(bayespy.nodes.variables.variable)
+imp.reload(bayespy.nodes.variables.wishart)
+imp.reload(bayespy.nodes.variables.gaussian)
+imp.reload(bayespy.nodes.variables.mixture)
+imp.reload(bayespy.nodes.variables.dirichlet)
+imp.reload(bayespy.nodes.variables.categorical)
 
 def gaussianmix_model(N, K, D):
     # N = number of data vectors
@@ -204,11 +204,11 @@ def run(N=50, K=5, D=2):
     #print(y)
     #print(Y.u[0])
 
-    plt.clf()
-    f = np.vstack([L_X, L_Lambda, L_z, L_alpha, L_Y, L]).T
-    #f = np.diff(f, axis=0)
-    ax = plt.plot(f)
-    plt.legend(ax)
+    ## plt.clf()
+    ## f = np.vstack([L_X, L_Lambda, L_z, L_alpha, L_Y, L]).T
+    ## #f = np.diff(f, axis=0)
+    ## ax = plt.plot(f)
+    ## plt.legend(ax)
 
     ## plt.figure()
     ## plt.clf()

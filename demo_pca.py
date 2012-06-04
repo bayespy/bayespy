@@ -2,30 +2,30 @@
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-import plotting as myplt
+import bayespy.plotting as myplt
 
-import utils
-import nodes as EF
+import bayespy.utils as utils
+import bayespy.nodes as EF
 
 # Reload everything (helpful for interactive sessions)
 import imp
-import nodes
-import nodes.node
-import nodes.variables
-import nodes.variables.variable
-import nodes.variables.gamma
-import nodes.variables.gaussian
-import nodes.variables.normal
-import nodes.variables.dot
+import bayespy.nodes
+import bayespy.nodes.node
+import bayespy.nodes.variables
+import bayespy.nodes.variables.variable
+import bayespy.nodes.variables.gamma
+import bayespy.nodes.variables.gaussian
+import bayespy.nodes.variables.normal
+import bayespy.nodes.variables.dot
 imp.reload(utils)
-imp.reload(nodes)
-imp.reload(nodes.node)
-imp.reload(nodes.variables)
-imp.reload(nodes.variables.variable)
-imp.reload(nodes.variables.gamma)
-imp.reload(nodes.variables.gaussian)
-imp.reload(nodes.variables.normal)
-imp.reload(nodes.variables.dot)
+imp.reload(bayespy.nodes)
+imp.reload(bayespy.nodes.node)
+imp.reload(bayespy.nodes.variables)
+imp.reload(bayespy.nodes.variables.variable)
+imp.reload(bayespy.nodes.variables.gamma)
+imp.reload(bayespy.nodes.variables.gaussian)
+imp.reload(bayespy.nodes.variables.normal)
+imp.reload(bayespy.nodes.variables.dot)
 
 def pca_model(M, N, D):
     # Construct the PCA model with ARD

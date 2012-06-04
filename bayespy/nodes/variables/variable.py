@@ -1,6 +1,6 @@
 import numpy as np
 
-import utils
+import bayespy.utils as utils
 
 from ..node import Node
 
@@ -100,7 +100,7 @@ class Variable(Node):
         """ Compute the dimensions of phi and u. """
         raise NotImplementedError()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, initialize=True, **kwargs):
 
         super().__init__(*args,
                          dims=self.compute_dims(*args),
@@ -133,6 +133,9 @@ class Variable(Node):
 
         # By default, ignore all plates
         self.mask = False
+
+        if initialize:
+            self.initialize_from_prior()
 
     def get_vb_term(self):
         return {self.lower_bound_contribution}

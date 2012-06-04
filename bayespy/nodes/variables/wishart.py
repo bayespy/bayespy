@@ -1,5 +1,6 @@
 import numpy as np
-import utils
+import scipy.special as special
+import bayespy.utils as utils
 
 from .variable import Variable
 from .constant import Constant
