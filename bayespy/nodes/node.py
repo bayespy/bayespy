@@ -35,6 +35,7 @@ from .. import utils
 # Gradients:
 #
 # ( (x1,...,xn), [ (dx1,...,dxn,callback), ..., (dx1,...,dxn,callback) ] )
+# callback(f(dx1),...,f(dx2))
     
 
 

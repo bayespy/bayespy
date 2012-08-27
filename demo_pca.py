@@ -27,6 +27,196 @@ imp.reload(bayespy.nodes.variables.gaussian)
 imp.reload(bayespy.nodes.variables.normal)
 imp.reload(bayespy.nodes.variables.dot)
 
+def rotate_pca(W, X, alpha, maxiter=10):
+    # Rotate: W*R, X*R^-1
+
+    W.start_rotation(to_children=False, to_parents=True)
+    X.start_rotation(to_children=False, to_parents=True)
+
+    # TODO: Sum over plates
+    u_q_W = W.u
+    u_q_alpha = alpha.u
+    phi_q_alpha = alpha.phi
+
+    phi_p_X = X.phi_of_p()
+    g_p_X = 0
+
+    phi_p_alpha = alpha.phi_of_p()
+    g_p_alpha = 0
+
+    f_X = X.get_rotation_cost_function(parents_transformed=False)
+    f_W = W.get_rotation_cost_function(parents_transformed=False)
+    (transform_x, cost_x) = X.start_rotation(..)
+    (transform_w, cost_w) = W.start_rotation(..)
+    # (transform_alpha, cost_alpha) = alpha.start_something(..)
+
+    transform_x(invR, svd=(V.T,invS,U.T))
+    transform_w(R, svd=(U,S,V))
+    # transform_alpha(..)
+
+    cost_x(gradient=True)
+    cost_w(gradient=True)
+    # cost_alpha()
+
+    f_X.rotate(invR)
+    f_W.rotate(R)
+    # alpha.transform(..)
+    # mu.transform(..)
+
+    f_X.
+    
+    X.rotate(invR)
+    W.rotate(R)
+    alpha.translate_b(..)
+
+    (transform_x, cost_x, gradient_x) = X.start_rotation()
+    .. alpha.start_optimization_translate_b()
+
+    # Transform
+    transform_x(invR)
+    transform_w(R)
+    db = W.get_moments() ...
+    transform_alpha(db)
+
+    # Compute cost
+    l += cost_x()
+    l += cost_w()
+    l += cost_alpha()
+    
+    # Compute gradient
+    dR = gradient_x()
+    
+
+    def get_rotation_cost_gaussian(X):
+        # TODO: Sum over plates
+        u_q_X = X.get_rotateable_moments()
+        #u_q_X = X.u
+        
+        # Assume that the parents are not optimized at the same time,
+        # so we can keep their moments fixed:
+        phi_p_X = X.phi_of_p()
+
+        def rotation_cost(R, svd=None, gradient=False):
+            if svd is None:
+                (U,S,V) = np.svd(R)
+            else:
+                (U,S,V) = svd
+            # Rotate the moments and compute the cost
+            u_qh_X = X.rotate_moments(u_q_X, R)
+            log_qh_X = N_X * X.rotation_cost(U,S,V, gradient=True)
+            log_ph_X = X.compute_logpdf(u_qh_X,
+                                        phi_p_X,
+                                        0,
+                                        0,
+                                        gradient=True)
+            l = log_qh_X + log_ph_X
+            return l
+
+        return rotation_cost
+
+    def get_rotation_cost_gaussian_ard(X, alpha):
+        # TODO: Sum over plates. Ignore observations and ignorable
+        # plates? You shouldn't rotate observed values! Actually,
+        # variables shouldn't have observed/fixed values at all.
+        u_q_X = X.u
+        u_q_mu = X.parents[0].u
+        u_q_alpha = alpha.u
+        phi_q_alpha = alpha.phi
+        phi_p_alpha = alpha.phi_of_p()
+
+        def rotation_cost(R, svd=None, gradient=False):
+            if svd is None:
+                (U,S,V) = np.svd(R)
+            else:
+                (U,S,V) = svd
+            # Rotate X
+            # ???: What if something is observed?
+            u_qh_X = X.rotate_moments(u_q_X, R)
+            # Scale alpha, i.e., change parameter b
+            phi_qh_alpha = [phi_q_alpha[0],
+                            phi_q_alpha[1] + xhxh - xx]
+            u_qh_alpha = alpha.compute_moments(phi_qh_alpha)
+            # Compute terms for <p(X|alpha)> over transformed alpha.
+            phi_ph_X = X.compute_phi_from_parents([u_q_mu,
+                                                   u_qh_alpha])
+            g_ph_X = X.compute_g_from_parents([u_q_mu,
+                                               u_qh_alpha])
+            # Cost for X
+            log_qh_X = N_X * X.rotation_cost(U,S,V)
+            log_ph_X = X.compute_logpdf(u_qh_X,
+                                        phi_ph_X,
+                                        g_ph_X,
+                                        0)
+            # Cost for alpha
+            log_qh_alpha = N_alpha * alpha_w.scaling_entropy(scale_alpha)
+            log_ph_alpha = alpha_w.compute_logpdf(u_qh_alpha,
+                                                  phi_p_alpha,
+                                                  0,
+                                                  0)
+
+        return rotation_cost
+            
+            
+
+    def rotation_cost(R):
+        # SVD of rotation
+        (u,s,v) = np.svd(R)
+
+        # Transform moments of W
+        #uh_W = [np.dot(u_W[0],R.T),
+        #        np.dot(np.dot(R, u_W[1]), R.T)]
+        u_qh_W = W.rotate_moments(uh_W, R, gradient=True)
+        u_qh_X = X.rotate_moments(uh_X, invR)
+
+        # Transform moments of alpha
+        # ???
+        phi_qh_alpha = [phi_q_alpha[0],
+                        phi_q_alpha[1] + whwh - ww]
+        #uh_aw = alpha_w.moments_from_translated_parameters(0,whwh-ww)
+        u_qh_alpha = alpha.compute_moments(phi_qh_alpha)
+        scale_alpha = u_qh_alpha[0] / u_q_alpha[0]
+        #scale_w = (aw - ww + whwh) / aw
+        #uh_aw = [scale_w * u_aw[0],
+        #         np.log(scale_w) + u_aw[1]
+        #uh_aw = alpha_w.scale_moments(u_aw, scale_w)
+        
+        phi_ph_W = W.compute_phi_from_parents([..])
+        g_ph_W = W.compute_g_from_parents([..])
+        
+                
+        log_qh_W = N_W * W.rotation_entropy(u,s,v, gradient=True)
+        # gradient?
+        log_ph_W = W.compute_logpdf(u_qh_W,
+                                  phi_ph_W,
+                                  g_ph_W,
+                                  0)
+
+        log_qh_X = X.rotation_cost(u,s,v)
+        log_ph_X = X.compute_logpdf(u_qh_X,
+                                  phi_p_X,
+                                  g_p_X,
+                                  0)
+
+        # These must be Wishart nodes?
+
+        log_qh_alpha = N_alpha * alpha_w.scaling_entropy(scale_alpha)
+        log_ph_alpha = alpha_w.compute_logpdf(u_qh_alpha,
+                                              phi_p_alpha,
+                                              g_p_alpha,
+                                              0)
+
+
+    # Find optimal rotation
+    R = np.identity(D)
+    R = optimize(rotation_cost, R, maxiter=maxiter)
+
+    # Apply rotation
+    (u,s,v) = np.svd(R)
+    W.rotate(R)
+    X.rotate(invR)
+    alpha_w.scale(??)
+    alpha_x.scale(??)
+
 def pca_model(M, N, D):
     # Construct the PCA model with ARD
 
@@ -119,6 +309,28 @@ def run(M=10, N=100, D_y=3, D=5):
             print("Converged.")
             #break
         L_last = L[i]
+
+    if False:
+        # Optimization:
+        # - initialize for optimization
+        # - iteration:
+        #   - set new values to nodes
+        #   - compute cost and gradient
+        # - terminate optimization
+        
+        # Rotation pseudo code:
+        utils.rotate_pca(W, X, alpha, maxiter=10)
+        rot = Rotation(W, X, alpha)
+        R = rot.optimize(maxiter=50)
+        cw = W.get_rotation_cost_function()
+        cx = X.get_rotation_cost_function()
+        ca = alpha.get_cost_function()
+        ca = @(R) ca(
+        cost = cw + cx + ca
+        R = optimize(cost, identity(D))
+        W.rotate(R)
+        X.rotate(R)
+        alpha.???(R)
 
     tau.show()
 

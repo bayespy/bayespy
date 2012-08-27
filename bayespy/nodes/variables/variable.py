@@ -225,6 +225,9 @@ class Variable(Node):
                     ## except ValueError:
                     ##     self.phi[i] = self.phi[i] + m[i]
                     #print('update2, phi', i, self.name, self.phi, m[i])
+
+                    # TODO/FIXME: You should take into account the
+                    # mask when adding the message!!!!???
                     self.phi[i] = self.phi[i] + m[i]
 
             # Mask for plates to update (i.e., unobserved plates)
@@ -233,6 +236,14 @@ class Variable(Node):
             (u, g) = self.compute_u_and_g(self.phi, mask=update_mask)
             # Update moments
             self.update_u_and_g(u, g, mask=update_mask)
+
+    def phi_from_parents(self, gradient=False):
+        # Messages from parents
+        u_parents = [parent.message_to_child(gradient=gradient)
+                     for parent in self.parents]
+        # Compute and return phi
+        return self.compute_phi_from_parents(u_parents,
+                                             gradient=gradient)
 
     def update_phi_from_parents(self, u_parents):
         # This makes correct broadcasting
