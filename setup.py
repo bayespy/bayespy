@@ -30,7 +30,7 @@ LONG_DESCRIPTION    = """Bayesian inference tools.  The package provides tools f
 models and performing posterior inference.
 """
 
-DISTNAME            = 'bayespy'
+NAME                = u'BayesPy'
 DESCRIPTION         = 'Bayesian inference tools for Python'
 MAINTAINER          = 'Jaakko Luttinen',
 MAINTAINER_EMAIL    = 'jaakko.luttinen@aalto.fi',
@@ -40,8 +40,8 @@ VERSION             = '0.1.0'
 
 if __name__ == "__main__":
     setup(install_requires = ['numpy', 'scipy'],
-          packages = find_packages(),
-          name = DISTNAME,
+          packages = ['bayespy'],
+          name = NAME,
           version = VERSION,
           maintainer = MAINTAINER,
           maintainer_email = MAINTAINER_EMAIL,
