@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 ######################################################################
 # Copyright (C) 2011,2012 Jaakko Luttinen
 #
@@ -22,36 +24,29 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
-import numpy as np
+from distutils.core import setup
 
-from ..node import Node
+LONG_DESCRIPTION    = """Bayesian inference tools.  The package provides tools for building
+models and performing posterior inference.
+"""
 
-def Constant(distribution):
-    class _Constant(Node):
+DISTNAME            = 'bayespy'
+DESCRIPTION         = 'Bayesian inference tools for Python'
+MAINTAINER          = 'Jaakko Luttinen',
+MAINTAINER_EMAIL    = 'jaakko.luttinen@aalto.fi',
+URL                 = 'https://github.com/jluttine/bayespy'
+LICENSE             = 'GPL'
+VERSION             = '0.1.0'
 
-        @staticmethod
-        def compute_fixed_moments(x):
-            """ Compute u(x) for given x. """
-            return distribution.compute_fixed_moments(x)
-        
-        @staticmethod
-        def compute_fixed_u_and_f(x):
-            """ Compute u(x) and f(x) for given x. """
-            return distribution.compute_fixed_u_and_f(x)
-        
-        def __init__(self, x, **kwargs):
-            # Compute moments
-            self.u = distribution.compute_fixed_moments(x)
-            # Dimensions of the moments
-            dims = distribution.compute_dims_from_values(x)
-            # Number of plate axes
-            plates_ndim = np.ndim(x) - distribution.ndim_observations
-            plates = np.shape(x)[:plates_ndim]
-            # Parent constructor
-            super().__init__(dims=dims, plates=plates, **kwargs)
-            
-        def get_moments(self):
-            return self.u
-        
-    return _Constant
-        
+if __name__ == "__main__":
+    setup(install_requires = ['numpy', 'scipy'],
+          packages = find_packages(),
+          name = DISTNAME,
+          version = VERSION,
+          maintainer = MAINTAINER,
+          maintainer_email = MAINTAINER_EMAIL,
+          description = DESCRIPTION,
+          license = LICENSE,
+          url = URL,
+          long_description = LONG_DESCRIPTION,
+          )
