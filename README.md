@@ -10,7 +10,7 @@ Carlo and other methods.
 
 Project home page is located at https://github.com/jluttine/bayespy .
  
-GIT repository can be found at https://github.com/jluttine/bayespy .
+GIT repository can be found at https://github.com/jluttine/bayespy.git .
 
 ## Documentation
 
@@ -24,4 +24,5 @@ Jaakko Luttinen jaakko.luttinen@aalto.fi
 
 Copyright (C) 2011-2012 Jaakko Luttinen, Aalto University
 
-CHOLMOD Extra Module is licensed under Version 3.0 of the GNU General Public License. See LICENSE for a text of the license.
+BayesPy is licensed under Version 3.0 of the GNU General Public
+License. See LICENSE for a text of the license.

@@ -6,11 +6,12 @@
 Welcome to BayesPy's documentation!
 ===================================
 
-Contents:
-
 .. toctree::
    :maxdepth: 2
-
+   
+   intro
+   install
+   license
 
 
 Indices and tables

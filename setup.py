@@ -39,7 +39,7 @@ LICENSE             = 'GPL'
 VERSION             = '0.1.0'
 
 if __name__ == "__main__":
-    setup(install_requires = ['numpy', 'scipy'],
+    setup(requires = ['numpy', 'scipy'],
           packages = ['bayespy'],
           name = NAME,
           version = VERSION,
