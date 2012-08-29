@@ -246,8 +246,8 @@ class Gaussian(Variable):
         def gradient_rotation():
             return dR
 
-        def stop_rotation():
-            self.u = 
+        #def stop_rotation():
+        #    self.u = 
 
         return (transform_rotation, cost_rotation, gradient_rotation)
         

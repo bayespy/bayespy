@@ -30,7 +30,7 @@ LONG_DESCRIPTION    = """Bayesian inference tools.  The package provides tools f
 models and performing posterior inference.
 """
 
-NAME                = u'BayesPy'
+NAME                = 'BayesPy'
 DESCRIPTION         = 'Bayesian inference tools for Python'
 MAINTAINER          = 'Jaakko Luttinen',
 MAINTAINER_EMAIL    = 'jaakko.luttinen@aalto.fi',

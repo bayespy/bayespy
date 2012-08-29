@@ -4,17 +4,21 @@ BayesPy provides tools for Bayesian inference with Python.
 
 The user may construct a model as a Bayesian network, observe data and
 run posterior inference.  Currently, only variational Bayesian
-inference has been implemented but future work might include
-expectation propagation, laplace approximations, Markov chain Monte
+inference for conjugate-exponential family (variational message
+passing) has been implemented.  Future work includes other types of
+distributions and possibly other approximate inference methods such as
+expectation propagation, Laplace approximations, Markov chain Monte
 Carlo and other methods.
 
-Project home page is located at https://github.com/jluttine/bayespy .
- 
-GIT repository can be found at https://github.com/jluttine/bayespy.git .
+* Home page: https://github.com/jluttine/bayespy
 
-## Documentation
+* Documentation: http://bayespy.readthedocs.org or at docs/ directory
 
-Documentation can be found at docs/ directory or http://bayespy.readthedocs.org/ .
+* Repository: https://github.com/jluttine/bayespy.git
+
+* Mailing list: bayespy@googlegroups.com
+
+* IRC: #bayespy @ `freenode <http://freenode.net/>`_
 
 ## Contact
 

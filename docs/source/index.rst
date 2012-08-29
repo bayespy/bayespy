@@ -11,6 +11,9 @@ Welcome to BayesPy's documentation!
    
    intro
    install
+   userguide
+   devguide
+   api
    license
 
 

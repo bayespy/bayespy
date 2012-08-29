@@ -22,6 +22,6 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
-
-from . import inference
+from . import utils
 from . import nodes
+from . import inference
