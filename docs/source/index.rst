@@ -6,6 +6,7 @@
 Welcome to BayesPy's documentation!
 ===================================
 
+
 .. toctree::
    :maxdepth: 2
    
