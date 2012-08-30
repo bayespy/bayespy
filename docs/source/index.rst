@@ -15,7 +15,6 @@ Welcome to BayesPy's documentation!
    userguide
    devguide
    api
-   license
 
 
 Indices and tables

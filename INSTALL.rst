@@ -1,5 +1,3 @@
-Installation
-============
 
 BayesPy is a Python 3 package.  It depends on `SciPy
 <http://www.scipy.org/>`_, thus install it if you do not have it
