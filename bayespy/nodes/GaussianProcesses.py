@@ -43,7 +43,7 @@ imp.reload(utils)
 imp.reload(EF)
 imp.reload(CF)
 
-class CovarianceMatrix
+class CovarianceMatrix:
     def cholesky(self):
         pass
 

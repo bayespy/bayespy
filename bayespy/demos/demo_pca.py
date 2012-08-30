@@ -70,8 +70,8 @@ def rotate_pca(W, X, alpha, maxiter=10):
 
     f_X = X.get_rotation_cost_function(parents_transformed=False)
     f_W = W.get_rotation_cost_function(parents_transformed=False)
-    (transform_x, cost_x) = X.start_rotation(..)
-    (transform_w, cost_w) = W.start_rotation(..)
+    (transform_x, cost_x) = X.start_rotation()
+    (transform_w, cost_w) = W.start_rotation()
     # (transform_alpha, cost_alpha) = alpha.start_something(..)
 
     transform_x(invR, svd=(V.T,invS,U.T))
@@ -87,19 +87,19 @@ def rotate_pca(W, X, alpha, maxiter=10):
     # alpha.transform(..)
     # mu.transform(..)
 
-    f_X.
+    #f_X.
     
     X.rotate(invR)
     W.rotate(R)
-    alpha.translate_b(..)
+    alpha.translate_b()
 
     (transform_x, cost_x, gradient_x) = X.start_rotation()
-    .. alpha.start_optimization_translate_b()
+    #.. alpha.start_optimization_translate_b()
 
     # Transform
     transform_x(invR)
     transform_w(R)
-    db = W.get_moments() ...
+    #db = W.get_moments() ...
     transform_alpha(db)
 
     # Compute cost
@@ -204,8 +204,8 @@ def rotate_pca(W, X, alpha, maxiter=10):
         #         np.log(scale_w) + u_aw[1]
         #uh_aw = alpha_w.scale_moments(u_aw, scale_w)
         
-        phi_ph_W = W.compute_phi_from_parents([..])
-        g_ph_W = W.compute_g_from_parents([..])
+        phi_ph_W = W.compute_phi_from_parents([])
+        g_ph_W = W.compute_g_from_parents([])
         
                 
         log_qh_W = N_W * W.rotation_entropy(u,s,v, gradient=True)
@@ -238,8 +238,8 @@ def rotate_pca(W, X, alpha, maxiter=10):
     (u,s,v) = np.svd(R)
     W.rotate(R)
     X.rotate(invR)
-    alpha_w.scale(??)
-    alpha_x.scale(??)
+    alpha_w.scale()
+    alpha_x.scale()
 
 def pca_model(M, N, D):
     # Construct the PCA model with ARD
@@ -349,12 +349,12 @@ def run(M=10, N=100, D_y=3, D=5):
         cw = W.get_rotation_cost_function()
         cx = X.get_rotation_cost_function()
         ca = alpha.get_cost_function()
-        ca = @(R) ca(
+        #ca = @(R) ca(
         cost = cw + cx + ca
         R = optimize(cost, identity(D))
         W.rotate(R)
         X.rotate(R)
-        alpha.???(R)
+        alpha.whathere(R)
 
     tau.show()
 
