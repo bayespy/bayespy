@@ -15,7 +15,7 @@ Copyright (C) 2011-2012 Jaakko Luttinen, Aalto University
 
 BayesPy including the documentation is licensed under Version 3.0 of
 the GNU General Public License. See LICENSE file for a text of the
-license.
+license or visit http://www.gnu.org/copyleft/gpl.html.
 
 * Home page: https://github.com/jluttine/bayespy
 

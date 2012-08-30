@@ -40,7 +40,10 @@ VERSION             = '0.1.0'
 
 if __name__ == "__main__":
     setup(requires = ['numpy', 'scipy'],
-          packages = ['bayespy'],
+          packages = ['bayespy',
+                      'bayespy.demos',
+                      'bayespy.nodes',
+                      'bayespy.nodes.variables'],
           name = NAME,
           version = VERSION,
           maintainer = MAINTAINER,

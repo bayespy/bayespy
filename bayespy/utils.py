@@ -22,8 +22,6 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
-""" This is important."""
-
 import itertools
 import numpy as np
 import scipy as sp
