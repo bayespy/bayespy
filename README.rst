@@ -39,10 +39,10 @@ Java and released under revised BSD license.
 
 `Bayes Blocks <http://research.ics.aalto.fi/bayes/software/>`_
 (http://research.ics.aalto.fi/bayes/software/) is a C++/Python
-implementation of the variational building block framework
-introduced. The framework allows easy learning of a wide variety of
-models using variational Bayesian learning.  It is available as free
-software under the GNU General Public License.
+implementation of the variational building block framework.  The
+framework allows easy learning of a wide variety of models using
+variational Bayesian learning.  It is available as free software under
+the GNU General Public License.
 
 `Infer.NET <http://research.microsoft.com/infernet/>`_
 (http://research.microsoft.com/infernet/) is a .NET framework for
