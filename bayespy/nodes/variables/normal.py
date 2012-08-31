@@ -31,6 +31,14 @@ from .gamma import Gamma
 class Normal(Variable):
 
     ndims = (0, 0)
+    ndims_parents = [(0, 0), (0, 0)]
+    # Observations are scalars (0-D):
+    ndim_observations = 0
+
+    @staticmethod
+    def compute_fixed_moments(x):
+        """ Compute moments u(x) for given x. """
+        return [x, x**2]
 
     @staticmethod
     def compute_phi_from_parents(u_parents):
@@ -79,23 +87,37 @@ class Normal(Variable):
         # Both moments are scalars, thus, shapes are ()
         return [(), ()]
 
+    @staticmethod
+    def compute_dims_from_values(x):
+        """ Compute the dimensions of phi and u. """
+        return [(), ()]
+
     # Normal(mu, 1/tau)
 
     def __init__(self, mu, tau, plates=(), **kwargs):
 
         # Check for constant mu
         if np.isscalar(mu) or isinstance(mu, np.ndarray):
-            mu = NodeConstant([mu, mu**2], plates=np.shape(mu), dims=[(),()])
+            mu = Constant(Normal)(mu)
 
         # Check for constant tau
         if np.isscalar(tau) or isinstance(tau, np.ndarray):
-            tau = NodeConstant([tau, log(tau)], plates=np.shape(tau), dims=[(),()])
+            tau = Constant(Gamma)(tau)
 
         # Construct
         super().__init__(mu, tau, plates=plates, **kwargs)
 
 
-    def show(self):
+    def show(self, parameters=True, mean=True, mode=True, median=True):
         mu = self.u[0]
-        s2 = self.u[1] - mu**2
-        print("Normal(" + str(mu) + ", " + str(s2) + ")")
+        tau = self.phi[1]
+        #s2 = self.u[1] - mu**2
+        print("%s ~ Normal(mu, tau)" % self.name)
+        print("  mu =", mu)
+        #print(mu)
+        print("  tau =", tau)
+        #print(tau)
+        #print("Normal(" + str(mu) + ", " + str(s2) + ")")
+
+    def plot(self):
+        pass

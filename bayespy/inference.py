@@ -32,7 +32,12 @@ class VB():
         self.iter = 0
         self.L = -np.inf
 
-    def update(self, *nodes, repeat=10):
+    def update(self, *nodes, repeat=1):
+
+        # By default, update all nodes
+        if len(nodes) == 0:
+            nodes = self.model
+            
         for i in range(repeat):
             t = time.clock()
             for node in nodes:

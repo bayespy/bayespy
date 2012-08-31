@@ -20,6 +20,7 @@ import sys, os
 
 # Import some information from the setup.py script.
 sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath('extensions'))
 import setup as setupfile
 
 # -- General configuration -----------------------------------------------------
@@ -29,7 +30,10 @@ import setup as setupfile
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax']
+extensions = ['sphinx.ext.autodoc', 
+              'sphinx.ext.mathjax',
+              'tikz']
+#'tikz-python3']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -181,7 +185,7 @@ latex_elements = {
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-#'preamble': '',
+'preamble': '\usepackage{tikz}'
 }
 
 # Grouping the document tree into LaTeX files. List of tuples

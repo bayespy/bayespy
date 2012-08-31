@@ -1,5 +1,58 @@
 User's guide
 ============
 
+* Construct the model (Bayesian network)
 
-.. literalinclude:: ../../bayespy/demos/demo_gaussian_mixture.py
+* Put the data in
+
+* Run inference
+
+* Examine posterior results
+
+Simple example
+--------------
+
+.. tikz:: An Example Directive with Caption
+
+   \draw[thick,rounded corners=8pt]
+   (0,0)--(0,2)--(1,3.25)--(2,2)--(2,0)--(0,2)--(2,2)--(0,0)--(2,0);
+
+First, the Bayesian
+
+.. literalinclude:: examples/example_01.py
+   :start-after: (1)
+   :end-before: (2)
+
+
+Constructing the model
+----------------------
+
+The model is constructed as a Bayesian network, which is directed
+acyclic graph representing a set of random variables and their
+conditional dependencies.
+
+
+
+Performing inference
+--------------------
+
+First, generate some data:
+
+.. literalinclude:: examples/example_01.py
+   :start-after: (2)
+   :end-before: (3)
+
+Run the inference
+
+.. literalinclude:: examples/example_01.py
+   :start-after: (3)
+   :end-before: (4)
+
+Show the resulting posterior approximation
+
+.. literalinclude:: examples/example_01.py
+   :start-after: (4)
+
+Plates
+
+

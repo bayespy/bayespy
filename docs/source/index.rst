@@ -14,6 +14,7 @@ Welcome to BayesPy's documentation!
    install
    userguide
    devguide
+   nodes
    api
 
 

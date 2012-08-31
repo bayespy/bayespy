@@ -5,8 +5,8 @@
 SPHINXOPTS    =
 
 # Use Python 3 version of Sphinx
-SPHINXBUILD   = /usr/share/sphinx/scripts/python3/sphinx-build
-#SPHINXBUILD   = sphinx-build
+#SPHINXBUILD   = /usr/share/sphinx/scripts/python3/sphinx-build
+SPHINXBUILD   = sphinx-build
 
 PAPER         =
 BUILDDIR      = build

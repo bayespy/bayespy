@@ -132,10 +132,10 @@ class Gamma(Variable):
         a = self.phi[1]
         b = -self.phi[0]
         print("%s ~ Gamma(a, b)" % self.name)
-        print(" a = ")
-        print(a)
-        print(" b = ")
-        print(b)
+        print("  a =", a)
+        #print(a)
+        print("  b =", b)
+        #print(b)
 
 class GammaToDiagonalWishart(Node):
     
