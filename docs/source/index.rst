@@ -15,7 +15,6 @@ Welcome to BayesPy's documentation!
    userguide
    devguide
    nodes
-   api
 
 
 Indices and tables
