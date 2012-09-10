@@ -185,7 +185,7 @@ latex_elements = {
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-#'preamble': '''
+'preamble': ''
 #  \usepackage{tikz}
 #  \usetikzlibrary{bayesnet}
 #  '''
