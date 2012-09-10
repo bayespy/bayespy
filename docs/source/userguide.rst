@@ -12,13 +12,8 @@ User's guide
 Simple example
 --------------
 
-.. image:: latex/model01.*
-
 .. 
-   tikz:: An Example Directive with Caption
-   :libs: bayesnet
-
-   \node[latent] {$\mathbf{X}$};
+   image:: latex/model01.*
 
 First, the Bayesian
 
