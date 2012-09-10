@@ -185,8 +185,13 @@ latex_elements = {
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-'preamble': '\usepackage{tikz}'
+#'preamble': '''
+#  \usepackage{tikz}
+#  \usetikzlibrary{bayesnet}
+#  '''
 }
+
+#latex_additional_files = ['tikzlibrarybayesnet.code.tex',]
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).

@@ -12,10 +12,13 @@ User's guide
 Simple example
 --------------
 
-.. tikz:: An Example Directive with Caption
+.. image:: latex/model01.*
 
-   \draw[thick,rounded corners=8pt]
-   (0,0)--(0,2)--(1,3.25)--(2,2)--(2,0)--(0,2)--(2,2)--(0,0)--(2,0);
+.. 
+   tikz:: An Example Directive with Caption
+   :libs: bayesnet
+
+   \node[latent] {$\mathbf{X}$};
 
 First, the Bayesian
 
