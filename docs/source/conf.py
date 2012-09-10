@@ -31,8 +31,8 @@ import setup as setupfile
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 
-              'sphinx.ext.mathjax',
-              'tikz']
+              'sphinx.ext.mathjax']
+              #'tikz']
 #'tikz-python3']
 
 # Add any paths that contain templates here, relative to this directory.
