@@ -11,6 +11,8 @@ Welcome to BayesPy's documentation!
    :maxdepth: 2
    
    intro
+
+..
    install
    userguide
    devguide

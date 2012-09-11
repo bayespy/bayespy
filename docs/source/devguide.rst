@@ -1,4 +1,0 @@
-Developer's guide
-=================
-
-jelou
