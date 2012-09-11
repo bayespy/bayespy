@@ -12,7 +12,7 @@ User's guide
 Simple example
 --------------
 
-.. image:: latex/model01.*
+.. image:: images/model01.*
 
 First, the Bayesian
 
