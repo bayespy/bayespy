@@ -1,7 +1,10 @@
 #!/bin/sh
 
-pdflatex model01
+FILES=model01
 
-pdfcrop model01.pdf model01.pdf
-
-convert -density 300 model01.pdf model01.png
+for F in $FILES
+do
+	pdflatex $F
+	pdfcrop $F.pdf $F.pdf
+	convert -density 70 $F.pdf $F.png
+done
