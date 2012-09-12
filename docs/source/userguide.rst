@@ -25,6 +25,18 @@ Simple example
    in LaTeX->PDF. However, tikz.py doesn't work for HTML output in
    readthedocs.org because of some missing applications.
 
+
+.. tikz::
+   :libs: shapes, fit, chains, arrows
+
+   [latent/.style = {circle,fill=white,draw=black,inner sep=1pt,
+   minimum size=20pt, node distance=1}]
+
+   \node[latent] {$\mathbf{X}$} ;
+
+
+
+
 First, the Bayesian
 
 .. literalinclude:: examples/example_01.py
