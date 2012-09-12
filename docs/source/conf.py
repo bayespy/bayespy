@@ -32,7 +32,8 @@ import setup as setupfile
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 
               'sphinx.ext.mathjax',
-              'tikz']
+              'tikz',
+              'bayesnet']
 #'tikz-python3']
 
 # Add a path to binary files that are necessary for readthedocs.org to
@@ -193,8 +194,8 @@ latex_elements = {
 # Additional stuff for the LaTeX preamble.
 'preamble': '''
   \usepackage{tikz}
-  \usetikzlibrary{shapes, fit, chains, arrows}
   '''
+#  \usetikzlibrary{shapes, fit, chains, arrows}
 #  \usetikzlibrary{bayesnet}
 }
 

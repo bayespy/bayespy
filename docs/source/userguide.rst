@@ -23,15 +23,15 @@ Simple example
    in LaTeX->PDF. However, tikz.py doesn't work for HTML output in
    readthedocs.org because of some missing applications.
 
-
-.. tikz::
    :libs: shapes, fit, chains, arrows
 
-   [latent/.style = {circle,fill=white,draw=black,inner sep=1pt,
-   minimum size=20pt, node distance=1}]
+.. bayesnet::
 
-   \node[latent] {$\mathbf{X}$} ;
+   \node[latent] (x) {$\mathbf{X}$} ;
 
+   \node[obs, above=of x] {$\mathbf{Y}$} ;
+
+   \plate {} {(x)} {} ;
 
 
 
