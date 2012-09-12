@@ -34,6 +34,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.mathjax',
               'tikz']
 #'tikz-python3']
+os.environ["PATH"] += os.pathsep + os.path.abspath('extensions')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
