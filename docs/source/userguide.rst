@@ -12,8 +12,6 @@ User's guide
 Simple example
 --------------
 
-.. image:: images/model01.png
-
 .. Use this .* suffix to enable .pdf for PDF and .png for HTML
    image:: images/model01.*
    BUT, readthedocs.org has a bug, so I must use .png until this issue is closed:
