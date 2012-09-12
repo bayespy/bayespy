@@ -192,7 +192,7 @@ latex_elements = {
 #  \usetikzlibrary{bayesnet}
 }
 
-latex_additional_files = ['images/bayesnet.sty',]
+#latex_additional_files = ['images/bayesnet.sty',]
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
