@@ -34,6 +34,9 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.mathjax',
               'tikz']
 #'tikz-python3']
+
+# Add a path to binary files that are necessary for readthedocs.org to
+# build HTML with tikz extension
 os.environ["PATH"] += os.pathsep + os.path.abspath('bin')
 
 # Add any paths that contain templates here, relative to this directory.
