@@ -12,14 +12,28 @@ User's guide
 Simple example
 --------------
 
-.. image:: images/model01.png
-   :scale: 30 %
-
 .. Use this .* suffix to enable .pdf for PDF and .png for HTML
    image:: images/model01.*
    BUT, readthedocs.org has a bug, so I must use .png until this issue is closed:
    https://github.com/rtfd/readthedocs.org/issues/183
    So, until then, I must use PNG images also in PDF files.. That just sucks.
+
+   Or even better would be if I could use the TikZ images directly
+   here with the help of tikz.py. Then all the text would be "native"
+   in LaTeX->PDF. However, tikz.py doesn't work for HTML output in
+   readthedocs.org because of some missing applications.
+
+
+.. tikz::
+   :libs: shapes, fit, chains, arrows
+
+   [latent/.style = {circle,fill=white,draw=black,inner sep=1pt,
+   minimum size=20pt, node distance=1}]
+
+   \node[latent] {$\mathbf{X}$} ;
+
+
+
 
 First, the Bayesian
 

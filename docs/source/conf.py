@@ -31,9 +31,14 @@ import setup as setupfile
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 
-              'sphinx.ext.mathjax']
-              #'tikz']
+              'sphinx.ext.mathjax',
+              'tikz']
 #'tikz-python3']
+
+# Add a path to binary files that are necessary for readthedocs.org to
+# build HTML with tikz extension
+os.environ["PATH"] += os.pathsep + os.path.abspath('bin')
+os.environ["LD_LIBRARY_PATH"] = os.path.abspath('bin')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -185,13 +190,14 @@ latex_elements = {
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-'preamble': ''
-#  \usepackage{tikz}
+'preamble': '''
+  \usepackage{tikz}
+  \usetikzlibrary{shapes, fit, chains, arrows}
+  '''
 #  \usetikzlibrary{bayesnet}
-#  '''
 }
 
-#latex_additional_files = ['tikzlibrarybayesnet.code.tex',]
+#latex_additional_files = ['images/bayesnet.sty',]
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
