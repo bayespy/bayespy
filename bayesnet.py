@@ -20,6 +20,7 @@ BAYESNET_DEFS = bnfile.read()
 bnfile.close()
 
 def bayesnet_role(role, rawtext, text, lineno, inliner, option={}, content=[]):
+    # TODO: Add the BayesNet definitions!
     return tikz_role(role, rawtext, text, lineno, inliner, option=option, content=content)
 
 class BayesNetDirective(TikzDirective):
@@ -34,5 +35,5 @@ class BayesNetDirective(TikzDirective):
         return [node]
 
 def setup(app):
-    app.add_role('tikz', bayesnet_role)
+    app.add_role('bayesnet', bayesnet_role)
     app.add_directive('bayesnet', BayesNetDirective)
