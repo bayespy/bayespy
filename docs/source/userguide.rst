@@ -25,17 +25,16 @@ Simple example
 
    :libs: shapes, fit, chains, arrows
 
-.. tikz::
-
-   \node[rectangle] {HELOU} ;
-
 .. bayesnet::
 
-   \node[latent] (x) {$\mathbf{X}$} ; 
+   \node[obs]                                  (y)   {$y$} ; 
+   \node[latent, above left=1.5 and 0.5 of y]  (mu)  {$\mu$} ;
+   \node[latent, above right=1.5 and 0.5 of y] (tau) {$\tau$} ;
 
-   \node[obs, above=of x] {$\mathbf{Y}$} ;
+   \factor[above=of y] {y-f} {left:$\mathcal{N}$} {mu,tau} {y};
 
-   \plate {} {(x)} {} ;
+   \plate {} {(y)(y-f)(y-f-caption)} {N} ;
+
 
 
 
