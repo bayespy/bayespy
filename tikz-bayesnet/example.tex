@@ -1,0 +1,158 @@
+% example.tex
+%
+% Copyright (C) 2010,2011 Laura Dietz
+% Copyright (C) 2012 Jaakko Luttinen
+%
+% This file may be distributed and/or modified
+%
+% 1. under the LaTeX Project Public License and/or
+% 2. under the GNU General Public License.
+%
+% See the files LICENSE_LPPL and LICENSE_GPL for more details.
+
+\documentclass[a4paper]{article}
+
+\usepackage{tikz}
+\usetikzlibrary{bayesnet}
+%\pgfrealjobname{example} % name of this file
+
+\title{Graphical Models in Tikz}
+\author{Laura Dietz, Jaakko Luttinen}
+
+\begin{document}
+
+\maketitle
+
+TikZ examples for graphical models (Bayesian networks) and directed
+factor graphs \cite{Dietz:2010}.
+
+% A table of node types
+\begin{table}[ht]
+  \caption{Node types}
+  \begin{center}
+    \begin{tabular}{llc}
+      Type & Syntax & Output
+      \\
+      \hline
+      Latent variable &
+      \texttt{\textbackslash node[latent]} &
+      \tikz{ %
+        \node[latent] {$x$}; %
+      }
+      \\
+      Observed variable &
+      \texttt{\textbackslash node[obs]} &
+      \tikz{ %
+        \node[obs] {$y$}; %
+      }
+      \\
+      Deterministic &
+      \texttt{\textbackslash node[det]} &
+      \tikz{ %
+        \node[det] {dot} ; %
+      }
+      \\
+      Constant &
+      \texttt{\textbackslash node[const]} &
+      \tikz{ %
+        \node[const] {$a$}; %
+      }
+      \\
+      Factor &
+      \texttt{\textbackslash node[factor]} &
+      \tikz{ %
+        \node[factor] [label=$\mathcal{N}$] {}; %
+      }
+      \\
+      Factor with nodes &
+      &
+      \tikz{ %
+        \node[obs] (y) {$y$} ; %
+        \node[latent, left=of y, yshift=0.5cm] (mu) {$\mu$} ; %
+        \node[latent, left=of y, yshift=-0.5cm] (tau) {$\tau$} ; %
+        \factor[left=of y] {y-factor} {$\mathcal{N}$} {} {};
+        \factoredge {mu,tau} {y-factor} {y} ; %
+      }
+      \\
+      Plate &
+      \texttt{\textbackslash plate} &
+      \tikz{ %
+        \node[latent] (x) {$x_m$}; %
+        \plate {} {(x)} {$m \in \mathcal{M}$}; %
+      }
+      \\
+      Gate &
+      &
+      \tikz{
+        % Nodes
+        \node[obs]                    (k)   {$k$}; %
+        \node[latent, above=2 of k]   (l)   {$\lambda$}; %
+        \factor[above=0.8 of k]       {k-f} {Multi} {} {}; %
+        \node[latent, right=of k-f]   (paa) {$\phi$}; %
+        %\node[latent, right=of k-f]   (p)   {$\phi$}; %
+        % Connections
+        \factoredge {paa} {k-f} {k} ; %
+        % Gate
+        \gate {} {(k-f)(k-f-caption)} {l} ; %
+      }
+    \end{tabular}
+  \end{center}
+\end{table}
+
+
+% Simple Bayesian network
+\begin{figure}[ht]
+  \begin{center}
+    \begin{tabular}{cc}
+      \input{model_pca} &
+      \input{model_pca2}
+    \end{tabular}
+  \end{center}
+  \caption{PCA model as a Bayesian network and a directed factor
+    graph.}
+\end{figure}
+
+% Latent Dirichlet allocation
+\begin{figure}[ht]
+  \begin{center}
+    \input{model_lda}
+  \end{center}
+  \caption{Latent Dirichlet allocation as directed factor graph.}
+\end{figure}
+
+% Citation influence model
+\begin{figure}[ht]
+  \begin{center}
+    \input{model_citation_influence}
+  \end{center}
+  \caption{Citation influence model with own topics \cite{Dietz:2007}
+    as directed factor graph.}
+\end{figure}
+
+\clearpage
+
+\begin{thebibliography}{9}
+
+\bibitem{Dietz:2010}
+  Laura Dietz,
+  \emph{Directed Factor Graph Notation for Generative Models}.
+  Technical Report. 2010
+
+% Laura Dietz, Steffen Bickel, Tobias Scheffer. 
+% Unsupervised Prediction of Citation Influences. 
+% In: Proceedings of International Conference on Machine Learning. 2007
+\bibitem{Dietz:2007}
+  Laura Dietz, Steffen Bickel, Tobias Scheffer,
+  \emph{Unsupervised Prediction of Citation Influences}.
+  In: Proceedings of International Conference on Machine
+  Learning. 2007
+
+
+\end{thebibliography}
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: tex-pdf
+%%% TeX-master: t
+%%% End: 
