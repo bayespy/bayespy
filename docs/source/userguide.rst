@@ -25,9 +25,13 @@ Simple example
 
    :libs: shapes, fit, chains, arrows
 
+.. tikz::
+
+   \node[rectangle] {HELOU} ;
+
 .. bayesnet::
 
-   \node[latent] (x) {$\mathbf{X}$} ;
+   \node[latent] (x) {$\mathbf{X}$} ; 
 
    \node[obs, above=of x] {$\mathbf{Y}$} ;
 

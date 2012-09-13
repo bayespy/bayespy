@@ -20,7 +20,9 @@ import sys, os
 
 # Import some information from the setup.py script.
 sys.path.insert(0, os.path.abspath('../..'))
-sys.path.insert(0, os.path.abspath('extensions'))
+sys.path.insert(0, os.path.abspath('extensions/sphinx-tikz'))
+sys.path.insert(0, os.path.abspath('extensions/sphinx-bayesnet'))
+#sys.path.insert(0, os.path.abspath('extensions'))
 import setup as setupfile
 
 # -- General configuration -----------------------------------------------------
