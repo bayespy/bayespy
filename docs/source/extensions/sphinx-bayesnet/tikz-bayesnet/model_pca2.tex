@@ -1,0 +1,71 @@
+% model_pca2.tex
+%
+% Copyright (C) 2010,2011 Laura Dietz
+% Copyright (C) 2012 Jaakko Luttinen
+%
+% This file may be distributed and/or modified
+%
+% 1. under the LaTeX Project Public License and/or
+% 2. under the GNU General Public License.
+%
+% See the files LICENSE_LPPL and LICENSE_GPL for more details.
+
+% PCA model
+
+%\beginpgfgraphicnamed{model-pca}
+\begin{tikzpicture}
+
+  % Define nodes
+
+  % Y
+  \node[obs]          (y)   {$y$}; %
+  \factor[above=of y] {y-f} {left:$\mathcal{N}$} {} {} ; %
+
+  % W and X
+  \node[det, above=of y]            (dot) {dot} ; % 
+  \node[latent, above left=1.2 of dot]  (w)   {$\mathbf{w}$}; %
+  \node[latent, above right=1.2 of dot] (x)   {$\mathbf{x}$}; %
+
+  % W hyperparameters
+  \node[const, above=1.2 of w, xshift=-0.5cm] (mw) {$\mu_w$} ; %
+  \node[const, above=1.2 of w, xshift=0.5cm]  (aw) {$\alpha_w$} ; %
+
+  % X hyperparameters
+  \node[const, above=1.2 of x, xshift=-0.5cm] (mx) {$\mu_x$} ; %
+  \node[const, above=1.2 of x, xshift=0.5cm]  (ax) {$\alpha_x$} ; %
+
+  % noise
+  \node[latent, right=2.5cm of y-f]         (t)   {$\tau$}; %
+  \node[const, above=of t, xshift=-0.5cm] (at)  {$\alpha_\tau$} ; %
+  \node[const, above=of t, xshift=0.5cm]  (bt)  {$\beta_\tau$} ; %
+
+  % Factors
+  \factor[above=of w] {w-f} {left:$\mathcal{N}$} {mw,aw} {w} ; %
+  \factor[above=of x] {x-f} {left:$\mathcal{N}$} {mx,ax} {x} ; %
+  \factor[above=of t] {t-f} {left:$\mathcal{G}$} {at,bt} {t} ; %
+  \factoredge {dot,t} {y-f} {y} ; %
+
+  % Connect w and x to the dot node
+  \edge[-] {w,x} {dot} ;
+
+  % Plates
+  \plate {yx} { %
+    (y)(y-f)(y-f-caption) %
+    (x)(x-f)(x-f-caption) %
+    (dot) %
+  } {$N$} ;
+  \plate {} {%
+    (y)(y-f)(y-f-caption) %
+    (w)(w-f)(w-f-caption) %
+    (dot) %
+    (yx.north west)(yx.south west) %
+  } {$M$} ;
+
+\end{tikzpicture}
+%\endpgfgraphicnamed
+
+%%% Local Variables: 
+%%% mode: tex-pdf
+%%% TeX-master: "example"
+%%% End: 
+
