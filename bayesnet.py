@@ -2,14 +2,20 @@
 
 # Copyright (c) 2012 Jaakko Luttinen
 
+import os, sys
+
+DIR = os.path.abspath(os.path.dirname(__file__))
+SPHINX_TIKZ_DIR = os.path.join(DIR, 'sphinx-tikz')
+sys.path.insert(0, SPHINX_TIKZ_DIR)
 
 from tikz import TikzDirective, tikz_role
-from sphinx.ext.autodoc import ViewList
-import os
+#from sphinx.ext.autodoc import ViewList
 
-BAYESNET_LIBS = 'shapes, fit, chains, arrows'
+#BAYESNET_LIBS = 'shapes, fit, chains, arrows'
 
-bnfile = open(os.path.join(os.path.abspath('.'), 'source/tikzlibrarybayesnet.code.tex'))
+TIKZ_BAYESNET_FILE = os.path.join(DIR,
+                                  'tikz-bayesnet/tikzlibrarybayesnet.code.tex')
+bnfile = open(TIKZ_BAYESNET_FILE)
 BAYESNET_DEFS = bnfile.read()
 bnfile.close()
 
