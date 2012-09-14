@@ -7,13 +7,13 @@ http://www.scipy.org/Installing_SciPy and
 http://matplotlib.sourceforge.net/users/installing.html.  After
 installing the dependencies, clone the Git repository of BayesPy:
 
-::
+.. code-block:: console
 
-    git clone https://github.com/jluttine/bayespy.git
+    git clone --recursive https://github.com/jluttine/bayespy.git
     
 Install the package:
 
-::
+.. code-block:: console
     
     cd bayespy
     python setup.py install
@@ -26,7 +26,7 @@ docs/source/ directory.  If you have `Sphinx
 <http://sphinx.pocoo.org/>`_ installed for Python 3, the documentation
 can be compiled to, for instance, HTML or PDF using
 
-::
+.. code-block:: console
 
     cd docs
     make html

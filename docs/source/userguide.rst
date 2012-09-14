@@ -41,6 +41,7 @@ Simple example
 First, the Bayesian
 
 .. literalinclude:: examples/example_01.py
+   :language: python3
    :start-after: (1)
    :end-before: (2)
 
@@ -60,18 +61,21 @@ Performing inference
 First, generate some data:
 
 .. literalinclude:: examples/example_01.py
+   :language: python3
    :start-after: (2)
    :end-before: (3)
 
 Run the inference
 
 .. literalinclude:: examples/example_01.py
+   :language: python3
    :start-after: (3)
    :end-before: (4)
 
 Show the resulting posterior approximation
 
 .. literalinclude:: examples/example_01.py
+   :language: python3
    :start-after: (4)
 
 Plates
