@@ -43,5 +43,5 @@ compiled to, for instance, HTML or PDF using
 
 Currently, Python 2 version of Sphinx is required, but in the future
 when API documentation is added, Python 3 version of Sphinx will be
-erquired. The documentation can be found also at
+required. The documentation can be found also at
 http://bayespy.readthedocs.org/ in various formats.
