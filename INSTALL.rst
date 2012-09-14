@@ -16,7 +16,7 @@ Install the package:
 .. code-block:: console
     
     cd bayespy
-    python setup.py install
+    python3 setup.py install
 
 Make sure you are using Python 3.
 
