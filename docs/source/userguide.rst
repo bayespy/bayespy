@@ -1,3 +1,26 @@
+..
+   Copyright (C) 2011,2012 Jaakko Luttinen
+
+   This file is licensed under Version 3.0 of the GNU General Public
+   License. See LICENSE for a text of the license.
+
+   This file is part of BayesPy.
+
+   BayesPy is free software: you can redistribute it and/or modify it
+   under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   BayesPy is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
 User's guide
 ============
 
@@ -48,10 +71,12 @@ mathematical notation:
 .. math::
 
    p(\mathbf{y}|\mu,\tau) &= \prod^{10}_{n=1} \mathcal{N}(y_n|\mu,\tau) \\
-   p(\mu) &= \mathcal{N}(\mu|0,10^{-3}) \\
+   p(\mu) &= \mathcal{N}(\mu|0,10^{3}) \\
    p(\tau) &= \mathcal{G}(\tau|10^{-3},10^{-3})
 
-This model can be defined in BayesPy as follows:
+Note that we parameterize the normal distribution using the mean and
+the precision (i.e., the inverse of the variance).  The model can be
+constructed in BayesPy as follows:
 
 .. literalinclude:: examples/example_01.py
    :language: python3
@@ -59,7 +84,7 @@ This model can be defined in BayesPy as follows:
    :end-before: (2)
 
 This is quite self-explanatory given the model definitions above.
-Now, we need to use the generated data:
+Now, we use the generated data:
 
 .. literalinclude:: examples/example_01.py
    :language: python3
@@ -69,8 +94,8 @@ Now, we need to use the generated data:
 Next we want to estimate the posterior distribution.  In principle, we
 could use different inference engines (e.g., MCMC or EP) but currently
 only variational Bayesian (VB) engine is implemented.  The engine is
-initialized by giving the nodes and the the inference algorithm can be
-run as long as wanted (20 iterations in this case):
+initialized by giving the nodes and the inference algorithm can be run
+as long as wanted (20 iterations in this case):
 
 .. literalinclude:: examples/example_01.py
    :language: python3
@@ -86,6 +111,10 @@ The resulting approximate posterior distributions :math:`q(\mu)` and
    :language: python3
    :start-after: (4)
 
+.. todo::
+   
+   Add an example of visualizing the results.
+
 This example was a very simple introduction to using BayesPy.  The
 model can be much more complex and each phase contains more options to
 give the user more control over the inference.  The following sections
@@ -95,11 +124,33 @@ give more details.
 Constructing the model
 ----------------------
 
-The model is constructed as a Bayesian network, which is directed
-acyclic graph representing a set of random variables and their
-conditional dependencies.
+In BayesPy, the model is constructed by creating nodes, which form a
+network.  Roughly speaking, a node corresponds to a random variable
+from a specific probability distribution.  In the example, ``mu`` was
+``Normal`` node corresponding to :math:`\mu` from the normal
+distribution.  However, a node can also correspond to a set of random
+variables or the nodes can be deterministic not corresponding to any
+random variable.
 
-Plates
+When you create a node, you give its parents as parameters.  The role
+and the number of parents depends on the node.  For instance,
+``Normal`` node takes two parents (mean and precision) and ``Gamma``
+node takes two parents (scale and rate).
+
+.. warning::
+
+   Currently, it is important that the parent has the correct node
+   type, because the model construction and inference engine are not
+   yet separated.  For instance, the parents mean and precision of
+   ``Normal`` node must be ``Normal`` and ``Gamma`` nodes (or other
+   nodes that have that kind of output), respectively.
+
+
+Deterministic nodes
+
+* Stochastic, constant and deterministic nodes
+
+* Plates
 
 Providing the data
 ------------------

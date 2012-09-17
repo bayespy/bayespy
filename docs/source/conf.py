@@ -34,9 +34,13 @@ import setup as setupfile
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 
               'sphinx.ext.mathjax',
+              'sphinx.ext.todo',
               'tikz',
               'bayesnet']
 #'tikz-python3']
+
+# Include TODOs in the documentation?
+todo_include_todos = True
 
 # Add a path to binary files that are necessary for readthedocs.org to
 # build HTML with tikz extension
