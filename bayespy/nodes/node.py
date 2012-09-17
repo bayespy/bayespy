@@ -306,16 +306,6 @@ class NodeConstant(Node):
         else:
             return self.u
 
-        #self.fix_u_and_f(u, 0, True)
-    #def lower_bound_contribution(self, gradient=False):
-        #return 0
-
-## class NodeConstant(ExponentialFamily):
-##     def __init__(self, u, **kwargs):
-##         ExponentialFamily.__init__(self, **kwargs)
-##         self.fix_u_and_f(u, 0, True)
-##     def lower_bound_contribution(self, gradient=False):
-##         return 0
 
 class NodeConstantScalar(NodeConstant):
     @staticmethod
@@ -368,65 +358,4 @@ class NodeConstantScalar(NodeConstant):
     def stop_optimization(self):
         #raise Exception("Not implemented for " + str(self.__class__))
         pass
-
-## class NodeConstantGaussian(NodeConstant):
-##     def __init__(self, X, **kwargs):
-##         X = np.atleast_1d(X)
-##         d = X.shape[-1]
-##         NodeConstant.__init__(self,
-##                               [X, utils.m_outer(X, X)],
-##                               plates=X.shape[:-1],
-##                               dims=[(d,), (d,d)],
-##                               **kwargs)
-        
-## class NodeConstantWishart(NodeConstant):
-##     @staticmethod
-##     def compute_fixed_u_and_f(Lambda):
-##         """ Compute u(x) and f(x) for given x. """
-##         u = [Lambda,
-##              utils.m_chol_logdet(utils.m_chol(Lambda))]
-##         f = 0
-##         return (u, f)
-
-##     def __init__(self, Lambda, **kwargs):
-##         Lambda = np.atleast_2d(Lambda)
-##         if Lambda.shape[-1] != Lambda.shape[-2]:
-##             raise Exception("Lambda not a square matrix.")
-##         NodeConstant.__init__(self,
-##                               [Lambda, utils.m_chol_logdet(utils.m_chol(Lambda))],
-##                               plates=Lambda.shape[:-2],
-##                               dims=[Lambda.shape[-2:], ()],
-##                               **kwargs)
-
-
-# Gamma(a, b)
-
-
-
-
-
-
-## class ConstantDirichlet(NodeConstant):
-##     def __init__(self, x, **kwargs):
-##         x = np.atleast_1d(X)
-##         d = x.shape[-1]
-##         super().__init__([np.log(x)],
-##                          plates=x.shape[:-1],
-##                          dims=[(d,)],
-##                          **kwargs)
-
-
-
-
-
-
-    ## def observe(self, x):
-    ##     self.fix_u_and_f(self.u, 0)
-
-# Pseudo:
-# Mixture(Gaussian)(z, mu, Lambda)
-
-
-
-
 

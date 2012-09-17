@@ -71,7 +71,7 @@ mathematical notation:
 .. math::
 
    p(\mathbf{y}|\mu,\tau) &= \prod^{10}_{n=1} \mathcal{N}(y_n|\mu,\tau) \\
-   p(\mu) &= \mathcal{N}(\mu|0,10^{3}) \\
+   p(\mu) &= \mathcal{N}(\mu|0,10^{-3}) \\
    p(\tau) &= \mathcal{G}(\tau|10^{-3},10^{-3})
 
 Note that we parameterize the normal distribution using the mean and
@@ -124,36 +124,168 @@ give more details.
 Constructing the model
 ----------------------
 
-In BayesPy, the model is constructed by creating nodes, which form a
+In BayesPy, the model is constructed by creating nodes which form a
 network.  Roughly speaking, a node corresponds to a random variable
 from a specific probability distribution.  In the example, ``mu`` was
 ``Normal`` node corresponding to :math:`\mu` from the normal
 distribution.  However, a node can also correspond to a set of random
-variables or the nodes can be deterministic not corresponding to any
+variables or nodes can be deterministic not corresponding to any
 random variable.
 
 When you create a node, you give its parents as parameters.  The role
-and the number of parents depends on the node.  For instance,
+and the number of the parents depend on the node.  For instance,
 ``Normal`` node takes two parents (mean and precision) and ``Gamma``
 node takes two parents (scale and rate).
 
 .. warning::
 
    Currently, it is important that the parent has the correct node
-   type, because the model construction and inference engine are not
-   yet separated.  For instance, the parents mean and precision of
+   type, because the model construction and VB inference engine are
+   not yet separated.  For instance, the parents mean and precision of
    ``Normal`` node must be ``Normal`` and ``Gamma`` nodes (or other
-   nodes that have that kind of output), respectively.
+   nodes that have similar output), respectively.  Thus, currently one
+   can build only conjugate-exponential family models.
+
+Name and plates
++++++++++++++++
+
+In general, the nodes take some optional parameters: ``name`` and
+``plates``.  The parameter ``name`` is used to give a name for the
+variable.  The parameter ``plates`` is used to define plates, that is,
+a repetitive collection of nodes that are independent given the
+parents. For instance, the following set of i.i.d. random variables
+
+.. math::
+   
+   y_{mn} \sim \mathcal{N}(\mu, \tau),\qquad m=1,\ldots,10,
+   \quad n=1,\ldots,30
+
+would be created as
+
+.. code-block:: python3
+
+   y = bp.nodes.Normal(mu, tau, plates=(10,30))
+
+It is also possible that the parents have plates.  The validity of the
+plates between a child and a parent is checked by comparing the plates
+plate-wise from the trailing plates and working the way forward.  A
+plate of the child is compatible with a plate of the parent if either
+of the following conditions is met:
+
+1) The two plates have equal size
+2) The parent has size 1 (or no plate)
+
+Table below shows an example of compatible plates for a child and two
+parent nodes.
+
++---------+-------------------------+
+| node    | plates                  |
++=========+===+===+====+===+===+====+
+| parent1 |   | 9 |  1 | 5 | 1 | 10 |
++---------+---+---+----+---+---+----+
+| parent2 |   |   | 15 | 5 | 1 |  1 |
++---------+---+---+----+---+---+----+
+| child   | 5 | 9 | 15 | 5 | 1 | 10 |
++---------+---+---+----+---+---+----+
+
+For instance, a model
+
+.. math::
+   
+   \mu_m &\sim  \mathcal{N}(0, 10^{-3}), \\
+   \tau_n &\sim \mathcal{G}(10^{-3}, 10^{-3}), \\
+   y_{mn} &\sim \mathcal{N}(\mu_m, \tau_n),\qquad m=1,\ldots,10,
+   \quad n=1,\ldots,30
+
+could be created as
+
+.. code-block:: python3
+
+   mu = bp.nodes.Normal(0, 1e-3, plates=(10,1))
+   tau = bp.nodes.Gamma(1e-3, 1e-3, plates=(30,))
+   y = bp.nodes.Normal(mu, tau, plates=(10,30))
+
+Multi-dimensional nodes
++++++++++++++++++++++++
+
+Sometimes a random variable is multi-dimensional.  For instance, a
+multivariate normal distribution is probability distribution for
+vectors.  Quite often, the dimensionality can be deduced implicitly
+from the parents, thus the user may not need to provide it explicitly.
+However, it is important to know that the values are stored in a NumPy
+array where the plates are the leading axes and the dimensions are the
+trailing axes.  This becomes relevant, for instance, when providing
+the data for an observed multi-dimensional node.  To make a clear
+distinction between scalar and multi-dimensional distributions, there
+is often a multi-dimensional counterpart of a scalar node.  For
+instance, the normal distribution for scalars is provided by the node
+``Normal``, but the node for the multivariate normal distribution is
+``Gaussian``.  Below is a more complete table of correspondence.
+
+============== ==================
+Scalar         Multi-dimensional
+============== ==================
+``Normal``     ``Gaussian``
+``Gamma``      ``Wishart``
+``Bernoulli``  ``Categorical``
+``Binomial``   ``Multinomial``
+``Beta``       ``Dirichlet``
+============== ==================
 
 
-Deterministic nodes
+Deterministic and constant nodes
+++++++++++++++++++++++++++++++++
 
-* Stochastic, constant and deterministic nodes
-
-* Plates
+In addition to the random variable nodes, there are two special types
+of nodes: constant and deterministic.  Neither one has any probability
+distribution associated with them.  A constant node has no parents and
+the value of the node is fixed.  Constant nodes are created implicitly
+as parent nodes when you give numeric values as parents when creating
+a node, thus, the user is not required to create any constant nodes
+explicitly.  A deterministic, on the other hand, defines some
+function.  It transforms the parents to produce a new variable which
+is a non-random function of the parents.  For instance, ``Dot`` node
+computes the dot product of its parents.
 
 Providing the data
 ------------------
+
+The data is provided by simply calling ``observe`` method of the node:
+
+.. code-block:: pytho3
+
+   y.observe(data)
+
+It is important that the shape of the ``data`` array matches the shape
+of the node ``y``, which is the combination of the plates and the
+dimensionality.  For instance, if ``y`` is ``Wishart`` node for
+:math:`3\times 3` matrices with plates ``(5,1,10)``, the actual shape
+of ``y`` would be ``(5,1,10,3,3)``.  The data array must have this
+shape exactly, that is, no broadcasting rules are applied.
+
+
+Missing values
+++++++++++++++
+
+It is possible to mark missing values by providing a mask:
+
+.. code-block:: python3
+
+   y.observe(data, mask=[True, False, False, True, True,
+                         False, True, True, True, False])
+
+``True`` means that the value is observed and ``False`` means that the
+value is missing.  To be more precise, the mask is applied to the
+plates, *not* to the data array directly.  Unlike for the data itself,
+standard NumPy broadcasting rules are applied for the mask with
+respect to the plates.  So, if the variable has plates ``(5,1,10)``,
+the mask could have a shape ``(1,)``, ``(10,)``, ``(5,1,1)`` or
+``(5,1,10)``.
+
+
+ignoring missing plates
+
+
 
 
 Performing inference
