@@ -200,7 +200,8 @@ latex_elements = {
 # Additional stuff for the LaTeX preamble.
 'preamble': '''
   \usepackage{tikz}
-  '''
+  \usepackage{amssymb}
+'''
 #  \usetikzlibrary{shapes, fit, chains, arrows}
 #  \usetikzlibrary{bayesnet}
 }

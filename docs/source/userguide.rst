@@ -21,8 +21,8 @@
 
 
 
-User's guide
-============
+User guide
+==========
 
 * Construct the model (Bayesian network)
 
@@ -407,3 +407,11 @@ to obtain the sufficient statistics of the node.
    method should return the parameter values of the approximate
    posterior distribution.  The user may use these values for
    arbitrarily complex further analysis.
+
+
+Example: Principal component analysis
+-------------------------------------
+
+
+Example: Gaussian mixture model
+-------------------------------

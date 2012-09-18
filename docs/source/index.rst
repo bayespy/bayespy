@@ -19,11 +19,6 @@
    You should have received a copy of the GNU General Public License
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
-.. BayesPy documentation master file, created by
-   sphinx-quickstart on Mon Aug 27 12:22:11 2012.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to BayesPy's documentation!
 ===================================
 
@@ -36,6 +31,7 @@ Welcome to BayesPy's documentation!
    userguide
    devguide
    nodes
+   vmp
 
 
 Indices and tables
