@@ -2,13 +2,18 @@ BayesPy
 =======
 
 BayesPy provides tools for Bayesian inference with Python.  The user
-may construct a model as a Bayesian network, observe data and run
-posterior inference.  Currently, only variational Bayesian inference
-for conjugate-exponential family (variational message passing) has
-been implemented.  Future work includes variational approximations for
+constructs a model as a Bayesian network, observes data and runs
+posterior inference.  The goal is to provide a tool which is
+efficient, flexible and extendable enough for expert use but also
+accessible for more casual users.
+
+Currently, only variational Bayesian inference for
+conjugate-exponential family (variational message passing) has been
+implemented.  Future work includes variational approximations for
 other types of distributions and possibly other approximate inference
 methods such as expectation propagation, Laplace approximations,
-Markov chain Monte Carlo (MCMC) and other methods.
+Markov chain Monte Carlo (MCMC) and other methods. Contributions are
+welcome.
 
 Project information
 -------------------

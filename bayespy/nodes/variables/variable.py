@@ -203,6 +203,9 @@ class Variable(Node):
         (u, g) = self.compute_u_and_g(self.phi, mask=True)
         self.update_u_and_g(u, g, mask=True)
 
+    # TODO: Initialization where you could give the distribution
+    # values in standard parameterization!
+
     ## def initialize_from_value(self, x):
     ##     # Update moments from value
     ##     (u, f) = self.compute_fixed_u_and_f(x)
