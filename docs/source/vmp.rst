@@ -26,9 +26,31 @@ Exponential-family distributions have the following form:
 
    \log p(\mathbf{x}|\mathbf{\Theta}) 
    &= 
-   \mathbf{u}(\mathbf{x})^{\mathrm{T}} \boldsymbol{\phi}(\mathbf{\Theta}) 
-   + g(\mathbf{\Theta}) 
-   + f(\mathbf{x})
+   \mathbf{u}_{\mathbf{x}}(\mathbf{x})^{\mathrm{T}}
+   \boldsymbol{\phi}_{\mathbf{x}}(\mathbf{\Theta})
+   + g_{\mathbf{x}}(\mathbf{\Theta})
+   + f_{\mathbf{x}}(\mathbf{x})
+
+The parents :math:`\mathbf{\Theta}=\{\boldsymbol{\theta}_j\}` .
+Message to children:
+
+.. math::
+
+   \mathbf{m}_{\mathbf{\boldsymbol{\theta}_j}\rightarrow\mathbf{x}}
+   &=
+   \langle \mathbf{u}_{\boldsymbol{\theta}_j} \rangle
+   =
+   \tilde{\mathbf{u}}_{\boldsymbol{\theta}_j} 
+   (\tilde{\boldsymbol{\phi}}_{\mathbf{\boldsymbol{\theta}_j}})
+   \\
+   \mathbf{m}_{\mathbf{x}\rightarrow\boldsymbol{\theta}_j}
+   &=
+   \langle \boldsymbol{\phi}_{\mathbf{x}\rightarrow\boldsymbol{\theta}_j} \rangle
+   =
+   \boldsymbol{\phi}_{\mathbf{x}\rightarrow\boldsymbol{\theta}_j} 
+   \left( \langle \mathbf{u}_{\mathbf{x}} \rangle, 
+     \{ \mathbf{m}_{\theta_k\rightarrow\mathbf{x}} \}_
+     {k \in \mathrm{cp}({\boldsymbol{\theta}_j}, \mathbf{x})} \right)
 
 .. include:: vmp/vmp_normal.rst
 
