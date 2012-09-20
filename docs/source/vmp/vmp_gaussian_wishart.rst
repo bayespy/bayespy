@@ -1,0 +1,3 @@
+Gaussian-Wishart distribution
+-----------------------------
+

@@ -132,6 +132,11 @@ Using the messages, the natural parameters of
 
 .. include:: vmp/vmp_wishart.rst
 
+.. include:: vmp/vmp_normal_gamma.rst
 
+.. include:: vmp/vmp_gaussian_wishart.rst
 
+.. include:: vmp/vmp_gaussian_gamma.rst
+
+.. include:: vmp/vmp_mixture.rst
 
