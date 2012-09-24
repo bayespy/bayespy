@@ -5,10 +5,14 @@ Wishart distribution
 
    \mathbf{\Lambda} 
    &\sim \mathcal{W}(n, \mathbf{V}),
-   \qquad n > D-1,
+
+.. math::
+   n > D-1,
    \quad \mathbf{\Lambda}, \mathbf{V} \in \mathbb{R}^{D \times D},
    \quad \mathbf{\Lambda}, \mathbf{V} \text{ symmetric positive definite}
-   \\
+
+.. math::
+
    \log\mathcal{W}( \mathbf{\Lambda} | n, \mathbf{V} )
    &= 
    - \frac{1}{2} \operatorname{tr} (\mathbf{\Lambda V})
@@ -17,7 +21,9 @@ Wishart distribution
    - \frac{D+1}{2} \log |\mathbf{\Lambda}|
    - \frac{nD}{2} \log 2
    - \log \Gamma_D \left(\frac{n}{2}\right)
-   \\
+
+.. math::
+
    \mathbf{u} (\mathbf{\Lambda})
    &=
    \left[ \begin{matrix}
@@ -67,7 +73,7 @@ Wishart distribution
    &=
    - \frac{D+1}{2} \log|\mathbf{\Lambda}|
    \\
-   \langle \mathbf{u} \rangle
+   \overline{\mathbf{u}}  (\boldsymbol{\phi})
    &=
    \left[ \begin{matrix}
      - \boldsymbol{\phi}_2 \boldsymbol{\phi}^{-1}_1

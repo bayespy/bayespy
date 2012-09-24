@@ -4,10 +4,15 @@ Multivariate normal distribution
 .. math::
 
    \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu}, \mathbf{\Lambda}),
-   \qquad \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
+
+.. math::
+
+   \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
    \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
    \quad \mathbf{\Lambda} \text{ symmetric positive definite}
-   \\
+
+.. math::
+
    \log\mathcal{N}( \mathbf{x} | \boldsymbol{\mu}, \mathbf{\Lambda} )
    &= 
    - \frac{1}{2} \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \mathbf{x}
@@ -16,7 +21,9 @@ Multivariate normal distribution
      \boldsymbol{\mu}
    + \frac{1}{2} \log |\mathbf{\Lambda}|
    - \frac{D}{2} \log (2\pi)
-   \\
+
+.. math::
+
    \mathbf{u} (\mathbf{x})
    &=
    \left[ \begin{matrix}
@@ -67,7 +74,7 @@ Multivariate normal distribution
    f(\mathbf{x})
    &= - \frac{D}{2} \log(2\pi)
    \\
-   \langle \mathbf{u} \rangle
+   \overline{\mathbf{u}}  (\boldsymbol{\phi})
    &=
    \left[ \begin{matrix}
      - \frac{1}{2} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1

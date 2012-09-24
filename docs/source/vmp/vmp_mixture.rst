@@ -9,13 +9,16 @@ Mixture distribution
    \left(
        \lambda, 
        \left\{ \mathbf{\Theta}^{(n)}_1, \ldots, \mathbf{\Theta}^{(n)}_K \right\}^N_{n=1}
-   \right),
-   \qquad \lambda \in \{1, \ldots, N\},
+   \right)
+
+.. math::
+
+   \lambda \in \{1, \ldots, N\},
    \quad \mathcal{D} \text{ is an exp.fam. distribution},
    \quad \mathbf{\Theta}^{(n)}_k \text{ are parameters of } \mathcal{D}
-   %
-   \\
-   %
+
+.. math::
+
    \log\mathrm{Mix}_{\mathcal{D}} 
    \left(
        \mathbf{x} 
@@ -38,9 +41,9 @@ Mixture distribution
        \mathbf{\Theta}^{(n)}_1, \ldots, \mathbf{\Theta}^{(n)}_K
    \right)
    + f_{\mathcal{D}} (\mathbf{x})
-   %
-   \\
-   %
+
+.. math::
+
    \mathbf{u} (\mathbf{x})
    &=
    \mathbf{u}_{\mathcal{D}} (\mathbf{x})
@@ -91,9 +94,22 @@ Mixture distribution
    %
    \\
    %
-   \boldsymbol{\phi}_{\mathbf{V}} (\mathbf{\Lambda}, n)
+   \boldsymbol{\phi}_{\mathbf{\Theta}^{(m)}_l} 
+   \left(
+     \mathbf{x},
+     \lambda, 
+     \left\{ \mathbf{\Theta}^{(n)}_1, \ldots, \mathbf{\Theta}^{(n)}_K \right\}^N_{n=1} 
+     \setminus \left\{ \mathbf{\Theta}^{(m)}_l \right\}
+   \right)
    &=
+   [\lambda=m] \boldsymbol{\phi}_{\mathcal{D}\rightarrow\mathbf{\Theta}_l}
+   \left(
+     \mathbf{x},
+     \left\{ \mathbf{\Theta}^{(m)}_k \right\}_{k\neq l}
+   \right)
+   %
    \\
+   %
    g
    \left(
      \lambda, 
