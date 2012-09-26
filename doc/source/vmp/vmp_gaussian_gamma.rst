@@ -1,0 +1,3 @@
+
+Gaussian-Gamma distribution
+---------------------------

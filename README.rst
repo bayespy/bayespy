@@ -1,5 +1,5 @@
-BayesPy
-=======
+BayesPy - Bayesian Python
+=========================
 
 BayesPy provides tools for Bayesian inference with Python.  The user
 constructs a model as a Bayesian network, observes data and runs

@@ -1,0 +1,2 @@
+Normal-Gamma distribution
+-------------------------
