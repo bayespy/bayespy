@@ -1,6 +1,6 @@
-[submodule "docs/source/extensions/sphinx-bayesnet"]
-	path = docs/source/extensions/sphinx-bayesnet
+[submodule "doc/source/extensions/sphinx-bayesnet"]
+	path = doc/source/extensions/sphinx-bayesnet
 	url = https://github.com/jluttine/sphinx-bayesnet.git
-[submodule "docs/source/extensions/sphinx-tikz"]
-	path = docs/source/extensions/sphinx-tikz
+[submodule "doc/source/extensions/sphinx-tikz"]
+	path = doc/source/extensions/sphinx-tikz
 	url = https://github.com/jluttine/sphinx-tikz.git
