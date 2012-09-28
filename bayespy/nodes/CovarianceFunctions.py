@@ -57,6 +57,40 @@ def gp_cov_se(D2, overwrite=False):
         K = np.exp(-0.5*D2)
     return K
 
+def gp_cov_pp2_new(r, d, derivative=False):
+    # Dimension dependent parameter
+    q = 2
+    j = np.floor(d/2) + q + 1
+
+    # Polynomial coefficients
+    a2 = j**2 + 4*j + 3
+    a1 = 3*j + 6
+    a0 = 3
+
+    # Two parts of the covariance function
+    k1 = (1-r) ** (j+2)
+    k2 = (a2*r**2 + a1*r + 3)
+
+    # TODO: Check that derivative is 0, 1 or 2!
+
+    if derivative == 0:
+        # Return covariance
+        return k1 * k2 / 3
+
+    dk1 = - (j+2) * (1-r)**(j+1)
+    dk2 = 2*a2*r + a1
+
+    if derivative == 1:
+        # Return first derivative of the covariance
+        return (k1 * dk2 + dk1 * k2) / 3
+    
+    ddk1 = (j+2) * (j+1) * (1-r)**j
+    ddk2 = 2*a2
+
+    if derivative == 2:
+        # Return second derivative of the covariance
+        return (ddk1*k2 + 2*dk1*dk2 + k1*ddk2) / 3
+
 def gp_cov_pp2(r, d, gradient=False):
     # Dimension dependent parameter
     j = np.floor(d/2) + 2 + 1

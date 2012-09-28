@@ -24,9 +24,9 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
-from distutils.core import setup
-
-LONG_DESCRIPTION    = """Bayesian inference tools.  The package provides tools for building
+LONG_DESCRIPTION    = \
+"""
+Bayesian inference tools.  The package provides tools for building
 models and performing posterior inference.
 """
 
@@ -39,11 +39,32 @@ LICENSE             = 'GPL'
 VERSION             = '0.1.0'
 
 if __name__ == "__main__":
-    setup(requires = ['numpy', 'scipy'],
+
+    from distutils.core import setup, Extension
+    from Cython.Distutils import build_ext
+    
+    # Sparse distance extension
+    sparse_distance = Extension('bayespy.utils.covfunc.distance',
+                                sources=['bayespy/utils/covfunc/distance.pyx',
+                                         'bayespy/utils/covfunc/sparse_distance/sparse_distance.c'],
+                                         include_dirs=['bayespy/utils/covfunc/sparse_distance'])
+
+    # Setup for BayesPy
+    setup(requires = ['numpy', 'scipy', 'scikits.sparse'],
           packages = ['bayespy',
                       'bayespy.demos',
+                      'bayespy.inference',
+                      'bayespy.inference.vmp',
+                      'bayespy.inference.vmp.nodes',
                       'bayespy.nodes',
-                      'bayespy.nodes.variables'],
+                      'bayespy.nodes.variables',
+                      'bayespy.plot',
+                      'bayespy.utils',
+                      'bayespy.utils.covfunc'],
+          ## packages = ['bayespy',
+          ##             'bayespy.demos',
+          ##             'bayespy.nodes',
+          ##             'bayespy.nodes.variables'],
           name = NAME,
           version = VERSION,
           maintainer = MAINTAINER,
@@ -52,4 +73,6 @@ if __name__ == "__main__":
           license = LICENSE,
           url = URL,
           long_description = LONG_DESCRIPTION,
+          cmdclass = {'build_ext': build_ext},
+          ext_modules = [sparse_distance],
           )
