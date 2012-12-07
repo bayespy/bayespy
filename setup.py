@@ -30,13 +30,13 @@ LONG_DESCRIPTION    = """Bayesian inference tools.  The package provides tools f
 models and performing posterior inference.
 """
 
-NAME                = 'BayesPy'
+NAME                = 'bayespy'
 DESCRIPTION         = 'Bayesian inference tools for Python'
 MAINTAINER          = 'Jaakko Luttinen',
 MAINTAINER_EMAIL    = 'jaakko.luttinen@aalto.fi',
 URL                 = 'https://github.com/jluttine/bayespy'
-LICENSE             = 'GPL'
-VERSION             = '0.1.0'
+LICENSE             = 'GPLv3'
+VERSION             = '0.1+dev'
 
 if __name__ == "__main__":
     setup(requires = ['numpy', 'scipy'],
@@ -52,4 +52,18 @@ if __name__ == "__main__":
           license = LICENSE,
           url = URL,
           long_description = LONG_DESCRIPTION,
+          classifiers =
+            [ 
+              'Programming Language :: Python',
+              'Programming Language :: Python :: 3',
+              'Development Status :: 2 - Pre-Alpha',
+              'Environment :: Console',
+              'Intended Audience :: Developers',
+              'Intended Audience :: Science/Research',
+              'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+              'Operating System :: OS Independent',
+              'Topic :: Scientific/Engineering',
+              'Topic :: Scientific/Engineering :: Information Analysis'
+            ],
           )
+
