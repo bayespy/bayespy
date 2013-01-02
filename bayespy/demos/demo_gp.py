@@ -26,18 +26,17 @@
 import numpy as np
 #import scipy as sp
 import matplotlib.pyplot as plt
-import plotting as myplt
 import time
+
+import bayespy.plot.plotting as myplt
+from bayespy.utils import utils
 
 # Profiling stuff
 #import profile
 #import cProfile
 #import pstats
 
-
 import imp
-
-import utils
 
 import Nodes.ExponentialFamily as EF
 import Nodes.CovarianceFunctions as CF

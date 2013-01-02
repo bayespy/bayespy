@@ -30,7 +30,7 @@ import scipy.linalg as linalg
 import scipy.special as special
 import scipy.spatial.distance as distance
 
-import bayespy.utils as utils
+from bayespy.utils import utils
 
 from .variable import Variable
 from .constant import Constant

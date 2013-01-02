@@ -27,9 +27,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-import bayespy.utils as utils
-import bayespy.plotting as myplt
-import bayespy.nodes as EF
+from bayespy.utils import utils
+import bayespy.plot.plotting as myplt
+import bayespy.inference.vmp.nodes as EF
 #import nodes.exponential_family as EF
 
 ## import imp
@@ -39,25 +39,23 @@ import bayespy.nodes as EF
 
 # Reload everything (helpful for interactive sessions)
 import imp
-import bayespy.nodes
-import bayespy.nodes.node
-import bayespy.nodes.variables
-import bayespy.nodes.variables.variable
-import bayespy.nodes.variables.wishart
-import bayespy.nodes.variables.gaussian
-import bayespy.nodes.variables.mixture
-import bayespy.nodes.variables.dirichlet
-import bayespy.nodes.variables.categorical
+import bayespy.inference.vmp.nodes
+import bayespy.inference.vmp.nodes.node
+import bayespy.inference.vmp.nodes.variable
+import bayespy.inference.vmp.nodes.wishart
+import bayespy.inference.vmp.nodes.gaussian
+import bayespy.inference.vmp.nodes.mixture
+import bayespy.inference.vmp.nodes.dirichlet
+import bayespy.inference.vmp.nodes.categorical
 imp.reload(utils)
-imp.reload(bayespy.nodes)
-imp.reload(bayespy.nodes.node)
-imp.reload(bayespy.nodes.variables)
-imp.reload(bayespy.nodes.variables.variable)
-imp.reload(bayespy.nodes.variables.wishart)
-imp.reload(bayespy.nodes.variables.gaussian)
-imp.reload(bayespy.nodes.variables.mixture)
-imp.reload(bayespy.nodes.variables.dirichlet)
-imp.reload(bayespy.nodes.variables.categorical)
+imp.reload(bayespy.inference.vmp.nodes.node)
+imp.reload(bayespy.inference.vmp.nodes.variable)
+imp.reload(bayespy.inference.vmp.nodes.wishart)
+imp.reload(bayespy.inference.vmp.nodes.gaussian)
+imp.reload(bayespy.inference.vmp.nodes.mixture)
+imp.reload(bayespy.inference.vmp.nodes.dirichlet)
+imp.reload(bayespy.inference.vmp.nodes.categorical)
+imp.reload(EF)
 
 def gaussianmix_model(N, K, D):
     # N = number of data vectors

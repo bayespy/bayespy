@@ -29,7 +29,7 @@ import time
 
 from bayespy.utils import utils
 from bayespy.plot import plotting as myplt
-import bayespy.nodes as EF
+import bayespy.inference.vmp.nodes as EF
 
 import imp
 imp.reload(utils)
