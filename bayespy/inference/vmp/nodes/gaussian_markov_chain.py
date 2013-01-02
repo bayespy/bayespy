@@ -24,13 +24,13 @@
 
 import numpy as np
 
-from bayespy.utils import utils
+import utils
 
 from .variable import Variable
 from .constant import Constant
 from .wishart import Wishart
 
-class Gaussian(Variable):
+class GaussianMarkovChain(Variable):
 
     ndims = (1, 2)
     ndims_parents = [(1, 2), (2, 0)]
@@ -156,8 +156,27 @@ class Gaussian(Variable):
         mu = self.u[0]
         z = np.random.normal(0, 1, self.get_shape(0))
         # Compute mu + U'*z
+        #return mu + np.einsum('...ij,...i->...j', U, z)
+        #scipy.linalg.solve_triangular(a, b, trans=0, lower=False, unit_diagonal=False, overwrite_b=False, debug=False)
+        #print('gaussian.random', np.shape(mu), np.shape(z))
         z = utils.m_solve_triangular(U, z, trans='T', lower=False)
         return mu + z
+        #return self.u[0] + utils.m_chol_solve(U, z)
+
+    ## def initialize_random_mean(self):
+    ##     # First, initialize the distribution from prior?
+    ##     self.initialize_from_prior()
+        
+    ##     if not np.all(self.observed):
+    ##         # Draw a random sample
+    ##         x = self.random()
+
+    ##         # Update parameter for the mean using the sample
+    ##         self.phi[0] = -2*utils.m_dot(self.phi[1], x)
+
+    ##         # Update moments
+    ##         (u, g) = self.compute_u_and_g(self.phi, mask=True)
+    ##         self.update_u_and_g(u, g, mask=True)
             
 
     def show(self):
@@ -169,87 +188,5 @@ class Gaussian(Variable):
         print("  Cov = ")
         print(str(Cov))
 
-    @staticmethod
-    def compute_rotated_moments(R, x, xx):
-        x = np.einsum('...ij,...j->...i', R, x)
-        xx = np.einsum('...ij,...jk,...lk->...il', R, xx, R)
-        return [x, xx]
-
-    @staticmethod
-    def rotation_entropy(U,s,V, n=1, gradient=False):
-        # Entropy
-        e = n*np.sum(np.log(S))
-        if gradient:
-            # Derivative w.r.t. rotation matrix R=U*S*V is inv(R).T
-            dR = n*np.dot(V.T, np.dot(np.diag(1/s), U.T))
-            return (e, dR)
-        else:
-            return e
-
-
-    def start_rotation(self):
-
-        R = None
-        U = None
-        s = None
-        V = None
-
-        # There should not be any observed/fixed values.
-
-        u = self.u
-        u0 = self.u
-
-        self.u = None
-
-        dR = None
-        
-
-        def transform_rotation(A, svd=None):
-            # Rotation matrix
-            R = np.atleast_2d(A)
-            if svd is None:
-                (U,s,V) = np.svd(R)
-            else:
-                (U,s,V) = svd
-                
-            # Transform moments
-            u = self.compute_rotated_moments(R, *u0)
-
-            # Put gradient to zero
-            dR = np.zeros(np.shape(R))
-
-            # Return transformed moments
-            return u
-            
-
-        def cost_rotation(gradient=True):
-            # Compute E[phi] over the parents' distribution
-            phi_p_X = self.phi_from_parents(gradient=gradient)
-            
-            # Compute the cost
-
-            # Entropy term
-            #log_qh_X = N_X * np.sum(np.log(S))
-            log_qh_X = self.rotation_entropy(U, s, V,
-                                             n=N_X,
-                                             gradient=gradient)
-
-            # Prior term
-            log_ph_X = X.compute_logpdf(u,
-                                        phi_p_X,
-                                        0,
-                                        0,
-                                        gradient=gradient)
-            # Total cost
-            l = log_qh_X + log_ph_X
-            return l
-
-        def gradient_rotation():
-            return dR
-
-        #def stop_rotation():
-        #    self.u = 
-
-        return (transform_rotation, cost_rotation, gradient_rotation)
-        
-
+    ## def observe(self, x):
+    ##     self.fix_moments([x, utils.m_outer(x,x)])

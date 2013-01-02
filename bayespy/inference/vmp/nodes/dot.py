@@ -26,7 +26,7 @@ import numpy as np
 
 from bayespy.utils import utils
 
-from ..node import Node
+from .node import Node
 
 class Dot(Node):
 

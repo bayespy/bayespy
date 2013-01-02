@@ -27,8 +27,12 @@ BayesPy is a Python 3 package.  It depends on `SciPy
 <http://matplotlib.sourceforge.net/>`_, thus make sure you have them
 installed for Python 3.  Instructions can be found at
 http://www.scipy.org/Installing_SciPy and
-http://matplotlib.sourceforge.net/users/installing.html.  After
-installing the dependencies, clone the Git repository of BayesPy:
+http://matplotlib.sourceforge.net/users/installing.html.  For
+matplotlib, tkinter backend works on Python 3 so you may want to
+install package python3-tk.
+
+After installing the dependencies, clone the Git repository of
+BayesPy:
 
 .. code-block:: console
 

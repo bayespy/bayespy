@@ -10,6 +10,9 @@ import numpy as np
 cimport numpy as np
 from scipy import sparse
 
+# Put all relevant distance functions under this namespace
+from scipy.spatial.distance import pdist, cdist, squareform
+
 np.import_array()
 
 cdef extern from "numpy/arrayobject.h":
@@ -165,7 +168,7 @@ cdef _py_sparse_csc(int *p, int *i, double *x, int m, int n, int nzmax):
                       cleaner)
     return sparse.csc_matrix((data, indices, indptr), shape=shape)
 
-def pdist(X, threshold, form="strictly_lower", format="csc"):
+def sparse_pdist(X, threshold, form="strictly_lower", format="csc"):
 
     # Outputs
     cdef double *Dx = NULL
@@ -214,7 +217,7 @@ def pdist(X, threshold, form="strictly_lower", format="csc"):
 
     return _py_sparse_coo(Dx, Dij, m, m, nzmax).asformat(format)
 
-def cdist(X1, X2, threshold, format="csc"):
+def sparse_cdist(X1, X2, threshold, format="csc"):
 
     # Outputs
     cdef double *Dx = NULL

@@ -26,30 +26,32 @@
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-import bayespy.plotting as myplt
 
-import bayespy.utils as utils
-import bayespy.nodes as EF
+from bayespy.plot import plotting as myplt
+
+from bayespy.utils import utils
+import bayespy.inference.vmp.nodes as EF
+#import bayespy.nodes as EF
 
 # Reload everything (helpful for interactive sessions)
 import imp
-import bayespy.nodes
-import bayespy.nodes.node
-import bayespy.nodes.variables
-import bayespy.nodes.variables.variable
-import bayespy.nodes.variables.gamma
-import bayespy.nodes.variables.gaussian
-import bayespy.nodes.variables.normal
-import bayespy.nodes.variables.dot
+import bayespy.inference.vmp.nodes
+import bayespy.inference.vmp.nodes.node
+#import bayespy.inference.vmp.nodes.variables
+import bayespy.inference.vmp.nodes.variable
+import bayespy.inference.vmp.nodes.gamma
+import bayespy.inference.vmp.nodes.gaussian
+import bayespy.inference.vmp.nodes.normal
+import bayespy.inference.vmp.nodes.dot
 imp.reload(utils)
-imp.reload(bayespy.nodes)
-imp.reload(bayespy.nodes.node)
-imp.reload(bayespy.nodes.variables)
-imp.reload(bayespy.nodes.variables.variable)
-imp.reload(bayespy.nodes.variables.gamma)
-imp.reload(bayespy.nodes.variables.gaussian)
-imp.reload(bayespy.nodes.variables.normal)
-imp.reload(bayespy.nodes.variables.dot)
+imp.reload(bayespy.inference.vmp.nodes)
+imp.reload(bayespy.inference.vmp.nodes.node)
+#imp.reload(bayespy.inference.vmp.nodes.variables)
+imp.reload(bayespy.inference.vmp.nodes.variable)
+imp.reload(bayespy.inference.vmp.nodes.gamma)
+imp.reload(bayespy.inference.vmp.nodes.gaussian)
+imp.reload(bayespy.inference.vmp.nodes.normal)
+imp.reload(bayespy.inference.vmp.nodes.dot)
 
 def rotate_pca(W, X, alpha, maxiter=10):
     # Rotate: W*R, X*R^-1
@@ -298,7 +300,7 @@ def run(M=10, N=100, D_y=3, D=5):
     Y.observe(y, mask)
 
     # Inference loop.
-    maxiter = 10000
+    maxiter = 100
     L_X = np.zeros(maxiter)
     L_W = np.zeros(maxiter)
     L_tau = np.zeros(maxiter)
@@ -366,7 +368,7 @@ def run(M=10, N=100, D_y=3, D=5):
     ## return
 
 
-    plt.ion()
+    #plt.ion()
     #plt.figure()
     plt.clf()
     WX_params = WX.get_parameters()
@@ -379,9 +381,10 @@ def run(M=10, N=100, D_y=3, D=5):
         plt.plot(np.arange(N), f[m], 'g')
         plt.plot(np.arange(N), y[m], 'r+')
 
+    plt.show()
 
 if __name__ == '__main__':
     # FOR INTERACTIVE SESSIONS, NON-BLOCKING PLOTTING:
-    plt.ion()
+    #plt.ion()
     run()
 

@@ -364,3 +364,5 @@ class NodeConstantScalar(NodeConstant):
         #raise Exception("Not implemented for " + str(self.__class__))
         pass
 
+
+    

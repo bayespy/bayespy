@@ -36,21 +36,27 @@ MAINTAINER          = 'Jaakko Luttinen',
 MAINTAINER_EMAIL    = 'jaakko.luttinen@aalto.fi',
 URL                 = 'https://github.com/jluttine/bayespy'
 LICENSE             = 'GPL'
-VERSION             = '0.1.0'
+VERSION             = '0.0.0-dev'
 
 if __name__ == "__main__":
 
     from distutils.core import setup, Extension
     from Cython.Distutils import build_ext
+    import numpy as np
     
-    # Sparse distance extension
+    # Sparse distance extension.
+    # Use numpy.get_include() in order to use the correct NumPy for building.
     sparse_distance = Extension('bayespy.utils.covfunc.distance',
                                 sources=['bayespy/utils/covfunc/distance.pyx',
                                          'bayespy/utils/covfunc/sparse_distance/sparse_distance.c'],
-                                         include_dirs=['bayespy/utils/covfunc/sparse_distance'])
+                                         include_dirs=['bayespy/utils/covfunc/sparse_distance',
+                                                       np.get_include()])
 
     # Setup for BayesPy
-    setup(requires = ['numpy', 'scipy', 'scikits.sparse'],
+    setup(requires = ['numpy (>=1.7.0)',
+                      'scipy (>=0.11.0)',
+                      'scikits.sparse (>=0.1)',
+                      'matplotlib (>=1.2.0)'],
           packages = ['bayespy',
                       'bayespy.demos',
                       'bayespy.inference',

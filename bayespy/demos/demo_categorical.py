@@ -27,9 +27,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-import utils
-import plotting as myplt
-import Nodes.ExponentialFamily as EF
+from bayespy.utils import utils
+from bayespy.plot import plotting as myplt
+import bayespy.nodes as EF
 
 import imp
 imp.reload(utils)
