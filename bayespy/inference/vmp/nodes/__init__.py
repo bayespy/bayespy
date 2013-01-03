@@ -22,10 +22,11 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
-from .node import Node
+# Import some most commonly used nodes
 
-from .variable import Variable
-from .constant import Constant
+#from .node import Node
+#from .variable import Variable
+#from .constant import Constant
 from .gaussian import Gaussian
 from .wishart import Wishart
 from .normal import Normal

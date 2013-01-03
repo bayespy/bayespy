@@ -22,16 +22,39 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
-# Import some most commonly used nodes
+import numpy as np
 
-#from .node import Node
-#from .variables.variable import Variable
-#from .variables.constant import Constant
-from .gaussian import Gaussian
-from .wishart import Wishart
-from .normal import Normal
-from .gamma import Gamma, GammaToDiagonalWishart
-from .dirichlet import Dirichlet
-from .categorical import Categorical
-from .dot import Dot
-from .mixture import Mixture
+from bayespy.utils import utils
+
+from .variable import Variable
+#from .constant import Constant
+#from .wishart import Wishart
+
+class Gaussian(Variable):
+
+    #ndims = (1, 2)
+    #ndims_parents = [(1, 2), (2, 0)]
+    # Observations are vectors (1-D):
+    ndim_observations = 1
+
+    # Gaussian(mu, inv(Lambda))
+
+    def __init__(self, mu, Lambda, plates=(), **kwargs):
+
+        ## # Check for constant mu
+        ## if np.isscalar(mu) or isinstance(mu, np.ndarray):
+        ##     mu = Constant(Gaussian)(mu)
+
+        ## # Check for constant Lambda
+        ## if np.isscalar(Lambda) or isinstance(Lambda, np.ndarray):
+        ##     Lambda = Constant(Wishart)(Lambda)
+
+        ## # You could check whether the dimensions of mu and Lambda
+        ## # match (and Lambda is square)
+        ## if Lambda.dims[0][-1] != mu.dims[0][-1]:
+        ##     raise Exception("Dimensionalities of mu and Lambda do not match.")
+
+        # Construct
+        super().__init__(mu, Lambda,
+                         plates=plates,
+                         **kwargs)

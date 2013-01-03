@@ -24,7 +24,7 @@
 
 import numpy as np
 
-from ..node import Node
+from .node import Node
 
 def Constant(distribution):
     class _Constant(Node):
