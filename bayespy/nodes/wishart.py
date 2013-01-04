@@ -24,7 +24,8 @@
 
 import numpy as np
 import scipy.special as special
-import bayespy.utils as utils
+
+from bayespy.utils import utils
 
 from .variable import Variable
 from .constant import Constant

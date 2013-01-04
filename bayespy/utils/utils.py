@@ -626,3 +626,41 @@ def m_dot(A,b):
     # TODO: Use einsum!!
     return np.sum(A*b[...,np.newaxis,:], axis=(-1,))
 
+def kalman_filter(y, U, A, V):
+    """
+    Performs Kalman filtering to obtain posterior mean and covariance.
+
+    Parameters
+    ----------
+    y : array
+        Noisy observations of the states multiplied by the precision matrix U.
+    U : array
+        Precision matrix (i.e., inverse covariance matrix) of the observation noise.
+    A : array
+        Dynamic matrix.
+    V : array
+        Covariance matrix of the innovation noise.
+
+    Returns
+    -------
+    mu : array
+        Posterior mean of the states.
+    Cov : array
+        Posterior covariance of the states.
+    """
+    # mu = mu0
+    # Cov = Cov0
+     for (yn, Un, An, Vn) in zip(y, U, A, V):
+         # Prediction step
+         mu = np.dot(An, mu)
+         Cov = np.dot(np.dot(An, Cov), An.T) + V
+         # Update step
+         M = np.dot(np.dot(Cov, Un), Cov) + Cov
+         L = chol(M)
+
+         # Cov = 1/(U + 1/Cov) = Cov*(Cov*U*Cov + Cov)*Cov
+         # mu = Cov*(...)*(Cov*Uy + mu)
+         
+
+def kalman_smoother():
+    pass

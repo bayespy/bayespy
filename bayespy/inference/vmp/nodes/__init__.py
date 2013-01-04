@@ -22,6 +22,20 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+# Import some most commonly used nodes
+
+#from .node import Node
+#from .variable import Variable
+#from .constant import Constant
+from .gaussian import Gaussian
+from .wishart import Wishart
+from .normal import Normal
+from .gamma import Gamma, GammaToDiagonalWishart
+from .dirichlet import Dirichlet
+from .categorical import Categorical
+from .dot import Dot
+from .mixture import Mixture
+
 ## from . import variable
 
 ## import imp

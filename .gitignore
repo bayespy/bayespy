@@ -8,4 +8,6 @@ __pycache__
 *.aux
 *.dvi
 *.log
+*.c
 build
+*.so

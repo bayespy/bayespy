@@ -25,7 +25,7 @@
 import numpy as np
 import scipy.special as special
 
-from ..node import Node
+from .node import Node
 from .variable import Variable
 from .constant import Constant
 

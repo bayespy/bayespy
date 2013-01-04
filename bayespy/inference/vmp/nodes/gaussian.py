@@ -22,8 +22,13 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+'''
+The VB inference class for Gaussian variable.
+'''
+
 import numpy as np
-import bayespy.utils as utils
+
+from bayespy.utils import utils
 
 from .variable import Variable
 from .constant import Constant
@@ -37,16 +42,6 @@ class Gaussian(Variable):
     ndim_observations = 1
 
     
-    ## @staticmethod
-    ## def compute_fixed_parameter_moments(*args):
-    ##     """ Compute the moments of the distribution parameters for
-    ##     fixed values."""
-    ##     mu = args[0]
-    ##     Lambda = args[1]
-    ##     u_mu = Gaussian.compute_fixed_moments(mu)
-    ##     u_Lambda = Wishart.compute_fixed_moments(Lambda)
-    ##     return (u_mu, u_Lambda)
-
     @staticmethod
     def compute_fixed_moments(x):
         """ Compute moments for fixed x. """
@@ -54,10 +49,6 @@ class Gaussian(Variable):
 
     @staticmethod
     def compute_phi_from_parents(u_parents):
-        ## print('in Gaussian.compute_phi_from_parents')
-        ## print(u_parents)
-        ## print(np.shape(u_parents[1][0]))
-        ## print(np.shape(u_parents[0][0]))
         return [utils.m_dot(u_parents[1][0], u_parents[0][0]),
                 -0.5 * u_parents[1][0]]
 
@@ -69,8 +60,6 @@ class Gaussian(Variable):
         logdet_Lambda = u_parents[1][1]
         g = (-0.5 * np.einsum('...ij,...ij',mumu,Lambda)
              + 0.5 * logdet_Lambda)
-        ## g = (-0.5 * np.einsum('...ij,...ij',mumu,Lambda)
-        ##      + 0.5 * np.sum(logdet_Lambda))
         return g
 
     @staticmethod
@@ -168,87 +157,87 @@ class Gaussian(Variable):
         print("  Cov = ")
         print(str(Cov))
 
-    @staticmethod
-    def compute_rotated_moments(R, x, xx):
-        x = np.einsum('...ij,...j->...i', R, x)
-        xx = np.einsum('...ij,...jk,...lk->...il', R, xx, R)
-        return [x, xx]
+    ## @staticmethod
+    ## def compute_rotated_moments(R, x, xx):
+    ##     x = np.einsum('...ij,...j->...i', R, x)
+    ##     xx = np.einsum('...ij,...jk,...lk->...il', R, xx, R)
+    ##     return [x, xx]
 
-    @staticmethod
-    def rotation_entropy(U,s,V, n=1, gradient=False):
-        # Entropy
-        e = n*np.sum(np.log(S))
-        if gradient:
-            # Derivative w.r.t. rotation matrix R=U*S*V is inv(R).T
-            dR = n*np.dot(V.T, np.dot(np.diag(1/s), U.T))
-            return (e, dR)
-        else:
-            return e
+    ## @staticmethod
+    ## def rotation_entropy(U,s,V, n=1, gradient=False):
+    ##     # Entropy
+    ##     e = n*np.sum(np.log(S))
+    ##     if gradient:
+    ##         # Derivative w.r.t. rotation matrix R=U*S*V is inv(R).T
+    ##         dR = n*np.dot(V.T, np.dot(np.diag(1/s), U.T))
+    ##         return (e, dR)
+    ##     else:
+    ##         return e
 
 
-    def start_rotation(self):
+    ## def start_rotation(self):
 
-        R = None
-        U = None
-        s = None
-        V = None
+    ##     R = None
+    ##     U = None
+    ##     s = None
+    ##     V = None
 
-        # There should not be any observed/fixed values.
+    ##     # There should not be any observed/fixed values.
 
-        u = self.u
-        u0 = self.u
+    ##     u = self.u
+    ##     u0 = self.u
 
-        self.u = None
+    ##     self.u = None
 
-        dR = None
+    ##     dR = None
         
 
-        def transform_rotation(A, svd=None):
-            # Rotation matrix
-            R = np.atleast_2d(A)
-            if svd is None:
-                (U,s,V) = np.svd(R)
-            else:
-                (U,s,V) = svd
+    ##     def transform_rotation(A, svd=None):
+    ##         # Rotation matrix
+    ##         R = np.atleast_2d(A)
+    ##         if svd is None:
+    ##             (U,s,V) = np.svd(R)
+    ##         else:
+    ##             (U,s,V) = svd
                 
-            # Transform moments
-            u = self.compute_rotated_moments(R, *u0)
+    ##         # Transform moments
+    ##         u = self.compute_rotated_moments(R, *u0)
 
-            # Put gradient to zero
-            dR = np.zeros(np.shape(R))
+    ##         # Put gradient to zero
+    ##         dR = np.zeros(np.shape(R))
 
-            # Return transformed moments
-            return u
+    ##         # Return transformed moments
+    ##         return u
             
 
-        def cost_rotation(gradient=True):
-            # Compute E[phi] over the parents' distribution
-            phi_p_X = self.phi_from_parents(gradient=gradient)
+    ##     def cost_rotation(gradient=True):
+    ##         # Compute E[phi] over the parents' distribution
+    ##         phi_p_X = self.phi_from_parents(gradient=gradient)
             
-            # Compute the cost
+    ##         # Compute the cost
 
-            # Entropy term
-            #log_qh_X = N_X * np.sum(np.log(S))
-            log_qh_X = self.rotation_entropy(U, s, V,
-                                             n=N_X,
-                                             gradient=gradient)
+    ##         # Entropy term
+    ##         #log_qh_X = N_X * np.sum(np.log(S))
+    ##         log_qh_X = self.rotation_entropy(U, s, V,
+    ##                                          n=N_X,
+    ##                                          gradient=gradient)
 
-            # Prior term
-            log_ph_X = X.compute_logpdf(u,
-                                        phi_p_X,
-                                        0,
-                                        0,
-                                        gradient=gradient)
-            # Total cost
-            l = log_qh_X + log_ph_X
-            return l
+    ##         # Prior term
+    ##         log_ph_X = X.compute_logpdf(u,
+    ##                                     phi_p_X,
+    ##                                     0,
+    ##                                     0,
+    ##                                     gradient=gradient)
+    ##         # Total cost
+    ##         l = log_qh_X + log_ph_X
+    ##         return l
 
-        def gradient_rotation():
-            return dR
+    ##     def gradient_rotation():
+    ##         return dR
 
-        #def stop_rotation():
-        #    self.u = 
+    ##     #def stop_rotation():
+    ##     #    self.u = 
 
-        return (transform_rotation, cost_rotation, gradient_rotation)
+    ##     return (transform_rotation, cost_rotation, gradient_rotation)
         
 

@@ -22,6 +22,9 @@
 Developer guide
 ===============
 
+How to document:
+https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
+
 Variational message passing
 ---------------------------
 
