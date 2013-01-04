@@ -25,7 +25,7 @@
 import itertools
 import numpy as np
 import scipy as sp
-import scipy.linalg.decomp_cholesky as decomp
+#import scipy.linalg.decomp_cholesky as decomp
 import scipy.linalg as linalg
 import scipy.special as special
 import scipy.optimize as optimize
@@ -50,12 +50,12 @@ def grid(x1, x2):
 class CholeskyDense():
     
     def __init__(self, K):
-        self.U = decomp.cho_factor(K)
+        self.U = linalg.cho_factor(K)
     
     def solve(self, b):
         if sparse.issparse(b):
             b = b.toarray()
-        return decomp.cho_solve(self.U, b)
+        return linalg.cho_solve(self.U, b)
 
     def logdet(self):
         return 2*np.sum(np.log(np.diag(self.U[0])))
@@ -438,13 +438,13 @@ def chol(C):
         return cholmod.cholesky(C)
     else:
         # Dense Cholesky decomposition
-        return decomp.cho_factor(C)[0]
+        return linalg.cho_factor(C)[0]
 
 def chol_solve(U, b):
     if isinstance(U, np.ndarray):
         if sparse.issparse(b):
             b = b.toarray()
-        return decomp.cho_solve((U, False), b)
+        return linalg.cho_solve((U, False), b)
     elif isinstance(U, cholmod.Factor):
         if sparse.issparse(b):
             b = b.toarray()
@@ -524,7 +524,7 @@ def m_chol(C):
     #print('m_chol', C)
     for i in nested_iterator(np.shape(U)[:-2]):
         try:
-            U[i] = decomp.cho_factor(C[i])[0]
+            U[i] = linalg.cho_factor(C[i])[0]
         except np.linalg.linalg.LinAlgError:
             print(C[i])
             raise Exception("Matrix not positive definite")
@@ -580,7 +580,7 @@ def m_chol_solve(U, B, out=None):
         else:
             ind_out = tuple(ind_b) + (Ellipsis,)
 
-        out[ind_out] = decomp.cho_solve((U[i], False),
+        out[ind_out] = linalg.cho_solve((U[i], False),
                                         b.T).T.reshape(orig_shape)
 
         
@@ -591,7 +591,7 @@ def m_chol_inv(U):
     # Allocate memory
     V = np.tile(np.identity(np.shape(U)[-1]), np.shape(U)[:-2]+(1,1))
     for i in nested_iterator(np.shape(U)[:-2]):
-        V[i] = decomp.cho_solve((U[i], False),
+        V[i] = linalg.cho_solve((U[i], False),
                                 V[i],
                                 overwrite_b=True) # This would need Fortran order
         
