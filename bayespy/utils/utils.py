@@ -626,7 +626,7 @@ def m_dot(A,b):
     # TODO: Use einsum!!
     return np.sum(A*b[...,np.newaxis,:], axis=(-1,))
 
-def kalman_filter(y, U, A, V):
+def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
     """
     Performs Kalman filtering to obtain posterior mean and covariance.
 
@@ -644,22 +644,37 @@ def kalman_filter(y, U, A, V):
     Returns
     -------
     mu : array
-        Posterior mean of the states.
+        Filtered mean of the states.
     Cov : array
-        Posterior covariance of the states.
+        Filtered covariance of the states.
     """
-    # mu = mu0
-    # Cov = Cov0
-     for (yn, Un, An, Vn) in zip(y, U, A, V):
-         # Prediction step
-         mu = np.dot(An, mu)
-         Cov = np.dot(np.dot(An, Cov), An.T) + V
-         # Update step
-         M = np.dot(np.dot(Cov, Un), Cov) + Cov
-         L = chol(M)
+    mu = mu0
+    Cov = Cov0
+    n = 0
+    # Allocate memory for the results
+    (N,D) = np.shape(y)
+    X = np.empty((N,D))
+    CovX = np.empty((N,D,D))
+    
+    for (yn, Un, An, Vn) in zip(y, U, A, V):
+        # Prediction step
+        mu = np.dot(An, mu)
+        Cov = np.dot(np.dot(An, Cov), An.T) + V
+        # Update step
+        M = np.dot(np.dot(Cov, Un), Cov) + Cov
+        L = chol(M)
+        mu = np.dot(Cov, chol_solve(L, np.dot(Cov,y) + mu))
+        Cov = np.dot(Cov, chol_solve(L, Cov))
 
-         # Cov = 1/(U + 1/Cov) = Cov*(Cov*U*Cov + Cov)*Cov
-         # mu = Cov*(...)*(Cov*Uy + mu)
+        # Store results
+        X[n,:] = mu
+        CovX[n,:,:] = Cov
+        n = n + 1
+        
+        # Cov = 1/(U + 1/Cov) = Cov*inv(Cov*U*Cov + Cov)*Cov
+        # mu = Cov*inv(...)*(Cov*Uy + mu)
+
+    return (X, CovX)
          
 
 def kalman_smoother():
