@@ -633,9 +633,12 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
     Parameters
     ----------
     y : array
-        Noisy observations of the states multiplied by the precision matrix U.
+        "Normalized" noisy observations of the states, that is, the
+         observations multiplied by the precision matrix U (and possibly
+         other transformation matrices).
     U : array
-        Precision matrix (i.e., inverse covariance matrix) of the observation noise.
+        Precision matrix (i.e., inverse covariance matrix) of the observation 
+        noise.
     A : array
         Dynamic matrix.
     V : array
@@ -659,11 +662,14 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
     for (yn, Un, An, Vn) in zip(y, U, A, V):
         # Prediction step
         mu = np.dot(An, mu)
-        Cov = np.dot(np.dot(An, Cov), An.T) + V
+        Cov = np.dot(np.dot(An, Cov), An.T) + Vn
+        # Force symmetric:
+        Cov = 0.5*Cov + 0.5*Cov.T
         # Update step
         M = np.dot(np.dot(Cov, Un), Cov) + Cov
+        print('M', M)
         L = chol(M)
-        mu = np.dot(Cov, chol_solve(L, np.dot(Cov,y) + mu))
+        mu = np.dot(Cov, chol_solve(L, np.dot(Cov,yn) + mu))
         Cov = np.dot(Cov, chol_solve(L, Cov))
 
         # Store results
@@ -675,7 +681,44 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
         # mu = Cov*inv(...)*(Cov*Uy + mu)
 
     return (X, CovX)
-         
 
-def kalman_smoother():
+
+def rts_smoother(mu, Cov, A, V):
+
+    N = len(mu)
+    n = N-1
+    for (An, Vn) in zip(reversed(A), reversed(V)):
+
+        if n <= 0:
+            break
+
+        # The smoothed value of n
+        x_s = mu[n,:]
+        Cov_s = Cov[n,:,:]
+
+        # The predicted value of n
+        x_p = np.dot(An, mu[n-1,:])
+        Cov_p = np.dot(np.dot(An, Cov[n-1,:,:]), An.T) + Vn
+
+        # Temporary variable
+        S = np.linalg.solve(Cov_p, np.dot(An, Cov[n-1,:,:]))
+
+        # Smoothed value of n-1
+        mu[n-1,:] = mu[n-1,:] + np.dot(S.T, x_s-x_p)
+        Cov[n-1,:] = Cov[n-1,:,:] + np.dot(np.dot(S.T, Cov_s-Cov_p), S)
+
+        n = n - 1
+
+    return (mu, Cov)
+        
+    
+    
+    ## x_p = A*x;
+    ## Covx_p = A*Covx*A' + Q;
+
+    ## S = (Covx*A') / Covx_p;
+    ## x = x + S*(x_s-x_p);
+    ## if nargout >= 2
+    ##   Covx = Covx + S*(Covx_s-Covx_p)*S';
+    ## end
     pass
