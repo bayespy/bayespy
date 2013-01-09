@@ -252,7 +252,7 @@ Providing the data
 
 The data is provided by simply calling ``observe`` method of the node:
 
-.. code-block:: pytho3
+.. code-block:: python3
 
    y.observe(data)
 

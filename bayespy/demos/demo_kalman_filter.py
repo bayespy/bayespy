@@ -15,12 +15,17 @@ def run():
     D = 2
     # Initial state
     x0 = np.array([0.5, -0.5])
-    # Dynamics
-    A = np.array([[.9, -.4], [.4, .9]])
+    # Dynamics (time varying)
+    A0 = np.array([[.9, -.4], [.4, .9]])
+    A1 = np.array([[.98, -.1], [.1, .98]])
+    l = np.linspace(0, 1, N).reshape((-1,1,1))
+    A = (1-l)*A0 + l*A1
     # Innovation covariance matrix
     V = np.array([[1, 0], [0, 1]])
     # Observation noise covariance matrix
-    C = 1*np.array([[1, 0], [0, 1]])
+    C0 = 10*np.array([[1, 0], [0, 1]])
+    C1 = 0.01*np.array([[1, 0], [0, 1]])
+    C = (1-l)**2*C0 + l**2*C1
 
     X = np.empty((N,D))
     Y = np.empty((N,D))
@@ -28,16 +33,19 @@ def run():
     # Simulate data
     x = x0
     for n in range(N):
-        x = np.dot(A,x) + np.random.multivariate_normal(np.zeros(D), V)
+        x = np.dot(A[n,:,:],x) + np.random.multivariate_normal(np.zeros(D), V)
         X[n,:] = x
-        Y[n,:] = x + np.random.multivariate_normal(np.zeros(D), C)
+        Y[n,:] = x + np.random.multivariate_normal(np.zeros(D), C[n,:,:])
 
-    U = np.linalg.inv(C)
-    UY = np.linalg.solve(C, Y.T).T
+    U = np.empty((N,D,D))
+    UY = np.empty((N,D))
+    for n in range(N):
+        U[n,:,:] = np.linalg.inv(C[n,:,:])
+        UY[n,:] = np.linalg.solve(C[n,:,:], Y[n,:])
 
     # Create iterators for the static matrices
-    U = N*(U,)
-    A = N*(A,)
+    #U = N*(U,)
+    #A = N*(A,)
     V = N*(V,)
     
     (Xh, CovXh) = utils.kalman_filter(UY, U, A, V, np.zeros(2), 10*np.identity(2))

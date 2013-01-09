@@ -63,7 +63,6 @@ if __name__ == "__main__":
                       'bayespy.inference.vmp',
                       'bayespy.inference.vmp.nodes',
                       'bayespy.nodes',
-                      'bayespy.nodes.variables',
                       'bayespy.plot',
                       'bayespy.utils',
                       'bayespy.utils.covfunc'],

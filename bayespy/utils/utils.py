@@ -22,6 +22,10 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+"""
+General numerical functions and methods.
+"""
+
 import itertools
 import numpy as np
 import scipy as sp
@@ -628,21 +632,25 @@ def m_dot(A,b):
 
 def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
     """
-    Performs Kalman filtering to obtain posterior mean and covariance.
+    Performs Kalman filtering to obtain filtered mean and covariance.
+    The parameters of the process may vary in time, thus they are
+    given as iterators instead of fixed values.
 
     Parameters
     ----------
     y : array
         "Normalized" noisy observations of the states, that is, the
-         observations multiplied by the precision matrix U (and possibly
-         other transformation matrices).
-    U : array
+        observations multiplied by the precision matrix U (and possibly
+        other transformation matrices). :math:`N \\times D`
+    U : iterator of arrays
         Precision matrix (i.e., inverse covariance matrix) of the observation 
-        noise.
-    A : array
-        Dynamic matrix.
-    V : array
-        Covariance matrix of the innovation noise.
+        noise for each time instance. Iterator of :math:`D \\times D` arrays.
+    A : iterator of arrays
+        Dynamic matrix for each time instance. Iterator of :math:`D \\times D`
+        arrays.
+    V : iterator of arrays
+        Covariance matrix of the innovation noise for each time instance.
+        Iterator of :math:`D \\times D` arrays.
 
     Returns
     -------
@@ -654,6 +662,7 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
     mu = mu0
     Cov = Cov0
     n = 0
+
     # Allocate memory for the results
     (N,D) = np.shape(y)
     X = np.empty((N,D))
@@ -663,51 +672,82 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
         # Prediction step
         mu = np.dot(An, mu)
         Cov = np.dot(np.dot(An, Cov), An.T) + Vn
-        # Force symmetric:
-        Cov = 0.5*Cov + 0.5*Cov.T
         # Update step
         M = np.dot(np.dot(Cov, Un), Cov) + Cov
-        print('M', M)
         L = chol(M)
         mu = np.dot(Cov, chol_solve(L, np.dot(Cov,yn) + mu))
         Cov = np.dot(Cov, chol_solve(L, Cov))
 
+        # Force symmetric covariance (for numeric inaccuracy)
+        Cov = 0.5*Cov + 0.5*Cov.T
+
         # Store results
         X[n,:] = mu
         CovX[n,:,:] = Cov
+
         n = n + 1
         
-        # Cov = 1/(U + 1/Cov) = Cov*inv(Cov*U*Cov + Cov)*Cov
-        # mu = Cov*inv(...)*(Cov*Uy + mu)
-
     return (X, CovX)
 
 
 def rts_smoother(mu, Cov, A, V):
+    """
+    Performs Rauch-Tung-Striebel smoothing to obtain posterior mean and 
+    covariance. The parameters of the process may vary in time, thus they are
+    given as iterators instead of fixed values.
+
+    Parameters
+    ----------
+    mu : array
+        Mean of the states from Kalman filter. :math:`N \\times D`
+    Cov : array
+        Covariance of the states from Kalman filter. 
+        :math:`N \\times D \\times D`
+    A : iterator of arrays
+        Dynamic matrix for each time instance. :math:`D \\times D`
+    V : iterator of arrays
+        :math:`D \\times D` covariance matrix of the innovation noise for 
+        each time instance.
+
+    Returns
+    -------
+    mu : array
+        Posterior mean of the states.
+    Cov : array
+        Posterior covariance of the states.
+    """
 
     N = len(mu)
     n = N-1
+
+    # Start from the last time instance and smoothen backwards
+    x = mu[-1,:]
+    Covx = Cov[-1,:,:]
+    
     for (An, Vn) in zip(reversed(A), reversed(V)):
 
+        n = n - 1
         if n <= 0:
             break
 
-        # The smoothed value of n
-        x_s = mu[n,:]
-        Cov_s = Cov[n,:,:]
-
         # The predicted value of n
-        x_p = np.dot(An, mu[n-1,:])
-        Cov_p = np.dot(np.dot(An, Cov[n-1,:,:]), An.T) + Vn
+        x_p = np.dot(An, mu[n,:])
+        Cov_p = np.dot(np.dot(An, Cov[n,:,:]), An.T) + Vn
 
         # Temporary variable
-        S = np.linalg.solve(Cov_p, np.dot(An, Cov[n-1,:,:]))
+        S = np.linalg.solve(Cov_p, np.dot(An, Cov[n,:,:]))
 
-        # Smoothed value of n-1
-        mu[n-1,:] = mu[n-1,:] + np.dot(S.T, x_s-x_p)
-        Cov[n-1,:] = Cov[n-1,:,:] + np.dot(np.dot(S.T, Cov_s-Cov_p), S)
+        # Smoothed value of n
+        x = mu[n,:] + np.dot(S.T, x-x_p)
+        Covx = Cov[n,:,:] + np.dot(np.dot(S.T, Covx-Cov_p), S)
 
-        n = n - 1
+        # Force symmetric covariance (for numeric inaccuracy)
+        Covx = 0.5*Covx + 0.5*Covx.T
+
+        # Store results
+        mu[n,:] = x
+        Cov[n,:] = Covx
+
 
     return (mu, Cov)
         

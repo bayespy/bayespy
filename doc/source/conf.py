@@ -198,10 +198,7 @@ latex_elements = {
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-'preamble': '''
-  \usepackage{tikz}
-  \usepackage{amssymb}
-'''
+'preamble': '\\usepackage{tikz} \\usepackage{amssymb}'
 #  \usetikzlibrary{shapes, fit, chains, arrows}
 #  \usetikzlibrary{bayesnet}
 }

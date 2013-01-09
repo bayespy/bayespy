@@ -22,5 +22,9 @@
 API
 ====
 
-Here:
+Here are some stuff:
 
+.. automodule:: bayespy.utils.utils
+   :members:
+
+.. autofunction:: bayespy.utils.utils.kalman_filter

@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 
-# Use Python 3 version of Sphinx
+# Use Python 3 version of Sphinx (or use virtualenv!)
 #SPHINXBUILD   = /usr/share/sphinx/scripts/python3/sphinx-build
 SPHINXBUILD   = sphinx-build
 

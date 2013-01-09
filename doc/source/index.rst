@@ -32,6 +32,7 @@ Welcome to BayesPy's documentation!
    devguide
    nodes
    vmp
+   api
 
 
 Indices and tables
