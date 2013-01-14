@@ -20,8 +20,8 @@ import sys, os
 
 # Import some information from the setup.py script.
 sys.path.insert(0, os.path.abspath('../..'))
-sys.path.insert(0, os.path.abspath('extensions/sphinx-bayesnet'))
-sys.path.insert(0, os.path.abspath('extensions/sphinx-bayesnet/sphinx-tikz'))
+#sys.path.insert(0, os.path.abspath('extensions/sphinx-bayesnet'))
+#sys.path.insert(0, os.path.abspath('extensions/sphinx-bayesnet/sphinx-tikz'))
 #sys.path.insert(0, os.path.abspath('extensions'))
 import setup as setupfile
 
@@ -35,8 +35,10 @@ import setup as setupfile
 extensions = ['sphinx.ext.autodoc', 
               'sphinx.ext.mathjax',
               'sphinx.ext.todo',
-              'tikz',
-              'bayesnet']
+              'sphinx.ext.autosummary',
+              'sphinxcontrib.tikz',
+              'sphinxcontrib.bayesnet',
+              'numpydoc']
 #'tikz-python3']
 
 # Include TODOs in the documentation?

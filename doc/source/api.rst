@@ -20,7 +20,7 @@
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
 API
-====
+===
 
 Here are some stuff:
 
@@ -28,3 +28,8 @@ Here are some stuff:
    :members:
 
 .. autofunction:: bayespy.utils.utils.kalman_filter
+
+
+.. autosummary:: 
+
+   bayespy.utils.utils

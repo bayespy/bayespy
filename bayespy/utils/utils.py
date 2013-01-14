@@ -658,6 +658,8 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
         Filtered mean of the states.
     Cov : array
         Filtered covariance of the states.
+
+    :returns: ``T`` for test.
     """
     mu = mu0
     Cov = Cov0
