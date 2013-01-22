@@ -22,15 +22,41 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+"""
+This module contains VMP nodes for Gaussian Markov chains.
+"""
+
 import numpy as np
 
-import utils
+from bayespy.utils import utils
 
 from .variable import Variable
 from .constant import Constant
 from .wishart import Wishart
 
 class GaussianMarkovChain(Variable):
+    r"""
+    VMP node for Gaussian Markov chain.
+
+    
+
+    .. bayesnet::
+
+       \node[latent] (x1) {$\mathbf{x}_1$};
+       \node[latent, right=of x1] (x2) {$\mathbf{x}_2$};
+       \node[right=of x2] (dots) {$\cdots$};
+       \node[latent, right=of dots] (xn) {$\mathbf{x}_n$};
+       \edge {x1}{x2};
+       \edge {x2}{dots};
+       \edge {dots}{xn};
+
+
+    See also
+    --------
+    bayespy.inference.vmp.nodes.gaussian.Gaussian
+    bayespy.inference.vmp.nodes.wishart.Wishart
+
+    """
 
     ndims = (1, 2)
     ndims_parents = [(1, 2), (2, 0)]

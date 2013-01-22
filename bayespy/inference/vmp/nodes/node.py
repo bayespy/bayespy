@@ -150,6 +150,17 @@ class Node:
 
 
     def add_child(self, child, index):
+        """
+        Add a child node.
+
+        Parameters
+        ----------
+        child : node
+        index : int
+           The parent index of this node for the child node.  
+           The child node recognizes its parents by their index 
+           number.
+        """
         self.children.append((child, index))
 
     def plates_to_parent(self, index):

@@ -20,16 +20,51 @@
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
 API
-===
+***
 
-Here are some stuff:
+Stochastic nodes in VMP
+=======================
 
-.. automodule:: bayespy.utils.utils
-   :members:
+.. currentmodule:: bayespy.inference.vmp.nodes
 
-.. autofunction:: bayespy.utils.utils.kalman_filter
+.. autosummary::
+   :toctree: generated/
+
+   normal.Normal
+   gamma.Gamma
+   gaussian.Gaussian
+   wishart.Wishart
+   dirichlet.Dirichlet
+   categorical.Categorical
+   mixture.Mixture
+   gaussian_markov_chain.GaussianMarkovChain
+
+Deterministic
+=============
+
+.. autosummary::
+   :toctree: generated/
+
+   dot.Dot
 
 
-.. autosummary:: 
 
-   bayespy.utils.utils
+Utility functions
+=================
+
+.. currentmodule:: bayespy.utils.utils
+
+.. autosummary::
+   :toctree: generated/
+
+   kalman_filter
+   rts_smoother
+
+.. currentmodule:: bayespy
+
+.. autosummary::
+   :toctree: generated/
+
+   demos
+   inference
+   utils.utils

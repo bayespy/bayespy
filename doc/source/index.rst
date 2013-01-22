@@ -34,7 +34,6 @@ Welcome to BayesPy's documentation!
    vmp
    api
 
-
 Indices and tables
 ==================
 

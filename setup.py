@@ -65,6 +65,7 @@ if __name__ == "__main__":
                       'bayespy.nodes',
                       'bayespy.plot',
                       'bayespy.utils',
+                      'bayespy.utils.tests',
                       'bayespy.utils.covfunc'],
           ## packages = ['bayespy',
           ##             'bayespy.demos',

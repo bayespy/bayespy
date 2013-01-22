@@ -20,9 +20,6 @@ import sys, os
 
 # Import some information from the setup.py script.
 sys.path.insert(0, os.path.abspath('../..'))
-#sys.path.insert(0, os.path.abspath('extensions/sphinx-bayesnet'))
-#sys.path.insert(0, os.path.abspath('extensions/sphinx-bayesnet/sphinx-tikz'))
-#sys.path.insert(0, os.path.abspath('extensions'))
 import setup as setupfile
 
 # -- General configuration -----------------------------------------------------
@@ -32,14 +29,16 @@ import setup as setupfile
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 
-              'sphinx.ext.mathjax',
-              'sphinx.ext.todo',
-              'sphinx.ext.autosummary',
-              'sphinxcontrib.tikz',
-              'sphinxcontrib.bayesnet',
-              'numpydoc']
-#'tikz-python3']
+extensions = [
+    'sphinx.ext.autodoc', 
+    'sphinx.ext.mathjax',
+    'sphinx.ext.todo',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.viewcode',
+    'sphinxcontrib.tikz',
+    'sphinxcontrib.bayesnet',
+    'numpydoc'
+    ]
 
 # Include TODOs in the documentation?
 todo_include_todos = True
@@ -49,6 +48,10 @@ todo_include_todos = True
 if os.environ.get('READTHEDOCS', None) == 'True':
     os.environ["PATH"] += os.pathsep + os.path.abspath('bin')
     os.environ["LD_LIBRARY_PATH"] = os.path.abspath('bin')
+
+# Generate autosummary stub pages automatically
+#autosummary_generate = False
+autosummary_generate = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -64,7 +67,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = setupfile.NAME
-copyright = u'2012, Jaakko Luttinen'
+copyright = u'2011-2013, Jaakko Luttinen'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -200,7 +203,10 @@ latex_elements = {
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-'preamble': '\\usepackage{tikz} \\usepackage{amssymb}'
+'preamble': r'''
+\usepackage{tikz}
+\usepackage{amssymb}
+'''
 #  \usetikzlibrary{shapes, fit, chains, arrows}
 #  \usetikzlibrary{bayesnet}
 }

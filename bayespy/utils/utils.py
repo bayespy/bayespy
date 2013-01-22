@@ -24,6 +24,7 @@
 
 """
 General numerical functions and methods.
+
 """
 
 import itertools
@@ -453,7 +454,29 @@ def chol_solve(U, b):
         if sparse.issparse(b):
             b = b.toarray()
         return U.solve_A(b)
+    else:
+        raise ValueError("Unknown type of Cholesky factor")
 
+def chol_inv(U):
+    if isinstance(U, np.ndarray):
+        I = np.identity(np.shape(U)[-1])
+        return linalg.cho_solve((U, False), I)
+    elif isinstance(U, cholmod.Factor):
+        raise NotImplementedError
+        ## if sparse.issparse(b):
+        ##     b = b.toarray()
+        ## return U.solve_A(b)
+    else:
+        raise ValueError("Unknown type of Cholesky factor")
+
+def chol_logdet(U):
+    if isinstance(U, np.ndarray):
+        return 2*np.sum(np.log(np.diag(U)))
+    elif isinstance(U, cholmod.Factor):
+        return np.sum(np.log(U.D()))
+    else:
+        raise ValueError("Unknown type of Cholesky factor")
+    
 def logdet_chol(U):
     if isinstance(U, np.ndarray):
         return 2*np.sum(np.log(np.diag(U)))
@@ -630,9 +653,182 @@ def m_dot(A,b):
     # TODO: Use einsum!!
     return np.sum(A*b[...,np.newaxis,:], axis=(-1,))
 
+## def block_ldl_solve(a, b):
+##     """
+##     A is diagonal blocks
+##     B is sub-diagonal blocks
+
+##     Compute the diagonal and sub-diagonal of the inverse.
+
+##     Solve vector.
+
+##     Compute log determinant.
+##     """
+
+##     # Filtering An <- An - Bn*inv(Ap)*Bn'
+##     #Ap = ...
+##     #L = scipy.linalg.cho_factor(Ap)
+##     #An - np.dot(Bn, scipy.linalg.cho_solve(L, Bn.T))
+
+##     N = len(a)
+##     u = np.empty(N)
+
+##     # Forward
+##     u[0] = a[0]
+##     for i in range(N-1):
+##         u[i+1] = a[i+1] - b[i]*(1/u[i])*b[i]
+
+##     # Backward
+##     c = np.empty(N)
+##     d = np.empty(N-1)
+##     c[-1] = 1/u[-1]
+##     for i in reversed(range(N-1)):
+##         d[i] = -(1/u[i]) * b[i] * c[i+1]
+##         c[i] = (1/u[i]) * (1 - b[i] * d[i])
+##         #c[i] = 1/u[i] + 1/u[i] * b[i] * c[i+1] * b[i] / u[i]
+
+##     return (c, d)
+
+def block_banded(D, B):
+    """
+    Construct a symmetric block-banded matrix.
+
+    `D` contains square diagonal blocks.
+    `B` contains super-diagonal blocks.
+
+    The resulting matrix is:
+
+    D[0],   B[0],   0,    0,    ..., 0,        0,        0
+    B[0].T, D[1],   B[1], 0,    ..., 0,        0,        0
+    0,      B[1].T, D[2], B[2], ..., ...,      ...,      ...
+    ...     ...     ...   ...   ..., B[N-2].T, D[N-1],   B[N-1]
+    0,      0,      0,    0,    ..., 0,        B[N-1].T, D[N]
+
+    """
+
+    D = [np.atleast_2d(d) for d in D]
+    B = [np.atleast_2d(b) for b in B]
+
+    # Number of diagonal blocks
+    N = len(D)
+
+    if len(B) != N-1:
+        raise ValueError("The number of super-diagonal blocks must contain exactly one block \
+                          less than the number of diagonal blocks")
+
+    # Compute the size of the full matrix
+    M = 0
+    for i in range(N):
+        if np.ndim(D[i]) != 2:
+            raise ValueError("Blocks must be 2 dimensional arrays")
+        d = np.shape(D[i])
+        if d[0] != d[1]:
+            raise ValueError("Diagonal blocks must be square")
+        M += d[0]
+
+    for i in range(N-1):
+        if np.ndim(B[i]) != 2:
+            raise ValueError("Blocks must be 2 dimensional arrays")
+        b = np.shape(B[i])
+        if b[0] != np.shape(D[i])[1] or b[1] != np.shape(D[i+1])[0]:
+            raise ValueError("Shapes of the super-diagonal blocks do not match the shapes of the \
+                              diagonal blocks")
+
+    A = np.zeros((M,M))
+    k = 0
+
+    for i in range(N-1):
+        (d0, d1) = np.shape(B[i])
+        # Diagonal block
+        A[k:k+d0, k:k+d0] = D[i]
+        # Super-diagonal block
+        A[k:k+d0, k+d0:k+d0+d1] = B[i]
+        # Sub-diagonal block
+        A[k+d0:k+d0+d1, k:k+d0] = B[i].T
+
+        k += d0
+    A[k:,k:] = D[-1]
+
+    return A
+    
+
+def block_banded_solve(A, B, y):
+    """
+    Invert symmetric, banded, positive-definite matrix.
+
+    A contains the diagonal blocks.
+
+    B contains the superdiagonal blocks (their transposes are the
+    subdiagonal blocks).
+
+    A and B are lists. The length of B is one smaller.
+
+    The algorithm is basically LU decomposition.
+
+    Computes only the diagonal and super-diagonal blocks of the
+    inverse. The true inverse is dense, in general.
+
+    Assume each block has the same size.
+
+    Return:
+    * inverse blocks
+    * solution to the system
+    * log-determinant
+    """
+
+    # Number of diagonal blocks
+    N = len(A)
+
+    if len(B) != N-1:
+        raise ValueError("The number of super-diagonal blocks must be exactly one less than \
+                          the number of diagonal blocks")
+
+    # Compute the size of the full matrix
+    D = np.shape(A[0])[0]
+    
+    V = np.empty((N,D,D))
+    C = np.empty((N-1,D,D))
+    x = np.empty(np.shape(y))
+
+    #
+    # Forward recursion
+    #
+    
+    # In the forward recursion, store the Cholesky factor in V. So you
+    # don't need to recompute them in the backward recursion.
+
+    x[0] = y[0]
+    V[0] = chol(A[0])
+    ldet = chol_logdet(V[0])
+    for n in range(N-1):
+        # Compute the solution of the system
+        x[n+1] = y[n+1] - np.dot(B[n].T, chol_solve(V[n], x[n]))
+        # Compute the diagonal block and store the Cholesky factor
+        V[n+1] = chol(A[n+1] - np.dot(B[n].T, chol_solve(V[n], B[n])))
+        # Compute the log-det term here, too
+        ldet += chol_logdet(V[n+1])
+
+    #
+    # Backward recursion
+    #
+    x[-1] = chol_solve(V[-1], x[-1])
+    V[-1] = chol_inv(V[-1])
+    for n in reversed(range(N-1)):
+        # Compute the solution of the system
+        x[n] = chol_solve(V[n], x[n] - np.dot(B[n], x[n+1]))
+        # Compute the superdiagonal block of the inverse
+        Z = chol_solve(V[n], B[n])
+        C[n] = -np.dot(Z, V[n+1])
+        # Compute the diagonal block of the inverse
+        V[n] = chol_inv(V[n]) + np.dot(np.dot(Z, V[n+1]), Z.T)
+
+    return (V, C, x, ldet)
+    
+
 def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
     """
-    Performs Kalman filtering to obtain filtered mean and covariance.
+    Perform Kalman filtering to obtain filtered mean and covariance.
+    
     The parameters of the process may vary in time, thus they are
     given as iterators instead of fixed values.
 
@@ -659,7 +855,9 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
     Cov : array
         Filtered covariance of the states.
 
-    :returns: ``T`` for test.
+    See also
+    --------
+    rts_smoother
     """
     mu = mu0
     Cov = Cov0
@@ -692,11 +890,13 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
     return (X, CovX)
 
 
-def rts_smoother(mu, Cov, A, V):
+def rts_smoother(mu, Cov, A, V, removethis=None):
     """
-    Performs Rauch-Tung-Striebel smoothing to obtain posterior mean and 
-    covariance. The parameters of the process may vary in time, thus they are
-    given as iterators instead of fixed values.
+    Perform Rauch-Tung-Striebel smoothing to obtain the posterior.
+
+    The function returns the posterior mean and covariance of each
+    state. The parameters of the process may vary in time, thus they
+    are given as iterators instead of fixed values.
 
     Parameters
     ----------
@@ -717,6 +917,10 @@ def rts_smoother(mu, Cov, A, V):
         Posterior mean of the states.
     Cov : array
         Posterior covariance of the states.
+
+    See also
+    --------
+    kalman_filter
     """
 
     N = len(mu)
