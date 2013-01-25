@@ -30,8 +30,8 @@ import unittest
 
 import numpy as np
 
-from bayespy.inference.vmp.nodes.gaussian_markov_chain import GaussianMarkovChain
-from bayespy.inference.vmp.nodes.gaussian import Gaussian
+from ..gaussian_markov_chain import GaussianMarkovChain
+from ..gaussian import Gaussian
 
 from bayespy.utils import utils
 
@@ -109,5 +109,5 @@ class TestGaussianMarkovChain(unittest.TestCase):
         self.assertTrue(np.allclose(Xh_vb, Xh))
         self.assertTrue(np.allclose(CovXh_vb, CovXh))
         
-if __name__ == '__main__':
-    unittest.main()
+## if __name__ == '__main__':
+##     unittest.main()

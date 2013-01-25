@@ -30,7 +30,8 @@ import unittest
 
 import numpy as np
 
-from bayespy.utils import utils
+from .. import utils
+#from bayespy.utils import utils
 
 
 class TestBandedSolve(unittest.TestCase):
@@ -106,5 +107,5 @@ class TestBandedSolve(unittest.TestCase):
         # Check the log determinant
         self.assertAlmostEqual(ldet/np.linalg.slogdet(C)[1], 1)
 
-if __name__ == '__main__':
-    unittest.main()
+## if __name__ == '__main__':
+##     unittest.main()
