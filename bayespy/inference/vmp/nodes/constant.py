@@ -26,19 +26,37 @@ import numpy as np
 
 from .node import Node
 
+
+class ConstantNumeric(Node):
+
+    def __init__(self, x, ndim, **kwargs):
+        # Compute moments
+        self.u = [x]
+        # Dimensions and plates of the moments
+        ind_dim = np.ndim(x) - ndim
+        dims = np.shape(x)[ind_dim:]
+        plates = np.shape(x)[:ind_dim]
+        # Parent constructor
+        super().__init__(dims=dims, plates=plates, **kwargs)
+
+    def get_moments(self):
+        return self.u
+
 def Constant(distribution):
+
     class _Constant(Node):
 
         @staticmethod
         def compute_fixed_moments(x):
             """ Compute u(x) for given x. """
             return distribution.compute_fixed_moments(x)
-        
+
         @staticmethod
         def compute_fixed_u_and_f(x):
             """ Compute u(x) and f(x) for given x. """
+            raise Exception("I think constants should NOT need this function?")
             return distribution.compute_fixed_u_and_f(x)
-        
+
         def __init__(self, x, **kwargs):
             # Compute moments
             self.u = distribution.compute_fixed_moments(x)
@@ -49,9 +67,9 @@ def Constant(distribution):
             plates = np.shape(x)[:plates_ndim]
             # Parent constructor
             super().__init__(dims=dims, plates=plates, **kwargs)
-            
+
         def get_moments(self):
             return self.u
-        
     return _Constant
-        
+    
+

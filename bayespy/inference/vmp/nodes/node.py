@@ -236,8 +236,6 @@ class Node:
             # Decompose our own message to parent[index]
             (m, my_mask) = self.get_message(index, u_parents)
 
-            #print('message_to_parent', self.name, index, m)
-
             # The parent we're sending the message to
             parent = self.parents[index]
 
@@ -249,56 +247,55 @@ class Node:
             # Compact the message to a proper shape
             for i in range(len(m)):
 
-                # Ignorations (add extra axes to broadcast properly).
-                # This sends zero messages to parent from such
-                # variables we are ignoring in this node. This is
-                # useful for handling missing data.
+                # Empty messages are given as None. We can ignore those.
+                if m[i] is not None:
 
-                # Apply the mask to the message
-                # Sum the dimensions of the message matrix to match
-                # the dimensionality of the parents natural
-                # parameterization (as there may be less plates for
-                # parents)
+                    # Ignorations (add extra axes to broadcast properly).
+                    # This sends zero messages to parent from such
+                    # variables we are ignoring in this node. This is
+                    # useful for handling missing data.
 
-                shape_mask = np.shape(my_mask) + (1,) * len(parent.dims[i])
-                my_mask2 = np.reshape(my_mask, shape_mask)
+                    # Apply the mask to the message
+                    # Sum the dimensions of the message matrix to match
+                    # the dimensionality of the parents natural
+                    # parameterization (as there may be less plates for
+                    # parents)
 
-                #try:
-                ## print('ExpFam.msg_to_parent')
-                ## print(m.__class__)
-                ## print(my_mask2.__class__)
-                #print(my_mask2)
-                m[i] = np.where(my_mask2, m[i], 0)
-                #m[i] = m[i] * my_mask2
-                #except:
+                    shape_mask = np.shape(my_mask) + (1,) * len(parent.dims[i])
+                    my_mask2 = np.reshape(my_mask, shape_mask)
 
-                shape_m = np.shape(m[i])
-                # If some dimensions of the message matrix were
-                # singleton although the corresponding dimension
-                # of the parents natural parameterization is not,
-                # multiply the message (i.e., broadcasting)
+                    #try:
+                    m[i] = np.where(my_mask2, m[i], 0)
+                    #m[i] = m[i] * my_mask2
+                    #except:
 
-                # Plates in the message
-                dim_parent = len(self.parents[index].dims[i])
-                if dim_parent > 0:
-                    plates_m = shape_m[:-dim_parent]
-                else:
-                    plates_m = shape_m
+                    shape_m = np.shape(m[i])
+                    # If some dimensions of the message matrix were
+                    # singleton although the corresponding dimension
+                    # of the parents natural parameterization is not,
+                    # multiply the message (i.e., broadcasting)
 
-                # Compute the multiplier (multiply by the number of
-                # plates for which both the message and parent have
-                # single plates)
-                plates_self = self.plates_to_parent(index)
-                r = self.plate_multiplier(plates_self, plates_m, parent.plates)
+                    # Plates in the message
+                    dim_parent = len(self.parents[index].dims[i])
+                    if dim_parent > 0:
+                        plates_m = shape_m[:-dim_parent]
+                    else:
+                        plates_m = shape_m
 
-                shape_parent = parent.get_shape(i)
+                    # Compute the multiplier (multiply by the number of
+                    # plates for which both the message and parent have
+                    # single plates)
+                    plates_self = self.plates_to_parent(index)
+                    r = self.plate_multiplier(plates_self, plates_m, parent.plates)
+
+                    shape_parent = parent.get_shape(i)
 
 
-                s = utils.axes_to_collapse(shape_m, shape_parent)
-                m[i] = np.sum(m[i], axis=s, keepdims=True)
+                    s = utils.axes_to_collapse(shape_m, shape_parent)
+                    m[i] = np.sum(m[i], axis=s, keepdims=True)
 
-                m[i] = utils.squeeze_to_dim(m[i], len(shape_parent))
-                m[i] *= r
+                    m[i] = utils.squeeze_to_dim(m[i], len(shape_parent))
+                    m[i] *= r
 
             return (m, mask)
         else:
@@ -342,7 +339,6 @@ class NodeConstantScalar(NodeConstant):
         #self.gradient = np.zeros(np.shape(x0))
         def transform(x):
             # E.g., for positive scalars you could have exp here.
-            #print('NodeConstantScalar.transform')
             self.gradient = np.zeros(np.shape(x0))
             self.u[0] = x
         def gradient():
@@ -353,17 +349,10 @@ class NodeConstantScalar(NodeConstant):
         return (x0, transform, gradient)
 
     def add_to_gradient(self, d):
-        #print('added to gradient in node')
-        #print('NodeConstantScalar.add_to_gradient')
         self.gradient += d
-        #print(self.gradient)
-        #print(d)
-        #print('self:')
-        #print(self.gradient)
 
     def message_to_child(self, gradient=False):
         if gradient:
-            #print('node sending gradient', np.shape(self.u))
             return (self.u, [ [np.ones(np.shape(self.u[0])),
                                #self.gradient] ])
                                self.add_to_gradient] ])

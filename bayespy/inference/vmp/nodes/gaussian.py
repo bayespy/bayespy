@@ -184,7 +184,7 @@ class Gaussian(Variable):
 
     @staticmethod
     def compute_u_and_g(phi, mask=True):
-        #print(-phi[1])
+        # TODO: Compute -2*phi[1] and simplify the formulas
         L = utils.m_chol(-phi[1])
         k = np.shape(phi[0])[-1]
         # Moments

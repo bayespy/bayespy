@@ -47,9 +47,6 @@ from .node import Node
 # nodes.gp.GaussianProcess
 # nodes.gp.Constant
 
-#print(Node)
-#print(Node.Node)
-
 # MAP/ML:
 # X = MAP(prior=Gaussian(mu,Cov))
 # X = ML()
@@ -91,7 +88,11 @@ class Variable(Node):
 
     @staticmethod
     def compute_phi_from_parents(u_parents):
-        """ Compute E[phi] over q(parents) """
+        """
+        Compute the natural parameters using parents' moments.
+
+        Compute E[phi] over q(parents)
+        """
         raise NotImplementedError()
 
     @staticmethod
@@ -191,7 +192,6 @@ class Variable(Node):
         #u_parents = self.compute_fixed_parameter_moments(*args)
         u_parents = list()
         for (ind, x) in enumerate(args):
-            #print(self.parents[ind].__class__)
             u = self.parameter_distributions[ind].compute_fixed_moments(x)
             #u = self.parents[ind].compute_fixed_moments(x)
             #(u, _) = self.parents[ind].compute_fixed_u_and_f(x)
@@ -224,11 +224,9 @@ class Variable(Node):
             # Update natural parameters using parents
             self.update_phi_from_parents(u_parents)
 
-            #print('update, phi', self.name, self.phi)
             # Update natural parameters using children (just add the
             # messages to phi)
             for (child,index) in self.children:
-                #print('ExpFam.update:', self.name)
 
                 # TODO/FIXME: These m are nans..
                 (m, mask) = child.message_to_parent(index)
@@ -239,23 +237,23 @@ class Variable(Node):
                 # at every update?
                 self.mask = np.logical_or(self.mask,mask)
                 for i in range(len(self.phi)):
-                    ## try:
-                    ##     # Try exploiting broadcasting rules
-                    ##     #
-                    ##     # TODO/FIXME: This has the problem that if phi
-                    ##     # is updated from parents such that phi is a
-                    ##     # view into parent's moments thus modifying
-                    ##     # phi would modify parents moments.. Maybe one
-                    ##     # should check that nobody else is viewing
-                    ##     # phi?
-                    ##     self.phi[i] += m[i]
-                    ## except ValueError:
-                    ##     self.phi[i] = self.phi[i] + m[i]
-                    #print('update2, phi', i, self.name, self.phi, m[i])
+                    if m[i] is not None:
+                        ## try:
+                        ##     # Try exploiting broadcasting rules
+                        ##     #
+                        ##     # TODO/FIXME: This has the problem that if phi
+                        ##     # is updated from parents such that phi is a
+                        ##     # view into parent's moments thus modifying
+                        ##     # phi would modify parents moments.. Maybe one
+                        ##     # should check that nobody else is viewing
+                        ##     # phi?
+                        ##     self.phi[i] += m[i]
+                        ## except ValueError:
+                        ##     self.phi[i] = self.phi[i] + m[i]
 
-                    # TODO/FIXME: You should take into account the
-                    # mask when adding the message!!!!???
-                    self.phi[i] = self.phi[i] + m[i]
+                        # TODO/FIXME: You should take into account the
+                        # mask when adding the message!!!!???
+                        self.phi[i] = self.phi[i] + m[i]
 
             # Mask for plates to update (i.e., unobserved plates)
             update_mask = np.logical_not(self.observed)
@@ -275,15 +273,11 @@ class Variable(Node):
     def update_phi_from_parents(self, u_parents):
         # This makes correct broadcasting
         self.phi = self.compute_phi_from_parents(u_parents)
-        #print('update_phi, phi', self.phi)
+        self.phi = list(self.phi)
         # Make sure phi has the correct number of axes. It makes life
         # a bit easier elsewhere.
         for i in range(len(self.phi)):
             axes = len(self.plates) + self.ndims[i] - np.ndim(self.phi[i])
-            ## print('update_phi_from_parents:')
-            ## print(np.shape(self.phi[i]))
-            ## print(self.plates)
-            ## print(self.dims[i])
             if axes > 0:
                 # Add axes
                 self.phi[i] = utils.add_leading_axes(self.phi[i], axes)
@@ -292,7 +286,6 @@ class Variable(Node):
                 first = -(len(self.plates)+self.ndims[i])
                 sh = np.shape(self.phi[i])[first:]
                 self.phi[i] = np.reshape(self.phi[i], sh)
-            #print(np.shape(self.phi[i]))
                                                  
         ## for i in range(len(self.phi)):
         ##     self.phi[i].fill(0)
@@ -420,7 +413,6 @@ class Variable(Node):
         #return L
             
     def fix_u_and_f(self, u, f, mask=True):
-        #print(u)
         for (i,v) in enumerate(u):
             # This is what the dimensionality "should" be
             s = self.plates + self.dims[i]
@@ -450,17 +442,12 @@ class Variable(Node):
         
     def observe(self, x, mask=True):
         (u, f) = self.compute_fixed_u_and_f(x)
-        #print(u)
         self.fix_u_and_f(u, f, mask=mask)
 
         # Observed nodes should not be ignored
         self.observed = mask
         self.mask = np.logical_or(self.mask, self.observed)
 
-        #print('observe', self.name, self.u)
-        ## print(x)
-        ## print(mask)
-        ## print(u)
 
     def integrated_logpdf_from_parents(self, index):
 

@@ -46,6 +46,8 @@ def array_to_scalar(x):
     # want it out as a scalar.
     return np.ravel(x)[0]
 
+#def diag(x):
+
 def grid(x1, x2):
     """ Returns meshgrid as a (M*N,2)-shape array. """
     (X1, X2) = np.meshgrid(x1, x2)
@@ -362,22 +364,44 @@ def broadcasted_shape_from_arrays(*args):
         S = S + (s,)
     return S
             
-def broadcasted_shape(a,b):
-    # Computes the resulting shape if shapes a and b are broadcasted
-    # together
-    l_max = max(len(a), len(b))
-    s = ()
-    for i in range(-l_max,0):
-        if -i > len(b):
-            s += (a[i],)
-        elif -i > len(a) or a[i] == 1 or a[i] == b[i]:
-            s += (b[i],)
-        elif b[i] == 1:
-            s += (a[i],)
-        else:
-            raise Exception("Shapes %s and %s do not broadcast" % (a,b))
-    return s
-            
+def broadcasted_shape(*shapes):
+    """
+    Get the resulting shape if the given shapes were broadcasted.
+
+    Broadcasting rules of NumPy.
+    """
+    dim = 0
+    for a in shapes:
+        dim = max(dim, len(a))
+    S = ()
+    for i in range(-dim,0):
+        s = 1
+        for a in shapes:
+            if -i <= len(a):
+                if s == 1:
+                    s = a[i]
+                elif a[i] != 1 and a[i] != s:
+                    raise Exception("Shapes do not broadcast")
+        S = S + (s,)
+    return S
+
+
+## def broadcasted_shape(a,b):
+##     # Computes the resulting shape if shapes a and b are broadcasted
+##     # together
+##     l_max = max(len(a), len(b))
+##     s = ()
+##     for i in range(-l_max,0):
+##         if -i > len(b):
+##             s += (a[i],)
+##         elif -i > len(a) or a[i] == 1 or a[i] == b[i]:
+##             s += (b[i],)
+##         elif b[i] == 1:
+##             s += (a[i],)
+##         else:
+##             raise Exception("Shapes %s and %s do not broadcast" % (a,b))
+##     return s
+
     
 def add_leading_axes(x, n):
     shape = (1,)*n + np.shape(x)
@@ -642,6 +666,9 @@ def m_outer(A,B):
     # shape (..., M), then the result has shape (..., N, M)
     return A[...,np.newaxis]*B[...,np.newaxis,:]
 
+def diagonal(A):
+    return np.diagonal(A, axis1=-2, axis2=-1)
+
 def m_dot(A,b):
     # Compute matrix-vector product over the last two axes of A and
     # the last axes of b.  Other axes are broadcasted. If A has shape
@@ -649,45 +676,11 @@ def m_dot(A,b):
     # (..., M)
     
     #b = reshape(b, shape(b)[:-1] + (1,) + shape(b)[-1:])
-
+    #return np.dot(A, b)
+    return np.einsum('...ik,...k->...i', A, b)
     # TODO: Use einsum!!
-    return np.sum(A*b[...,np.newaxis,:], axis=(-1,))
+    #return np.sum(A*b[...,np.newaxis,:], axis=(-1,))
 
-## def block_ldl_solve(a, b):
-##     """
-##     A is diagonal blocks
-##     B is sub-diagonal blocks
-
-##     Compute the diagonal and sub-diagonal of the inverse.
-
-##     Solve vector.
-
-##     Compute log determinant.
-##     """
-
-##     # Filtering An <- An - Bn*inv(Ap)*Bn'
-##     #Ap = ...
-##     #L = scipy.linalg.cho_factor(Ap)
-##     #An - np.dot(Bn, scipy.linalg.cho_solve(L, Bn.T))
-
-##     N = len(a)
-##     u = np.empty(N)
-
-##     # Forward
-##     u[0] = a[0]
-##     for i in range(N-1):
-##         u[i+1] = a[i+1] - b[i]*(1/u[i])*b[i]
-
-##     # Backward
-##     c = np.empty(N)
-##     d = np.empty(N-1)
-##     c[-1] = 1/u[-1]
-##     for i in reversed(range(N-1)):
-##         d[i] = -(1/u[i]) * b[i] * c[i+1]
-##         c[i] = (1/u[i]) * (1 - b[i] * d[i])
-##         #c[i] = 1/u[i] + 1/u[i] * b[i] * c[i+1] * b[i] / u[i]
-
-##     return (c, d)
 
 def block_banded(D, B):
     """
@@ -834,19 +827,17 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
 
     Parameters
     ----------
-    y : array
+    y : (N,D) array
         "Normalized" noisy observations of the states, that is, the
         observations multiplied by the precision matrix U (and possibly
-        other transformation matrices). :math:`N \\times D`
-    U : iterator of arrays
+        other transformation matrices).
+    U : (N,D,D) array or N-list of (D,D) arrays
         Precision matrix (i.e., inverse covariance matrix) of the observation 
-        noise for each time instance. Iterator of :math:`D \\times D` arrays.
-    A : iterator of arrays
-        Dynamic matrix for each time instance. Iterator of :math:`D \\times D`
-        arrays.
-    V : iterator of arrays
+        noise for each time instance.
+    A : (N-1,D,D) array or (N-1)-list of (D,D) arrays
+        Dynamic matrix for each time instance.
+    V : (N-1,D,D) array or (N-1)-list of (D,D) arrays
         Covariance matrix of the innovation noise for each time instance.
-        Iterator of :math:`D \\times D` arrays.
 
     Returns
     -------
@@ -861,32 +852,38 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
     """
     mu = mu0
     Cov = Cov0
-    n = 0
 
     # Allocate memory for the results
     (N,D) = np.shape(y)
     X = np.empty((N,D))
     CovX = np.empty((N,D,D))
     
-    for (yn, Un, An, Vn) in zip(y, U, A, V):
+    # Update step for t=0
+    M = np.dot(np.dot(Cov, U[0]), Cov) + Cov
+    L = chol(M)
+    mu = np.dot(Cov, chol_solve(L, np.dot(Cov,y[0]) + mu))
+    Cov = np.dot(Cov, chol_solve(L, Cov))
+    X[0,:] = mu
+    CovX[0,:,:] = Cov
+    
+    #for (yn, Un, An, Vn) in zip(y, U, A, V):
+    for n in range(len(y)-1): #(yn, Un, An, Vn) in zip(y, U, A, V):
         # Prediction step
-        mu = np.dot(An, mu)
-        Cov = np.dot(np.dot(An, Cov), An.T) + Vn
+        mu = np.dot(A[n], mu)
+        Cov = np.dot(np.dot(A[n], Cov), A[n].T) + V[n]
         # Update step
-        M = np.dot(np.dot(Cov, Un), Cov) + Cov
+        M = np.dot(np.dot(Cov, U[n+1]), Cov) + Cov
         L = chol(M)
-        mu = np.dot(Cov, chol_solve(L, np.dot(Cov,yn) + mu))
+        mu = np.dot(Cov, chol_solve(L, np.dot(Cov,y[n+1]) + mu))
         Cov = np.dot(Cov, chol_solve(L, Cov))
 
         # Force symmetric covariance (for numeric inaccuracy)
         Cov = 0.5*Cov + 0.5*Cov.T
 
         # Store results
-        X[n,:] = mu
-        CovX[n,:,:] = Cov
+        X[n+1,:] = mu
+        CovX[n+1,:,:] = Cov
 
-        n = n + 1
-        
     return (X, CovX)
 
 
@@ -900,16 +897,14 @@ def rts_smoother(mu, Cov, A, V, removethis=None):
 
     Parameters
     ----------
-    mu : array
-        Mean of the states from Kalman filter. :math:`N \\times D`
-    Cov : array
+    mu : (N,D) array
+        Mean of the states from Kalman filter.
+    Cov : (N,D,D) array
         Covariance of the states from Kalman filter. 
-        :math:`N \\times D \\times D`
-    A : iterator of arrays
-        Dynamic matrix for each time instance. :math:`D \\times D`
-    V : iterator of arrays
-        :math:`D \\times D` covariance matrix of the innovation noise for 
-        each time instance.
+    A : (N-1,D,D) array or (N-1)-list of (D,D) arrays
+        Dynamic matrix for each time instance.
+    V : (N-1,D,D) array or (N-1)-list of (D,D) arrays
+        Covariance matrix of the innovation noise for each time instance.
 
     Returns
     -------
@@ -924,24 +919,24 @@ def rts_smoother(mu, Cov, A, V, removethis=None):
     """
 
     N = len(mu)
-    n = N-1
+    #n = N-1
 
     # Start from the last time instance and smoothen backwards
     x = mu[-1,:]
     Covx = Cov[-1,:,:]
     
-    for (An, Vn) in zip(reversed(A), reversed(V)):
+    for n in reversed(range(N-1)):#(An, Vn) in zip(reversed(A), reversed(V)):
 
-        n = n - 1
-        if n <= 0:
-            break
+        #n = n - 1
+        #if n <= 0:
+        #    break
 
         # The predicted value of n
-        x_p = np.dot(An, mu[n,:])
-        Cov_p = np.dot(np.dot(An, Cov[n,:,:]), An.T) + Vn
+        x_p = np.dot(A[n], mu[n,:])
+        Cov_p = np.dot(np.dot(A[n], Cov[n,:,:]), A[n].T) + V[n]
 
         # Temporary variable
-        S = np.linalg.solve(Cov_p, np.dot(An, Cov[n,:,:]))
+        S = np.linalg.solve(Cov_p, np.dot(A[n], Cov[n,:,:]))
 
         # Smoothed value of n
         x = mu[n,:] + np.dot(S.T, x-x_p)
