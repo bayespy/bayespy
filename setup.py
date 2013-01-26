@@ -37,7 +37,7 @@ AUTHOR       = 'Jaakko Luttinen',
 AUTHOR_EMAIL = 'jaakko.luttinen@iki.fi',
 URL          = 'https://github.com/bayespy/bayespy'
 LICENSE      = 'GPLv3'
-VERSION      = '0.1'
+VERSION      = '0.0'
 
 if __name__ == "__main__":
 
@@ -57,17 +57,20 @@ if __name__ == "__main__":
     setup(requires = ['numpy (>=1.7.0)',
                       'scipy (>=0.11.0)',
                       'scikits.sparse (>=0.1)',
-                      'matplotlib (>=1.2.0)'],
+                      'matplotlib (>=1.2.0)',
+                      'cython'],
           packages = ['bayespy',
                       'bayespy.demos',
                       'bayespy.inference',
                       'bayespy.inference.vmp',
                       'bayespy.inference.vmp.nodes',
+                      'bayespy.inference.vmp.nodes.tests',
                       'bayespy.nodes',
                       'bayespy.plot',
                       'bayespy.utils',
                       'bayespy.utils.tests',
-                      'bayespy.utils.covfunc'],
+                      'bayespy.utils.covfunc',
+                      'bayespy.utils.covfunc.tests'],
           name             = NAME,
           version          = VERSION,
           author           = AUTHOR,

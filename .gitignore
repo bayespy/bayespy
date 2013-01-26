@@ -11,3 +11,5 @@ __pycache__
 *.c
 build
 *.so
+dist
+MANIFEST
