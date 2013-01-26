@@ -11,9 +11,8 @@
 # This file is part of BayesPy.
 #
 # BayesPy is free software: you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# under the terms of the GNU General Public License version 3 as
+# published by the Free Software Foundation.
 #
 # BayesPy is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,13 +29,13 @@ Bayesian inference tools.  The package provides tools for building
 models and performing posterior inference.
 """
 
-NAME                = 'bayespy'
-DESCRIPTION         = 'Bayesian inference tools for Python'
-MAINTAINER          = 'Jaakko Luttinen',
-MAINTAINER_EMAIL    = 'jaakko.luttinen@aalto.fi',
-URL                 = 'https://github.com/jluttine/bayespy'
-LICENSE             = 'GPLv3'
-VERSION             = '0.1+dev'
+NAME         = 'bayespy'
+DESCRIPTION  = 'Bayesian inference tools for Python'
+AUTHOR       = 'Jaakko Luttinen',
+AUTHOR_EMAIL = 'jaakko.luttinen@aalto.fi',
+URL          = 'https://github.com/jluttine/bayespy'
+LICENSE      = 'GPLv3'
+VERSION      = '0.1'
 
 if __name__ == "__main__":
 
@@ -67,17 +66,13 @@ if __name__ == "__main__":
                       'bayespy.utils',
                       'bayespy.utils.tests',
                       'bayespy.utils.covfunc'],
-          ## packages = ['bayespy',
-          ##             'bayespy.demos',
-          ##             'bayespy.nodes',
-          ##             'bayespy.nodes.variables'],
-          name = NAME,
-          version = VERSION,
-          maintainer = MAINTAINER,
-          maintainer_email = MAINTAINER_EMAIL,
-          description = DESCRIPTION,
-          license = LICENSE,
-          url = URL,
+          name             = NAME,
+          version          = VERSION,
+          author           = AUTHOR,
+          author_email     = AUTHOR_EMAIL,
+          description      = DESCRIPTION,
+          license          = LICENSE,
+          url              = URL,
           long_description = LONG_DESCRIPTION,
           classifiers =
             [ 
