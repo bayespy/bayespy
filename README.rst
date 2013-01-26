@@ -24,17 +24,17 @@ BayesPy including the documentation is licensed under Version 3.0 of
 the GNU General Public License. See LICENSE file for a text of the
 license or visit http://www.gnu.org/copyleft/gpl.html.
 
-* Home page: https://github.com/jluttine/bayespy
+* Home page: https://github.com/bayespy/bayespy
 
 * Documentation: http://bayespy.readthedocs.org or at docs/ directory
 
-* Repository: https://github.com/jluttine/bayespy.git
+* Repository: https://github.com/bayespy/bayespy.git
 
 * Mailing list: bayespy@googlegroups.com
 
 * IRC: #bayespy @ `freenode <http://freenode.net/>`_
 
-* Maintainer: Jaakko Luttinen jaakko.luttinen@aalto.fi
+* Author: Jaakko Luttinen jaakko.luttinen@iki.fi
 
 Similar projects
 ----------------

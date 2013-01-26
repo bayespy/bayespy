@@ -25,15 +25,17 @@
 
 LONG_DESCRIPTION    = \
 """
-Bayesian inference tools.  The package provides tools for building
-models and performing posterior inference.
+Bayesian inference tools for Python.
+
+The package provides tools for building models and performing
+posterior inference using variational Bayesian message passing.
 """
 
 NAME         = 'bayespy'
 DESCRIPTION  = 'Bayesian inference tools for Python'
 AUTHOR       = 'Jaakko Luttinen',
-AUTHOR_EMAIL = 'jaakko.luttinen@aalto.fi',
-URL          = 'https://github.com/jluttine/bayespy'
+AUTHOR_EMAIL = 'jaakko.luttinen@iki.fi',
+URL          = 'https://github.com/bayespy/bayespy'
 LICENSE      = 'GPLv3'
 VERSION      = '0.1'
 
