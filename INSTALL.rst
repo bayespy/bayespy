@@ -56,7 +56,7 @@ This will pull the up-to-date version and re-install.
 
 This documentation can be found in doc/ folder.  The documentation
 source files are readable as such in reStructuredText format in
-docs/source/ directory.  If you have `Sphinx
+doc/source/ directory.  If you have `Sphinx
 <http://sphinx.pocoo.org/>`_ installed, the documentation can be
 compiled to, for instance, HTML or PDF using
 
