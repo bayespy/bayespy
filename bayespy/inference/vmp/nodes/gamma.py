@@ -29,6 +29,8 @@ from .node import Node
 from .variable import Variable
 from .constant import Constant
 
+from bayespy.utils import utils
+
 class GammaPrior:
 
     """ Conjugate prior node for the shape of the gamma
@@ -103,14 +105,14 @@ class Gamma(Variable):
     @staticmethod
     def compute_dims(*parents):
         """ Compute the dimensions of phi/u. """
-        return [(), ()]
+        return ( (), () )
 
     @staticmethod
     def compute_dims_from_values(x):
         """ Compute the dimensions of phi and u. """
-        return [(), ()]
+        return ( (), () )
 
-    def __init__(self, a, b, plates=(), **kwargs):
+    def __init__(self, a, b, **kwargs):
 
         self.parameter_distributions = (GammaPrior, Gamma)
         
@@ -126,18 +128,25 @@ class Gamma(Variable):
             #b = NodeConstant([b, np.log(b)], plates=np.shape(b), dims=[(),()])
 
         # Construct
-        super().__init__(a, b, plates=plates, **kwargs)
+        super().__init__(a, b, **kwargs)
 
     def show(self):
         a = self.phi[1]
         b = -self.phi[0]
         print("%s ~ Gamma(a, b)" % self.name)
         print("  a =", a)
-        #print(a)
         print("  b =", b)
-        #print(b)
 
-class GammaToDiagonalWishart(Node):
+    def as_diagonal_wishart(self):
+        return _GammaToDiagonalWishart(self,
+                                       name=self.name + " as Wishart")
+
+class _GammaToDiagonalWishart(Node):
+    """
+    Transform a set of gamma scalars into a diagonal Wishart matrix.
+
+    The last plate is used as the diagonal dimension.
+    """
     
     ndims = (2, 0)
     ndims_parents = [None, (2, 0)]
@@ -145,84 +154,35 @@ class GammaToDiagonalWishart(Node):
     # Observations/values are 2-D matrices
     ndim_observations = 2
 
-    ## @staticmethod
-    ## def compute_fixed_moments(Lambda):
-    ##     """ Compute moments for fixed x. """
-    ##     return Wishart.compute_fixed_moments(Lambda)
-
-    ## @staticmethod
-    ## def compute_g_from_parents(u_parents):
-    ##     n = u_parents[0][0]
-    ##     gammaln_n = u_parents[0][1]
-    ##     V = u_parents[1][0]
-    ##     logdet_V = u_parents[1][1]
-    ##     k = np.shape(V)[-1]
-    ##     #k = self.dims[0][0]
-    ##     # TODO: Check whether this is correct:
-    ##     #g = 0.5*n*logdet_V - special.multigammaln(n/2, k)
-    ##     g = 0.5*n*logdet_V - 0.5*k*n*np.log(2) - gammaln_n #special.multigammaln(n/2, k)
-    ##     return g
-
-    ## @staticmethod
-    ## def compute_phi_from_parents(u_parents):
-    ##     return [-0.5 * u_parents[1][0],
-    ##             0.5 * u_parents[0][0]]
-
-    ## @staticmethod
-    ## def compute_u_and_g(phi, mask=True):
-    ##     U = utils.m_chol(-phi[0])
-    ##     k = np.shape(phi[0])[-1]
-    ##     #k = self.dims[0][0]
-    ##     logdet_phi0 = utils.m_chol_logdet(U)
-    ##     u0 = phi[1][...,np.newaxis,np.newaxis] * utils.m_chol_inv(U)
-    ##     u1 = -logdet_phi0 + utils.m_digamma(phi[1], k)
-    ##     u = [u0, u1]
-    ##     g = phi[1] * logdet_phi0 - special.multigammaln(phi[1], k)
-    ##     return (u, g)
-
-    ## @staticmethod
-    ## def compute_fixed_u_and_f(Lambda):
-    ##     """ Compute u(x) and f(x) for given x. """
-    ##     k = np.shape(Lambda)[-1]
-    ##     ldet = utils.m_chol_logdet(utils.m_chol(Lambda))
-    ##     u = [Lambda,
-    ##          ldet]
-    ##     f = -(k+1)/2 * ldet
-    ##     return (u, f)
-
-    ## @staticmethod
-    ## def message(index, u, u_parents):
-    ##     if index == 0:
-    ##         raise Exception("No analytic solution exists")
-    ##     elif index == 1:
-    ##         return (-0.5 * u[0],
-    ##                 0.5 * u_parents[0][0])
-
-    ## @staticmethod
-    ## def compute_dims(*parents):
-    ##     """ Compute the dimensions of phi/u. """
-    ##     # Has the same dimensionality as the second parent.
-    ##     return parents[1].dims
-
-    ## @staticmethod
-    ## def compute_dims_from_values(x):
-    ##     """ Compute the dimensions of phi and u. """
-    ##     d = np.shape(x)[-1]
-    ##     return [(d,d), ()]
-
     def __init__(self, alpha, **kwargs):
 
-        # Check for constant n
-        if np.isscalar(alpha) or isinstance(alpha, np.ndarray):            
+        # Check for constant
+        if utils.is_numeric(alpha):
             alpha = Constant(Gamma)(alpha)
 
-        #ExponentialFamily.__init__(self, n, V, plates=plates, dims=V.dims, **kwargs)
-        k = alpha.plates[-1]
+        # Remove the last plate...
+        #plates = alpha.plates[:-1]
+        # ... and use it as the dimensionality of the Wishart
+        # distribution
+        if len(alpha.plates) == 0:
+            raise Exception("Gamma variable needs to have plates in "
+                            "order to be used as a diagonal Wishart.")
+        D = alpha.plates[-1]
+        dims = ( (D,D), () )
+
+        # Construct the node
         super().__init__(alpha,
-                         plates=alpha.plates[:-1],
-                         dims=[(k,k),()],
+        #plates=plates,
+                         dims=dims,
                          **kwargs)
         
+    def plates_to_parent(self, index):
+        D = self.dims[0][0]
+        return self.plates + (D,)
+
+    def plates_from_parent(self, index):
+        return self.parents[index].plates[:-1]
+
     def get_moments(self):
         u = self.parents[0].message_to_child()
 

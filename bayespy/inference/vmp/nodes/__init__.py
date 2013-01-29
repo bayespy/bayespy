@@ -32,7 +32,7 @@ from . import *
 from .gaussian import Gaussian
 from .wishart import Wishart
 from .normal import Normal
-from .gamma import Gamma, GammaToDiagonalWishart
+from .gamma import Gamma
 from .dirichlet import Dirichlet
 from .categorical import Categorical
 from .dot import Dot

@@ -85,16 +85,16 @@ class Normal(Variable):
     def compute_dims(*parents):
         """ Compute the dimensions of phi/u. """
         # Both moments are scalars, thus, shapes are ()
-        return [(), ()]
+        return ( (), () )
 
     @staticmethod
     def compute_dims_from_values(x):
         """ Compute the dimensions of phi and u. """
-        return [(), ()]
+        return ( (), () )
 
     # Normal(mu, 1/tau)
 
-    def __init__(self, mu, tau, plates=(), **kwargs):
+    def __init__(self, mu, tau, **kwargs):
 
         # Check for constant mu
         if np.isscalar(mu) or isinstance(mu, np.ndarray):
@@ -105,7 +105,7 @@ class Normal(Variable):
             tau = Constant(Gamma)(tau)
 
         # Construct
-        super().__init__(mu, tau, plates=plates, **kwargs)
+        super().__init__(mu, tau, **kwargs)
 
 
     def show(self, parameters=True, mean=True, mode=True, median=True):

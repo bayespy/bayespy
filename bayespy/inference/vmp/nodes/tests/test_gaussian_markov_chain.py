@@ -23,7 +23,7 @@
 ######################################################################
 
 """
-Unit tests for bayespy.utils.utils module.
+Unit tests for gaussian_markov_chain module.
 """
 
 import unittest

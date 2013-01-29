@@ -218,22 +218,48 @@ class Gaussian(Variable):
                     0.5]
 
     @staticmethod
-    def compute_dims(*parents):
-        """ Compute the dimensions of phi and u. """
-        # Has the same dimensionality as the first parent.
-        ## print('in gaussian compute dims: parent.dims:', parents[0].dims)
-        ## print('in gaussian compute dims: parent.u:', parents[0].u)
-        return parents[0].dims
+    def compute_dims(mu, Lambda):
+        """
+        Compute the dimensions of phi and u using the parent nodes.
+
+        Also, check that the dimensionalities of the parents are
+        consistent with each other.
+
+        Parameters:
+        -----------
+        mu : Node
+            A VB node with ( (D,), (D,D) ) dimensional Gaussian
+            output.
+        Lambda: Node
+            A VB node with ( (D,D), () ) dimensional Wishart output.
+        """
+        D = mu.dims[0][0]
+
+        if mu.dims != ( (D,), (D,D) ):
+            raise Exception("First parent has wrong dimensionality")
+        if Lambda.dims != ( (D,D), () ):
+            raise Exception("Second parent has wrong dimensionality")
+        
+        return ( (D,), (D,D) )
 
     @staticmethod
     def compute_dims_from_values(x):
-        """ Compute the dimensions of phi and u. """
-        d = np.shape(x)[-1]
-        return [(d,), (d,d)]
+        """
+        Compute the dimensions of phi and u from a value.
 
-    # Gaussian(mu, inv(Lambda))
+        The last axis tells the dimensionality, the other axes are
+        plates.
 
-    def __init__(self, mu, Lambda, plates=(), **kwargs):
+        Parameters:
+        -----------
+        x : ndarray
+        """
+        if np.ndim(x) == 0:
+            raise ValueError("The value must be at least 1-D array.")
+        D = np.shape(x)[-1]
+        return ( (D,), (D,D) )
+
+    def __init__(self, mu, Lambda, **kwargs):
 
         self.parameter_distributions = (Gaussian, Wishart)
         
@@ -252,7 +278,6 @@ class Gaussian(Variable):
 
         # Construct
         super().__init__(mu, Lambda,
-                         plates=plates,
                          **kwargs)
 
     def random(self):

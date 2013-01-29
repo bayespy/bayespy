@@ -88,34 +88,9 @@ def run():
     plt.clf()
     for d in range(D):
         plt.subplot(D,1,d)
-        #plt.plot(Xh[:,d], 'r--')
         bpplt.errorplot(xh[:,d], error=2*np.sqrt(varxh[:,d]))
         plt.plot(X[:,d], 'r-')
         plt.plot(Y[:,d], '.')
-
-    Xh_vb = xh
-    CovXh_vb = Xh.u[1] - Xh_vb[...,np.newaxis,:] * Xh_vb[...,:,np.newaxis]
-
-                  
-    # Create iterators for the static matrices
-    #U = N*(U,)
-    #A = N*(A,)
-    if True:
-        V = N*(V,)
-        (Xh, CovXh) = utils.kalman_filter(UY, U, A, V, np.zeros(D), np.identity(D))
-        (Xh, CovXh) = utils.rts_smoother(Xh, CovXh, A, V)
-
-        plt.figure(2)
-        plt.clf()
-        for d in range(D):
-            plt.subplot(D,1,d)
-            #plt.plot(Xh[:,d], 'r--')
-            bpplt.errorplot(Xh[:,d], error=2*np.sqrt(CovXh[:,d,d]))
-            plt.plot(X[:,d], 'r-')
-            plt.plot(Y[:,d], '.')
-
-    assert np.allclose(Xh_vb, Xh)
-    assert np.allclose(CovXh_vb, CovXh)
     
 
 if __name__ == '__main__':

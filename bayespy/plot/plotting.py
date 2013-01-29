@@ -85,7 +85,7 @@ def contourplot(x1, x2, y, colorbar=False, filled=True):
         plt.colorbar()
         
 
-def errorplot(y, error=None, x=None, lower=None, upper=None):
+def errorplot(y=None, error=None, x=None, lower=None, upper=None):
 
     # Default inputs
     if x is None:

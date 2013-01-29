@@ -27,6 +27,8 @@ import numpy as np
 from bayespy.utils import utils
 
 from .node import Node
+from .constant import Constant
+from .gaussian import Gaussian
 
 class Dot(Node):
 
@@ -37,30 +39,56 @@ class Dot(Node):
 
     # y(i0,i1,...,in) = sum_d prod_k xk(i0,i1,...,in,d)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *parents, **kwargs):
         # For now, do not use plates other than from the parents,
         # although it would be possible (it would mean that you'd
         # create several "datasets" with identical "PCA
         # distribution"). Maybe it is better to create such plates in
         # children nodes?
-        plates = []
-        for x in args:
-            # Convert constant matrices to nodes
-            if np.isscalar(x) or isinstance(x, np.ndarray):
-                x = NodeConstantGaussian(x)
-            # Dimensionality of the Gaussian(s). You should check that
-            # all the parents have the same dimensionality!
-            self.d = x.dims[0]
-            # Check consistency of plates (broadcasting rules!)
-            for ind in range(min(len(plates),len(x.plates))):
-                if plates[-ind-1] == 1:
-                    plates[-ind-1] = x.plates[-ind-1]
-                elif x.plates[-ind-1] != 1 and plates[-ind-1] != x.plates[-ind-1]:
-                    raise Exception('Plates do not match')
-            # Add new extra plates
-            plates = list(x.plates[:(len(x.plates)-len(plates))]) + plates
+        #plates = []
 
-        Node.__init__(self, *args, plates=tuple(plates), dims=[(),()], **kwargs)
+        parents = list(parents)
+        # Convert constant arrays to constant nodes
+        for n in range(len(parents)):
+            if utils.is_numeric(parents[n]):
+                parents[n] = Constant(Gaussian)(parents[n])
+
+        parent_dims = [parent.dims for parent in parents]
+        parent_plates = [parent.plates for parent in parents]
+
+        # Check that the parents have equal dimensions
+        for n in range(len(parent_dims)-1):
+            if parent_dims[n] != parent_dims[n+1]:
+                raise ValueError("Dimensions of the Gaussians do not "
+                                 "match: %s" % (parent_dims,))
+
+        try:
+            plates = utils.broadcasted_shape(*parent_plates)
+        except ValueError:
+            raise ValueError("The plates of the parents are "
+                             "incompatible: %s" % (parent_plates,))
+        
+        ## for x in parents:
+        ##     # Convert constant matrices to nodes
+        ##     if np.isscalar(x) or isinstance(x, np.ndarray):
+        ##         x = Constant(Gaussian)(x)
+        ##     # Dimensionality of the Gaussian(s). You should check that
+        ##     # all the parents have the same dimensionality!
+        ##     self.d = x.dims[0]
+        ##     if not gaussian_dims:
+        ##         gaussian_dims = x.dims
+        ##     elif gaussian_dims != x.dims:
+        ##         raise Exception("Dimensions of the Gaussians do not match")
+        ##     # Check consistency of plates (broadcasting rules!)
+        ##     for ind in range(min(len(plates),len(x.plates))):
+        ##         if plates[-ind-1] == 1:
+        ##             plates[-ind-1] = x.plates[-ind-1]
+        ##         elif x.plates[-ind-1] != 1 and plates[-ind-1] != x.plates[-ind-1]:
+        ##             raise Exception('Plates do not match')
+        ##     # Add new extra plates
+        ##     plates = list(x.plates[:(len(x.plates)-len(plates))]) + plates
+
+        Node.__init__(self, *parents, plates=tuple(plates), dims=[(),()], **kwargs)
 
             
 

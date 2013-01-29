@@ -166,7 +166,7 @@ class Variable(Node):
         return {self.lower_bound_contribution}
 
     def get_message(self, index, u_parents):
-        return (self.compute_message(index, self.u, u_parents),
+        return (list(self.compute_message(index, self.u, u_parents)),
                 self.mask)
         ## return (self.message(index, u_parents),
         ##         self.mask)
@@ -335,8 +335,11 @@ class Variable(Node):
             ndim_u = np.ndim(self.u[ind])
             if ndim > ndim_u:
                 self.u[ind] = utils.add_leading_axes(u[ind], ndim - ndim_u)
-            elif ndim < np.ndim(self.u[ind]):
-                raise Exception("Weird, this shouldn't happen.. :)")
+            elif ndim < ndim_u:
+                raise Exception("The size of the variable's moments array "
+                                "is larger than it should be based on the "
+                                "plates and dimension information. Check "
+                                "that you have provided plates properly.")
 
 
     def update_u_and_g(self, u, g, mask=True):

@@ -53,7 +53,7 @@ def WishartPrior(k):
         @staticmethod
         def compute_dims_from_values(n):
             """ Compute the dimensions of phi or u. """
-            return [(), ()]
+            return ( (), () )
         
     return _WishartPrior
 
@@ -145,7 +145,7 @@ class Wishart(Variable):
     def compute_dims_from_values(x):
         """ Compute the dimensions of phi and u. """
         d = np.shape(x)[-1]
-        return [(d,d), ()]
+        return ( (d,d), () )
 
     # Wishart(n, inv(V))
 

@@ -145,6 +145,32 @@ class GaussianMarkovChain(Variable):
 
     @staticmethod
     def compute_g_from_parents(u_parents):
+        """
+        Compute CGF using the moments of the parents.
+
+        
+        """
+        u_mu = u_parents[0]
+        u_Lambda = u_parents[1]
+        u_A = u_parents[2]
+        u_v = u_parents[3]
+        u_N = u_parents[4]
+
+        mumu = u_mu[1]
+        Lambda = u_Lambda[0]
+        logdet_Lambda = u_Lambda[1]
+        logdet_v = u_v[1]
+        return 0
+        
+        -0.5 * np.einsum('...ij,...ij->...', mumu, Lambda)
+        + 0.5 * logdet_Lambda
+        if np.ndim(logdet_v) == 1:
+            + 0.5 * N * np.sum(logdet_v, axis=-1)
+        elif np.shape(logdet_v)[-2] == 1:
+            + 0.5 * N * np.sum(logdet_v, axis=(-1,-2))
+        else:
+            + 0.5 * np.sum(logdet_v, axis=(-1,-2))
+        
         raise NotImplementedError()
 
     @staticmethod
@@ -186,14 +212,99 @@ class GaussianMarkovChain(Variable):
 
     @staticmethod
     def compute_message(index, u, u_parents):
-        """ . """
-        raise NotImplementedError()
+        """
+        Compute a message to a parent.
+
+        Parameters:
+        -----------
+        index : int
+            Index of the parent requesting the message.
+        u : list of ndarrays
+            Moments of this node.
+        u_parents : list of list of ndarrays
+            List of parents' moments.
+        """
+        u_mu = u_parents[0]
+        u_Lambda = u_parents[1]
+        u_A = u_parents[2]
+        u_v = u_parents[3]
+        
+        if index == 0:   # mu
+            raise NotImplementedError()
+        elif index == 1: # Lambda
+            raise NotImplementedError()
+        elif index == 2: # A
+            XnXn = u[1]
+            XpXn = u[2]
+            v = u_v[0]
+            m0 = v[...,np.newaxis] * XpXn.swapaxes(-1,-2)
+            
+            m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
+            return (m0, m1)
+            
+            raise NotImplementedError()
+        elif index == 3: # v
+            raise NotImplementedError()
+        elif index == 4: # N
+            raise NotImplementedError()
 
     @staticmethod
     def compute_dims(mu, Lambda, A, v, N):
-        """ Compute the dimensions of phi and u. """
+        """
+        Compute the dimensions of phi and u.
+
+        The plates and dimensions of the parents should be:
+        mu:     (...)                  and D-dimensional
+        Lambda: (...)                  and D-dimensional
+        A:      (...,D) or (...,N-1,D) and D-dimensional
+        v:      (...,D) or (...,N-1,D) and 0-dimensional
+        N:      ()                     and 0-dimensional (dummy parent)
+
+        Check that the dimensionalities of the parents are proper.
+        For instance, A should be a collection of DxD matrices, thus
+        the dimensionality and the last plate should both equal D.
+        Similarly, `v` should be a collection of diagonal innovation
+        matrix elements, thus the last plate should equal D.
+        """
         D = mu.dims[0][0]
         M = N.get_moments()[0]
+
+        # Check mu
+        if mu.dims != ( (D,), (D,D) ):
+            raise Exception("First parent has wrong dimensionality")
+        # Check Lambda
+        if Lambda.dims != ( (D,D), () ):
+            raise Exception("Second parent has wrong dimensionality")
+        # Check A
+        if A.dims != ( (D,), (D,D) ):
+            raise Exception("Third parent has wrong dimensionality")
+        if len(A.plates) == 0 or A.plates[-1] != D:
+            raise Exception("Third parent should have a last plate "
+                            "equal to the dimensionality of the "
+                            "system.")
+        if (len(A.plates) >= 2 
+            and A.plates[-2] != 1
+            and A.plates[-2] != M-1):
+            raise ValueError("The second last plate of the third "
+                             "parent should have length equal to one or "
+                             "N-1, where N is the number of time "
+                             "instances.")
+        # Check v
+        if v.dims != ( (), () ):
+            raise Exception("Fourth parent has wrong dimensionality")
+        if len(v.plates) == 0 or v.plates[-1] != D:
+            raise Exception("Fourth parent should have a last plate "
+                            "equal to the dimensionality of the "
+                            "system.")
+        if (len(v.plates) >= 2 
+            and v.plates[-2] != 1
+            and v.plates[-2] != M-1):
+            raise ValueError("The second last plate of the fourth "
+                             "parent should have length equal to one or "
+                             "N-1 where N is the number of time "
+                             "instances.")
+
+        
         return ( (M,D), (M,D,D), (M-1,D,D) )
 
     @staticmethod
@@ -201,7 +312,7 @@ class GaussianMarkovChain(Variable):
         """ Compute the dimensions of phi and u. """
         raise NotImplementedError()
 
-    def __init__(self, mu, Lambda, A, v, N=None, plates=(), **kwargs):
+    def __init__(self, mu, Lambda, A, v, n=None, **kwargs):
         """
         `mu` is the mean of x_0
         `Lambda` is the precision of x_0
@@ -232,31 +343,97 @@ class GaussianMarkovChain(Variable):
             raise Exception("Dimensionalities of mu and Lambda do not match.")
 
         # A dummy wrapper for the number of time instances.
-        N_A = 1
+        n_A = 1
         if len(A.plates) >= 2:
-            N_A = A.plates[-2]
-        N_v = 1
+            n_A = A.plates[-2]
+        n_v = 1
         if len(v.plates) >= 2:
-            N_v = b.plates[-2]
-        if N_v != N_A and N_v != 1 and N_A != 1:
+            n_v = b.plates[-2]
+        if n_v != n_A and n_v != 1 and n_A != 1:
             raise Exception("Plates of A and v are giving different number of time instances")
-        N_A = max(N_v, N_A)
-        if N is None:
-            if N_A == 1:
+        n_A = max(n_v, n_A)
+        if n is None:
+            if n_A == 1:
                 raise Exception("""The number of time instances could not be determined
                                  automatically. Give the number of
                                  time instances.""")
-            N = ConstantNumeric(N_A+1, 0)
-        else:
-            if N_A != 1 and N_A+1 != N:
-                raise Exception("""The number of time instances must match the number of last plates of
-                                parents: %d != %d+1""" % (N, N_A))
-            N = ConstantNumeric(N, 0)
+            n = n_A + 1
+        elif n_A != 1 and n_A+1 != n:
+            raise Exception("The number of time instances must match "
+                            "the number of last plates of parents: "
+                            "%d != %d+1" % (n, n_A))
+                                
+        N = ConstantNumeric(n, 0)
+
+        # Check that the dimensions and plates of the parents are
+        # consistent with the dimensionality of the process.  The
+        # plates are checked in the super constructor.
+        #if mu.dims[0][0] != 
+        
 
         # Construct
-        super().__init__(mu, Lambda, A, v, N,
-                         plates=plates,
-                         **kwargs)
+        super().__init__(mu, Lambda, A, v, N, **kwargs)
+
+
+    def plates_to_parent(self, index):
+        """
+        Computes the plates of this node with respect to a parent.
+
+        If this node has plates (...), the latent dimensionality is D
+        and the number of time instances is N, the plates with respect
+        to the parents are:
+          mu:     (...)
+          Lambda: (...)
+          A:      (...,N-1,D)
+          v:      (...,N-1,D)
+          N:      ()
+
+        Parameters:
+        -----------
+        index : int
+            The index of the parent node to use.
+        """
+
+        N = self.dims[0][0]
+        D = self.dims[0][1]
+        
+        if index == 0:   # mu
+            return self.plates
+        elif index == 1: # Lambda
+            return self.plates
+        elif index == 2: # A
+            return self.plates + (N-1,D)
+            #raise NotImplementedError()
+        elif index == 3: # v
+            raise NotImplementedError()
+
+    def plates_from_parent(self, index):
+        """
+        Compute the plates using information of a parent node.
+
+        If the plates of the parents are:
+          mu:     (...)
+          Lambda: (...)
+          A:      (...,N-1,D)
+          v:      (...,N-1,D)
+          N:      ()
+        the resulting plates of this node are (...)
+
+        Parameters
+        ----------
+        index : int
+            Index of the parent to use.
+        """
+        if index == 0:   # mu
+            return self.parents[0].plates
+        elif index == 1: # Lambda
+            return self.parents[1].plates
+        elif index == 2: # A
+            return self.parents[2].plates[:-2]
+        elif index == 3: # v
+            return self.parents[3].plates[:-2]
+        elif index == 4: # N
+            return ()
 
     def random(self):
         raise NotImplementedError()
@@ -265,7 +442,8 @@ class GaussianMarkovChain(Variable):
         raise NotImplementedError()
 
     def as_gaussian(self):
-        return _MarkovChainToGaussian(self)
+        return _MarkovChainToGaussian(self,
+                                      name=self.name+" as Gaussian")
 
 
 class _MarkovChainToGaussian(Node):
@@ -353,297 +531,3 @@ class _MarkovChainToGaussian(Node):
         m = [m[0], m[1], None]
 
         return (m, mask)
-                
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class GaussianMarkovChainFull(Variable):
-    r"""
-    VMP node for Gaussian Markov chain.
-
-    Parents are:
-    `mu` is the mean of x0
-    `Lambda` is the precision of x0
-    `A` is the dynamic matrix
-    `V` is the precision of the innovation
-    An additional dummy parent is created:
-    'N' is the number of time instances
-
-    Output is Gaussian variables where each time instance is
-    independent.
-
-    Time dimension is over the last plate.
-
-    Hmm.. The number of time instances is one more than the plates in
-    A and V. Input N -> Output N+1.
-
-    .. bayesnet::
-
-       \node[latent] (x1) {$\mathbf{x}_1$};
-       \node[latent, right=of x1] (x2) {$\mathbf{x}_2$};
-       \node[right=of x2] (dots) {$\cdots$};
-       \node[latent, right=of dots] (xn) {$\mathbf{x}_n$};
-       \edge {x1}{x2};
-       \edge {x2}{dots};
-       \edge {dots}{xn};
-
-
-    See also
-    --------
-    bayespy.inference.vmp.nodes.gaussian.Gaussian
-    bayespy.inference.vmp.nodes.wishart.Wishart
-
-    """
-
-    ndims = (1, 2)
-    ndims_parents = [(1, 2), (2, 0)]
-    # Observations are vectors (1-D):
-    ndim_observations = 1
-
-    
-    ## @staticmethod
-    ## def compute_fixed_parameter_moments(*args):
-    ##     """ Compute the moments of the distribution parameters for
-    ##     fixed values."""
-    ##     mu = args[0]
-    ##     Lambda = args[1]
-    ##     u_mu = Gaussian.compute_fixed_moments(mu)
-    ##     u_Lambda = Wishart.compute_fixed_moments(Lambda)
-    ##     return (u_mu, u_Lambda)
-
-    @staticmethod
-    def compute_fixed_moments(x):
-        raise NotImplementedError()
-        """ Compute moments for fixed x. """
-        return [x, utils.m_outer(x,x)]
-
-    @staticmethod
-    def compute_phi_from_parents(u_mu, u_Lambda, u_A, u_V, N):
-        """
-        Compute the natural parameters using parents' moments.
-
-        Parameters
-        ----------
-        u_parents : list of list of arrays
-           List of parents' lists of moments.
-
-        Returns
-        -------
-        phi : list of arrays
-           Natural parameters.
-        dims : tuple
-           Shape of the variable part of phi.
-
-        """
-
-
-        # Dimensionality of the Gaussian states
-        D = np.shape(u_mu[0])[-1]
-        
-        # TODO/FIXME: Take into account plates!
-        phi0 = np.zeros((N,D))
-        phi1 = np.zeros((N,D,D))
-        phi2 = np.zeros((N-1,D,D))
-
-        # Parameters for x0
-        mu = u_mu[0]
-        Lambda = u_Lambda[0]
-        phi0[...,0,:] = np.dot(Lambda, mu)
-        phi1[...,0,:,:] = -0.5*Lambda
-
-        # TODO/FIXME: Take into account the covariance of A!
-        A = u_A[0]
-        V = u_V[0]
-
-        # Diagonal blocks
-        phi1[..., 1:, :, :] = V
-        phi1[..., :-1, :, :] += np.dot(A.T, np.dot(V, A))
-        phi1 *= -0.5
-
-        # Super-diagonal blocks
-        phi2[..., :, :, :] = 0.5 * np.dot(A.T, V)
-
-        return (phi0, phi1, phi2)
-
-    @staticmethod
-    def compute_g_from_parents(u_parents):
-        raise NotImplementedError()
-        mu = u_parents[0][0]
-        mumu = u_parents[0][1]
-        Lambda = u_parents[1][0]
-        logdet_Lambda = u_parents[1][1]
-        g = (-0.5 * np.einsum('...ij,...ij',mumu,Lambda)
-             + 0.5 * logdet_Lambda)
-        ## g = (-0.5 * np.einsum('...ij,...ij',mumu,Lambda)
-        ##      + 0.5 * np.sum(logdet_Lambda))
-        return g
-
-    @staticmethod
-    def compute_u_and_g(phi, mask=True):
-        """
-        Compute the moments and the cumulant-generating function.
-
-        Parameters
-        ----------
-        phi
-
-        Returns
-        -------
-        u
-        g
-        """
-
-        # Solve the Kalman filtering and smoothing problem
-        y = phi[0]
-        A = -2*phi[1]
-        B = -2*phi[2]
-        (CovXnXn, CovXpXn, Xn, ldet) = utils.block_banded_solve(A, B, y)
-        
-        # Compute moments
-        u0 = Xn
-        u1 = CovXnXn + np.dot(Xn, Xn.T)
-        u2 = CovXpXn + np.dot(Xn[...,:-1,:], Xn[...,1:,:].T)
-        u = [u0, u1, u2]
-        
-        # Compute cumulant-generating function
-        k = np.shape(Xn)[-2] * np.shape(Xn)[-1]
-        g = (-0.5 * np.einsum('...ij,...ij', u[0], phi[0]) + 0.5 *
-             ldet)
-        
-        return (u, g)
-
-    @staticmethod
-    def compute_fixed_u_and_f(x):
-        """ Compute u(x) and f(x) for given x. """
-        raise NotImplementedError()
-        k = np.shape(x)[-1]
-        u = [x, utils.m_outer(x,x)]
-        f = -k/2*np.log(2*np.pi)
-        return (u, f)
-
-    @staticmethod
-    def compute_message(index, u, u_parents):
-        """ . """
-        raise NotImplementedError()
-        if index == 0:
-            return [utils.m_dot(u_parents[1][0], u[0]),
-                    -0.5 * u_parents[1][0]]
-        elif index == 1:
-            xmu = utils.m_outer(u[0], u_parents[0][0])
-            return [-0.5 * (u[1] - xmu - xmu.swapaxes(-1,-2) + u_parents[0][1]),
-                    0.5]
-
-    @staticmethod
-    def compute_dims(mu, Lambda, A, V, N):
-        """ Compute the dimensions of phi and u. """
-        D = mu.dims[0][0]
-        M = N.get_moments()[0]
-        return ( (M,D), (M,D,D), (M-1,D,D) )
-
-    @staticmethod
-    def compute_dims_from_values(x):
-        """ Compute the dimensions of phi and u. """
-        raise NotImplementedError()
-        d = np.shape(x)[-1]
-        return [(d,), (d,d)]
-
-    # Gaussian(mu, inv(Lambda))
-
-    def __init__(self, mu, Lambda, A, V, N=None, plates=(), **kwargs):
-        """
-        `mu` is the mean of x_0
-        `Lambda` is the precision of x_0
-        `A` is the dynamic matrix
-        `V` is the precision of the innovation
-        """
-        self.parameter_distributions = (Gaussian, Wishart, Gaussian, Wishart)
-        
-        # Check for constant mu
-        if np.isscalar(mu) or isinstance(mu, np.ndarray):
-            mu = Constant(Gaussian)(mu)
-
-        # Check for constant Lambda
-        if np.isscalar(Lambda) or isinstance(Lambda, np.ndarray):
-            Lambda = Constant(Wishart)(Lambda)
-
-        # Check for constant A
-        if np.isscalar(A) or isinstance(A, np.ndarray):
-            A = Constant(Gaussian)(A)
-
-        # Check for constant V
-        if np.isscalar(V) or isinstance(V, np.ndarray):
-            V = Constant(Wishart)(V)
-
-        # You could check whether the dimensions of mu and Lambda
-        # match (and Lambda is square)
-        if Lambda.dims[0][-1] != mu.dims[0][-1]:
-            raise Exception("Dimensionalities of mu and Lambda do not match.")
-
-        # A dummy wrapper for the number of time instances.
-        M = utils.broadcasted_shape(mu.plates, Lambda.plates, A.plates, V.plates)
-        if N is None:
-            if len(M) == 0 or M[-1] == 1:
-                raise Exception("Give the number of time instances")
-            N = ConstantNumeric(M[-1], 0)
-        else:
-            if len(M) > 0 and M[-1] != 1 and M[-1] != N:
-                raise Exception("Number of time instances must match the number of last plates of parents")
-            N = ConstantNumeric(N, 0)
-
-        # Construct
-        super().__init__(mu, Lambda, A, V, N,
-                         plates=plates,
-                         **kwargs)
-
-    def random(self):
-        raise NotImplementedError()
-        # TODO/FIXME: You shouldn't draw random values for
-        # observed/fixed elements!
-
-        # Note that phi[1] is -0.5*inv(Cov)
-        U = utils.m_chol(-2*self.phi[1])
-        mu = self.u[0]
-        z = np.random.normal(0, 1, self.get_shape(0))
-        # Compute mu + U'*z
-        #return mu + np.einsum('...ij,...i->...j', U, z)
-        #scipy.linalg.solve_triangular(a, b, trans=0, lower=False, unit_diagonal=False, overwrite_b=False, debug=False)
-        z = utils.m_solve_triangular(U, z, trans='T', lower=False)
-        return mu + z
-        #return self.u[0] + utils.m_chol_solve(U, z)
-
-    def show(self):
-        raise NotImplementedError()

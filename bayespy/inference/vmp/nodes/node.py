@@ -117,22 +117,38 @@ class Node:
         # Hmm.. For Gibbs and for generating samples from the model?
         return
 
-    def __init__(self, *args, dims=None, plates=(), name=""):
+    def __init__(self, *parents, dims=None, plates=None, name=""):
 
         if dims is None:
             raise Exception("You need to specify the dimensionality" \
                             + " of the distribution for class" \
                             + str(self.__class__))
+
         self.dims = dims
-        self.plates = plates
         self.name = name
 
         # Parents
-        self.parents = args
+        self.parents = parents
         # Inform parent nodes
         for (index,parent) in enumerate(self.parents):
             if parent:
                 parent.add_child(self, index)
+
+        # Check plates
+        parent_plates = [self.plates_from_parent(index) 
+                         for index in range(len(self.parents))]
+        if plates is None:
+            # By default, use the minimum number of plates determined
+            # from the parent nodes
+            self.plates = utils.broadcasted_shape(*parent_plates)
+        else:
+            # Use custom plates
+            self.plates = plates
+            # TODO/FIXME: Check that these plates are consistent with
+            # parents. This is not a good test yet..
+            plates_broadcasted = utils.broadcasted_shape(plates, *parent_plates)
+            
+
         # Children
         self.children = list()
 
@@ -165,6 +181,9 @@ class Node:
 
     def plates_to_parent(self, index):
         return self.plates
+
+    def plates_from_parent(self, index):
+        return self.parents[index].plates
 
     def get_shape(self, ind):
         return self.plates + self.dims[ind]
@@ -286,7 +305,24 @@ class Node:
                     # plates for which both the message and parent have
                     # single plates)
                     plates_self = self.plates_to_parent(index)
-                    r = self.plate_multiplier(plates_self, plates_m, parent.plates)
+                    try:
+                        r = self.plate_multiplier(plates_self, 
+                                                  plates_m,
+                                                  parent.plates)
+                    except ValueError:
+                        raise ValueError("The plates of the message, this node "
+                                         "and parent[%d] node are "
+                                         "inconsistent. "
+                                         "The message has shape %s, meaning "
+                                         "plates %s. This node has plates %s "
+                                         "with respect to the parent[%d], "
+                                         "which has plates %s." 
+                                         % (index,
+                                            np.shape(m[i]),
+                                            plates_m,
+                                            plates_self,
+                                            index,
+                                            parent.plates))
 
                     shape_parent = parent.get_shape(i)
 

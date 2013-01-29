@@ -90,21 +90,11 @@ class CholeskySparse():
         
         # Use the identity trace(K\dK)=sum(inv(K).*dK) by computing
         # the sparse inverse (lower triangular part)
-        #print("HERE 1\n")
-        #print(self.LD.L())
         iK = self.LD.spinv(form='lower')
         return (2*iK.multiply(dK).sum()
                 - iK.diagonal().dot(dK.diagonal()))
-        #print(self.LD.L())
-        #print("Compare spinv to inv")
-        #print(iK.todense())
-        #print(self.LD.inv().todense())
-        #print("HERE 2\n")
-        #print(iK.todense())
         # Multiply by two because of symmetry (remove diagonal once
         # because it was taken into account twice)
-        #print("Try this")
-        #print(self.LD.inv().todense())
         #return np.multiply(self.LD.inv().todense(),dK.todense()).sum()
         #return self.LD.inv().multiply(dK).sum() # THIS WORKS
         #return np.multiply(self.LD.inv(),dK).sum() # THIS NOT WORK!! WTF??
@@ -129,7 +119,6 @@ def vb_optimize(x0, set_values, lowerbound, gradient=None):
     # Function for computing the lower bound
     def func(x):
         # Set the value of the nodes
-        #print('func')
         set_values(x)
         # Compute lower bound (and gradient terms)
         return -lowerbound()
@@ -138,7 +127,6 @@ def vb_optimize(x0, set_values, lowerbound, gradient=None):
     # Function for computing the gradient of the lower bound
     def funcprime(x):
         # Collect the gradients from the nodes
-        #print('funcprime')
         set_values(x)
         # Compute lower bound (and gradient terms)
         #lowerbound()
@@ -147,7 +135,6 @@ def vb_optimize(x0, set_values, lowerbound, gradient=None):
 
     # Optimize
     if gradient != None:
-        print('Checking gradient')
         check_gradient(x0, func, funcprime, 1e-6)
 
         xopt = optimize.fmin_bfgs(func, x0, fprime=funcprime, maxiter=100)
@@ -157,7 +144,6 @@ def vb_optimize(x0, set_values, lowerbound, gradient=None):
         #xopt = optimize.fmin_ncg(func, x0, maxiter=50)
 
     # Set optimal values to the nodes
-    print(xopt)
     set_values(xopt)
     
 
@@ -199,8 +185,6 @@ def vb_optimize_nodes(*nodes):
 
     # Function for changing the values of the nodes
     def set_value(x):
-        #print(x)
-        #print(ind_all)
         for (ind, transform) in zip(ind_all, transform_all):
             # Transform/update variable
             transform(x[ind[0]:ind[1]])
@@ -221,8 +205,6 @@ def vb_optimize_nodes(*nodes):
         for (ind, gradient) in zip(ind_all, gradient_all):
             dl[ind[0]:ind[1]] = gradient()
 
-        #print('gradient')
-        #print(dl)
         return dl
             
     #vb_optimize(x0_all, set_value, lowerbound)
@@ -334,7 +316,6 @@ def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
 def moveaxis(A, axis_from, axis_to):
 
     """ Move the axis number axis_from to be the axis number axis_to. """
-    #print('moveaxis', np.shape(A), axis_from, axis_to)
     axes = np.arange(np.ndim(A))
     axes[axis_from:axis_to] += 1
     axes[axis_from:axis_to:-1] -= 1
@@ -381,7 +362,7 @@ def broadcasted_shape(*shapes):
                 if s == 1:
                     s = a[i]
                 elif a[i] != 1 and a[i] != s:
-                    raise Exception("Shapes do not broadcast")
+                    raise ValueError("Shapes %s do not broadcast" % (shapes,))
         S = S + (s,)
     return S
 
@@ -584,7 +565,6 @@ def m_chol(C):
 
 def m_chol_solve(U, B, out=None):
 
-    #print('m_chol_solve', B)
     
     # Allocate memory
     U = np.atleast_2d(U)
