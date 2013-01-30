@@ -1,0 +1,9 @@
+include README*
+include INSTALL*
+include LICENSE
+
+# Add documentation to sdist-generated tarballs
+recursive-include doc/source *.rst
+recursive-include doc/source *.py
+include doc/Makefile
+#include doc/make.bat

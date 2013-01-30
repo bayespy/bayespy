@@ -9,9 +9,8 @@
 # This file is part of BayesPy.
 #
 # BayesPy is free software: you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# under the terms of the GNU General Public License version 3 as
+# published by the Free Software Foundation.
 #
 # BayesPy is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,12 +29,19 @@ import unittest
 
 import numpy as np
 
-from bayespy.inference.vmp.nodes.gaussian_markov_chain import GaussianMarkovChain
-from bayespy.inference.vmp.nodes.gaussian import Gaussian
+from ..gaussian_markov_chain import GaussianMarkovChain
+from ..gaussian import Gaussian
 
 from bayespy.utils import utils
 
 class TestGaussianMarkovChain(unittest.TestCase):
+
+    def test_plates(self):
+        """
+        Test that plates are handled correctly.
+        """
+
+        
 
     def test_smoothing(self):
         """
@@ -109,5 +115,5 @@ class TestGaussianMarkovChain(unittest.TestCase):
         self.assertTrue(np.allclose(Xh_vb, Xh))
         self.assertTrue(np.allclose(CovXh_vb, CovXh))
         
-if __name__ == '__main__':
-    unittest.main()
+## if __name__ == '__main__':
+##     unittest.main()
