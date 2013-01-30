@@ -166,10 +166,25 @@ class Variable(Node):
         return {self.lower_bound_contribution}
 
     def get_message(self, index, u_parents):
+        """
+        Get the message and the mask for a parent.
+
+        Parameters:
+        -----------
+        index : int
+            Index of the parent requesting the message.
+        u_parents : list of list of ndarrays
+            List of parents' moments.
+
+        Returns:
+        --------
+        m : list of ndarrays
+            Message as a list of arrays.
+        mask : boolean ndarray
+            Mask telling which plates should be taken into account.
+        """
         return (list(self.compute_message(index, self.u, u_parents)),
                 self.mask)
-        ## return (self.message(index, u_parents),
-        ##         self.mask)
 
     def initialize_from_prior(self):
         if not np.all(self.observed):

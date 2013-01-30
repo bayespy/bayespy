@@ -258,7 +258,9 @@ class Node:
             # The parent we're sending the message to
             parent = self.parents[index]
 
-            # Compute mask message
+            # Compute mask message:
+            # "Sum" (i.e., logical or) over the plates that have unit length in 
+            # the parent node.
             s = utils.axes_to_collapse(np.shape(my_mask), parent.plates)
             mask = np.any(my_mask, axis=s, keepdims=True)
             mask = utils.squeeze_to_dim(mask, len(parent.plates))
@@ -280,13 +282,13 @@ class Node:
                     # parameterization (as there may be less plates for
                     # parents)
 
+                    # Extend the plate mask to include unit axes for variable
+                    # dimensions.
                     shape_mask = np.shape(my_mask) + (1,) * len(parent.dims[i])
                     my_mask2 = np.reshape(my_mask, shape_mask)
 
-                    #try:
+                    # Apply the mask to the message
                     m[i] = np.where(my_mask2, m[i], 0)
-                    #m[i] = m[i] * my_mask2
-                    #except:
 
                     shape_m = np.shape(m[i])
                     # If some dimensions of the message matrix were
@@ -339,8 +341,28 @@ class Node:
             raise Exception("Unknown parent requesting a message")
 
     def get_message(self, index, u_parents):
-        raise Exception("Not implemented.")
-        pass
+        """
+        Get the message and the mask for a parent.
+
+        Parameters:
+        -----------
+        index : int
+            Index of the parent requesting the message.
+        u_parents : list of list of ndarrays
+            List of parents' moments.
+
+        Returns:
+        --------
+        m : list of ndarrays
+            Message as a list of arrays.
+        mask : boolean ndarray
+            Mask telling which plates should be taken into account.
+
+        Notes:
+        ------
+        Sub-classes should implement this method.
+        """
+        raise NotImplementedError()
 
 
 

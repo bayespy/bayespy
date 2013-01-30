@@ -37,6 +37,7 @@ from bayespy.inference.vmp.nodes.normal import Normal
 from bayespy.inference.vmp.nodes.dot import Dot
 
 from bayespy.utils import utils
+from bayespy.utils import random
 
 from bayespy.inference.vmp.vmp import VB
 
@@ -78,20 +79,25 @@ def linear_state_space_model(D=3, N=100, M=10):
                 name='tau')
 
     # Observations
-    Y = Normal(Dot(C, X.as_gaussian()),
+    CX = Dot(C, X.as_gaussian())
+    Y = Normal(CX,
                tau,
                name='Y')
 
-    return (Y, X, tau, C, gamma, A, alpha)
+    return (Y, CX, X, tau, C, gamma, A, alpha)
 
 def run():
 
+    seed = np.random.randint(1000)
+    print("seed = ", seed)
+    np.random.seed(seed)
+
     # Simulate some data
     D = 3
-    M = 3
-    N = 500
-    c = np.eye(M,D)#np.random.randn(M,D)
-    w = 0.1
+    M = 6
+    N = 200
+    c = np.random.randn(M,D)
+    w = 0.3
     a = np.array([[np.cos(w), -np.sin(w), 0], 
                   [np.sin(w), np.cos(w),  0], 
                   [0,         0,          1]])
@@ -99,86 +105,33 @@ def run():
     x = np.empty((N,D))
     f = np.empty((M,N))
     y = np.empty((M,N))
-    x[0] = np.random.randn(D)
+    x[0] = 10*np.random.randn(D)
     f[:,0] = np.dot(c,x[0])
-    y[:,0] = f[:,0] + 10*np.random.randn(M)
+    y[:,0] = f[:,0] + 3*np.random.randn(M)
     for n in range(N-1):
         x[n+1] = np.dot(a,x[n]) + np.random.randn(D)
         f[:,n+1] = np.dot(c,x[n+1])
-        y[:,n+1] = f[:,n+1] + 10*np.random.randn(M)
-
-        #print(a)
-        #print(np.dot(a, np.ones(D)))
-    ## plt.figure(1)
-    ## plt.clf()
-    ## for d in range(D):
-    ##     plt.subplot(D,1,d+1)
-    ##     plt.plot(x[:,d], 'r-')
-    ## return
-    ## plt.figure(2)
-    ## plt.clf()
-    ## for m in range(M):
-    ##     plt.subplot(M,1,m)
-    ##     plt.plot(y[:,m], 'k-')
-    ## return
-        
-    
+        y[:,n+1] = f[:,n+1] + 3*np.random.randn(M)
 
     # Create the model
-    #(Y, X, tau, C, gamma, A, alpha) = linear_state_space_model()
+    (Y, CX, X, tau, C, gamma, A, alpha) = linear_state_space_model(D, N, M)
 
-    # Dynamics matrix with ARD
-    alpha = Gamma(1e-5,
-                  1e-5,
-                  plates=(D,),
-                  name='alpha')
-    A = Gaussian(np.zeros(D),
-                 alpha.as_diagonal_wishart(),
-                 plates=(1,D,),
-                 name='A')
-
-    # Latent states with dynamics
-    X = GaussianMarkovChain(np.zeros(D),         # mean of x0
-                            1e-3*np.identity(D), # prec of x0
-                            A,                   # dynamics
-                            np.ones(D),          # innovation
-                            n=N,                 # time instances
-                            name='X')
-
-    # Mixing matrix from latent space to observation space using ARD
-    gamma = Gamma(1e-5,
-                  1e-5,
-                  plates=(D,),
-                  name='gamma')
-    C = Gaussian(np.zeros(D),
-                 gamma.as_diagonal_wishart(),
-                 plates=(M,1),
-                 name='C')
-
-    # Observation noise
-    tau = Gamma(1e-5,
-                1e-5,
-                name='tau')
-
-    # Observations
-    CX = Dot(#c[:,np.newaxis,:], 
-             C,
-             X.as_gaussian(),
-             name='C*X')
-    Y = Normal(CX,
-               tau,
-               name='Y')
-
+    # Hmm.. does the mask go properly from X to A?
     
+    # Add missing values
+    mask = random.mask(M, N, p=0.3)
+    y[~mask] = np.nan # BayesPy doesn't require this. Just for plotting.
     # Observe the data
-    Y.observe(y)
+    Y.observe(y, mask=mask)
+    
 
-    # Initialize nodes (must use some randomness)
+    # Initialize nodes (must use some randomness for C)
     C.initialize_from_parameters(C.random(), np.identity(D))
 
     # Run inference
     Q = VB(Y, X, tau, C, gamma, A, alpha)
-    Q.update(X, tau, C, gamma, A, alpha, repeat=20)
+    #Q.update(X, C, tau, A, repeat=5)
+    Q.update(X, C, tau, gamma, A, alpha, repeat=20)
 
     X_vb = X.u[0]
     varX_vb = utils.diagonal(X.u[1] - X_vb[...,np.newaxis,:] * X_vb[...,:,np.newaxis])
@@ -188,17 +141,17 @@ def run():
     varCX_vb = u_CX[1] - CX_vb**2
 
     # Show results
-    plt.figure(1)
-    plt.clf()
-    for d in range(D):
-        plt.subplot(D,1,d+1)
-        plt.plot(x[:,d], 'r-')
-        #plt.figure(2)
-        #plt.clf()
-        #for d in range(D):
-        #plt.subplot(D,1,d)
-        bpplt.errorplot(y=X_vb[:,d],
-                        error=2*np.sqrt(varX_vb[:,d]))
+    ## plt.figure(1)
+    ## plt.clf()
+    ## for d in range(D):
+    ##     plt.subplot(D,1,d+1)
+    ##     plt.plot(x[:,d], 'r-')
+    ##     #plt.figure(2)
+    ##     #plt.clf()
+    ##     #for d in range(D):
+    ##     #plt.subplot(D,1,d)
+    ##     bpplt.errorplot(y=X_vb[:,d],
+    ##                     error=2*np.sqrt(varX_vb[:,d]))
     plt.figure(3)
     plt.clf()
     for m in range(M):
@@ -209,6 +162,8 @@ def run():
                         error=2*np.sqrt(varCX_vb[m,:]))
 
     tau.show()
+    gamma.show()
+    alpha.show()
 
     
     return

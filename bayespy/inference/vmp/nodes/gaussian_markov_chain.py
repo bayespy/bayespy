@@ -123,19 +123,19 @@ class GaussianMarkovChain(Variable):
         phi2 = np.zeros((N-1,D,D))
 
         # Parameters for x0
-        mu = u_mu[0]
-        Lambda = u_Lambda[0]
+        mu = u_mu[0]         # (..., D)
+        Lambda = u_Lambda[0] # (..., D, D)
         phi0[...,0,:] = np.dot(Lambda, mu)
         phi1[...,0,:,:] = Lambda
 
-        # TODO/FIXME: Take into account the covariance of A!
-        A = u_A[0]
-        v = u_v[0]
+        # Helpful variables (show shapes in comments)
+        A = u_A[0]  # (..., N-1, D, D)
+        AA = u_A[1] # (..., N-1, D, D, D)
+        v = u_v[0]  # (..., N-1, D)
 
         # Diagonal blocks: -0.5 * (V_i + A_{i+1}' * V_{i+1} * A_{i+1})
         phi1[..., 1:, :, :] = v[...,np.newaxis]*np.identity(D)
-        phi1[..., :-1, :, :] += np.einsum('...ki,...k,...kj->...ij', A, v, A)
-        #phi1[..., :-1, :, :] += np.dot(A.T, v[...,np.newaxis]*A)
+        phi1[..., :-1, :, :] += np.einsum('...kij,...k->...ij', AA, v)
         phi1 *= -0.5
 
         # Super-diagonal blocks: 0.5 * A.T * V
@@ -156,22 +156,24 @@ class GaussianMarkovChain(Variable):
         u_v = u_parents[3]
         u_N = u_parents[4]
 
+        N = u_N[0]
+
         mumu = u_mu[1]
         Lambda = u_Lambda[0]
         logdet_Lambda = u_Lambda[1]
         logdet_v = u_v[1]
-        return 0
         
-        -0.5 * np.einsum('...ij,...ij->...', mumu, Lambda)
-        + 0.5 * logdet_Lambda
+        g0 = -0.5 * np.einsum('...ij,...ij->...', mumu, Lambda)
+        
+        g1 = 0.5 * logdet_Lambda
         if np.ndim(logdet_v) == 1:
-            + 0.5 * N * np.sum(logdet_v, axis=-1)
+            g1 = g1 + 0.5 * N * np.sum(logdet_v, axis=-1)
         elif np.shape(logdet_v)[-2] == 1:
-            + 0.5 * N * np.sum(logdet_v, axis=(-1,-2))
+            g1 = g1 + 0.5 * N * np.sum(logdet_v, axis=(-1,-2))
         else:
-            + 0.5 * np.sum(logdet_v, axis=(-1,-2))
-        
-        raise NotImplementedError()
+            g1 = g1 + 0.5 * np.sum(logdet_v, axis=(-1,-2))
+
+        return g0 + g1
 
     @staticmethod
     def compute_u_and_g(phi, mask=True):
@@ -519,13 +521,27 @@ class _MarkovChainToGaussian(Node):
         2) Because the message does not contain <X(n-1)X(n)> part,
         we'll put the last/third message to None meaning that it is
         empty.
+
+        Parameters:
+        -----------
+        index : int
+            Index of the parent requesting the message.
+        u_parents : list of list of ndarrays
+            List of parents' moments.
+
+        Returns:
+        --------
+        m : list of ndarrays
+            Message as a list of arrays.
+        mask : boolean ndarray
+            Mask telling which plates should be taken into account.
         """
         
         (m, mask) = self.message_from_children()
 
-        # TODO/FIXME: Apply and remove the last axis of the mask
+        # Remove the last axis of the mask
         if np.ndim(mask) >= 1:
-            mask = mask[:-1]
+            mask = np.any(mask, axis=-1)
 
         # Add the third empty message
         m = [m[0], m[1], None]
