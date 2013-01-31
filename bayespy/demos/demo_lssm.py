@@ -9,9 +9,8 @@
 # This file is part of BayesPy.
 #
 # BayesPy is free software: you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# under the terms of the GNU General Public License version 3 as
+# published by the Free Software Foundation.
 #
 # BayesPy is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -88,7 +87,7 @@ def linear_state_space_model(D=3, N=100, M=10):
 
 def run():
 
-    seed = np.random.randint(1000)
+    seed = 496#np.random.randint(1000)
     print("seed = ", seed)
     np.random.seed(seed)
 
@@ -118,8 +117,10 @@ def run():
 
     # Hmm.. does the mask go properly from X to A?
     
-    # Add missing values
+    # Add missing values randomly
     mask = random.mask(M, N, p=0.3)
+    # Add missing values to a period of time
+    mask[:,30:80] = False
     y[~mask] = np.nan # BayesPy doesn't require this. Just for plotting.
     # Observe the data
     Y.observe(y, mask=mask)
@@ -131,7 +132,7 @@ def run():
     # Run inference
     Q = VB(Y, X, tau, C, gamma, A, alpha)
     #Q.update(X, C, tau, A, repeat=5)
-    Q.update(X, C, tau, gamma, A, alpha, repeat=20)
+    Q.update(X, C, tau, gamma, A, alpha, repeat=2000)
 
     X_vb = X.u[0]
     varX_vb = utils.diagonal(X.u[1] - X_vb[...,np.newaxis,:] * X_vb[...,:,np.newaxis])
