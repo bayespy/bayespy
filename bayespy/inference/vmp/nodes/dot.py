@@ -31,6 +31,13 @@ from .constant import Constant
 from .gaussian import Gaussian
 
 class Dot(Node):
+    """
+    A deterministic node for computing vector product of two Gaussians.
+
+    See also:
+    ---------
+    MatrixDot
+    """
 
     # This node satisfies Normal-protocol to children and
     # Gaussian-protocol to parents
@@ -68,27 +75,10 @@ class Dot(Node):
             raise ValueError("The plates of the parents are "
                              "incompatible: %s" % (parent_plates,))
         
-        ## for x in parents:
-        ##     # Convert constant matrices to nodes
-        ##     if np.isscalar(x) or isinstance(x, np.ndarray):
-        ##         x = Constant(Gaussian)(x)
-        ##     # Dimensionality of the Gaussian(s). You should check that
-        ##     # all the parents have the same dimensionality!
-        ##     self.d = x.dims[0]
-        ##     if not gaussian_dims:
-        ##         gaussian_dims = x.dims
-        ##     elif gaussian_dims != x.dims:
-        ##         raise Exception("Dimensions of the Gaussians do not match")
-        ##     # Check consistency of plates (broadcasting rules!)
-        ##     for ind in range(min(len(plates),len(x.plates))):
-        ##         if plates[-ind-1] == 1:
-        ##             plates[-ind-1] = x.plates[-ind-1]
-        ##         elif x.plates[-ind-1] != 1 and plates[-ind-1] != x.plates[-ind-1]:
-        ##             raise Exception('Plates do not match')
-        ##     # Add new extra plates
-        ##     plates = list(x.plates[:(len(x.plates)-len(plates))]) + plates
-
-        Node.__init__(self, *parents, plates=tuple(plates), dims=[(),()], **kwargs)
+        super().__init__(*parents,
+                         plates=tuple(plates), 
+                         dims=((),()),
+                         **kwargs)
 
             
 
@@ -175,53 +165,148 @@ class Dot(Node):
         return (m, mask)
 
 
-    def OLD_get_message(self, index, u_parents):
-        
+
+
+class MatrixDot(Node):
+    """
+    A deterministic node for computing matrix-vector product of Gaussians.
+
+    The matrix is given in vector form.  Therefore, the first parent should have
+    dimensionality that is a multiple of the dimensionality of the second
+    parent. The dimensionality of the result is that multiplier:
+        A : (M*N)-dimensional 
+        X : N-dimensional 
+        result : M-dimensional
+
+    `Dot` computes vector-vector product of Gaussians, thus the result is scalar
+    Normal. This node assumes that you have a full joint Gaussian distribution
+    for all elements of a matrix, thus the result is vector Gaussian.
+
+    See also
+    --------
+    Dot
+    """
+
+    def __init__(self, A, X, **kwargs):
+
+        # Convert arrays to constant nodes
+        if utils.is_numeric(A):
+            A = Constant(Gaussian)(A)
+        if utils.is_numeric(X):
+            X = Constant(Gaussian)(X)
+
+        MN = A.dims[0][0]
+        N = X.dims[0][0]
+
+        # Check parents
+        if A.dims != ( (MN,), (MN, MN) ):
+            raise ValueError("Invalid dimensionality of the first parent.")
+        if X.dims != ( (N,), (N, N) ):
+            raise ValueError("Invalid dimensionality of the second parent.")
+        if (MN % N) != 0:
+            raise ValueError("The dimensionality of the first parent should be "
+                             "a multiple of the second parent.")
+
+        # Dimensionality of the output
+        M = int(MN / N)
+        dims = ( (M,), (M,M) )
+
+        Node.__init__(self, A, X, dims=dims, **kwargs)
+
+            
+
+    def get_moments(self):
+        """
+        Get the moments of the Gaussian output.
+        """
+
+        # Get parents' moments
+        u_A = self.parents[0].message_to_child()
+        u_X = self.parents[1].message_to_child()
+
+        # Helpful variables to clarify the code
+        A = u_A[0]
+        AA = u_A[1]
+        X = u_X[0]
+        XX = u_X[1]
+
+        (A, AA) = self._reshape_to_matrix(A, AA, X.shape[-1])
+
+        # Compute matrix-vector products
+        Y = np.einsum('...ij,...j->...i', A, X)
+        YY = np.einsum('...jlik,...lk->...ij', AA, XX)
+
+        return [Y, YY]
+
+    def get_message(self, index, u_parents):
+        """
+        Compute the message to a parent node.
+        """
+
+        # Get the message from children
         (m, mask) = self.message_from_children()
+        VY = m[0]
+        V = m[1]
 
-        parent = self.parents[index]
+        if index == 0: # Message to A
+            X = u_parents[1][0]
+            XX = u_parents[1][1]
+            m0 = VY[...,:,np.newaxis] * X[...,np.newaxis,:]
+            m1 = np.einsum('...ik,...jl->...ijkl', V, XX)
+            (m0, m1) = self._reshape_to_vector(m0, m1)
+        elif index == 1: # Message to X
+            (A, AA) = self._reshape_to_matrix(u_parents[0][0],
+                                              u_parents[0][1],
+                                              self.parents[1].dims[0][0])
+            m0 = np.einsum('...ij,...i->...j', A, VY)
+            m1 = np.einsum('...kilj,...kl->...ij', AA, V)
 
-        # Compute both messages
-        for i in range(2):
-
-            # Add extra axes to the message from children
-            #m_shape = np.shape(m[i]) + (1,) * (i+1)
-            #m[i] = np.reshape(m[i], m_shape)
-
-            # Add extra axes to the mask from children
-            mask_shape = np.shape(mask) + (1,) * (i+1)
-            mask_i = np.reshape(mask, mask_shape)
-
-            mask_i = mask
-            for k in range(i+1):
-                m[i] = np.expand_dims(m[i], axis=-1)
-                mask_i = np.expand_dims(mask_i, axis=-1)
-
-            # List of elements to multiply together
-            A = [m[i], mask_i]
-            for k in range(len(u_parents)):
-                if k != index:
-                    A.append(u_parents[k][i])
-
-            # Find out which axes are summed over. Also, because
-            # we are summing over the dimensions already in this
-            # function (for efficiency), we need to cancel the
-            # effect of the plate-multiplier applied in the
-            # message_to_parent function.
-            full_shape = utils.broadcasted_shape_from_arrays(*A)
-            axes = utils.axes_to_collapse(full_shape, parent.get_shape(i))
-            r = 1
-            for j in axes:
-                r *= full_shape[j]
-
-            # Compute dot product
-            m[i] = utils.sum_product(*A, axes_to_sum=axes, keepdims=True) / r
-
-        # Compute the mask
-        s = utils.axes_to_collapse(np.shape(mask), parent.plates)
-        mask = np.any(mask, axis=s, keepdims=True)
-        mask = utils.squeeze_to_dim(mask, len(parent.plates))
-
+        m = [m0, m1]
         return (m, mask)
 
+    
+    def _reshape_to_matrix(self, A, AA, N):
+        """
+        Reshape vector form moments to matrix form.
+
+        A : (...,M*N)
+        AA : (...,M*N,M*N)
+
+        Reshape to:
+        A : (...,M,N)
+        AA : (...,M,N,M,N)
+        """
+        # The dimensionalities
+        MN = self.parents[0].dims[0][0]
+        N = self.parents[1].dims[0][0]
+        M = int(MN / N)
+
+        # Reshape vector A to a matrix
+        sh_A = np.shape(A)[:-1] + (M,N)
+        sh_AA = np.shape(A)[:-1] + (M,N,M,N)
+        A = A.reshape(sh_A)
+        AA = AA.reshape(sh_AA)
+
+        return (A, AA)
+
+    def _reshape_to_vector(self, A, AA):
+        """
+        Reshape matrix form moments to vector form.
+
+        A : (...,M,N)
+        AA : (...,M,N,M,N)
+
+        Reshape to:
+        A : (...,M*N)
+        AA : (...,M*N,M*N)
+        """
+
+        MN = A.shape[-2] * A.shape[-1]
+        sh_A = A.shape[:-2] + (MN,)
+        sh_AA = AA.shape[:-4] + (MN,MN)
+
+        A = A.reshape(sh_A)
+        AA = AA.reshape(sh_AA)
+
+        return (A, AA)
 

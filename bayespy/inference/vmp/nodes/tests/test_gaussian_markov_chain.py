@@ -90,7 +90,7 @@ class TestGaussianMarkovChain(unittest.TestCase):
         #
 
         # Construct VB model
-        Xh = GaussianMarkovChain(np.zeros(D), np.identity(D), A, 1/v, N=N)
+        Xh = GaussianMarkovChain(np.zeros(D), np.identity(D), A, 1/v, n=N)
         Yh = Gaussian(Xh.as_gaussian(), np.identity(D), plates=(N,))
         # Put data 
         Yh.observe(Y)

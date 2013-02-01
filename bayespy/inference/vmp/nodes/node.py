@@ -144,8 +144,9 @@ class Node:
         else:
             # Use custom plates
             self.plates = plates
-            # TODO/FIXME: Check that these plates are consistent with
-            # parents. This is not a good test yet..
+            # TODO/FIXME: Check that these plates are consistent with parents.
+            # This is not a good test yet.. You need to check that the
+            # parent_plates are a subset of plates.
             plates_broadcasted = utils.broadcasted_shape(plates, *parent_plates)
             
 
@@ -313,13 +314,15 @@ class Node:
                                                   parent.plates)
                     except ValueError:
                         raise ValueError("The plates of the message, this node "
-                                         "and parent[%d] node are "
+                                         "(%s) and parent[%d] node (%s) are "
                                          "inconsistent. "
                                          "The message has shape %s, meaning "
                                          "plates %s. This node has plates %s "
                                          "with respect to the parent[%d], "
                                          "which has plates %s." 
-                                         % (index,
+                                         % (self.name,
+                                            index,
+                                            parent.name,
                                             np.shape(m[i]),
                                             plates_m,
                                             plates_self,
