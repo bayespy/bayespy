@@ -40,6 +40,7 @@ from ...vmp import VB
 
 from bayespy.utils import utils
 from bayespy.utils import linalg
+from bayespy.utils import random
 
 class TestMatrixDot(unittest.TestCase):
 
@@ -59,10 +60,10 @@ class TestMatrixDot(unittest.TestCase):
         # Y: D4,D3,D2,D1
         # A:  1,D3,D2, 1
         # X:  1,D3, 1,D1
-        D4 = 5#5
-        D3 = 7#7
-        D2 = 6#6
-        D1 = 1#2
+        D4 = 5
+        D3 = 7
+        D2 = 6
+        D1 = 2
 
         # Generate data
         a = np.random.randn(D3,D2,1,M,N)
@@ -76,43 +77,48 @@ class TestMatrixDot(unittest.TestCase):
                           l_cov,
                           np.random.randn(D4, D3, D2, D1, M))
 
-        # Construct the model
-        A = Gaussian(np.zeros(M*N), 
-                     np.identity(M*N),
-                     plates=(D3,D2,1),
-                     name='A')
-        # TODO: Distribution for X (but fixed)
-        X = x
-        AX = MatrixDot(A, X, name='AX')
         Lambda = vv
-        Y = Gaussian(AX,
-                     Lambda,
-                     plates=(D4,D3,D2,D1),
-                     name='Y')
+        for mask in [np.array([True]), random.mask(D4,D3,D2,D1,p=0.5)]:
+            # Construct the model (use non-constants for parents and children)
+            A = Gaussian(np.zeros(M*N), 
+                         np.identity(M*N),
+                         plates=(D3,D2,1),
+                         name='A')
+            X = Gaussian(x, np.identity(N), name='X')
+            AX = MatrixDot(A, X, name='AX')
+            Y = Gaussian(AX,
+                         Lambda,
+                         plates=(D4,D3,D2,D1),
+                         name='Y')
 
-        # TODO: Add missing values
-        # Put in data
-        Y.observe(y)
+            # Put in data
+            Y.observe(y, mask=mask)
 
-        # Run inference
-        Q = VB(Y, A)
-        Q.update(A, repeat=1)
-        u = A.get_moments()
+            # Run inference
+            Q = VB(Y, A)
+            Q.update(A, repeat=1)
+            u = A.get_moments()
 
-        # Compute true solution
-        xx = x[...,:,np.newaxis] * x[...,np.newaxis,:]
-        Cov_A = np.kron(Lambda, xx) # from data
-        Cov_A = np.sum(Cov_A, axis=2, keepdims=True)
-        Cov_A = Cov_A + np.identity(M*N) # add prior
-        Cov_A = linalg.chol_inv(linalg.chol(Cov_A))
-        mu_A = np.einsum('...ij,...j,...k->...ik', Lambda, y, x)
-        mu_A = np.sum(mu_A, axis=(0,3))
-        mu_A = np.reshape(mu_A, (D3,D2,1,M*N))
-        mu_A = np.einsum('...ij,...j->...i', Cov_A, mu_A)
+            # Compute true solution
+            vv = np.ones((D4,D3,D2,D1,1,1)) * mask[...,np.newaxis,np.newaxis] * vv
+            xx = (x[...,:,np.newaxis] * x[...,np.newaxis,:]
+                  + np.identity(N))
+            Cov_A = (vv[...,:,np.newaxis,:,np.newaxis] * 
+                     xx[...,np.newaxis,:,np.newaxis,:]) # from data
+            Cov_A = np.sum(Cov_A, axis=(0,3), keepdims=True)
+            Cov_A = np.reshape(Cov_A, (D3,D2,1,M*N,M*N))
+            Cov_A = Cov_A + np.identity(M*N) # add prior
+            Cov_A = linalg.chol_inv(linalg.chol(Cov_A))
+            mu_A = np.einsum('...ij,...j,...k->...ik', vv, y, x)
+            mu_A = np.sum(mu_A, axis=(0,3))
+            mu_A = np.reshape(mu_A, (D3,D2,1,M*N))
+            mu_A = np.einsum('...ij,...j->...i', Cov_A, mu_A)
 
-        print(np.shape(u[0]))
-        print(np.shape(mu_A))
 
-        # Compare VB results to the analytic solution:
-        testing.assert_allclose(u[0], mu_A)
+            # Compare VB results to the analytic solution:
+            Cov_vb = u[1] - u[0][...,np.newaxis,:]*u[0][...,:,np.newaxis]
+            testing.assert_allclose(Cov_vb, Cov_A,
+                                    err_msg="Incorrect second moment.")
+            testing.assert_allclose(u[0], mu_A,
+                                    err_msg="Incorrect first moment.")
         
