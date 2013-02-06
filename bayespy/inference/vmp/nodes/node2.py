@@ -94,6 +94,25 @@ class Node():
         """
         self.children.append((child, index))
 
+    def _set_mask(self, mask):
+        # Sub-classes may want to overwrite this
+        pass
+    
+    def _update_mask(self):
+        # Combine masks from children
+        mask = False
+        for (child, index) in self.children:
+            mask = np.logical_or(mask, child._mask_to_parent(index))
+        # Set the mask of this node
+        self._set_mask(mask)
+        # Tell parents to update their masks
+        for parent in self.parents:
+            parent._update_mask()
+
+    def _mask_to_parent(self, index):
+        # Sub-classes should implement this
+        raise NotImplementedError()
+
     def _message_to_child(self):
         return self.get_moments()
     
@@ -208,14 +227,38 @@ class Node():
 
     def get_moments(self):
         raise NotImplementedError()
-    
+
+
 class Stochastic(Node):
     """
     Base class for nodes that are stochastic.
 
     u
     mask
+    observed
     """
+
+    def __init__(self, *args, initialize=True, **kwargs):
+
+        super().__init__(*args,
+                         dims=self.compute_dims(*args),
+                         **kwargs)
+
+        axes = len(self.plates)*(1,)
+        self.u = [utils.nans(axes+dim) for dim in self.dims]
+
+        # Terms for the lower bound (G for latent and F for observed)
+        #self.g = 0
+        #self.f = 0
+
+        # Not observed
+        self.observed = False
+
+        # By default, ignore all plates
+        self.mask = False
+
+        if initialize:
+            self.initialize_from_prior()
 
     def get_moments(self):
         return self.u
@@ -224,17 +267,86 @@ class Stochastic(Node):
         u_parents = self._message_from_parents(ignore=index)
         return self._compute_message_to_parent(index, self.u, *u_parents)
     
+    def _mask_to_parent(self, index):
+        return self._compute_mask_to_parent(index, self.mask)
+
+    def _set_mask(self, mask):
+        # Sub-classes may want to overwrite this
+        self.mask = np.logical_or(mask, self.observed)
+    
+    def _set_moments(self, u, mask=True):
+        # Store the computed moments u but do not change moments for
+        # observations, i.e., utilize the mask.
+        for ind in range(len(u)):
+            # Add axes to the mask for the variable dimensions (mask
+            # contains only axes for the plates).
+            u_mask = utils.add_trailing_axes(mask, self.ndims[ind])
+
+            # Enlarge self.u[ind] as necessary so that it can store the
+            # broadcasted result.
+            sh = utils.broadcasted_shape_from_arrays(self.u[ind], u[ind], u_mask)
+            self.u[ind] = utils.repeat_to_shape(self.u[ind], sh)
+
+            # Use mask to update only unobserved plates and keep the
+            # observed as before
+            np.copyto(self.u[ind],
+                      u[ind],
+                      where=u_mask)
+
+            # Make sure u has the correct number of dimensions:
+            shape = self.get_shape(ind)
+            ndim = len(shape)
+            ndim_u = np.ndim(self.u[ind])
+            if ndim > ndim_u:
+                self.u[ind] = utils.add_leading_axes(u[ind], ndim - ndim_u)
+            elif ndim < ndim_u:
+                raise Exception("The size of the variable's moments array "
+                                "is larger than it should be based on the "
+                                "plates and dimension information. Check "
+                                "that you have provided plates properly.")
+
     def update(self):
         u_parents = self._message_from_parents()
         m_children = self._message_from_children()
         self._update_distribution_and_lowerbound(m_children, *u_parents)
 
     def observe(y, mask=True):
-        # Fix moments, compute f and propagate mask.
-        pass
+        """
+        Fix moments, compute f and propagate mask.
+        """
+
+        # Compute fixed moments
+        (u, f) = self._compute_fixed_moments_and_f(x, mask=mask)
+
+        # Check the dimensionality of the observations
+        for (i,v) in enumerate(u):
+            # This is what the dimensionality "should" be
+            s = self.plates + self.dims[i]
+            t = np.shape(v)
+            if s != t:
+                msg = "Dimensionality of the observations incorrect."
+                msg += "\nShape of input: " + str(t)
+                msg += "\nExpected shape: " + str(s)
+                msg += "\nCheck plates."
+                raise Exception(msg)
+
+        # Set the moments
+        self._set_moments(u, mask=mask)
+        
+        # TODO/FIXME: Use the mask?
+        self.f = f
+
+        # Observed nodes should not be ignored
+        self.observed = mask
+        self._update_mask()
 
     def lowerbound():
         # Sub-class should implement this
+        raise NotImplementedError()
+
+    @staticmethod
+    def _compute_fixed_moments_and_f(x, mask=True):
+        # Sub-classes should implement this
         raise NotImplementedError()
 
     @staticmethod
@@ -254,6 +366,13 @@ class Deterministic(Node):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     
+    def _mask_to_parent(self, index):
+        # Sub-classes should implement this
+        mask = False
+        for (child, index) in self.children:
+            mask = np.logical_or(mask, child._mask_to_parent(index))
+        return self._compute_mask_to_parent(index, mask)
+
     def get_moments(self):
         u_parents = [parent._message_to_child() for parent in self.parents]
         return self._compute_moments(*u_parents)
@@ -272,11 +391,3 @@ class Deterministic(Node):
     def _compute_message_to_parent(index, m_children, *u_parents):
         # Sub-classes should implement this
         raise NotImplementedError()
-
-class ExponentialFamily(Stochastic):
-    """
-    A base class for nodes using natural parameterization `phi`.
-
-    phi
-    """
-    pass
