@@ -35,7 +35,7 @@ from .normal import Normal
 from .gamma import Gamma
 from .dirichlet import Dirichlet
 from .categorical import Categorical
-from .dot import Dot
+from .dot import Dot, MatrixDot
 from .mixture import Mixture
 
 ## from . import variable

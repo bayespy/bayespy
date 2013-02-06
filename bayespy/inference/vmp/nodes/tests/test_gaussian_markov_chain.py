@@ -29,27 +29,146 @@ import unittest
 
 import numpy as np
 
+from numpy import testing
+
 from ..gaussian_markov_chain import GaussianMarkovChain
 from ..gaussian import Gaussian
+from ..wishart import Wishart
+from ..gamma import Gamma
 
-from bayespy.utils import utils
+from bayespy import utils
 
 class TestGaussianMarkovChain(unittest.TestCase):
+
+    def create_model(self, N, D):
+
+        # Construct the model
+        Mu = Gaussian(np.random.randn(D),
+                      np.identity(D))
+        Lambda = Wishart(D,
+                         utils.random.covariance(D))
+        A = Gaussian(np.random.randn(D,D),
+                     np.identity(D))
+        V = Gamma(D,
+                  np.random.rand(D))
+        X = GaussianMarkovChain(Mu, Lambda, A, V, n=N)
+        Y = Gaussian(X.as_gaussian(), np.identity(D))
+
+        return (Y, X, Mu, Lambda, A, V)
+        
 
     def test_plates(self):
         """
         Test that plates are handled correctly.
         """
 
+    def test_message_to_mu0(self):
+        pass
+
+    def test_message_to_Lambda0(self):
+        pass
+
+    def test_message_to_A(self):
+        pass
+
+    def test_message_to_v(self):
+        pass
+
+    def test_message_to_child(self):
+        pass
+
+    def test_moments(self):
+        """
+        Test the updating of GaussianMarkovChain.
+
+        Check that the moments and the lower bound contribution are computed
+        correctly.
+        """
+
+        # TODO: Add plates and missing values!
+
+        # Dimensionalities
+        D = 3
+        N = 5
+        (Y, X, Mu, Lambda, A, V) = self.create_model(N, D)
+
+        # Inference with arbitrary observations
+        y = np.random.randn(N,D)
+        Y.observe(y)
+        X.update()
+        (x_vb, xnxn_vb, xpxn_vb) = X.get_moments()
+
+        # Get parameter moments
+        (mu0, mumu0) = Mu.get_moments()
+        (icov0, logdet0) = Lambda.get_moments()
+        (a, aa) = A.get_moments()
+        (icov_x, logdetx) = V.get_moments()
+        icov_x = np.diag(icov_x)
+        # Prior precision
+        Z = np.einsum('...kij,...kk->...ij', aa, icov_x)
+        U_diag = [icov0+Z] + (N-2)*[icov_x+Z] + [icov_x]
+        U_super = (N-1) * [-np.dot(a.T, icov_x)]
+        U = utils.utils.block_banded(U_diag, U_super)
+        # Prior mean
+        mu_prior = np.zeros(D*N)
+        mu_prior[:D] = np.dot(icov0,mu0)
+        # Data 
+        Cov = np.linalg.inv(U + np.identity(D*N))
+        mu = np.dot(Cov, mu_prior + y.flatten())
+        # Moments
+        xx = mu[:,np.newaxis]*mu[np.newaxis,:] + Cov
+        mu = np.reshape(mu, (N,D))
+        xx = np.reshape(xx, (N,D,N,D))
+
+        # Check results
+        testing.assert_allclose(x_vb, mu,
+                                err_msg="Incorrect mean")
+        for n in range(N):
+            testing.assert_allclose(xnxn_vb[n,:,:], xx[n,:,n,:],
+                                    err_msg="Incorrect second moment")
+        for n in range(N-1):
+            testing.assert_allclose(xpxn_vb[n,:,:], xx[n,:,n+1,:],
+                                    err_msg="Incorrect lagged second moment")
+
+
+        # Compute the entropy H(X)
+        ldet = utils.linalg.logdet_cov(Cov)
+        H = utils.random.gaussian_entropy(ldet, N*D)
+        # Compute <log p(X|...)>
+        xx = np.reshape(xx, (N*D, N*D))
+        mu = np.reshape(mu, (N*D,))
+        ldet = -logdet0 - np.sum(np.ones((N-1,D))*logdetx)
+        P = utils.random.gaussian_logpdf(np.einsum('...ij,...ij', 
+                                                   xx, 
+                                                   U),
+                                         np.einsum('...i,...i', 
+                                                   mu, 
+                                                   mu_prior),
+                                         np.einsum('...ij,...ij', 
+                                                   mumu0,
+                                                   icov0),
+                                         ldet,
+                                         N*D)
+                                                   
+        # The VB bound from the net
+        l = X.lower_bound_contribution()
+
+        testing.assert_allclose(l, H+P)
+                                                   
+
+        # Compute the true bound <log p(X|...)> + H(X)
+        
         
 
     def test_smoothing(self):
         """
         Test the posterior estimation of GaussianMarkovChain.
 
-        Create time-variant dynamics and compare the results of
-        BayesPy VB inference and standard Kalman filtering &
-        smoothing.
+        Create time-variant dynamics and compare the results of BayesPy VB
+        inference and standard Kalman filtering & smoothing.
+
+        This is not that useful anymore, because the moments are checked much
+        better in another test method.
         """
 
         #
@@ -106,8 +225,8 @@ class TestGaussianMarkovChain(unittest.TestCase):
         V = N*(V,)
         UY = Y
         U = N*(C,)
-        (Xh, CovXh) = utils.kalman_filter(UY, U, A, V, np.zeros(D), np.identity(D))
-        (Xh, CovXh) = utils.rts_smoother(Xh, CovXh, A, V)
+        (Xh, CovXh) = utils.utils.kalman_filter(UY, U, A, V, np.zeros(D), np.identity(D))
+        (Xh, CovXh) = utils.utils.rts_smoother(Xh, CovXh, A, V)
 
         #
         # Check results

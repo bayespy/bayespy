@@ -185,16 +185,15 @@ class Gaussian(Variable):
     @staticmethod
     def compute_u_and_g(phi, mask=True):
         # TODO: Compute -2*phi[1] and simplify the formulas
-        L = utils.m_chol(-phi[1])
+        L = utils.m_chol(-2*phi[1])
         k = np.shape(phi[0])[-1]
         # Moments
-        u0 = utils.m_chol_solve(L, 0.5*phi[0])
-        u1 = utils.m_outer(u0, u0) + 0.5 * utils.m_chol_inv(L)
+        u0 = utils.m_chol_solve(L, phi[0])
+        u1 = utils.m_outer(u0, u0) + utils.m_chol_inv(L)
         u = [u0, u1]
         # G
         g = (-0.5 * np.einsum('...i,...i', u[0], phi[0])
-             + 0.5 * utils.m_chol_logdet(L)
-             + 0.5 * np.log(2) * k)
+             + 0.5 * utils.m_chol_logdet(L))
              #+ 0.5 * np.log(2) * self.dims[0][0])
         return (u, g)
 
@@ -280,6 +279,10 @@ class Gaussian(Variable):
         super().__init__(mu, Lambda,
                          **kwargs)
 
+    def get_shape_of_value(self):
+        # Dimensionality of a realization
+        return self.dims[0]
+    
     def random(self):
         # TODO/FIXME: You shouldn't draw random values for
         # observed/fixed elements!

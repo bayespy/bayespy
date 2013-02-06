@@ -33,6 +33,28 @@ import numpy as np
 from .. import utils
 #from bayespy.utils import utils
 
+class TestBroadcasting(unittest.TestCase):
+
+    def test_is_shape_subset(self):
+        f = utils.is_shape_subset
+        self.assertTrue(f( (), () ))
+        self.assertTrue(f( (), (3,) ))
+        self.assertTrue(f( (1,), (1,) ))
+        self.assertTrue(f( (1,), (3,) ))
+        self.assertTrue(f( (1,), (4,1) ))
+        self.assertTrue(f( (1,), (4,3) ))
+        self.assertTrue(f( (1,), (1,3) ))
+        self.assertTrue(f( (3,), (1,3) ))
+        self.assertTrue(f( (3,), (4,3) ))
+        self.assertTrue(f( (5,1,3), (6,5,4,3) ))
+        self.assertTrue(f( (5,4,3), (6,5,4,3) ))
+
+        self.assertFalse(f( (1,), () ))
+        self.assertFalse(f( (3,), (1,) ))
+        self.assertFalse(f( (4,3,), (3,) ))
+        self.assertFalse(f( (4,3,), (1,3,) ))
+        self.assertFalse(f( (6,1,4,3,), (6,1,1,3,) ))
+
 
 class TestBandedSolve(unittest.TestCase):
 

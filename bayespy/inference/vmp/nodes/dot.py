@@ -232,6 +232,8 @@ class MatrixDot(Node):
 
         (A, AA) = self._reshape_to_matrix(A, AA, X.shape[-1])
 
+        #print('debug in matrixdot.moments', np.shape(A), np.shape(AA), np.shape(X), np.shape(XX))
+
         # Compute matrix-vector products
         Y = np.einsum('...ij,...j->...i', A, X)
         YY = np.einsum('...jlik,...lk->...ij', AA, XX)

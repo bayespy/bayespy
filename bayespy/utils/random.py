@@ -39,3 +39,56 @@ def mask(*shape, p=0.5):
         A probability that the elements are `True`.
     """
     return np.random.rand(*shape) < p
+
+def covariance(D):
+    """
+    Draw a random covariance matrix.
+
+    Parameters:
+    -----------
+    D : int
+        Dimensionality of the covariance matrix.
+
+    Returns:
+    --------
+    C : (D,D) ndarray
+        Positive-definite symmetric :math:`D\times D` matrix.
+    """
+    X = np.random.randn(D,D)
+    return np.dot(X, X.T) / D
+
+def wishart_rand(nu, V):
+    """
+    Draw a random sample from the Wishart distribution.
+
+    Parameters:
+    -----------
+    nu : int
+    """
+    raise NotImplementedError()
+
+def gaussian_logpdf(yVy, yVmu, muVmu, logdet_cov, D):
+    """
+    Compute the log probability density of a Gaussian distribution.
+
+    Parameters:
+    yVy : ndarray or double
+    yVmu : ndarray or double
+    muVmu : ndarray or double
+    logdet_cov : ndarray or double
+    D : int
+    """
+    return -0.5*yVy + yVmu - 0.5*muVmu - 0.5*logdet_cov - 0.5*D*np.log(2*np.pi)
+
+def gaussian_entropy(logdet_cov, D):
+    """
+    Compute the entropy of a Gaussian distribution.
+
+    Parameters:
+    -----------
+    logdet_cov : ndarray or double
+        The log-determinant of the covariance matrix.
+    D : int
+        The dimensionality of the distribution.
+    """
+    return 0.5*logdet_cov + 0.5*D + 0.5*D*np.log(2*np.pi)

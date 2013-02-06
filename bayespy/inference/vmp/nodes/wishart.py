@@ -46,8 +46,8 @@ def WishartPrior(k):
         @staticmethod
         def compute_fixed_moments(n):
             """ Compute moments for fixed x. """
-            u0 = n
-            u1 = special.multigammaln(0.5*n, k)
+            u0 = np.asanyarray(n)
+            u1 = special.multigammaln(0.5*u0, k)
             return [u0, u1]
 
         @staticmethod
@@ -144,6 +144,13 @@ class Wishart(Variable):
     @staticmethod
     def compute_dims_from_values(x):
         """ Compute the dimensions of phi and u. """
+        if np.ndim(x) < 2:
+            raise ValueError("Values for Wishart distribution must be at least "
+                             "2-D arrays.")
+        if np.shape(x)[-1] != np.shape(x)[-2]:
+            raise ValueError("Values for Wishart distribution must be square "
+                             "matrices, thus the two last axes must have equal "
+                             "length.")
         d = np.shape(x)[-1]
         return ( (d,d), () )
 
@@ -160,10 +167,9 @@ class Wishart(Variable):
         # Check for constant n
         if np.isscalar(n) or isinstance(n, np.ndarray):
             n = Constant(WishartPrior(k))(n)
-            #n = NodeConstantScalar(n)
 
         self.parameter_distributions = (WishartPrior(k), Wishart)
-        
+
         super().__init__(n, V, plates=plates, **kwargs)
         
     def show(self):

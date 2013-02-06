@@ -140,14 +140,21 @@ class Node:
         if plates is None:
             # By default, use the minimum number of plates determined
             # from the parent nodes
-            self.plates = utils.broadcasted_shape(*parent_plates)
+            try:
+                self.plates = utils.broadcasted_shape(*parent_plates)
+            except ValueError:
+                raise ValueError("The plates of the parents do not broadcast.")
         else:
             # Use custom plates
             self.plates = plates
             # TODO/FIXME: Check that these plates are consistent with parents.
             # This is not a good test yet.. You need to check that the
             # parent_plates are a subset of plates.
-            plates_broadcasted = utils.broadcasted_shape(plates, *parent_plates)
+            try:
+                plates_broadcasted = utils.broadcasted_shape(plates, *parent_plates)
+            except ValueError:
+                raise ValueError("The given plates and the plates of the "
+                                 "parents do not broadcast.")
             
 
         # Children
@@ -194,6 +201,12 @@ class Node:
         # Check broadcasting of the shapes
         for arg in args:
             utils.broadcasted_shape(plates, arg)
+
+        # Check that each arg-plates are a subset of plates?
+        for arg in args:
+            if not utils.is_shape_subset(arg, plates):
+                raise ValueError("The shapes in args are not a sub-shape of "
+                                 "plates.")
             
         r = 1
         for j in range(-len(plates),0):
@@ -309,23 +322,26 @@ class Node:
                     # single plates)
                     plates_self = self.plates_to_parent(index)
                     try:
+                        ## print('node.msg', self.name, plates_self, 
+                        ##                           plates_m,
+                        ##                           parent.plates)
                         r = self.plate_multiplier(plates_self, 
                                                   plates_m,
                                                   parent.plates)
                     except ValueError:
-                        raise ValueError("The plates of the message, this node "
-                                         "(%s) and parent[%d] node (%s) are "
-                                         "inconsistent. "
-                                         "The message has shape %s, meaning "
-                                         "plates %s. This node has plates %s "
-                                         "with respect to the parent[%d], "
-                                         "which has plates %s." 
-                                         % (self.name,
-                                            index,
+                        raise ValueError("The plates of the message and "
+                                         "parent[%d] node (%s) are not a "
+                                         "broadcastable subset of the plates "
+                                         "of this node (%s).  The message has "
+                                         "shape %s, meaning plates %s. This "
+                                         "node has plates %s with respect to "
+                                         "the parent[%d], which has plates %s."
+                                         % (index,
                                             parent.name,
-                                            np.shape(m[i]),
-                                            plates_m,
-                                            plates_self,
+                                            self.name,
+                                            np.shape(m[i]), 
+                                            plates_m, 
+                                            plates_self, 
                                             index,
                                             parent.plates))
 
@@ -367,8 +383,170 @@ class Node:
         """
         raise NotImplementedError()
 
+    def move_plates(self, from_plate, to_plate):
+        return _MovePlate(self, 
+                          from_plate,
+                          to_plate,
+                          name=self.name + ".move_plates")
+
+    def add_plate_axis(self, to_plate):
+        return _AddPlateAxis(self,
+                             to_plate,
+                             name=self.name+".add_plate_axis")
+
+class _AddPlateAxis(Node):
+
+    def __init__(self, X, to_plate, plates=None, **kwargs):
+        
+        if plates is not None:
+            raise ValueError("Do not specify plates.")
+
+        plates = X.plates
+
+        N = len(plates) + 1
+
+        # Check the parameters
+        if to_plate >= N or to_plate < -N:
+            raise ValueError("Invalid plate position to add.")
+
+        # Use positive indexing only
+        if to_plate < 0:
+            to_plate += N
+        self.to_plate = to_plate
+
+        # Move the plate
+        plates = list(plates)
+        plates.insert(self.to_plate, 1)
+
+        super().__init__(X, 
+                         plates=tuple(plates),
+                         dims=X.dims,
+                         **kwargs)
+
+    def plates_to_parent(self, index):
+        return self.plates[:self.to_plate] + self.plates[(self.to_plate+1):]
+
+        
+    def get_moments(self):
+        """
+        Get the moments with an added plate axis.
+        """
+
+        # Get parents' moments
+        u = self.parents[0].message_to_child()
+
+        # Move a plate axis
+        u = list(u)
+        for i in range(len(u)):
+            # Make sure the moments have all the axes
+            diff = len(self.plates) + len(self.dims[i]) - np.ndim(u[i]) - 1
+            u[i] = utils.add_leading_axes(u[i], diff)
+            # Add one axes to the correct position
+            sh_u = list(np.shape(u[i]))
+            sh_u.insert(self.to_plate, 1)
+            u[i] = np.reshape(u[i], sh_u)
+
+        return tuple(u)
+
+    def get_message(self, index, u_parents):
+        """
+        Compute the message to a parent node.
+        """
+
+        # Get the message from children
+        (m, mask) = self.message_from_children()
+
+        # Remove the added message plate
+        for i in range(len(m)):
+            # Make sure the message has all the axes
+            diff = len(self.plates) + len(self.dims[i]) - np.ndim(m[i])
+            m[i] = utils.add_leading_axes(m[i], diff)
+            # Remove the axis
+            sh_m = list(np.shape(m[i]))
+            sh_m.pop(self.to_plate)
+            m[i] = np.reshape(m[i], sh_m)
+
+        # Remove the added mask plate
+        diff = len(self.plates) - np.ndim(mask)
+        mask = utils.add_leading_axes(mask, diff)
+        sh_mask = list(np.shape(mask))
+        sh_mask.pop(self.to_plate)
+        mask = np.reshape(mask, sh_mask)
+
+        return (m, mask)
 
 
+class _MovePlate(Node):
+    """
+    Move a plate to a given position.
+
+    NOTE: This has NOT been tested yet..
+    """
+
+    def __init__(self, X, from_plate, to_plate, plates=None, **kwargs):
+
+        if plates is not None:
+            raise ValueError("Do not specify plates.")
+
+        plates = X.plates
+
+        # Check the parameters
+        if from_plate >= len(plates) or from_plate < -len(plates):
+            raise ValueError("Invalid plate to move from.")
+        if to_plate >= len(plates) or to_plate < -len(plates):
+            raise ValueError("Invalid plate to move to.")
+
+        # Use positive indexing only
+        if from_plate < 0:
+            from_plate = len(plates) + from_plate
+        if to_plate < 0:
+            to_plate = len(plates) + to_plate + 1
+
+        # Move the plate
+        plates = list(plates)
+        plates.insert(to_plate, plates.pop(from_plate))
+
+        super().__init__(X, 
+                         plates=tuple(plates),
+                         dims=X.dims,
+                         **kwargs)
+
+    def get_moments(self):
+        """
+        Get the moments with moved plates.
+        """
+
+        # Get parents' moments
+        u = self.parents[0].message_to_child()
+
+        # Move a plate axis
+        u = list(u)
+        for i in range(len(u)):
+            u[i] = utils.moveaxis(u[i], self.from_plate, self.to_plate)
+
+        return tuple(u)
+
+    def get_message(self, index, u_parents):
+        """
+        Compute the message to a parent node.
+        """
+
+        # Get the message from children
+        (m, mask) = self.message_from_children()
+
+        # Move message plates
+        for i in range(len(m)):
+            diff = len(self.plates) + len(self.dims[i]) - self.np.ndim(m[i])
+            m[i] = utils.add_leading_axes(m[i], diff)
+            m[i] = utils.moveaxis(m[i], self.to_plate, self.from_plate)
+
+        # Move mask plates
+        mask = utils.add_leading_axes(mask, len(self.plates) - np.ndim(mask))
+        mask = utils.moveaxis(mask, self.to_plate, self.from_plate)
+
+        return (m, mask)
+
+    
 class NodeConstant(Node):
     def __init__(self, u, **kwargs):
         self.u = u

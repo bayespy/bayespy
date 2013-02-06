@@ -141,7 +141,9 @@ class GaussianMarkovChain(Variable):
         phi1 *= -0.5
 
         # Super-diagonal blocks: 0.5 * A.T * V
-        phi2[..., :, :, :] = np.einsum('...,...ji,...j->...ij', 0.5, A, v)
+        # However, don't multiply by 0.5 because there are both super- and
+        # sub-diagonal blocks (sum them together)
+        phi2[..., :, :, :] = np.einsum('...ji,...j->...ij', A, v)
 
         return (phi0, phi1, phi2)
 
@@ -169,9 +171,9 @@ class GaussianMarkovChain(Variable):
         
         g1 = 0.5 * logdet_Lambda
         if np.ndim(logdet_v) == 1:
-            g1 = g1 + 0.5 * N * np.sum(logdet_v, axis=-1)
+            g1 = g1 + 0.5 * (N-1) * np.sum(logdet_v, axis=-1)
         elif np.shape(logdet_v)[-2] == 1:
-            g1 = g1 + 0.5 * N * np.sum(logdet_v, axis=(-1,-2))
+            g1 = g1 + 0.5 * (N-1) * np.sum(logdet_v, axis=(-1,-2))
         else:
             g1 = g1 + 0.5 * np.sum(logdet_v, axis=(-1,-2))
 
@@ -195,7 +197,9 @@ class GaussianMarkovChain(Variable):
         # Solve the Kalman filtering and smoothing problem
         y = phi[0]
         A = -2*phi[1]
-        B = -2*phi[2]
+        # Don't multiply phi[2] by two because it is a sum of the super- and
+        # sub-diagonal blocks so we would need to divide by two anyway.
+        B = -phi[2]
         (CovXnXn, CovXpXn, Xn, ldet) = utils.block_banded_solve(A, B, y)
         
         # Compute moments
@@ -212,7 +216,13 @@ class GaussianMarkovChain(Variable):
     @staticmethod
     def compute_fixed_u_and_f(x):
         """ Compute u(x) and f(x) for given x. """
-        raise NotImplementedError()
+        u0 = x
+        u1 = x[...,:,np.newaxis] * x[...,np.newaxis,:]
+        u2 = x[...,:-1,:,np.newaxis] * x[...,1:,np.newaxis,:]
+        u = [u0, u1, u2]
+
+        f = -0.5 * np.shape(x)[-2] * np.shape(x)[-1] * np.log(2*np.pi)
+        return (u, f)
 
     @staticmethod
     def compute_message(index, u, u_parents):
@@ -242,7 +252,6 @@ class GaussianMarkovChain(Variable):
             XpXn = u[2]
             v = u_v[0]
             m0 = v[...,np.newaxis] * XpXn.swapaxes(-1,-2)
-            
             m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
             return (m0, m1)
             
@@ -352,7 +361,7 @@ class GaussianMarkovChain(Variable):
             n_A = A.plates[-2]
         n_v = 1
         if len(v.plates) >= 2:
-            n_v = b.plates[-2]
+            n_v = v.plates[-2]
         if n_v != n_A and n_v != 1 and n_A != 1:
             raise Exception("Plates of A and v are giving different number of time instances")
         n_A = max(n_v, n_A)
@@ -379,6 +388,10 @@ class GaussianMarkovChain(Variable):
         super().__init__(mu, Lambda, A, v, N, **kwargs)
 
 
+    def get_shape_of_value(self):
+        # Dimensionality of a realization
+        return self.dims[0]
+    
     def plates_to_parent(self, index):
         """
         Computes the plates of this node with respect to a parent.

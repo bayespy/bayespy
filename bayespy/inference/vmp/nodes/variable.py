@@ -220,10 +220,12 @@ class Variable(Node):
     # TODO: Initialization where you could give the distribution
     # values in standard parameterization!
 
-    ## def initialize_from_value(self, x):
-    ##     # Update moments from value
-    ##     (u, f) = self.compute_fixed_u_and_f(x)
-    ##     self.update_u_and_g(u, np.nan, mask=True)
+    def initialize_from_value(self, x):
+        # Update moments from value
+        if np.shape(x) != self.plates + self.get_shape_of_value():
+            raise ValueError("Invalid shape of the value for initialization.")
+        (u, f) = self.compute_fixed_u_and_f(x)
+        self.update_u_and_g(u, np.nan, mask=True)
 
     ## def initialize_from_random(self):
     ##     self.initialize_from_prior()

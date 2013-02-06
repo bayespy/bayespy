@@ -37,7 +37,9 @@ import scipy.sparse as sparse
 #import scikits.sparse.cholmod as cholmod
 
 from .utils import nested_iterator
-    
+
+def logdet_cov(C):
+    return chol_logdet(chol(C))
 
 def chol(C):
     if sparse.issparse(C):

@@ -343,7 +343,18 @@ def broadcasted_shape_from_arrays(*args):
                     raise Exception("Shapes do not broadcast")
         S = S + (s,)
     return S
-            
+
+def is_shape_subset(sub_shape, full_shape):
+    """
+    """
+    if len(sub_shape) > len(full_shape):
+        return False
+    for i in range(len(sub_shape)):
+        ind = -1 - i
+        if sub_shape[ind] != 1 and sub_shape[ind] != full_shape[ind]:
+            return False
+    return True
+
 def broadcasted_shape(*shapes):
     """
     Get the resulting shape if the given shapes were broadcasted.
@@ -685,8 +696,9 @@ def block_banded(D, B):
     N = len(D)
 
     if len(B) != N-1:
-        raise ValueError("The number of super-diagonal blocks must contain exactly one block \
-                          less than the number of diagonal blocks")
+        raise ValueError("The number of super-diagonal blocks must contain "
+                         "exactly one block less than the number of diagonal "
+                         "blocks")
 
     # Compute the size of the full matrix
     M = 0
@@ -776,7 +788,10 @@ def block_banded_solve(A, B, y):
         # Compute the solution of the system
         x[n+1] = y[n+1] - np.dot(B[n].T, chol_solve(V[n], x[n]))
         # Compute the diagonal block and store the Cholesky factor
-        V[n+1] = chol(A[n+1] - np.dot(B[n].T, chol_solve(V[n], B[n])))
+        V[n+1] = A[n+1] - np.dot(B[n].T, chol_solve(V[n], B[n]))
+        V[n+1] = 0.5*V[n+1] + 0.5*V[n+1].T
+        V[n+1] = chol(V[n+1])
+        #V[n+1] = chol(A[n+1] - np.dot(B[n].T, chol_solve(V[n], B[n])))
         # Compute the log-det term here, too
         ldet += chol_logdet(V[n+1])
 
@@ -793,6 +808,7 @@ def block_banded_solve(A, B, y):
         C[n] = -np.dot(Z, V[n+1])
         # Compute the diagonal block of the inverse
         V[n] = chol_inv(V[n]) + np.dot(np.dot(Z, V[n+1]), Z.T)
+        V[n] = 0.5*V[n] + 0.5*V[n].T
 
     return (V, C, x, ldet)
     

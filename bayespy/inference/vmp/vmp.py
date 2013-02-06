@@ -32,6 +32,9 @@ class VB():
         self.iter = 0
         self.L = -np.inf
 
+        self.l = dict(zip(self.model, 
+                          len(self.model)*[np.array([-np.inf])]))
+
     def update(self, *nodes, repeat=1):
 
         # By default, update all nodes
@@ -63,6 +66,11 @@ class VB():
     def loglikelihood_lowerbound(self):
         L = 0
         for node in self.model:
-            L += node.lower_bound_contribution()
+            lp = node.lower_bound_contribution()
+            self.l[node] = np.append(self.l[node], lp)
+            L += lp
         return L
+
+    def get_iteration_by_nodes(self):
+        return self.l
 
