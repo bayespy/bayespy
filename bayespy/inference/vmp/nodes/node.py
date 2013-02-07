@@ -223,7 +223,7 @@ class Node():
         # be expensive..
         m = self._get_message_to_parent(index)
         #my_mask = self.mask #self._get_message_mask()
-        my_mask = self._mask_to_parent(index)
+        my_mask = self._compute_mask_to_parent(index, self.mask)
 
         # The parent we're sending the message to
         parent = self.parents[index]
