@@ -98,7 +98,8 @@ def run(M=10, N=100, D_y=3, D=5):
     W.initialize_from_parameters(W.random(), np.identity(D))
 
     # Inference loop.
-    Q.update(X, W, tau, alpha, repeat=200)
+    Q.update(X, W, repeat=1)
+    Q.update(alpha, tau, repeat=1)
 
     plt.clf()
     WX_params = WX.get_parameters()
