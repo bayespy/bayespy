@@ -23,6 +23,8 @@
 ######################################################################
 
 import numpy as np
+import matplotlib.pyplot as plt
+import warnings
 import time
 
 class VB():
@@ -33,7 +35,7 @@ class VB():
         self.L = -np.inf
 
         self.l = dict(zip(self.model, 
-                          len(self.model)*[np.array([-np.inf])]))
+                          len(self.model)*[np.array([])]))
 
     def update(self, *nodes, repeat=1):
 
@@ -54,8 +56,8 @@ class VB():
             # Check for errors
             if self.L - L > 1e-6:
                 L_diff = (self.L - L)
-                print("Lower bound decreased %e! Bug somewhere or numerical inaccuracy?" % L_diff)
-                #raise Exception("Lower bound decreased %e! Bug somewhere or numerical inaccuracy?" % L_diff)
+                warnings.warn("Lower bound decreased %e! Bug somewhere or "
+                              "numerical inaccuracy?" % L_diff)
 
             # Check for convergence
             if L - self.L < 1e-12:
@@ -70,6 +72,25 @@ class VB():
             self.l[node] = np.append(self.l[node], lp)
             L += lp
         return L
+
+    def plot_iteration_by_nodes(self):
+        """
+        Plot the cost function per node during the iteration.
+
+        Handy tool for debugging.
+        """
+        
+        D = len(self.l)
+        N = self.iter
+        L = np.empty((N,D))
+        legends = []
+        for (d, node) in enumerate(self.l):
+            L[:,d] = self.l[node]
+            legends += [node.name]
+        plt.plot(np.arange(N)+1, L)
+        plt.legend(legends)
+        plt.title('Lower bound contributions by nodes')
+        plt.xlabel('Iteration')
 
     def get_iteration_by_nodes(self):
         return self.l
