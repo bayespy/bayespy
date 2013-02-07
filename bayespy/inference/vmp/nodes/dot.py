@@ -27,10 +27,11 @@ import numpy as np
 from bayespy.utils import utils
 
 from .node import Node
+from .deterministic import Deterministic
 from .constant import Constant
 from .gaussian import Gaussian
 
-class Dot(Node):
+class Dot(Deterministic):
     """
     A deterministic node for computing vector product of two Gaussians.
 
@@ -69,14 +70,14 @@ class Dot(Node):
                 raise ValueError("Dimensions of the Gaussians do not "
                                  "match: %s" % (parent_dims,))
 
-        try:
-            plates = utils.broadcasted_shape(*parent_plates)
-        except ValueError:
-            raise ValueError("The plates of the parents are "
-                             "incompatible: %s" % (parent_plates,))
+        ## try:
+        ##     plates = utils.broadcasted_shape(*parent_plates)
+        ## except ValueError:
+        ##     raise ValueError("The plates of the parents are "
+        ##                      "incompatible: %s" % (parent_plates,))
         
         super().__init__(*parents,
-                         plates=tuple(plates), 
+        #plates=tuple(plates), 
                          dims=((),()),
                          **kwargs)
 
@@ -92,7 +93,7 @@ class Dot(Node):
         u1 = list()
         u2 = list()
         for parent in self.parents:
-            u = parent.message_to_child()
+            u = parent._message_to_child()
             u1.append(u[0])
             u2.append(u[1])
 
@@ -110,10 +111,17 @@ class Dot(Node):
         return u
         
 
-    def get_message(self, index, u_parents):
+    def _compute_message_to_parent(self, index, m, *u_parents):
+        #def get_message(self, index, u_parents):
         
-        (m, mask) = self.message_from_children()
+        #(m, mask) = self.message_from_children()
 
+        # Normally we don't need to care about masks when computing the
+        # message. However, in this node we want to avoid computing huge message
+        # arrays so we sum some axis already here. Thus, we need to apply the
+        # mask
+
+        mask = self.mask
         parent = self.parents[index]
 
         # Compute both messages
@@ -158,11 +166,12 @@ class Dot(Node):
             m[i] = utils.sum_product(*A, axes_to_sum=axes, keepdims=True) / r
 
         # Compute the mask
-        s = utils.axes_to_collapse(np.shape(mask), parent.plates)
-        mask = np.any(mask, axis=s, keepdims=True)
-        mask = utils.squeeze_to_dim(mask, len(parent.plates))
+        ## s = utils.axes_to_collapse(np.shape(mask), parent.plates)
+        ## mask = np.any(mask, axis=s, keepdims=True)
+        ## mask = utils.squeeze_to_dim(mask, len(parent.plates))
 
-        return (m, mask)
+        return m
+    #return (m, mask)
 
 
 

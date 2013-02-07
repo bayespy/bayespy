@@ -70,6 +70,7 @@ def Constant(distribution):
 
         def get_moments(self):
             return self.u
+        
     return _Constant
     
 

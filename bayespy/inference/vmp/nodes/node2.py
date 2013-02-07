@@ -40,9 +40,9 @@ class Node():
     def __init__(self, *parents, dims=None, plates=None, name=""):
 
         if dims is None:
-            raise Exception("You need to specify the dimensionality" \
-                            + " of the distribution for class" \
-                            + str(self.__class__))
+            raise Exception("You need to specify the dimensionality of the "
+                            "distribution for class %s"
+                            % str(self.__class__))
 
         self.dims = dims
         self.name = name
@@ -79,6 +79,16 @@ class Node():
 
         # Children
         self.children = list()
+
+    @staticmethod
+    def _compute_dims_from_parents(*parents):
+        """ Compute the dimensions of phi and u. """
+        raise NotImplementedError()
+
+    @staticmethod
+    def _compute_dims_from_values(x):
+        """ Compute the dimensions of phi and u. """
+        raise NotImplementedError()
 
     def _add_child(self, child, index):
         """
@@ -209,21 +219,22 @@ class Node():
         for (child,index) in self.children:
             m = child._message_to_parent(index)
             for i in range(len(self.dims)):
-                # Check broadcasting shapes
-                sh = utils.broadcasted_shape(self.get_shape(i), np.shape(m[i]))
-                try:
-                    # Try exploiting broadcasting rules
-                    msg[i] += m[i]
-                except ValueError:
-                    msg[i] = msg[i] + m[i]
+                if m[i] is not None:
+                    # Check broadcasting shapes
+                    sh = utils.broadcasted_shape(self.get_shape(i), np.shape(m[i]))
+                    try:
+                        # Try exploiting broadcasting rules
+                        msg[i] += m[i]
+                    except ValueError:
+                        msg[i] = msg[i] + m[i]
 
         return msg
 
     def _message_from_parents(self, ignore=None):
         return [parent._message_to_child() 
-                for (ind,parent) in enumerate(self.parents)
                 if ind != ignore else
-                None]
+                None
+                for (ind,parent) in enumerate(self.parents)]
 
     def get_moments(self):
         raise NotImplementedError()
@@ -266,12 +277,16 @@ class Stochastic(Node):
     def _get_message_to_parent(self, index):
         u_parents = self._message_from_parents(ignore=index)
         return self._compute_message_to_parent(index, self.u, *u_parents)
+
+    @staticmethod
+    def _compute_mask_to_parent(index, mask):
+        # Sub-classes may want to overwrite this if they do something to plates.
+        return mask
     
     def _mask_to_parent(self, index):
         return self._compute_mask_to_parent(index, self.mask)
 
     def _set_mask(self, mask):
-        # Sub-classes may want to overwrite this
         self.mask = np.logical_or(mask, self.observed)
     
     def _set_moments(self, u, mask=True):
@@ -287,6 +302,9 @@ class Stochastic(Node):
             sh = utils.broadcasted_shape_from_arrays(self.u[ind], u[ind], u_mask)
             self.u[ind] = utils.repeat_to_shape(self.u[ind], sh)
 
+            # TODO/FIXME/BUG: The mask of observations is not used, observations
+            # may be overwritten!!! ???
+            
             # Use mask to update only unobserved plates and keep the
             # observed as before
             np.copyto(self.u[ind],
@@ -306,9 +324,10 @@ class Stochastic(Node):
                                 "that you have provided plates properly.")
 
     def update(self):
-        u_parents = self._message_from_parents()
-        m_children = self._message_from_children()
-        self._update_distribution_and_lowerbound(m_children, *u_parents)
+        if not np.all(self.observed):
+            u_parents = self._message_from_parents()
+            m_children = self._message_from_children()
+            self._update_distribution_and_lowerbound(m_children, *u_parents)
 
     def observe(y, mask=True):
         """
