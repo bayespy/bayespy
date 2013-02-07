@@ -98,7 +98,7 @@ def run(M=10, N=100, D_y=3, D=5):
     W.initialize_from_parameters(W.random(), np.identity(D))
 
     # Inference loop.
-    Q.update(X, W, tau, alpha, repeat=200)
+    Q.update(X, W, repeat=200)
 
     plt.clf()
     WX_params = WX.get_parameters()
@@ -123,7 +123,9 @@ def run(M=10, N=100, D_y=3, D=5):
     #myplt.binary_matrix(WX.get_mask())
     plt.subplot(2,2,4)
     myplt.binary_matrix(Y.mask)
-    
+
+    tau.show()
+    alpha.show()
 
     plt.show()
 
