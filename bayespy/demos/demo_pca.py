@@ -37,8 +37,8 @@ def pca_model(M, N, D):
     # Construct the PCA model with ARD
 
     # ARD
-    alpha = nodes.Gamma(1e-10,
-                        1e-10,
+    alpha = nodes.Gamma(1e-2,
+                        1e-2,
                         plates=(D,),
                         name='alpha')
 
@@ -58,7 +58,7 @@ def pca_model(M, N, D):
     WX = nodes.Dot(W, X, name="WX")
 
     # Noise
-    tau = nodes.Gamma(1e-5, 1e-5, name="tau", plates=())
+    tau = nodes.Gamma(1e-2, 1e-2, name="tau", plates=())
 
     # Noisy observations
     Y = nodes.Normal(WX, tau, name="Y", plates=(M,N))
@@ -127,7 +127,6 @@ def run(M=10, N=100, D_y=3, D=5):
 
     tau.show()
     alpha.show()
-    
 
     plt.show()
 
