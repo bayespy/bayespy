@@ -51,16 +51,20 @@ class Deterministic(Node):
         u_parents = [parent._message_to_child() for parent in self.parents]
         return self._compute_moments(*u_parents)
 
-    def _get_message_to_parent(self, index):
+    def _get_message_and_mask_to_parent(self, index):
         u_parents = self._message_from_parents(exclude=index)
         m_children = self._message_from_children()
-        return self._compute_message_to_parent(index, m_children, *u_parents)
+        return self._compute_message_and_mask_to_parent(index,
+                                                        m_children,
+                                                        *u_parents)
+        #mask = self._compute_mask_to_parent(index)
+        #return (m, mask)
         
     
     def _compute_moments(self, *u_parents):
         # Sub-classes should implement this
         raise NotImplementedError()
 
-    def _compute_message_to_parent(self, index, m_children, *u_parents):
+    def _compute_message_and_mask_to_parent(self, index, m_children, *u_parents):
         # Sub-classes should implement this
         raise NotImplementedError()

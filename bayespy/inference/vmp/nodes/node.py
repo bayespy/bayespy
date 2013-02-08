@@ -40,6 +40,9 @@ class Node():
     parents
     children
     name
+
+    Implement:
+    _get_message_and_mask_to_parent
     """
     
     def __init__(self, *parents, dims=None, plates=None, name=""):
@@ -159,13 +162,30 @@ class Node():
     ##     # Sub-classes may want to overwrite this if they do something to plates.
     ##     return mask
 
+    # TODO: Rename to _compute_message_mask_to_parent(index, mask)
     @staticmethod
     def _compute_mask_to_parent(index, mask):
-        # Sub-classes may want to overwrite this method if they do something to
-        # plates
+        """
+        Compute the mask used for messages sent to parent[index].
+
+        The mask tells which plates in the messages are active. This method is
+        used for obtaining the mask which is used to set plates in the messages
+        to parent to zero.
+        
+        Sub-classes may want to overwrite this method if they do something to
+        plates so that the mask is somehow altered. 
+        """
         return mask
 
     def _mask_to_parent(self, index):
+        """
+        Get the mask with respect to parent[index].
+
+        The mask tells which plate connections are active. The mask is "summed"
+        (logical or) and reshaped into the plate shape of the parent. Thus, it
+        can't be used for masking messages, because some plates have been summed
+        already. This method is used for propagating the mask to parents.
+        """
         mask = self._compute_mask_to_parent(index, self.mask)
 
         # Check the shape of the mask
@@ -186,21 +206,6 @@ class Node():
                                 plates_to_parent,
                                 self.__class__.__name__))
 
-        ## if not utils.is_shape_subset(parent_plates, np.shape(mask)):
-        ##     print(self._plates_to_parent(index))
-        ##     raise ValueError("The mask of the node %s being sent to parent[%d] "
-        ##                      "(%s) has invalid shape: The plates of the "
-        ##                      "parent %s is not a subset of the shape of the "
-        ##                      "mask %s. It could be that this node (%s) is "
-        ##                      "manipulating plates but has not overwritten the "
-        ##                      "method _compute_mask_to_parent."
-        ##                      % (self.name,
-        ##                         index,
-        ##                         self.parents[index].name,
-        ##                         parent_plates,
-        ##                         np.shape(mask),
-        ##                         self.__class__.__name__))
-
         # "Sum" (i.e., logical or) over the plates that have unit length in 
         # the parent node.
         parent_plates = self.parents[index].plates
@@ -213,6 +218,9 @@ class Node():
     def _message_to_child(self):
         return self.get_moments()
     
+    def _get_message_and_mask_to_parent(self, index):
+        raise NotImplementedError()
+
     def _message_to_parent(self, index):
         # Compute the message, check plates, apply mask and sum over some plates
         if index >= len(self.parents):
@@ -221,9 +229,9 @@ class Node():
         # Compute the message
         # TODO/FIXME: If several deterministic nodes as a chain, get_mask will
         # be expensive..
-        m = self._get_message_to_parent(index)
+        (m, my_mask) = self._get_message_and_mask_to_parent(index)
         #my_mask = self.mask #self._get_message_mask()
-        my_mask = self._compute_mask_to_parent(index, self.mask)
+        #my_mask = self._compute_mask_to_parent(index, self.mask)
 
         # The parent we're sending the message to
         parent = self.parents[index]

@@ -111,7 +111,7 @@ class Dot(Deterministic):
         return u
         
 
-    def _compute_message_to_parent(self, index, m, *u_parents):
+    def _compute_message_and_mask_to_parent(self, index, m, *u_parents):
         #def get_message(self, index, u_parents):
         
         #(m, mask) = self.message_from_children()
@@ -166,11 +166,11 @@ class Dot(Deterministic):
             m[i] = utils.sum_product(*A, axes_to_sum=axes, keepdims=True) / r
 
         # Compute the mask
-        ## s = utils.axes_to_collapse(np.shape(mask), parent.plates)
-        ## mask = np.any(mask, axis=s, keepdims=True)
-        ## mask = utils.squeeze_to_dim(mask, len(parent.plates))
+        s = utils.axes_to_collapse(np.shape(mask), parent.plates)
+        mask = np.any(mask, axis=s, keepdims=True)
+        mask = utils.squeeze_to_dim(mask, len(parent.plates))
 
-        return m
+        return (m, mask)
     #return (m, mask)
 
 

@@ -59,9 +59,11 @@ class Stochastic(Node):
         # Sub-classes should implement this
         raise NotImplementedError()
 
-    def _get_message_to_parent(self, index):
+    def _get_message_and_mask_to_parent(self, index):
         u_parents = self._message_from_parents(exclude=index)
-        return self._compute_message_to_parent(index, self.u, *u_parents)
+        m = self._compute_message_to_parent(index, self.u, *u_parents)
+        mask = self._compute_mask_to_parent(index, self.mask)
+        return (m, mask)
 
     ## def get_mask(self):
     ##     return self.mask

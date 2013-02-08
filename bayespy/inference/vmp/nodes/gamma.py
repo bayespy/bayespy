@@ -195,7 +195,7 @@ class _GammaToDiagonalWishart(Deterministic):
         return [np.identity(self.dims[0][0]) * u[0][...,np.newaxis],
                 np.sum(u[1], axis=(-1))]
 
-    def _compute_message_to_parent(self, index, m_children, *u_parents):
+    def _compute_message_and_mask_to_parent(self, index, m_children, *u_parents):
         
         m = self._message_from_children()
         #(m, mask) = self.message_from_children()
@@ -206,11 +206,11 @@ class _GammaToDiagonalWishart(Deterministic):
         m[1] = np.reshape(m[1], np.shape(m[1]) + (1,))
         # m[1] is ok
 
+        mask = self._compute_mask_to_parent(index, self.mask)
         #mask = mask[...,np.newaxis]
 
-        # TODO/FIXME/BUG: THE MASK TO PARENT MUST BE FIXED!!
-
-        return m
+        return (m, mask)
+        #return m
         
 
 
