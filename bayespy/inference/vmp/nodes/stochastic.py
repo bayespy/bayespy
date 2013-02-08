@@ -90,6 +90,10 @@ class Stochastic(Node):
             # TODO/FIXME/BUG: The mask of observations is not used, observations
             # may be overwritten!!! ???
             
+            # Hah, this function is used to set the observations! The caller
+            # should be careful what mask he uses! If you want to set only
+            # latent variables, then use such a mask.
+            
             # Use mask to update only unobserved plates and keep the
             # observed as before
             np.copyto(self.u[ind],
@@ -97,6 +101,8 @@ class Stochastic(Node):
                       where=u_mask)
 
             # Make sure u has the correct number of dimensions:
+            # TODO/FIXME: Maybe it would be good to also check that u has a
+            # shape that is a sub-shape of get_shape.
             shape = self.get_shape(ind)
             ndim = len(shape)
             ndim_u = np.ndim(self.u[ind])
