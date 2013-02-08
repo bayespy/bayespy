@@ -40,6 +40,9 @@ class Stochastic(Node):
        lowerbound(self)
        _compute_dims
 
+    If you want to be able to observe the variable:
+       _compute_fixed_moments_and_f
+
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
        _compute_mask_to_parent(index, mask)

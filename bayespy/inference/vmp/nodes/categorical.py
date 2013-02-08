@@ -66,7 +66,7 @@ def Categorical(p, **kwargs):
             return (u, g)
 
         @staticmethod
-        def compute_fixed_u_and_f(x):
+        def _compute_fixed_moments_and_f(x, mask=True):
             """ Compute u(x) and f(x) for given x. """
 
             # TODO: You could check that x has proper dimensions
