@@ -81,6 +81,9 @@ def run():
         bpplt.errorplot(Xh[:,d], error=2*np.sqrt(CovXh[:,d,d]))
         plt.plot(X[:,d], 'r-')
         plt.plot(Y[:,d], '.')
+    plt.show()
     
-
-#pip install https://github.com/matplotlib/matplotlib/archive/v1.2.0rc3.tar.gz
+if __name__ == '__main__':
+    # FOR INTERACTIVE SESSIONS, NON-BLOCKING PLOTTING:
+    #plt.ion()
+    run()
