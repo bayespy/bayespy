@@ -33,6 +33,18 @@ class Stochastic(Node):
 
     u
     observed
+
+    Sub-classes must implement:
+    1. _compute_message_to_parent(index, u_self, *u_parents)
+    2. _update_distribution_and_lowerbound(self, m, *u)
+    3. lowerbound(self)
+
+    Sub-classes may need to re-implement:
+    1. If they manipulate plates:
+       _compute_mask_to_parent(index, mask)
+       _plates_to_parent(self, index)
+       _plates_from_parent(self, index)
+    
     """
 
     def __init__(self, *args, initialize=True, **kwargs):
@@ -154,10 +166,10 @@ class Stochastic(Node):
         # Sub-class should implement this
         raise NotImplementedError()
 
-    @staticmethod
-    def _compute_fixed_moments_and_f(x, mask=True):
-        # Sub-classes should implement this
-        raise NotImplementedError()
+    ## @staticmethod
+    ## def _compute_fixed_moments_and_f(x, mask=True):
+    ##     # Sub-classes should implement this
+    ##     raise NotImplementedError()
 
     def _update_distribution_and_lowerbound(self, m_children, *u_parents):
         # Sub-classes should implement this

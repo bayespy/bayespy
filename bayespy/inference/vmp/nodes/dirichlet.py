@@ -25,12 +25,13 @@
 import numpy as np
 import scipy.special as special
 
-from .variable import Variable
+#from .variable import Variable
+from .expfamily import ExponentialFamily
 from .constant import Constant
 
 
 
-class Dirichlet(Variable):
+class Dirichlet(ExponentialFamily):
 
     class ConjugatePrior:
 

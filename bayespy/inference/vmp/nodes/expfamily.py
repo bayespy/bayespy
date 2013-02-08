@@ -32,6 +32,11 @@ class ExponentialFamily(Stochastic):
     A base class for nodes using natural parameterization `phi`.
 
     phi
+
+    Sub-classes must implement:
+       _compute_message_to_parent(index, u_self, *u_parents)
+       _update_phi_from_parents
+       _compute_moments_and_cgf
     """
 
     def __init__(self, *args, initialize=True, **kwargs):
@@ -96,7 +101,7 @@ class ExponentialFamily(Stochastic):
         # TODO/FIXME: Could this be combined to the function
         # _update_distribution_and_lowerbound ?
         # No, because some initialization methods may want to use this.
-        
+
         # This makes correct broadcasting
         self.phi = self._compute_phi_from_parents(*u_parents)
         self.phi = list(self.phi)

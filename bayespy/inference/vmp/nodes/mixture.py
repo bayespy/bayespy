@@ -32,7 +32,7 @@ import scipy.spatial.distance as distance
 
 from bayespy.utils import utils
 
-from .variable import Variable
+from .expfamily import ExponentialFamily
 from .constant import Constant
 from .categorical import Categorical
 
@@ -41,7 +41,7 @@ def Mixture(distribution, cluster_plate=-1):
     if cluster_plate >= 0:
         raise Exception("Give negative value for axis index cluster_plates")
 
-    class _Mixture(Variable):
+    class _Mixture(ExponentialFamily):
 
         ndims = distribution.ndims
 

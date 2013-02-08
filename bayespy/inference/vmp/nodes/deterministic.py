@@ -30,26 +30,38 @@ from .node import Node
 class Deterministic(Node):
     """
     Base class for nodes that are deterministic.
+
+    Sub-classes must implement:
+    1. For implementing the deterministic function:
+       _compute_moments(self, *u)
+    2. One of the following options:
+       a) Simple static methods:
+          _compute_message_to_parent(index, m, *u)
+          _compute_mask_to_parent(index, mask)
+       b) More control with:
+          _compute_message_and_mask_to_parent(self, index, m, *u)
+
+    Sub-classes may need to re-implement:
+    1. If they manipulate plates:
+       _compute_mask_to_parent(index, mask)
+       _plates_to_parent(self, index)
+       _plates_from_parent(self, index)
+    
+    
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, plates=None, **kwargs)
 
-    ## def _get_message_mask(self):
-    ##     # No need to perform any masking because the messages from children have
-    ##     # already been masked.
-    ##     return True
-    
-    ## def get_mask(self):
-    ##     # Combine the masks from children
-    ##     mask = False
-    ##     for (child, index) in self.children:
-    ##         mask = np.logical_or(mask, child._mask_to_parent(index))
-    ##     return mask
-
     def get_moments(self):
         u_parents = [parent._message_to_child() for parent in self.parents]
         return self._compute_moments(*u_parents)
+
+    def _compute_message_and_mask_to_parent(self, index, m_children, *u_parents):
+        # The following methods should be implemented by sub-classes.
+        m = self._compute_message_to_parent(index, m_children, *u_parents)
+        mask = self._compute_mask_to_parent(index, self.mask)
+        return (m, mask)
 
     def _get_message_and_mask_to_parent(self, index):
         u_parents = self._message_from_parents(exclude=index)
@@ -57,14 +69,9 @@ class Deterministic(Node):
         return self._compute_message_and_mask_to_parent(index,
                                                         m_children,
                                                         *u_parents)
-        #mask = self._compute_mask_to_parent(index)
-        #return (m, mask)
         
     
     def _compute_moments(self, *u_parents):
         # Sub-classes should implement this
         raise NotImplementedError()
 
-    def _compute_message_and_mask_to_parent(self, index, m_children, *u_parents):
-        # Sub-classes should implement this
-        raise NotImplementedError()

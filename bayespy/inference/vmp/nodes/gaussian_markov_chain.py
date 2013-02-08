@@ -30,7 +30,8 @@ import numpy as np
 from bayespy.utils import utils
 
 from .node import Node
-from .variable import Variable
+from .deterministic import Deterministic
+from .expfamily import ExponentialFamily
 from .constant import Constant, ConstantNumeric
 from .gaussian import Gaussian
 from .wishart import Wishart
@@ -39,7 +40,7 @@ from .gamma import Gamma
 # TODO/FIXME: The plates of masks are not handled properly! Try having
 # a plate of GMCs and then the message mask to A or v..
 
-class GaussianMarkovChain(Variable):
+class GaussianMarkovChain(ExponentialFamily):
     r"""
     VMP node for Gaussian Markov chain.
 
@@ -82,12 +83,68 @@ class GaussianMarkovChain(Variable):
     # Observations are a set of vectors (thus 2-D matrix):
     ndim_observations = 2
     
+    def __init__(self, mu, Lambda, A, v, n=None, **kwargs):
+        """
+        `mu` is the mean of x_0
+        `Lambda` is the precision of x_0
+        `A` is the dynamic matrix
+        `v` is the diagonal precision of the innovation
+        """
+        self.parameter_distributions = (Gaussian, Wishart, Gaussian, Gamma)
+        
+        # Check for constant mu
+        if np.isscalar(mu) or isinstance(mu, np.ndarray):
+            mu = Constant(Gaussian)(mu)
+
+        # Check for constant Lambda
+        if np.isscalar(Lambda) or isinstance(Lambda, np.ndarray):
+            Lambda = Constant(Wishart)(Lambda)
+
+        # Check for constant A
+        if np.isscalar(A) or isinstance(A, np.ndarray):
+            A = Constant(Gaussian)(A)
+
+        # Check for constant V
+        if np.isscalar(v) or isinstance(v, np.ndarray):
+            v = Constant(Gamma)(v)
+
+        # A dummy wrapper for the number of time instances.
+        n_A = 1
+        if len(A.plates) >= 2:
+            n_A = A.plates[-2]
+        n_v = 1
+        if len(v.plates) >= 2:
+            n_v = v.plates[-2]
+        if n_v != n_A and n_v != 1 and n_A != 1:
+            raise Exception("Plates of A and v are giving different number of time instances")
+        n_A = max(n_v, n_A)
+        if n is None:
+            if n_A == 1:
+                raise Exception("""The number of time instances could not be determined
+                                 automatically. Give the number of
+                                 time instances.""")
+            n = n_A + 1
+        elif n_A != 1 and n_A+1 != n:
+            raise Exception("The number of time instances must match "
+                            "the number of last plates of parents: "
+                            "%d != %d+1" % (n, n_A))
+                                
+        N = ConstantNumeric(n, 0)
+
+        # Check that the dimensions and plates of the parents are
+        # consistent with the dimensionality of the process.  The
+        # plates are checked in the super constructor.
+        #if mu.dims[0][0] != 
+
+        # Construct
+        super().__init__(mu, Lambda, A, v, N, **kwargs)
+
     @staticmethod
     def compute_fixed_moments(x):
         raise NotImplementedError()
 
     @staticmethod
-    def compute_phi_from_parents(u_parents):
+    def _compute_phi_from_parents(*u_parents):
         #def compute_phi_from_parents(u_mu, u_Lambda, u_A, u_v, N):
         """
         Compute the natural parameters using parents' moments.
@@ -148,7 +205,7 @@ class GaussianMarkovChain(Variable):
         return (phi0, phi1, phi2)
 
     @staticmethod
-    def compute_g_from_parents(u_parents):
+    def _compute_cgf_from_parents(*u_parents):
         """
         Compute CGF using the moments of the parents.
 
@@ -180,7 +237,7 @@ class GaussianMarkovChain(Variable):
         return g0 + g1
 
     @staticmethod
-    def compute_u_and_g(phi, mask=True):
+    def _compute_moments_and_cgf(phi, mask=True):
         """
         Compute the moments and the cumulant-generating function.
 
@@ -200,6 +257,7 @@ class GaussianMarkovChain(Variable):
         # Don't multiply phi[2] by two because it is a sum of the super- and
         # sub-diagonal blocks so we would need to divide by two anyway.
         B = -phi[2]
+        #print('in gcm.ugcf', np.shape(A), np.shape(B))
         (CovXnXn, CovXpXn, Xn, ldet) = utils.block_banded_solve(A, B, y)
         
         # Compute moments
@@ -225,7 +283,12 @@ class GaussianMarkovChain(Variable):
         return (u, f)
 
     @staticmethod
-    def compute_message(index, u, u_parents):
+    def _compute_mask_to_parent(index, mask):
+        # TODO/FIXME/BUG: IMPLEMENT THIS
+        return mask
+
+    @staticmethod
+    def _compute_message_to_parent(index, u, *u_parents):
         """
         Compute a message to a parent.
 
@@ -253,13 +316,12 @@ class GaussianMarkovChain(Variable):
             v = u_v[0]
             m0 = v[...,np.newaxis] * XpXn.swapaxes(-1,-2)
             m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
-            return (m0, m1)
-            
-            raise NotImplementedError()
         elif index == 3: # v
             raise NotImplementedError()
         elif index == 4: # N
             raise NotImplementedError()
+
+        return [m0, m1]
 
     @staticmethod
     def compute_dims(mu, Lambda, A, v, N):
@@ -325,74 +387,12 @@ class GaussianMarkovChain(Variable):
         """ Compute the dimensions of phi and u. """
         raise NotImplementedError()
 
-    def __init__(self, mu, Lambda, A, v, n=None, **kwargs):
-        """
-        `mu` is the mean of x_0
-        `Lambda` is the precision of x_0
-        `A` is the dynamic matrix
-        `v` is the diagonal precision of the innovation
-        """
-        self.parameter_distributions = (Gaussian, Wishart, Gaussian, Gamma)
-        
-        # Check for constant mu
-        if np.isscalar(mu) or isinstance(mu, np.ndarray):
-            mu = Constant(Gaussian)(mu)
-
-        # Check for constant Lambda
-        if np.isscalar(Lambda) or isinstance(Lambda, np.ndarray):
-            Lambda = Constant(Wishart)(Lambda)
-
-        # Check for constant A
-        if np.isscalar(A) or isinstance(A, np.ndarray):
-            A = Constant(Gaussian)(A)
-
-        # Check for constant V
-        if np.isscalar(v) or isinstance(v, np.ndarray):
-            v = Constant(Gamma)(v)
-
-        # You could check whether the dimensions of mu and Lambda
-        # match (and Lambda is square)
-        if Lambda.dims[0][-1] != mu.dims[0][-1]:
-            raise Exception("Dimensionalities of mu and Lambda do not match.")
-
-        # A dummy wrapper for the number of time instances.
-        n_A = 1
-        if len(A.plates) >= 2:
-            n_A = A.plates[-2]
-        n_v = 1
-        if len(v.plates) >= 2:
-            n_v = v.plates[-2]
-        if n_v != n_A and n_v != 1 and n_A != 1:
-            raise Exception("Plates of A and v are giving different number of time instances")
-        n_A = max(n_v, n_A)
-        if n is None:
-            if n_A == 1:
-                raise Exception("""The number of time instances could not be determined
-                                 automatically. Give the number of
-                                 time instances.""")
-            n = n_A + 1
-        elif n_A != 1 and n_A+1 != n:
-            raise Exception("The number of time instances must match "
-                            "the number of last plates of parents: "
-                            "%d != %d+1" % (n, n_A))
-                                
-        N = ConstantNumeric(n, 0)
-
-        # Check that the dimensions and plates of the parents are
-        # consistent with the dimensionality of the process.  The
-        # plates are checked in the super constructor.
-        #if mu.dims[0][0] != 
-        
-
-        # Construct
-        super().__init__(mu, Lambda, A, v, N, **kwargs)
-
 
     def get_shape_of_value(self):
         # Dimensionality of a realization
         return self.dims[0]
     
-    def plates_to_parent(self, index):
+    def _plates_to_parent(self, index):
         """
         Computes the plates of this node with respect to a parent.
 
@@ -422,9 +422,13 @@ class GaussianMarkovChain(Variable):
             return self.plates + (N-1,D)
             #raise NotImplementedError()
         elif index == 3: # v
-            raise NotImplementedError()
+            return self.plates + (N-1,D)
+        elif index == 4: # N
+            return ()
+        raise ValueError("Invalid parent index.")
+        #raise NotImplementedError()
 
-    def plates_from_parent(self, index):
+    def _plates_from_parent(self, index):
         """
         Compute the plates using information of a parent node.
 
@@ -451,6 +455,7 @@ class GaussianMarkovChain(Variable):
             return self.parents[3].plates[:-2]
         elif index == 4: # N
             return ()
+        raise ValueError("Invalid parent index.")
 
     def random(self):
         raise NotImplementedError()
@@ -463,7 +468,7 @@ class GaussianMarkovChain(Variable):
                                       name=self.name+" as Gaussian")
 
 
-class _MarkovChainToGaussian(Node):
+class _MarkovChainToGaussian(Deterministic):
     """
     Transform a Gaussian Markov chain node into a Gaussian node.
 
@@ -477,15 +482,15 @@ class _MarkovChainToGaussian(Node):
             X = Constant(GaussianMarkovChain)(X)
 
         # Make the time dimension a plate dimension...
-        plates = X.plates + (X.dims[0][0],)
+        #plates = X.plates + (X.dims[0][0],)
         # ... and remove it from the variable dimensions
         dims = ( X.dims[0][-1:], X.dims[1][-2:] )
         super().__init__(X,
-                         plates=plates,
+        #plates=plates,
                          dims=dims,
                          **kwargs)
 
-    def plates_to_parent(self, index):
+    def _plates_to_parent(self, index):
         """
         Return the number of plates to the parent node.
 
@@ -504,6 +509,15 @@ class _MarkovChainToGaussian(Node):
         """
         return self.plates[:-1]
         
+    def _plates_from_parent(self, index):
+        # Sub-classes may want to overwrite this if they manipulate plates
+        if index != 0:
+            raise ValueError("Invalid parent index.")
+
+        parent = self.parents[0]
+        plates = parent.plates + (parent.dims[0][0],)
+        return plates
+
     def get_moments(self):
         """
         Transform the moments of a GMC to moments of a Gaussian.
@@ -516,12 +530,21 @@ class _MarkovChainToGaussian(Node):
         """
 
         # Get the moments from the parent Gaussian Markov Chain
-        u = self.parents[0].message_to_child()
+        u = self.parents[0].get_moments() #message_to_child()
 
         # Send only moments <X(n)> and <X(n)X(n)> but not <X(n-1)X(n)>
         return u[:2]
 
-    def get_message(self, index, u_parents):
+    @staticmethod
+    def _compute_mask_to_parent(index, mask):
+        # Remove the last axis of the mask
+        if np.ndim(mask) >= 1:
+            mask = np.any(mask, axis=-1)
+        return mask
+        
+
+    @staticmethod
+    def _compute_message_to_parent(index, m_children, *u_parents):
         """
         Transform a message to a Gaussian into a message to a GMC.
 
@@ -552,13 +575,10 @@ class _MarkovChainToGaussian(Node):
             Mask telling which plates should be taken into account.
         """
         
-        (m, mask) = self.message_from_children()
-
-        # Remove the last axis of the mask
-        if np.ndim(mask) >= 1:
-            mask = np.any(mask, axis=-1)
+        #(m, mask) = self.message_from_children()
 
         # Add the third empty message
-        m = [m[0], m[1], None]
+        return [m_children[0], m_children[1], None]
+    #mask = self._compute_mask
 
-        return (m, mask)
+    #return (m, mask)

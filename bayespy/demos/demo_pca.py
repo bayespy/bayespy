@@ -81,8 +81,9 @@ def run(M=10, N=100, D_y=3, D=5):
 
     # Data with missing values
     mask = utils.random.mask(M, N, p=0.9) # randomly missing
-    #mask[:,20:40] = False # gap missing
+    mask[:,20:40] = False # gap missing
     #mask[2,:] = False # gap missing
+    y[~mask] = np.nan
     Y.observe(y, mask=mask)
 
     # Construct inference machine

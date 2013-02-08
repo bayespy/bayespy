@@ -24,7 +24,7 @@
 
 import numpy as np
 
-from .variable import Variable
+from .expfamily import ExponentialFamily
 from .constant import Constant
 from .dirichlet import Dirichlet
 
@@ -37,7 +37,7 @@ def Categorical(p, **kwargs):
         n_categories = p.dims[0][0]
 
     # The actual categorical distribution node
-    class _Categorical(Variable):
+    class _Categorical(ExponentialFamily):
 
         ndims = (1,)
 

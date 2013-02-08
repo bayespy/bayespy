@@ -41,8 +41,17 @@ class Node():
     children
     name
 
-    Implement:
-    _get_message_and_mask_to_parent
+    Sub-classes must implement:
+    1. For computing the message to children:
+       get_moments(self):
+    2. For computing the message to parents:
+       _get_message_and_mask_to_parent(self, index)
+
+    Sub-classes may need to re-implement:
+    1. If they manipulate plates:
+       _compute_mask_to_parent(index, mask)
+       _plates_to_parent(self, index)
+       _plates_from_parent(self, index)
     """
     
     def __init__(self, *parents, dims=None, plates=None, name=""):
@@ -91,15 +100,15 @@ class Node():
         # Children
         self.children = list()
 
-    @staticmethod
-    def _compute_dims_from_parents(*parents):
-        """ Compute the dimensions of phi and u. """
-        raise NotImplementedError("Not implemented for %s" % self.__class__)
+    ## @staticmethod
+    ## def _compute_dims_from_parents(*parents):
+    ##     """ Compute the dimensions of phi and u. """
+    ##     raise NotImplementedError("Not implemented for %s" % self.__class__)
 
-    @staticmethod
-    def _compute_dims_from_values(x):
-        """ Compute the dimensions of phi and u. """
-        raise NotImplementedError()
+    ## @staticmethod
+    ## def _compute_dims_from_values(x):
+    ##     """ Compute the dimensions of phi and u. """
+    ##     raise NotImplementedError()
 
     def _plates_to_parent(self, index):
         # Sub-classes may want to overwrite this if they manipulate plates
@@ -218,8 +227,8 @@ class Node():
     def _message_to_child(self):
         return self.get_moments()
     
-    def _get_message_and_mask_to_parent(self, index):
-        raise NotImplementedError()
+    #def _get_message_and_mask_to_parent(self, index):
+    #    raise NotImplementedError()
 
     def _message_to_parent(self, index):
         # Compute the message, check plates, apply mask and sum over some plates

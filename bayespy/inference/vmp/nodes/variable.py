@@ -27,6 +27,8 @@ from bayespy.utils import utils
 
 from .node import Node
 
+raise DeprecationWarning("Don't use this module. Use stochastic or expfamily "
+                         "instead.")
 
 # nodes/
 #   gp/

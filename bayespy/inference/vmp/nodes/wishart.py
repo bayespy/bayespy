@@ -27,7 +27,8 @@ import scipy.special as special
 
 from bayespy.utils import utils
 
-from .variable import Variable
+#from .variable import Variable
+from .expfamily import ExponentialFamily
 from .constant import Constant
 
 def WishartPrior(k):
@@ -57,7 +58,7 @@ def WishartPrior(k):
         
     return _WishartPrior
 
-class Wishart(Variable):
+class Wishart(ExponentialFamily):
 
 
     ndims = (2, 0)
