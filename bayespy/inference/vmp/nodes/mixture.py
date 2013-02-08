@@ -45,13 +45,17 @@ def Mixture(distribution, cluster_plate=-1):
         """
 
         Mixtured distributions must implement:
-        _compute_phi_from_parents
-        _compute_cgf_from_parents
-        _compute_logpdf
-        _compute_moments_and_cgf(phi, mask)
-        _compute_fixed_moments_and_f(x, mask)
-        _compute_message_to_parent
-        _compute_dims
+           _compute_cgf_from_parents
+           _compute_fixed_moments_and_f(x, mask)
+           _compute_dims
+
+        Sub-classes of ExponentialFamily should implement anyway:
+           _compute_message_to_parent
+           _compute_phi_from_parents
+           _compute_moments_and_cgf(phi, mask)
+
+        ExponentialFamily implements already:
+           _compute_logpdf
         """
 
         ndims = distribution.ndims
@@ -188,7 +192,7 @@ def Mixture(distribution, cluster_plate=-1):
                     
                 # Compute logpdf:
                 # Shape(L)      = [Nn,..,N0,K]
-                L = distribution.compute_logpdf(u_self, phi, g, 0)
+                L = distribution._compute_logpdf(u_self, phi, g, 0)
                 
                 # Sum over other than the cluster dimensions? No!
                 # Hmm.. I think the message passing method will do
@@ -218,7 +222,9 @@ def Mixture(distribution, cluster_plate=-1):
                     u_self.append(np.expand_dims(u[ind], axis=cluster_axis))
                     
                 # Message from the mixed distribution
-                m = distribution.compute_message(index, u_self, u_parents[1:])
+                m = distribution._compute_message_to_parent(index, 
+                                                            u_self, 
+                                                            *(u_parents[1:]))
 
                 # Weigh the messages with the responsibilities
                 for i in range(len(m)):
@@ -329,17 +335,18 @@ def Mixture(distribution, cluster_plate=-1):
                 cluster_axis = cluster_plate - distribution.ndim_observations
                 x = np.expand_dims(x, axis=cluster_axis)
 
-                u_parents = self.moments_from_parents()
+                u_parents = self._message_from_parents()
+                #u_parents = self.moments_from_parents()
                 
                 # Shape(u) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
                 # Shape(f) = [M1,..,Mm,N1,..,1,..,Nn]
-                (u, f) = distribution.compute_fixed_u_and_f(x)
+                (u, f) = distribution._compute_fixed_moments_and_f(x)
                 # Shape(phi) = [N1,..,K,..,Nn,D1,..,Dd]
-                phi = distribution.compute_phi_from_parents(u_parents[1:])
+                phi = distribution._compute_phi_from_parents(*(u_parents[1:]))
                 # Shape(g) = [N1,..,K,..,Nn]
-                g = distribution.compute_g_from_parents(u_parents[1:])
+                g = distribution._compute_cgf_from_parents(*(u_parents[1:]))
                 # Shape(lpdf) = [M1,..,Mm,N1,..,K,..,Nn]
-                lpdf = distribution.compute_logpdf(u, phi, g, f)
+                lpdf = distribution._compute_logpdf(u, phi, g, f)
 
                 # From logpdf to pdf, but avoid over/underflow
                 lpdf_max = np.max(lpdf, axis=cluster_plate, keepdims=True)

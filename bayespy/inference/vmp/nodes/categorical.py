@@ -46,7 +46,7 @@ def Categorical(p, **kwargs):
             return [u_parents[0][0]]
 
         @staticmethod
-        def compute_g_from_parents(u_parents):
+        def _compute_cgf_from_parents(*u_parents):
             return 0
 
         @staticmethod
@@ -78,7 +78,7 @@ def Categorical(p, **kwargs):
             return ([u0], f)
 
         @staticmethod
-        def compute_message(index, u, u_parents):
+        def _compute_message_to_parent(index, u, *u_parents):
             """ . """
             #print('message in categorical:', u[0])
             if index == 0:

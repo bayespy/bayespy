@@ -33,10 +33,10 @@ class ExponentialFamily(Stochastic):
 
     phi
 
-    Sub-classes must implement:
+    Sub-classes must implement the following static methods:
        _compute_message_to_parent(index, u_self, *u_parents)
-       _update_phi_from_parents
-       _compute_moments_and_cgf
+       _compute_phi_from_parents(*u_parents, mask)
+       _compute_moments_and_cgf(phi, mask)
 
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
@@ -183,3 +183,22 @@ class ExponentialFamily(Stochastic):
                                          np.shape(L),
                                          np.shape(self.mask)))
         #return L
+
+    @classmethod
+    def _compute_logpdf(cls, u, phi, g, f):
+        """ Compute E[log p(X)] given E[u], E[phi], E[g] and
+        E[f]. Does not sum over plates."""
+
+        # TODO/FIXME: Should I take into account what is latent or
+        # observed, or what is even totally ignored (by the mask).
+        L = g + f
+        for (phi_i, u_i, ndims_i) in zip(phi, u, cls.ndims):
+        #for (phi_i, u_i, len_dims_i) in zip(phi, u, len_dims):
+            # Axes to sum (dimensions of the variable, not the plates)
+            axis_sum = tuple(range(-ndims_i,0))
+            #axis_sum = tuple(range(-len_dims_i,0))
+            # Compute the term
+            # TODO/FIXME: Use einsum!
+            L = L + np.sum(phi_i * u_i, axis=axis_sum)
+        return L
+

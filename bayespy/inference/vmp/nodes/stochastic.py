@@ -35,9 +35,10 @@ class Stochastic(Node):
     observed
 
     Sub-classes must implement:
-    1. _compute_message_to_parent(index, u_self, *u_parents)
-    2. _update_distribution_and_lowerbound(self, m, *u)
-    3. lowerbound(self)
+       _compute_message_to_parent(index, u_self, *u_parents)
+       _update_distribution_and_lowerbound(self, m, *u)
+       lowerbound(self)
+       _compute_dims
 
     Sub-classes may need to re-implement:
     1. If they manipulate plates:

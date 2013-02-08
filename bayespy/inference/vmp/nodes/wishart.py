@@ -89,7 +89,7 @@ class Wishart(ExponentialFamily):
         return u
 
     @staticmethod
-    def compute_g_from_parents(u_parents):
+    def _compute_cgf_from_parents(*u_parents):
         n = u_parents[0][0]
         gammaln_n = u_parents[0][1]
         V = u_parents[1][0]

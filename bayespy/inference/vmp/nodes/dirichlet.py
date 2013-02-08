@@ -67,7 +67,7 @@ class Dirichlet(ExponentialFamily):
         #return [u_parents[0][0].copy()]
 
     @staticmethod
-    def compute_g_from_parents(u_parents):
+    def _compute_cgf_from_parents(*u_parents):
         return u_parents[0][1]
 
     @staticmethod

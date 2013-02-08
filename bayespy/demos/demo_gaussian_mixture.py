@@ -89,7 +89,7 @@ def gaussianmix_model(N, K, D):
 
 def run(N=50, K=5, D=2):
 
-    plt.ion()
+    #plt.ion()
     #17,31
     #np.random.seed(31)
     
@@ -222,6 +222,8 @@ def run(N=50, K=5, D=2):
     X.show()
     alpha.show()
 
+    plt.show()
+
     #print(y)
     #print(Y.u[0])
 
@@ -244,6 +246,6 @@ def run(N=50, K=5, D=2):
 
 if __name__ == '__main__':
     # FOR INTERACTIVE SESSIONS, NON-BLOCKING PLOTTING:
-    plt.ion()
+    #plt.ion()
     run()
 
