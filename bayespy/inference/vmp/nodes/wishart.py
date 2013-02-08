@@ -102,12 +102,12 @@ class Wishart(ExponentialFamily):
         return g
 
     @staticmethod
-    def compute_phi_from_parents(u_parents):
+    def _compute_phi_from_parents(*u_parents):
         return [-0.5 * u_parents[1][0],
                 0.5 * u_parents[0][0]]
 
     @staticmethod
-    def compute_u_and_g(phi, mask=True):
+    def _compute_moments_and_cgf(phi, mask=True):
         U = utils.m_chol(-phi[0])
         k = np.shape(phi[0])[-1]
         #k = self.dims[0][0]

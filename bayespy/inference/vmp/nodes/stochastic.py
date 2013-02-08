@@ -66,10 +66,10 @@ class Stochastic(Node):
     def get_moments(self):
         return self.u
 
-    @staticmethod
-    def _compute_message_to_parent(index, u_self, *u_parents):
-        # Sub-classes should implement this
-        raise NotImplementedError()
+    ## @staticmethod
+    ## def _compute_message_to_parent(index, u_self, *u_parents):
+    ##     # Sub-classes should implement this
+    ##     raise NotImplementedError()
 
     def _get_message_and_mask_to_parent(self, index):
         u_parents = self._message_from_parents(exclude=index)

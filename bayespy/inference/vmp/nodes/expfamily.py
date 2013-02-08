@@ -37,6 +37,13 @@ class ExponentialFamily(Stochastic):
        _compute_message_to_parent(index, u_self, *u_parents)
        _update_phi_from_parents
        _compute_moments_and_cgf
+
+    Sub-classes may need to re-implement:
+    1. If they manipulate plates:
+       _compute_mask_to_parent(index, mask)
+       _plates_to_parent(self, index)
+       _plates_from_parent(self, index)
+    
     """
 
     def __init__(self, *args, initialize=True, **kwargs):

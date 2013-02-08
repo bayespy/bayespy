@@ -42,16 +42,27 @@ def Mixture(distribution, cluster_plate=-1):
         raise Exception("Give negative value for axis index cluster_plates")
 
     class _Mixture(ExponentialFamily):
+        """
+
+        Mixtured distributions must implement:
+        _compute_phi_from_parents
+        _compute_cgf_from_parents
+        _compute_logpdf
+        _compute_moments_and_cgf(phi, mask)
+        _compute_fixed_moments_and_f(x, mask)
+        _compute_message_to_parent
+        _compute_dims
+        """
 
         ndims = distribution.ndims
 
         @staticmethod
-        def compute_phi_from_parents(u_parents):
+        def _compute_phi_from_parents(*u_parents):
 
             # Compute weighted average of the parameters
 
             # Cluster parameters
-            Phi = distribution.compute_phi_from_parents(u_parents[1:])
+            Phi = distribution._compute_phi_from_parents(*(u_parents[1:]))
             # Contributions/weights/probabilities
             P = u_parents[0][0]
 
@@ -98,7 +109,7 @@ def Mixture(distribution, cluster_plate=-1):
             return phi
 
         @staticmethod
-        def compute_g_from_parents(u_parents):
+        def _compute_cgf_from_parents(*u_parents):
 
             # Compute weighted average of g over the clusters.
 
@@ -108,7 +119,7 @@ def Mixture(distribution, cluster_plate=-1):
 
             # Compute g for clusters:
             # Shape(g)      = [Nn,..,K,..,N0]
-            g = distribution.compute_g_from_parents(u_parents[1:])
+            g = distribution._compute_cgf_from_parents(*(u_parents[1:]))
             
             # Move cluster axis to last:
             # Shape(g)      = [Nn,..,N0,K]
@@ -130,16 +141,16 @@ def Mixture(distribution, cluster_plate=-1):
             return g
 
         @staticmethod
-        def compute_u_and_g(phi, mask=True):
-            return distribution.compute_u_and_g(phi, mask=mask)
+        def _compute_moments_and_cgf(phi, mask=True):
+            return distribution._compute_moments_and_cgf(phi, mask=mask)
 
         @staticmethod
-        def compute_fixed_u_and_f(x):
+        def _compute_fixed_moments_and_f(x, mask=True):
             """ Compute u(x) and f(x) for given x. """
-            return distribution.compute_fixed_u_and_f(x)
+            return distribution._compute_fixed_moments_and_f(x, mask=True)
 
         @staticmethod
-        def compute_message(index, u, u_parents):
+        def _compute_message_to_parent(index, u, *u_parents):
             """ . """
 
             #print('Mixture.compute_message:')
@@ -153,14 +164,14 @@ def Mixture(distribution, cluster_plate=-1):
 
                 # Compute g:
                 # Shape(g)      = [Nn,..,K,..,N0]
-                g = distribution.compute_g_from_parents(u_parents[1:])
+                g = distribution._compute_cgf_from_parents(*(u_parents[1:]))
                 # Reshape(g):
                 # Shape(g)      = [Nn,..,N0,K]
                 g = utils.moveaxis(g, cluster_plate, -1)
 
                 # Compute phi:
                 # Shape(phi)    = [Nn,..,K,..,N0,Dd,..,D0]
-                phi = distribution.compute_phi_from_parents(u_parents[1:])
+                phi = distribution._compute_phi_from_parents(*(u_parents[1:]))
                 # Reshape phi:
                 # Shape(phi)    = [Nn,..,N0,K,Dd,..,D0]
                 for ind in range(len(phi)):
@@ -269,7 +280,10 @@ def Mixture(distribution, cluster_plate=-1):
             super().__init__(z, *args,
                              **kwargs)
 
-        def plates_to_parent(self, index):
+            #_compute_mask_to_parent(index, mask)
+            #_plates_to_parent(self, index)
+            #_plates_from_parent(self, index)
+        def _plates_to_parent(self, index):
             if index == 0:
                 return self.plates
             else:
@@ -286,6 +300,14 @@ def Mixture(distribution, cluster_plate=-1):
                     ##           self.parents[0].dims[0] +
                     ##           self.plates[cluster_plate:])
                 return plates
+
+        def _plates_from_parent(self, index):
+            if index == 0:
+                return self.parents[index].plates
+            else:
+                plates = list(self.parents[index].plates)
+                plates.pop(cluster_plate)
+                return tuple(plates)
             
         def integrated_logpdf_from_parents(self, x, index):
 

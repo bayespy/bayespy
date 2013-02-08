@@ -28,7 +28,7 @@ import time
 
 from bayespy.utils import utils
 import bayespy.plot.plotting as myplt
-import bayespy.inference.vmp.nodes as EF
+from bayespy.inference.vmp import nodes
 #import nodes.exponential_family as EF
 
 ## import imp
@@ -37,24 +37,24 @@ import bayespy.inference.vmp.nodes as EF
 ## imp.reload(EF)
 
 # Reload everything (helpful for interactive sessions)
-import imp
-import bayespy.inference.vmp.nodes
-import bayespy.inference.vmp.nodes.node
-import bayespy.inference.vmp.nodes.variable
-import bayespy.inference.vmp.nodes.wishart
-import bayespy.inference.vmp.nodes.gaussian
-import bayespy.inference.vmp.nodes.mixture
-import bayespy.inference.vmp.nodes.dirichlet
-import bayespy.inference.vmp.nodes.categorical
-imp.reload(utils)
-imp.reload(bayespy.inference.vmp.nodes.node)
-imp.reload(bayespy.inference.vmp.nodes.variable)
-imp.reload(bayespy.inference.vmp.nodes.wishart)
-imp.reload(bayespy.inference.vmp.nodes.gaussian)
-imp.reload(bayespy.inference.vmp.nodes.mixture)
-imp.reload(bayespy.inference.vmp.nodes.dirichlet)
-imp.reload(bayespy.inference.vmp.nodes.categorical)
-imp.reload(EF)
+## import imp
+## import bayespy.inference.vmp.nodes
+## import bayespy.inference.vmp.nodes.node
+## import bayespy.inference.vmp.nodes.variable
+## import bayespy.inference.vmp.nodes.wishart
+## import bayespy.inference.vmp.nodes.gaussian
+## import bayespy.inference.vmp.nodes.mixture
+## import bayespy.inference.vmp.nodes.dirichlet
+## import bayespy.inference.vmp.nodes.categorical
+## imp.reload(utils)
+## imp.reload(bayespy.inference.vmp.nodes.node)
+## imp.reload(bayespy.inference.vmp.nodes.variable)
+## imp.reload(bayespy.inference.vmp.nodes.wishart)
+## imp.reload(bayespy.inference.vmp.nodes.gaussian)
+## imp.reload(bayespy.inference.vmp.nodes.mixture)
+## imp.reload(bayespy.inference.vmp.nodes.dirichlet)
+## imp.reload(bayespy.inference.vmp.nodes.categorical)
+## imp.reload(EF)
 
 def gaussianmix_model(N, K, D):
     # N = number of data vectors
@@ -64,22 +64,22 @@ def gaussianmix_model(N, K, D):
     # Construct the Gaussian mixture model
 
     # K prior weights (for components)
-    alpha = EF.Dirichlet(1*np.ones(K),
+    alpha = nodes.Dirichlet(1*np.ones(K),
                          name='alpha')
     # N K-dimensional cluster assignments (for data)
-    z = EF.Categorical(alpha,
+    z = nodes.Categorical(alpha,
                        plates=(N,),
                        name='z')
     # K D-dimensional component means
-    X = EF.Gaussian(np.zeros(D), 0.01*np.identity(D),
+    X = nodes.Gaussian(np.zeros(D), 0.01*np.identity(D),
                     plates=(K,),
                     name='X')
     # K D-dimensional component covariances
-    Lambda = EF.Wishart(D, 0.01*np.identity(D),
+    Lambda = nodes.Wishart(D, 0.01*np.identity(D),
                         plates=(K,),
                         name='Lambda')
     # N D-dimensional observation vectors
-    Y = EF.Mixture(EF.Gaussian)(z, X, Lambda, plates=(N,), name='Y')
+    Y = nodes.Mixture(nodes.Gaussian)(z, X, Lambda, plates=(N,), name='Y')
     # TODO: Plates should be learned automatically if not given (it
     # would be the smallest shape broadcasted from the shapes of the
     # parents)
@@ -195,8 +195,8 @@ def run(N=50, K=5, D=2):
         L_last = L[i]
 
     # Predictive stuff
-    zh = EF.Categorical(alpha, name='zh')
-    Yh = EF.Mixture(EF.Gaussian)(zh, X, Lambda, name='Yh')
+    zh = nodes.Categorical(alpha, name='zh')
+    Yh = nodes.Mixture(nodes.Gaussian)(zh, X, Lambda, name='Yh')
     # TODO/FIXME: Messages to parents should use the masks such that
     # children don't need to be initialized!
     zh.initialize_from_prior()
