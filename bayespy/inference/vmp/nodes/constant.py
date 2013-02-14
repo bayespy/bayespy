@@ -31,7 +31,7 @@ class ConstantNumeric(Node):
 
     def __init__(self, x, ndim, **kwargs):
         # Compute moments
-        self.u = [x]
+        self.u = [np.asarray(x)]
         # Dimensions and plates of the moments
         ind_dim = np.ndim(x) - ndim
         dims = np.shape(x)[ind_dim:]
@@ -46,6 +46,18 @@ def Constant(distribution):
 
     class _Constant(Node):
 
+        def __init__(self, x, **kwargs):
+            x = np.asanyarray(x)
+            # Compute moments
+            self.u = distribution.compute_fixed_moments(x)
+            # Dimensions of the moments
+            dims = distribution.compute_dims_from_values(x)
+            # Number of plate axes
+            plates_ndim = np.ndim(x) - distribution.ndim_observations
+            plates = np.shape(x)[:plates_ndim]
+            # Parent constructor
+            super().__init__(dims=dims, plates=plates, **kwargs)
+
         @staticmethod
         def compute_fixed_moments(x):
             """ Compute u(x) for given x. """
@@ -57,19 +69,9 @@ def Constant(distribution):
             raise Exception("I think constants should NOT need this function?")
             return distribution.compute_fixed_u_and_f(x)
 
-        def __init__(self, x, **kwargs):
-            # Compute moments
-            self.u = distribution.compute_fixed_moments(x)
-            # Dimensions of the moments
-            dims = distribution.compute_dims_from_values(x)
-            # Number of plate axes
-            plates_ndim = np.ndim(x) - distribution.ndim_observations
-            plates = np.shape(x)[:plates_ndim]
-            # Parent constructor
-            super().__init__(dims=dims, plates=plates, **kwargs)
-
         def get_moments(self):
             return self.u
+        
     return _Constant
     
 

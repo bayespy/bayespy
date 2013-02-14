@@ -37,6 +37,7 @@ from .dirichlet import Dirichlet
 from .categorical import Categorical
 from .dot import Dot, MatrixDot
 from .mixture import Mixture
+from .gaussian_markov_chain import GaussianMarkovChain
 
 ## from . import variable
 

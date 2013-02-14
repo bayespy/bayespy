@@ -27,7 +27,21 @@ import scipy.sparse as sp
 import matplotlib.pyplot as plt
 #from matplotlib.pyplot import *
 
+<<<<<<< HEAD
 def binary_matrix(A):
+=======
+def matrix(A):
+    A = np.atleast_2d(A)
+    vmax = np.max(np.abs(A))
+    plt.imshow(A, 
+               interpolation='nearest', 
+               cmap='RdBu_r',
+               vmin=-vmax,
+               vmax=vmax)
+
+def binary_matrix(A):
+    A = np.atleast_2d(A)
+>>>>>>> rewrite
     G = np.zeros(np.shape(A) + (3,))
     G[A] = [0,0,0]
     G[np.logical_not(A)] = [1,1,1]

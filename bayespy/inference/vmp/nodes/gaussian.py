@@ -9,11 +9,10 @@
 # This file is part of BayesPy.
 #
 # BayesPy is free software: you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# under the terms of the GNU General Public License version 3 as
+# published by the Free Software Foundation.
 #
-# BayesPy is distributed in the hope that it will be useful, but
+# Bayespy is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
@@ -27,11 +26,11 @@ import numpy as np
 
 from bayespy.utils import utils
 
-from .variable import Variable
+from .expfamily import ExponentialFamily
 from .constant import Constant
 from .wishart import Wishart
 
-class Gaussian(Variable):
+class Gaussian(ExponentialFamily):
     r"""
     VMP node for Gaussian variable.
 
@@ -162,18 +161,39 @@ class Gaussian(Variable):
     ndim_observations = 1
 
     
+    def __init__(self, mu, Lambda, **kwargs):
+
+        self.parameter_distributions = (Gaussian, Wishart)
+        
+        # Check for constant mu
+        if utils.is_numeric(mu):
+            mu = Constant(Gaussian)(np.atleast_1d(mu))
+
+        # Check for constant Lambda
+        if utils.is_numeric(Lambda):
+            Lambda = Constant(Wishart)(np.atleast_2d(Lambda))
+
+        ## # You could check whether the dimensions of mu and Lambda
+        ## # match (and Lambda is square)
+        ## if Lambda.dims[0][-1] != mu.dims[0][-1]:
+        ##     raise Exception("Dimensionalities of mu and Lambda do not match.")
+
+        # Construct
+        super().__init__(mu, Lambda,
+                         **kwargs)
+
     @staticmethod
     def compute_fixed_moments(x):
         """ Compute moments for fixed x. """
         return [x, utils.m_outer(x,x)]
 
     @staticmethod
-    def compute_phi_from_parents(u_parents):
+    def _compute_phi_from_parents(*u_parents):
         return [utils.m_dot(u_parents[1][0], u_parents[0][0]),
                 -0.5 * u_parents[1][0]]
 
     @staticmethod
-    def compute_g_from_parents(u_parents):
+    def _compute_cgf_from_parents(*u_parents):
         mu = u_parents[0][0]
         mumu = u_parents[0][1]
         Lambda = u_parents[1][0]
@@ -183,7 +203,7 @@ class Gaussian(Variable):
         return g
 
     @staticmethod
-    def compute_u_and_g(phi, mask=True):
+    def _compute_moments_and_cgf(phi, mask=True):
         # TODO: Compute -2*phi[1] and simplify the formulas
         L = utils.m_chol(-2*phi[1])
         k = np.shape(phi[0])[-1]
@@ -198,7 +218,7 @@ class Gaussian(Variable):
         return (u, g)
 
     @staticmethod
-    def compute_fixed_u_and_f(x):
+    def _compute_fixed_moments_and_f(x, mask=True):
         """ Compute u(x) and f(x) for given x. """
         k = np.shape(x)[-1]
         u = [x, utils.m_outer(x,x)]
@@ -206,7 +226,7 @@ class Gaussian(Variable):
         return (u, f)
 
     @staticmethod
-    def compute_message(index, u, u_parents):
+    def _compute_message_to_parent(index, u, *u_parents):
         """ . """
         if index == 0:
             return [utils.m_dot(u_parents[1][0], u[0]),
@@ -257,27 +277,6 @@ class Gaussian(Variable):
             raise ValueError("The value must be at least 1-D array.")
         D = np.shape(x)[-1]
         return ( (D,), (D,D) )
-
-    def __init__(self, mu, Lambda, **kwargs):
-
-        self.parameter_distributions = (Gaussian, Wishart)
-        
-        # Check for constant mu
-        if np.isscalar(mu) or isinstance(mu, np.ndarray):
-            mu = Constant(Gaussian)(mu)
-
-        # Check for constant Lambda
-        if np.isscalar(Lambda) or isinstance(Lambda, np.ndarray):
-            Lambda = Constant(Wishart)(Lambda)
-
-        # You could check whether the dimensions of mu and Lambda
-        # match (and Lambda is square)
-        if Lambda.dims[0][-1] != mu.dims[0][-1]:
-            raise Exception("Dimensionalities of mu and Lambda do not match.")
-
-        # Construct
-        super().__init__(mu, Lambda,
-                         **kwargs)
 
     def get_shape_of_value(self):
         # Dimensionality of a realization

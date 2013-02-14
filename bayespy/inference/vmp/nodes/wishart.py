@@ -27,7 +27,8 @@ import scipy.special as special
 
 from bayespy.utils import utils
 
-from .variable import Variable
+#from .variable import Variable
+from .expfamily import ExponentialFamily
 from .constant import Constant
 
 def WishartPrior(k):
@@ -57,7 +58,7 @@ def WishartPrior(k):
         
     return _WishartPrior
 
-class Wishart(Variable):
+class Wishart(ExponentialFamily):
 
 
     ndims = (2, 0)
@@ -88,7 +89,7 @@ class Wishart(Variable):
         return u
 
     @staticmethod
-    def compute_g_from_parents(u_parents):
+    def _compute_cgf_from_parents(*u_parents):
         n = u_parents[0][0]
         gammaln_n = u_parents[0][1]
         V = u_parents[1][0]
@@ -101,12 +102,12 @@ class Wishart(Variable):
         return g
 
     @staticmethod
-    def compute_phi_from_parents(u_parents):
+    def _compute_phi_from_parents(*u_parents):
         return [-0.5 * u_parents[1][0],
                 0.5 * u_parents[0][0]]
 
     @staticmethod
-    def compute_u_and_g(phi, mask=True):
+    def _compute_moments_and_cgf(phi, mask=True):
         U = utils.m_chol(-phi[0])
         k = np.shape(phi[0])[-1]
         #k = self.dims[0][0]

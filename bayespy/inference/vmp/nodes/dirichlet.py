@@ -25,12 +25,13 @@
 import numpy as np
 import scipy.special as special
 
-from .variable import Variable
+#from .variable import Variable
+from .expfamily import ExponentialFamily
 from .constant import Constant
 
 
 
-class Dirichlet(Variable):
+class Dirichlet(ExponentialFamily):
 
     class ConjugatePrior:
 
@@ -61,16 +62,16 @@ class Dirichlet(Variable):
     ndims = (1,)
 
     @staticmethod
-    def compute_phi_from_parents(u_parents):
+    def _compute_phi_from_parents(*u_parents):
         return [u_parents[0][0]]
         #return [u_parents[0][0].copy()]
 
     @staticmethod
-    def compute_g_from_parents(u_parents):
+    def _compute_cgf_from_parents(*u_parents):
         return u_parents[0][1]
 
     @staticmethod
-    def compute_u_and_g(phi, mask=True):
+    def _compute_moments_and_cgf(phi, mask=True):
         sum_gammaln = np.sum(special.gammaln(phi[0]), axis=-1)
         gammaln_sum = special.gammaln(np.sum(phi[0], axis=-1))
         psi_sum = special.psi(np.sum(phi[0], axis=-1, keepdims=True))

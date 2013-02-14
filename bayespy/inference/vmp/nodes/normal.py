@@ -24,11 +24,11 @@
 
 import numpy as np
 
-from .variable import Variable
+from .expfamily import ExponentialFamily
 from .constant import Constant
 from .gamma import Gamma
 
-class Normal(Variable):
+class Normal(ExponentialFamily):
 
     ndims = (0, 0)
     ndims_parents = [(0, 0), (0, 0)]
@@ -41,13 +41,13 @@ class Normal(Variable):
         return [x, x**2]
 
     @staticmethod
-    def compute_phi_from_parents(u_parents):
+    def _compute_phi_from_parents(*u_parents):
         phi = [u_parents[1][0] * u_parents[0][0],
                -u_parents[1][0] / 2]
         return phi
 
     @staticmethod
-    def compute_g_from_parents(u_parents):
+    def _compute_cgf_from_parents(*u_parents):
         mu = u_parents[0][0]
         mumu = u_parents[0][1]
         tau = u_parents[1][0]
@@ -56,7 +56,7 @@ class Normal(Variable):
         return g
 
     @staticmethod
-    def compute_u_and_g(phi, mask=True):
+    def _compute_moments_and_cgf(phi, mask=True):
         u0 = -phi[0] / (2*phi[1])
         u1 = u0**2 - 1 / (2*phi[1])
         u = [u0, u1]
@@ -64,14 +64,14 @@ class Normal(Variable):
         return (u, g)
 
     @staticmethod
-    def compute_fixed_u_and_f(x):
+    def _compute_fixed_moments_and_f(x, mask=True):
         """ Compute u(x) and f(x) for given x. """
         u = [x, x**2]
         f = -np.log(2*np.pi)/2
         return (u, f)
 
     @staticmethod
-    def compute_message(index, u, u_parents):
+    def _compute_message_to_parent(index, u, *u_parents):
         """ . """
         if index == 0:
             return [u_parents[1][0] * u[0],
@@ -79,7 +79,6 @@ class Normal(Variable):
         elif index == 1:
             return [-0.5 * (u[1] - 2*u[0]*u_parents[0][0] + u_parents[0][1]),
                     0.5]
-        raise NotImplementedError()
 
     @staticmethod
     def compute_dims(*parents):

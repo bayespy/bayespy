@@ -13,3 +13,5 @@ build
 *.so
 dist
 MANIFEST
+*.backup
+*.egg-info

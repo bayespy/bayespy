@@ -27,10 +27,11 @@ import numpy as np
 from bayespy.utils import utils
 
 from .node import Node
+from .deterministic import Deterministic
 from .constant import Constant
 from .gaussian import Gaussian
 
-class Dot(Node):
+class Dot(Deterministic):
     """
     A deterministic node for computing vector product of two Gaussians.
 
@@ -69,20 +70,20 @@ class Dot(Node):
                 raise ValueError("Dimensions of the Gaussians do not "
                                  "match: %s" % (parent_dims,))
 
-        try:
-            plates = utils.broadcasted_shape(*parent_plates)
-        except ValueError:
-            raise ValueError("The plates of the parents are "
-                             "incompatible: %s" % (parent_plates,))
+        ## try:
+        ##     plates = utils.broadcasted_shape(*parent_plates)
+        ## except ValueError:
+        ##     raise ValueError("The plates of the parents are "
+        ##                      "incompatible: %s" % (parent_plates,))
         
         super().__init__(*parents,
-                         plates=tuple(plates), 
+        #plates=tuple(plates), 
                          dims=((),()),
                          **kwargs)
 
             
 
-    def get_moments(self):
+    def _compute_moments(self, *u_parents):
         if len(self.parents) == 0:
             return [0, 0]
 
@@ -91,8 +92,7 @@ class Dot(Node):
 
         u1 = list()
         u2 = list()
-        for parent in self.parents:
-            u = parent.message_to_child()
+        for u in u_parents:
             u1.append(u[0])
             u2.append(u[1])
 
@@ -110,10 +110,17 @@ class Dot(Node):
         return u
         
 
-    def get_message(self, index, u_parents):
+    def _compute_message_and_mask_to_parent(self, index, m, *u_parents):
+        #def get_message(self, index, u_parents):
         
-        (m, mask) = self.message_from_children()
+        #(m, mask) = self.message_from_children()
 
+        # Normally we don't need to care about masks when computing the
+        # message. However, in this node we want to avoid computing huge message
+        # arrays so we sum some axis already here. Thus, we need to apply the
+        # mask
+
+        mask = self.mask
         parent = self.parents[index]
 
         # Compute both messages
@@ -163,11 +170,12 @@ class Dot(Node):
         mask = utils.squeeze_to_dim(mask, len(parent.plates))
 
         return (m, mask)
+    #return (m, mask)
 
 
 
 
-class MatrixDot(Node):
+class MatrixDot(Deterministic):
     """
     A deterministic node for computing matrix-vector product of Gaussians.
 
@@ -215,14 +223,14 @@ class MatrixDot(Node):
 
             
 
-    def get_moments(self):
+    def _compute_moments(self, u_A, u_X):
         """
         Get the moments of the Gaussian output.
         """
 
         # Get parents' moments
-        u_A = self.parents[0].message_to_child()
-        u_X = self.parents[1].message_to_child()
+        #u_A = self.parents[0].get_moments()
+        #u_X = self.parents[1].get_moments()
 
         # Helpful variables to clarify the code
         A = u_A[0]
@@ -240,13 +248,13 @@ class MatrixDot(Node):
 
         return [Y, YY]
 
-    def get_message(self, index, u_parents):
+    def _compute_message_to_parent(self, index, m, *u_parents):
         """
         Compute the message to a parent node.
         """
 
         # Get the message from children
-        (m, mask) = self.message_from_children()
+        #(m, mask) = self.message_from_children()
         VY = m[0]
         V = m[1]
 
@@ -263,8 +271,10 @@ class MatrixDot(Node):
             m0 = np.einsum('...ij,...i->...j', A, VY)
             m1 = np.einsum('...kilj,...kl->...ij', AA, V)
 
+            #m = [m0, m1]
+            #return (m, mask)
         m = [m0, m1]
-        return (m, mask)
+        return m
 
     
     def _reshape_to_matrix(self, A, AA, N):
