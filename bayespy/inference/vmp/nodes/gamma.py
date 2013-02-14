@@ -63,6 +63,24 @@ class Gamma(ExponentialFamily):
     ndim_observations = 0
 
     
+    def __init__(self, a, b, **kwargs):
+
+        self.parameter_distributions = (GammaPrior, Gamma)
+        
+        # TODO: USE asarray(a)
+
+        # Check for constant a
+        if utils.is_numeric(a):
+            a = Constant(GammaPrior)(a)
+
+        # Check for constant b
+        if utils.is_numeric(b):
+            b = Constant(Gamma)(b)
+            #b = NodeConstant([b, np.log(b)], plates=np.shape(b), dims=[(),()])
+
+        # Construct
+        super().__init__(a, b, **kwargs)
+
     @staticmethod
     def compute_fixed_moments(x):
         """ Compute moments for fixed x. """
@@ -112,24 +130,6 @@ class Gamma(ExponentialFamily):
     def compute_dims_from_values(x):
         """ Compute the dimensions of phi and u. """
         return ( (), () )
-
-    def __init__(self, a, b, **kwargs):
-
-        self.parameter_distributions = (GammaPrior, Gamma)
-        
-        # TODO: USE asarray(a)
-
-        # Check for constant a
-        if utils.is_numeric(a):
-            a = Constant(GammaPrior)(a)
-
-        # Check for constant b
-        if utils.is_numeric(b):
-            b = Constant(Gamma)(b)
-            #b = NodeConstant([b, np.log(b)], plates=np.shape(b), dims=[(),()])
-
-        # Construct
-        super().__init__(a, b, **kwargs)
 
     def show(self):
         a = self.phi[1]

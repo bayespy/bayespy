@@ -161,6 +161,27 @@ class Gaussian(ExponentialFamily):
     ndim_observations = 1
 
     
+    def __init__(self, mu, Lambda, **kwargs):
+
+        self.parameter_distributions = (Gaussian, Wishart)
+        
+        # Check for constant mu
+        if utils.is_numeric(mu):
+            mu = Constant(Gaussian)(np.atleast_1d(mu))
+
+        # Check for constant Lambda
+        if utils.is_numeric(Lambda):
+            Lambda = Constant(Wishart)(np.atleast_2d(Lambda))
+
+        ## # You could check whether the dimensions of mu and Lambda
+        ## # match (and Lambda is square)
+        ## if Lambda.dims[0][-1] != mu.dims[0][-1]:
+        ##     raise Exception("Dimensionalities of mu and Lambda do not match.")
+
+        # Construct
+        super().__init__(mu, Lambda,
+                         **kwargs)
+
     @staticmethod
     def compute_fixed_moments(x):
         """ Compute moments for fixed x. """
@@ -256,27 +277,6 @@ class Gaussian(ExponentialFamily):
             raise ValueError("The value must be at least 1-D array.")
         D = np.shape(x)[-1]
         return ( (D,), (D,D) )
-
-    def __init__(self, mu, Lambda, **kwargs):
-
-        self.parameter_distributions = (Gaussian, Wishart)
-        
-        # Check for constant mu
-        if np.isscalar(mu) or isinstance(mu, np.ndarray):
-            mu = Constant(Gaussian)(mu)
-
-        # Check for constant Lambda
-        if np.isscalar(Lambda) or isinstance(Lambda, np.ndarray):
-            Lambda = Constant(Wishart)(Lambda)
-
-        # You could check whether the dimensions of mu and Lambda
-        # match (and Lambda is square)
-        if Lambda.dims[0][-1] != mu.dims[0][-1]:
-            raise Exception("Dimensionalities of mu and Lambda do not match.")
-
-        # Construct
-        super().__init__(mu, Lambda,
-                         **kwargs)
 
     def get_shape_of_value(self):
         # Dimensionality of a realization

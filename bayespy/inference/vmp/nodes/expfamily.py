@@ -46,7 +46,7 @@ class ExponentialFamily(Stochastic):
     
     """
 
-    def __init__(self, *args, initialize=True, **kwargs):
+    def __init__(self, *args, **kwargs):
 
         super().__init__(*args,
                          **kwargs)
@@ -58,8 +58,6 @@ class ExponentialFamily(Stochastic):
         self.g = 0
         self.f = 0
 
-        if initialize:
-            self.initialize_from_prior()
 
     def initialize_from_prior(self):
         if not np.all(self.observed):
@@ -100,8 +98,8 @@ class ExponentialFamily(Stochastic):
         if np.shape(x) != self.plates + self.get_shape_of_value():
             raise ValueError("Invalid shape of the value for initialization.")
         mask = np.logical_not(self.observed)
-        (u, f) = self.compute_fixed_u_and_f(x, mask=mask)
-        self._set_moments_and_cgf(u, np.nan, mask=mask)
+        (u, f) = self._compute_fixed_moments_and_f(x, mask=mask)
+        self._set_moments_and_cgf(u, np.inf, mask=mask)
 
     def _update_phi_from_parents(self, *u_parents):
 

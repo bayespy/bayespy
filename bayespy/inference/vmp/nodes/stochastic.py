@@ -67,6 +67,8 @@ class Stochastic(Node):
         if initialize:
             self.initialize_from_prior()
 
+    # TODO: Write the initialization method.
+
     def get_moments(self):
         return self.u
 

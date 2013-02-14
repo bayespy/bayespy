@@ -26,8 +26,12 @@ This module contains VMP nodes for Gaussian Markov chains.
 """
 
 import numpy as np
+import scipy
 
-from bayespy.utils import utils
+import matplotlib.pyplot as plt
+import bayespy.plot.plotting as bpplt
+
+from bayespy import utils
 
 from .node import Node
 from .deterministic import Deterministic
@@ -93,20 +97,20 @@ class GaussianMarkovChain(ExponentialFamily):
         self.parameter_distributions = (Gaussian, Wishart, Gaussian, Gamma)
         
         # Check for constant mu
-        if np.isscalar(mu) or isinstance(mu, np.ndarray):
-            mu = Constant(Gaussian)(mu)
+        if utils.utils.is_numeric(mu):
+            mu = Constant(Gaussian)(np.atleast_1d(mu))
 
         # Check for constant Lambda
-        if np.isscalar(Lambda) or isinstance(Lambda, np.ndarray):
-            Lambda = Constant(Wishart)(Lambda)
+        if utils.utils.is_numeric(Lambda):
+            Lambda = Constant(Wishart)(np.atleast_2d(Lambda))
 
         # Check for constant A
-        if np.isscalar(A) or isinstance(A, np.ndarray):
-            A = Constant(Gaussian)(A)
+        if utils.utils.is_numeric(A):
+            A = Constant(Gaussian)(np.atleast_2d(A))
 
         # Check for constant V
-        if np.isscalar(v) or isinstance(v, np.ndarray):
-            v = Constant(Gamma)(v)
+        if utils.utils.is_numeric(v):
+            v = Constant(Gamma)(np.atleast_1d(v))
 
         # A dummy wrapper for the number of time instances.
         n_A = 1
@@ -144,8 +148,7 @@ class GaussianMarkovChain(ExponentialFamily):
         raise NotImplementedError()
 
     @staticmethod
-    def _compute_phi_from_parents(*u_parents):
-        #def compute_phi_from_parents(u_mu, u_Lambda, u_A, u_v, N):
+    def _compute_phi_from_parents(u_mu, u_Lambda, u_A, u_v, u_N):
         """
         Compute the natural parameters using parents' moments.
 
@@ -162,13 +165,6 @@ class GaussianMarkovChain(ExponentialFamily):
            Shape of the variable part of phi.
 
         """
-
-        u_mu = u_parents[0]
-        u_Lambda = u_parents[1]
-        u_A = u_parents[2]
-        u_v = u_parents[3]
-        u_N = u_parents[4]
-
 
         # Dimensionality of the Gaussian states
         D = np.shape(u_mu[0])[-1]
@@ -191,6 +187,11 @@ class GaussianMarkovChain(ExponentialFamily):
         A = u_A[0]  # (..., N-1, D, D)
         AA = u_A[1] # (..., N-1, D, D, D)
         v = u_v[0]  # (..., N-1, D)
+
+        # DEBUGGING:
+        #AA = A[...,np.newaxis] * A[...,np.newaxis,:]
+        #CovA = AA - A[...,np.newaxis] * A[...,np.newaxis,:]
+        #print('gmc.compphi', CovA)
 
         # Diagonal blocks: -0.5 * (V_i + A_{i+1}' * V_{i+1} * A_{i+1})
         phi1[..., 1:, :, :] = v[...,np.newaxis]*np.identity(D)
@@ -257,9 +258,23 @@ class GaussianMarkovChain(ExponentialFamily):
         # Don't multiply phi[2] by two because it is a sum of the super- and
         # sub-diagonal blocks so we would need to divide by two anyway.
         B = -phi[2]
-        #print('in gcm.ugcf', np.shape(A), np.shape(B))
-        (CovXnXn, CovXpXn, Xn, ldet) = utils.block_banded_solve(A, B, y)
-        
+
+        (CovXnXn, CovXpXn, Xn, ldet) = utils.utils.block_banded_solve(A, B, y)
+
+        ## # DEBUGGING
+        ## if np.shape(phi[0])[-1] == 1:
+        ##     C = utils.utils.block_banded(A, B)
+        ##     L = np.linalg.cholesky(C)
+        ##     N = np.shape(C)[-1]
+        ##     print('C', C)
+        ##     print('L', L)#utils.linalg.chol(C))
+        ##     print('gmc.compmom', np.linalg.cond(C))
+        ##     print('Use inv')
+        ##     #invC = np.linalg.inv(C)
+        ##     invC = scipy.linalg.cho_solve((L,True), np.identity(N))
+        ##     CovXnXn = np.diag(invC)[...,np.newaxis,np.newaxis]
+        ##     CovXpXn = np.diag(invC, k=1)[...,np.newaxis,np.newaxis]
+
         # Compute moments
         u0 = Xn
         u1 = CovXnXn + Xn[...,:,np.newaxis] * Xn[...,np.newaxis,:]
@@ -272,7 +287,7 @@ class GaussianMarkovChain(ExponentialFamily):
         return (u, g)
 
     @staticmethod
-    def compute_fixed_u_and_f(x):
+    def _compute_fixed_moments_and_f(x, mask=True):
         """ Compute u(x) and f(x) for given x. """
         u0 = x
         u1 = x[...,:,np.newaxis] * x[...,np.newaxis,:]
@@ -284,11 +299,21 @@ class GaussianMarkovChain(ExponentialFamily):
 
     @staticmethod
     def _compute_mask_to_parent(index, mask):
-        # TODO/FIXME/BUG: IMPLEMENT THIS
-        return mask
+
+        if index == 0: # mu
+            return mask
+        elif index == 1: # Lambda
+            return mask
+        elif index == 2: # A
+            return mask[...,np.newaxis,np.newaxis]
+        elif index == 3: # v
+            return mask[...,np.newaxis,np.newaxis]
+        elif index == 4: # N
+            return mask
+
 
     @staticmethod
-    def _compute_message_to_parent(index, u, *u_parents):
+    def _compute_message_to_parent(index, u, u_mu, u_Lambda, u_A, u_v, u_N):
         """
         Compute a message to a parent.
 
@@ -298,13 +323,17 @@ class GaussianMarkovChain(ExponentialFamily):
             Index of the parent requesting the message.
         u : list of ndarrays
             Moments of this node.
-        u_parents : list of list of ndarrays
-            List of parents' moments.
+        u_mu : list of ndarrays
+            Moments of parent `mu`.
+        u_Lambda : list of ndarrays
+            Moments of parent `Lambda`.
+        u_A : list of ndarrays
+            Moments of parent `A`.
+        u_v : list of ndarrays
+            Moments of parent `v`.
+        u_N : list of ndarrays
+            Moments of parent `N`.
         """
-        u_mu = u_parents[0]
-        u_Lambda = u_parents[1]
-        u_A = u_parents[2]
-        u_v = u_parents[3]
         
         if index == 0:   # mu
             raise NotImplementedError()
@@ -317,7 +346,14 @@ class GaussianMarkovChain(ExponentialFamily):
             m0 = v[...,np.newaxis] * XpXn.swapaxes(-1,-2)
             m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
         elif index == 3: # v
-            raise NotImplementedError()
+            XnXn = u[1] # (...,N,D,D)
+            XpXn = u[2] # (...,N-1,D,D)
+            A = u_A[0]  # (...,N-1,D,D)
+            AA = u_A[1] # (...,N-1,D,D,D)
+            m0 = (- 0.5*np.einsum('...ii->...i', XnXn[...,1:,:,:])
+                  + np.einsum('...ik,...ki->...i', A, XpXn)
+                  - 0.5*np.einsum('...ikl,...kl->...i', AA, XnXn[...,:-1,:,:]))
+            m1 = 0.5
         elif index == 4: # N
             raise NotImplementedError()
 
@@ -329,11 +365,11 @@ class GaussianMarkovChain(ExponentialFamily):
         Compute the dimensions of phi and u.
 
         The plates and dimensions of the parents should be:
-        mu:     (...)                  and D-dimensional
-        Lambda: (...)                  and D-dimensional
-        A:      (...,D) or (...,N-1,D) and D-dimensional
-        v:      (...,D) or (...,N-1,D) and 0-dimensional
-        N:      ()                     and 0-dimensional (dummy parent)
+        mu:     (...)                    and D-dimensional
+        Lambda: (...)                    and D-dimensional
+        A:      (...,1,D) or (...,N-1,D) and D-dimensional
+        v:      (...,1,D) or (...,N-1,D) and 0-dimensional
+        N:      ()                       and 0-dimensional (dummy parent)
 
         Check that the dimensionalities of the parents are proper.
         For instance, A should be a collection of DxD matrices, thus
@@ -467,6 +503,17 @@ class GaussianMarkovChain(ExponentialFamily):
         return _MarkovChainToGaussian(self,
                                       name=self.name+" as Gaussian")
 
+    def plot(self):
+        x = self.u[0]
+        xx = self.u[1]
+        var = np.einsum('...ii->...i', xx) - x**2
+        plt.figure()
+        D = np.shape(x)[-1]
+        for d in range(D):
+            plt.subplot(D,1,d+1)
+            bpplt.errorplot(y=x[...,d],
+                            error=2*np.sqrt(var[...,d]))
+
 
 class _MarkovChainToGaussian(Deterministic):
     """
@@ -478,7 +525,7 @@ class _MarkovChainToGaussian(Deterministic):
     def __init__(self, X, **kwargs):
 
         # Check for constant n
-        if utils.is_numeric(X):
+        if utils.utils.is_numeric(X):
             X = Constant(GaussianMarkovChain)(X)
 
         # Make the time dimension a plate dimension...
@@ -518,7 +565,7 @@ class _MarkovChainToGaussian(Deterministic):
         plates = parent.plates + (parent.dims[0][0],)
         return plates
 
-    def get_moments(self):
+    def _compute_moments(self, u):
         """
         Transform the moments of a GMC to moments of a Gaussian.
 
@@ -530,7 +577,7 @@ class _MarkovChainToGaussian(Deterministic):
         """
 
         # Get the moments from the parent Gaussian Markov Chain
-        u = self.parents[0].get_moments() #message_to_child()
+        #u = self.parents[0].get_moments() #message_to_child()
 
         # Send only moments <X(n)> and <X(n)X(n)> but not <X(n-1)X(n)>
         return u[:2]

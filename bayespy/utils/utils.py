@@ -715,8 +715,8 @@ def block_banded(D, B):
             raise ValueError("Blocks must be 2 dimensional arrays")
         b = np.shape(B[i])
         if b[0] != np.shape(D[i])[1] or b[1] != np.shape(D[i+1])[0]:
-            raise ValueError("Shapes of the super-diagonal blocks do not match the shapes of the \
-                              diagonal blocks")
+            raise ValueError("Shapes of the super-diagonal blocks do not match "
+                             "the shapes of the diagonal blocks")
 
     A = np.zeros((M,M))
     k = 0
@@ -764,8 +764,8 @@ def block_banded_solve(A, B, y):
     N = len(A)
 
     if len(B) != N-1:
-        raise ValueError("The number of super-diagonal blocks must be exactly one less than \
-                          the number of diagonal blocks")
+        raise ValueError("The number of super-diagonal blocks must be exactly "
+                         "one less than the number of diagonal blocks")
 
     # Compute the size of the full matrix
     D = np.shape(A[0])[0]
@@ -790,6 +790,7 @@ def block_banded_solve(A, B, y):
         # Compute the diagonal block and store the Cholesky factor
         V[n+1] = A[n+1] - np.dot(B[n].T, chol_solve(V[n], B[n]))
         V[n+1] = 0.5*V[n+1] + 0.5*V[n+1].T
+        #print('blk bnd solve', n, V[n+1])
         V[n+1] = chol(V[n+1])
         #V[n+1] = chol(A[n+1] - np.dot(B[n].T, chol_solve(V[n], B[n])))
         # Compute the log-det term here, too
