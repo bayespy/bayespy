@@ -239,7 +239,7 @@ def run():
     # Then, learn drifting dynamics
     Q.update(W, S, A_S, alpha, v_s, repeat=10)
     # Then, fine tune by learning everything jointly
-    Q.update(X, C, gamma, tau, W, S, A_S, alpha, v_s, repeat=100)
+    Q.update(X, C, gamma, tau, W, S, A_S, alpha, v_s, repeat=1000)
 
     ## # Debugging
     ## Y.observe(y, mask=False)
