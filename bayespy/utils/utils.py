@@ -36,6 +36,22 @@ import scipy.optimize as optimize
 import scipy.sparse as sparse
 #import scikits.sparse.cholmod as cholmod
 
+def write_to_hdf5(group, data, name):
+    """
+    Writes the given array into the HDF5 file.
+    """
+    try:
+        # Try using compression. It doesn't work for scalars.
+        group.create_dataset(name, 
+                             data=data, 
+                             compression='gzip')
+    except TypeError:
+        group.create_dataset(name, 
+                             data=data)
+    except ValueError:
+        raise ValueError('Could not write %s' % data)
+
+
 def nans(size=()):
     return np.tile(np.nan, size)
 

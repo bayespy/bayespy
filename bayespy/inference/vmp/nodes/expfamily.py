@@ -46,17 +46,19 @@ class ExponentialFamily(Stochastic):
     
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, initialize=True, **kwargs):
 
         super().__init__(*args,
+                         initialize=initialize,
                          **kwargs)
 
-        axes = len(self.plates)*(1,)
-        self.phi = [utils.nans(axes+dim) for dim in self.dims]
+        if not initialize:
+            axes = len(self.plates)*(1,)
+            self.phi = [utils.nans(axes+dim) for dim in self.dims]
 
         # Terms for the lower bound (G for latent and F for observed)
-        self.g = 0
-        self.f = 0
+        self.g = np.array(0)
+        self.f = np.array(0)
 
 
     def initialize_from_prior(self):
@@ -199,4 +201,33 @@ class ExponentialFamily(Stochastic):
             # TODO/FIXME: Use einsum!
             L = L + np.sum(phi_i * u_i, axis=axis_sum)
         return L
+
+    def save(self, group):
+        """
+        Save the state of the node into a HDF5 file.
+
+        group can be the root
+        """
+        ## if name is None:
+        ##     name = self.name
+        ## subgroup = group.create_group(name)
+        
+        for i in range(len(self.phi)):
+            utils.write_to_hdf5(group, self.phi[i], 'phi%d' % i)
+        utils.write_to_hdf5(group, self.f, 'f')
+        utils.write_to_hdf5(group, self.g, 'g')
+        super().save(group)
+    
+    def load(self, group):
+        """
+        Load the state of the node from a HDF5 file.
+        """
+        # TODO/FIXME: Check that the shapes are correct!
+        for i in range(len(self.phi)):
+            phii = group['phi%d' % i][...]
+            self.phi[i] = phii
+            
+        self.f = group['f'][...]
+        self.g = group['g'][...]
+        super().load(group)
 

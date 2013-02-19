@@ -26,18 +26,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 import time
+import h5py
+
+from bayespy import utils
 
 class VB():
 
     def __init__(self, *nodes, tol=1e-6):
         self.model = set(nodes)
         self.iter = 0
-        self.L = -np.inf
-
+        self.L = np.array(())
         self.l = dict(zip(self.model, 
                           len(self.model)*[np.array([])]))
 
     def update(self, *nodes, repeat=1):
+
+        # Append the cost arrays
+        print(self.L)
+        self.L = np.append(self.L, utils.utils.nans(repeat))
+        for (node, l) in self.l.items():
+            self.l[node] = np.append(l, utils.utils.nans(repeat))
 
         # By default, update all nodes
         if len(nodes) == 0:
@@ -47,30 +55,32 @@ class VB():
             t = time.clock()
             for node in nodes:
                 node.update()
-            self.iter += 1
             
             L = self.loglikelihood_lowerbound()
             print("Iteration %d: loglike=%e (%.3f seconds)" 
-                  % (self.iter, L, time.clock()-t))
+                  % (self.iter+1, L, time.clock()-t))
 
-            # Check for errors
-            if self.L - L > 1e-6:
-                L_diff = (self.L - L)
-                warnings.warn("Lower bound decreased %e! Bug somewhere or "
-                              "numerical inaccuracy?" % L_diff)
+            if self.iter > 0:
+                # Check for errors
+                if self.L[self.iter-1] - L > 1e-6:
+                    L_diff = (self.L[self.iter-1] - L)
+                    warnings.warn("Lower bound decreased %e! Bug somewhere or "
+                                  "numerical inaccuracy?" % L_diff)
 
-            # Check for convergence
-            if L - self.L < 1e-12:
-                print("Converged.")
+                # Check for convergence
+                if L - self.L[self.iter-1] < 1e-12:
+                    print("Converged.")
 
-            self.L = L
+            self.L[self.iter] = L
+            self.iter += 1
 
     def loglikelihood_lowerbound(self):
         L = 0
         for node in self.model:
             lp = node.lower_bound_contribution()
-            self.l[node] = np.append(self.l[node], lp)
             L += lp
+            self.l[node][self.iter] = lp
+            
         return L
 
     def plot_iteration_by_nodes(self):
@@ -95,3 +105,40 @@ class VB():
     def get_iteration_by_nodes(self):
         return self.l
 
+
+    def save(self, filename):
+        # Open HDF5 file
+        h5f = h5py.File(filename)
+        # Write each node
+        nodegroup = h5f.create_group('nodes')
+        for node in self.model:
+            if node.name == '':
+                raise Exception("In order to save nodes, they must have "
+                                "(unique) names.")
+            node.save(nodegroup.create_group(node.name))
+        # Write iteration statistics
+        utils.utils.write_to_hdf5(h5f, self.L, 'L')
+        utils.utils.write_to_hdf5(h5f, self.iter, 'iter')
+        boundgroup = h5f.create_group('boundterms')
+        for node in self.model:
+            utils.utils.write_to_hdf5(boundgroup, self.l[node], node.name)
+        # Close file
+        h5f.close()
+
+    def load(self, filename):
+        # Open HDF5 file
+        h5f = h5py.File(filename)
+        # Read each node
+        for node in self.model:
+            if node.name == '':
+                raise Exception("In order to load nodes, they must have "
+                                "(unique) names.")
+            node.load(h5f['nodes'][node.name])
+        # Read iteration statistics
+        self.L = h5f['L'][...]
+        self.iter = h5f['iter'][...]
+        for node in self.model:
+            self.l[node] = h5f['boundterms'][node.name][...]
+        # Close file
+        h5f.close()
+        

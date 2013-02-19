@@ -181,3 +181,35 @@ class Stochastic(Node):
         # Sub-classes should implement this
         raise NotImplementedError()
 
+
+
+    def save(self, group):
+        """
+        Save the state of the node into a HDF5 file.
+
+        group can be the root
+        """
+        ## if name is None:
+        ##     name = self.name
+        ## subgroup = group.create_group(name)
+        
+        for i in range(len(self.u)):
+            utils.write_to_hdf5(group, self.u[i], 'u%d' % i)
+        utils.write_to_hdf5(group, self.observed, 'observed')
+
+    def load(self, group):
+        """
+        Load the state of the node from a HDF5 file.
+        """
+        # TODO/FIXME: Check that the shapes are correct!
+        for i in range(len(self.u)):
+            ui = group['u%d' % i][...]
+            self.u[i] = ui
+
+        old_observed = self.observed
+        self.observed = group['observed'][...]
+        # Update masks if necessary
+        if np.any(old_observed != self.observed):
+            self._update_mask()
+
+
