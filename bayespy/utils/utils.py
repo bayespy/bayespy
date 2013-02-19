@@ -39,6 +39,9 @@ import scipy.sparse as sparse
 def nans(size=()):
     return np.tile(np.nan, size)
 
+def trues(shape):
+    return np.ones(shape, dtype=np.bool)
+
 def array_to_scalar(x):
     # This transforms an N-dimensional array to a scalar. It's most
     # useful when you know that the array has only one element and you
