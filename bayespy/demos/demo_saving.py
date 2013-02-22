@@ -96,7 +96,7 @@ def run(M=10, N=100, D_y=3, D=5):
     Y.observe(y, mask=mask)
 
     # Construct inference machine
-    Q = VB(Y, W, X, tau, alpha)
+    Q = VB(Y, W, X, tau, alpha, autosave_iterations=5)
 
     # Initialize some nodes randomly
     X.initialize_from_value(X.random())

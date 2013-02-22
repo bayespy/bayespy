@@ -27,22 +27,49 @@ import matplotlib.pyplot as plt
 import warnings
 import time
 import h5py
+import datetime
+import tempfile
+from pympler import tracker
+from pympler.classtracker import ClassTracker
+
+import gc
 
 from bayespy import utils
 
+from bayespy.inference.vmp.nodes.node import Node
+
 class VB():
 
-    def __init__(self, *nodes, tol=1e-6):
+    def __init__(self,
+                 *nodes, 
+                 tol=1e-6, 
+                 autosave_iterations=0, 
+                 autosave_filename=None):
         self.model = set(nodes)
         self.iter = 0
         self.L = np.array(())
         self.l = dict(zip(self.model, 
                           len(self.model)*[np.array([])]))
+        self.autosave_iterations = autosave_iterations
+        if autosave_filename is None or autosave_filename == '':
+            date = datetime.datetime.today().strftime('%Y%m%d%H%M%S')
+            prefix = 'vb_autosave_%s_' % date
+            tmpfile = tempfile.NamedTemporaryFile(prefix=prefix,
+                                                  suffix='.hdf5')
+            self.autosave_filename = tmpfile.name
+        else:
+            self.autosave_filename = autosave_filename
 
     def update(self, *nodes, repeat=1):
 
+        #mem_tracker = tracker.SummaryTracker()
+        #node_tracker = ClassTracker()
+        #tracker.track_object(factory)
+        #node_tracker.track_class(Node)
+        #for node in self.model:
+        #    node_tracker.track_object(node)
+
         # Append the cost arrays
-        print(self.L)
         self.L = np.append(self.L, utils.utils.nans(repeat))
         for (node, l) in self.l.items():
             self.l[node] = np.append(l, utils.utils.nans(repeat))
@@ -53,13 +80,19 @@ class VB():
             
         for i in range(repeat):
             t = time.clock()
+
+            # Update nodes
             for node in nodes:
                 node.update()
-            
+                # Force garbage collection
+                gc.collect()
+
+            # Compute lower bound
             L = self.loglikelihood_lowerbound()
             print("Iteration %d: loglike=%e (%.3f seconds)" 
                   % (self.iter+1, L, time.clock()-t))
 
+            # Check the progress of the iteration
             if self.iter > 0:
                 # Check for errors
                 if self.L[self.iter-1] - L > 1e-6:
@@ -71,8 +104,23 @@ class VB():
                 if L - self.L[self.iter-1] < 1e-12:
                     print("Converged.")
 
+            # Auto-save, if requested
+            if (self.autosave_iterations > 0 
+                and np.mod(self.iter+1, self.autosave_iterations) == 0):
+
+                self.save(self.autosave_filename)
+                print('Auto-saved to %s' % self.autosave_filename)
+
             self.L[self.iter] = L
             self.iter += 1
+
+            # Memory debugging
+            #all_objects = muppy.get_objects()
+            #mem_tracker.print_diff()
+            #node_tracker.create_snapshot()
+            #node_tracker.stats.print_summary()
+            
+            
 
     def loglikelihood_lowerbound(self):
         L = 0
@@ -108,7 +156,7 @@ class VB():
 
     def save(self, filename):
         # Open HDF5 file
-        h5f = h5py.File(filename)
+        h5f = h5py.File(filename, 'w')
         # Write each node
         nodegroup = h5f.create_group('nodes')
         for node in self.model:
