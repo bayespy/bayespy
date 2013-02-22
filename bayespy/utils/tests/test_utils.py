@@ -30,6 +30,8 @@ import unittest
 
 import numpy as np
 
+from numpy import testing
+
 from .. import utils
 #from bayespy.utils import utils
 
@@ -55,6 +57,190 @@ class TestBroadcasting(unittest.TestCase):
         self.assertFalse(f( (4,3,), (1,3,) ))
         self.assertFalse(f( (6,1,4,3,), (6,1,1,3,) ))
 
+class TestSumMultiply(unittest.TestCase):
+
+    def check_sum_multiply(self, *shapes, **kwargs):
+
+        # The set of arrays
+        x = list()
+        for (ind, shape) in enumerate(shapes):
+            x += [np.random.randn(*shape)]
+
+        # Result from the function
+        yh = utils.sum_multiply(*x,
+                                **kwargs)
+
+        axis = kwargs.get('axis', None)
+        sumaxis = kwargs.get('sumaxis', True)
+        keepdims = kwargs.get('keepdims', False)
+        
+        # Compute the product
+        y = 1
+        for xi in x:
+            y = y * xi
+
+        # Compute the sum
+        if sumaxis:
+            y = np.sum(y, axis=axis, keepdims=keepdims)
+        else:
+            axes = np.arange(np.ndim(y))
+            # TODO/FIXME: np.delete has a bug that it doesn't accept negative
+            # indices. Thus, transform negative axes to positive axes.
+            if len(axis) > 0:
+                axis = [i if i >= 0 
+                        else i+np.ndim(y) 
+                        for i in axis]
+            elif axis < 0:
+                axis += np.ndim(y)
+                
+            axes = np.delete(axes, axis)
+            axes = tuple(axes)
+            if len(axes) > 0:
+                y = np.sum(y, axis=axes, keepdims=keepdims)
+
+        # Check the result
+        testing.assert_allclose(yh, y,
+                                err_msg="Incorrect value.")
+        
+
+    def test_sum_multiply(self):
+        """
+        Test utils.sum_multiply.
+        """
+        # Check empty list returns error
+        self.assertRaises(ValueError, 
+                          self.check_sum_multiply)
+        # Check scalars
+        self.check_sum_multiply(())
+        self.check_sum_multiply((), (), ())
+        
+        # Check doing no summation
+        self.check_sum_multiply((3,), 
+                                axis=())
+        self.check_sum_multiply((3,1,5), 
+                                (  4,1),
+                                (    5,),
+                                (      ),
+                                axis=(), 
+                                keepdims=True)
+        # Check AXES_TO_SUM
+        self.check_sum_multiply((3,1), 
+                                (1,4),
+                                (3,4),
+                                axis=(1,))
+        self.check_sum_multiply((3,1),
+                                (1,4),
+                                (3,4),
+                                axis=(-2,))
+        self.check_sum_multiply((3,1), 
+                                (1,4),
+                                (3,4),
+                                axis=(1,-2))
+        # Check AXES_TO_SUM and KEEPDIMS
+        self.check_sum_multiply((3,1), 
+                                (1,4),
+                                (3,4),
+                                axis=(1,),
+                                keepdims=True)
+        self.check_sum_multiply((3,1),
+                                (1,4),
+                                (3,4),
+                                axis=(-2,),
+                                keepdims=True)
+        self.check_sum_multiply((3,1), 
+                                (1,4),
+                                (3,4),
+                                axis=(1,-2,),
+                                keepdims=True)
+        self.check_sum_multiply((3,1,5,6), 
+                                (  4,1,6),
+                                (  4,1,1),
+                                (       ),
+                                axis=(1,-2),
+                                keepdims=True)
+        # Check AXES_TO_KEEP
+        self.check_sum_multiply((3,1), 
+                                (1,4),
+                                (3,4),
+                                sumaxis=False,
+                                axis=(1,))
+        self.check_sum_multiply((3,1),
+                                (1,4),
+                                (3,4),
+                                sumaxis=False,
+                                axis=(-2,))
+        self.check_sum_multiply((3,1), 
+                                (1,4),
+                                (3,4),
+                                sumaxis=False,
+                                axis=(1,-2))
+        # Check AXES_TO_KEEP and KEEPDIMS
+        self.check_sum_multiply((3,1), 
+                                (1,4),
+                                (3,4),
+                                sumaxis=False,
+                                axis=(1,),
+                                keepdims=True)
+        self.check_sum_multiply((3,1),
+                                (1,4),
+                                (3,4),
+                                sumaxis=False,
+                                axis=(-2,),
+                                keepdims=True)
+        self.check_sum_multiply((3,1), 
+                                (1,4),
+                                (3,4),
+                                sumaxis=False,
+                                axis=(1,-2,),
+                                keepdims=True)
+        self.check_sum_multiply((3,1,5,6), 
+                                (  4,1,6),
+                                (  4,1,1),
+                                (       ),
+                                sumaxis=False,
+                                axis=(1,-2,),
+                                keepdims=True)
+        # Check errors
+        # Inconsistent shapes
+        self.assertRaises(ValueError, 
+                          self.check_sum_multiply,
+                          (3,4),
+                          (3,5))
+        # Axis index out of bounds
+        self.assertRaises(ValueError, 
+                          self.check_sum_multiply,
+                          (3,4),
+                          (3,4),
+                          axis=(-3,))
+        self.assertRaises(ValueError, 
+                          self.check_sum_multiply,
+                          (3,4),
+                          (3,4),
+                          axis=(2,))
+        self.assertRaises(ValueError, 
+                          self.check_sum_multiply,
+                          (3,4),
+                          (3,4),
+                          sumaxis=False,
+                          axis=(-3,))
+        self.assertRaises(ValueError, 
+                          self.check_sum_multiply,
+                          (3,4),
+                          (3,4),
+                          sumaxis=False,
+                          axis=(2,))
+        # Same axis several times
+        self.assertRaises(ValueError, 
+                          self.check_sum_multiply,
+                          (3,4),
+                          (3,4),
+                          axis=(1,-1))
+        self.assertRaises(ValueError, 
+                          self.check_sum_multiply,
+                          (3,4),
+                          (3,4),
+                          sumaxis=False,
+                          axis=(1,-1))
 
 class TestBandedSolve(unittest.TestCase):
 

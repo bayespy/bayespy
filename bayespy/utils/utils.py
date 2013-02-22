@@ -25,8 +25,9 @@
 General numerical functions and methods.
 
 """
-
+import functools
 import itertools
+
 import numpy as np
 import scipy as sp
 #import scipy.linalg.decomp_cholesky as decomp
@@ -271,35 +272,44 @@ def is_numeric(a):
             isinstance(a, list) or
             isinstance(a, np.ndarray))
 
-def sum_multiply(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
+def sum_multiply(*args, axis=None, sumaxis=True, keepdims=False):
 
     # Computes sum(arg[0]*arg[1]*arg[2]*..., axis=axes_to_sum) without
     # explicitly computing the intermediate product
+
+    if len(args) == 0:
+        raise ValueError("You must give at least one input array")
 
     # Dimensionality of the result
     max_dim = 0
     for k in range(len(args)):
         max_dim = max(max_dim, np.ndim(args[k]))
 
-    axes = list()
-    if axes_to_sum == None and axes_to_keep == None:
-        # Sum over all axes if none given
-        axes = []
-    elif axes_to_sum != None:
-        if np.isscalar(axes_to_sum):
-            axes_to_sum = [axes_to_sum]
-        for i in range(max_dim):
-            if i not in axes_to_sum and (-max_dim+i) not in axes_to_sum:
-                axes.append(i)
-    elif axes_to_keep != None:
-        if np.isscalar(axes_to_keep):
-            axes_to_keep = [axes_to_keep]
-        for i in range(max_dim):
-            if i in axes_to_keep or (-max_dim+i) in axes_to_keep:
-                axes.append(i)
+    if sumaxis:
+        if axis is None:
+            # Sum all axes
+            axes = []
+        else:
+            if np.isscalar(axis):
+                axis = [axis]
+            axes = [i
+                    for i in range(max_dim)
+                    if i not in axis and (-max_dim+i) not in axis]
     else:
-        raise Exception("You can't give both axes to sum and keep")
+        if axis is None:
+            # Keep all axes
+            axes = range(max_dim)
+        else:
+            # Find axes that are kept
+            if np.isscalar(axis):
+                axes = [axis]
+            axes = [i if i >= 0
+                    else i+max_dim
+                    for i in axis]
+            axes = sorted(axes)
 
+    if len(axes) > 0 and (min(axes) < 0 or max(axes) >= max_dim):
+        raise ValueError("Axis index out of bounds")
 
     # Form a list of pairs: the array in the product and its axes
     pairs = list()
@@ -313,7 +323,19 @@ def sum_multiply(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
     pairs.append(axes)
 
     # Compute the sum-product
-    y = np.einsum(*pairs)
+    try:
+        y = np.einsum(*pairs)
+    except ValueError as err:
+        if str(err) == ("If 'op_axes' or 'itershape' is not NULL in "
+                        "theiterator constructor, 'oa_ndim' must be greater "
+                        "than zero"):
+            # TODO/FIXME: Handle a bug in NumPy. If all arguments to einsum are
+            # scalars, it raises an error. For scalars we can just use multiply
+            # and forget about summing. Hopefully, in the future, einsum handles
+            # scalars properly and this try-except becomes unnecessary.
+            y = functools.reduce(np.multiply, args)
+        else:
+            raise err
 
     # Restore summed axes as singleton axes
     if keepdims:
@@ -331,8 +353,17 @@ def sum_multiply(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
 
     return y
 
-def sum_product(*args, **kwargs):
-    return sum_multiply(*args, **kwargs)
+def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
+    if axes_to_keep is not None:
+        return sum_multiply(*args, 
+                            axis=axes_to_keep, 
+                            sumaxis=False,
+                            keepdims=keepdims)
+    else:
+        return sum_multiply(*args, 
+                            axis=axes_to_sum, 
+                            sumaxis=True,
+                            keepdims=keepdims)
 
 def moveaxis(A, axis_from, axis_to):
 

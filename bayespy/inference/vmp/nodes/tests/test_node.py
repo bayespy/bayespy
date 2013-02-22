@@ -42,11 +42,10 @@ from bayespy import utils
 class TestNode(unittest.TestCase):
 
     def check_message_to_parent(self, plates_child, plates_message,
-                                plates_mask, plates_parent):
-        D = 2
+                                plates_mask, plates_parent, dims=(2,)):
 
         # Dummy message
-        msg = np.random.randn(*(plates_message+(D,)))
+        msg = np.random.randn(*(plates_message+dims))
         # Mask with every other True and every other False
         mask = np.mod(np.arange(np.prod(plates_mask)).reshape(plates_mask),
                       2) == 0
@@ -55,13 +54,13 @@ class TestNode(unittest.TestCase):
         class Dummy(Node):
             def _get_message_and_mask_to_parent(self, index):
                 return ([msg], mask)
-        parent = Dummy(dims=[(D,)], plates=plates_parent)
-        child = Dummy(parent, dims=[(D,)], plates=plates_child)
+        parent = Dummy(dims=[dims], plates=plates_parent)
+        child = Dummy(parent, dims=[dims], plates=plates_child)
 
-        m = child._message_to_parent(0)[0] * np.ones(plates_parent+(D,))
+        m = child._message_to_parent(0)[0] * np.ones(plates_parent+dims)
 
         # Brute-force computation of the message without too much checking
-        m_true = msg * mask[...,np.newaxis] * np.ones(plates_child+(D,))
+        m_true = msg * mask[...,np.newaxis] * np.ones(plates_child+dims)
         for ind in range(len(plates_child)):
             axis = -ind - 2
             if ind >= len(plates_parent):
@@ -77,39 +76,45 @@ class TestNode(unittest.TestCase):
         Test plate handling in _message_to_parent.
         """
 
+        # Test empty plates with scalar messages
+        self.check_message_to_parent((),
+                                     (),
+                                     (),
+                                     (),
+                                     dims=())
         # Test singular plates
-        self.check_message_to_parent((3,),
-                                     (3,),
-                                     (3,),
-                                     (3,))
-        self.check_message_to_parent((3,),
-                                     (1,),
-                                     (3,),
-                                     (3,))
-        self.check_message_to_parent((3,),
-                                     (3,),
-                                     (1,),
-                                     (3,))
-        self.check_message_to_parent((3,),
-                                     (3,),
-                                     (3,),
-                                     (1,))
-        self.check_message_to_parent((3,),
-                                     (1,),
-                                     (1,),
-                                     (3,))
-        self.check_message_to_parent((3,),
-                                     (3,),
-                                     (1,),
-                                     (1,))
-        self.check_message_to_parent((3,),
-                                     (1,),
-                                     (3,),
-                                     (1,))
-        self.check_message_to_parent((3,),
-                                     (1,),
-                                     (1,),
-                                     (1,))
+        self.check_message_to_parent((2,3,4),
+                                     (2,3,4),
+                                     (2,3,4),
+                                     (2,3,4))
+        self.check_message_to_parent((2,3,4),
+                                     (2,1,4),
+                                     (2,3,4),
+                                     (2,3,4))
+        self.check_message_to_parent((2,3,4),
+                                     (2,3,4),
+                                     (2,1,4),
+                                     (2,3,4))
+        self.check_message_to_parent((2,3,4),
+                                     (2,3,4),
+                                     (2,3,4),
+                                     (2,1,4))
+        self.check_message_to_parent((2,3,4),
+                                     (2,1,4),
+                                     (2,1,4),
+                                     (2,3,4))
+        self.check_message_to_parent((2,3,4),
+                                     (2,3,4),
+                                     (2,1,4),
+                                     (2,1,4))
+        self.check_message_to_parent((2,3,4),
+                                     (2,1,4),
+                                     (2,3,4),
+                                     (2,1,4))
+        self.check_message_to_parent((2,3,4),
+                                     (2,1,4),
+                                     (2,1,4),
+                                     (2,1,4))
         # Test missing plates
         self.check_message_to_parent((4,3),
                                      (4,3),

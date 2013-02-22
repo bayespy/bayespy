@@ -299,7 +299,7 @@ class Node():
                 # parent does not have.
                 axes_msg = utils.axes_to_collapse(shape_msg, shape_parent)
                 m[i] = utils.sum_multiply(mask_i, m[i], r, 
-                                          axes_to_sum=axes_msg, 
+                                          axis=axes_msg, 
                                           keepdims=True)
 
                 # Remove leading singular plates if the parent does not have
