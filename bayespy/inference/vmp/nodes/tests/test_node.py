@@ -45,14 +45,16 @@ class TestNode(unittest.TestCase):
                                 plates_mask, plates_parent):
         D = 2
 
-        # Set up the dummy model
+        # Dummy message
         msg = np.random.randn(*(plates_message+(D,)))
-        mask = utils.random.mask(*plates_mask)
+        # Mask with every other True and every other False
+        mask = np.mod(np.arange(np.prod(plates_mask)).reshape(plates_mask),
+                      2) == 0
 
+        # Set up the dummy model
         class Dummy(Node):
             def _get_message_and_mask_to_parent(self, index):
                 return ([msg], mask)
-
         parent = Dummy(dims=[(D,)], plates=plates_parent)
         child = Dummy(parent, dims=[(D,)], plates=plates_child)
 
@@ -219,7 +221,6 @@ class TestNode(unittest.TestCase):
                           (4,),
                           (4,),
                           (1,))
-        #self.assertRaises(SomeCoolException, mymod.myfunc)        
 
 
         

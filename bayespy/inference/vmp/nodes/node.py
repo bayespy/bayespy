@@ -232,12 +232,11 @@ class Node():
         if index >= len(self.parents):
             raise ValueError("Parent index larger than the number of parents")
 
-        # Compute the message
-        # TODO/FIXME: If several deterministic nodes as a chain, get_mask will
-        # be expensive..
-        (m, my_mask) = self._get_message_and_mask_to_parent(index)
-        #my_mask = self.mask #self._get_message_mask()
-        #my_mask = self._compute_mask_to_parent(index, self.mask)
+        # Compute the message and mask
+        (m, mask) = self._get_message_and_mask_to_parent(index)
+
+        # Plates in the mask
+        plates_mask = np.shape(mask)
 
         # The parent we're sending the message to
         parent = self.parents[index]
@@ -248,73 +247,64 @@ class Node():
             # Empty messages are given as None. We can ignore those.
             if m[i] is not None:
 
-                # Ignorations (add extra axes to broadcast properly).
-                # This sends zero messages to parent from such
-                # variables we are ignoring in this node. This is
-                # useful for handling missing data.
-
-                # Apply the mask to the message
-                # Sum the dimensions of the message matrix to match
-                # the dimensionality of the parents natural
-                # parameterization (as there may be less plates for
-                # parents)
-
-                # Extend the plate mask to include unit axes for variable
-                # dimensions.
-                shape_mask = np.shape(my_mask) + (1,) * len(parent.dims[i])
-                my_mask2 = np.reshape(my_mask, shape_mask)
-
-                # Apply the mask to the message
-                m[i] = np.where(my_mask2, m[i], 0)
-
-                shape_m = np.shape(m[i])
-                # If some dimensions of the message matrix were
-                # singleton although the corresponding dimension
-                # of the parents natural parameterization is not,
-                # multiply the message (i.e., broadcasting)
-
                 # Plates in the message
+                shape_m = np.shape(m[i])
                 dim_parent = len(parent.dims[i])
                 if dim_parent > 0:
                     plates_m = shape_m[:-dim_parent]
                 else:
                     plates_m = shape_m
 
-                # Compute the multiplier (multiply by the number of
-                # plates for which both the message and parent have
-                # single plates)
+                # Compute the multiplier (multiply by the number of plates for
+                # which the message, the mask and the parent have single
+                # plates).  Such a plate is meant to be broadcasted but because
+                # the parent has singular plate axis, it won't broadcast (and
+                # sum over it), so we need to multiply it.
                 plates_self = self._plates_to_parent(index)
                 try:
-                    ## print('node.msg', self.name, plates_self, 
-                    ##                           plates_m,
-                    ##                           parent.plates)
                     r = self._plate_multiplier(plates_self, 
                                                plates_m,
+                                               plates_mask,
                                                parent.plates)
                 except ValueError:
-                    raise ValueError("The plates of the message and "
+                    raise ValueError("The plates of the message, the mask and "
                                      "parent[%d] node (%s) are not a "
-                                     "broadcastable subset of the plates "
-                                     "of this node (%s).  The message has "
-                                     "shape %s, meaning plates %s. This "
-                                     "node has plates %s with respect to "
-                                     "the parent[%d], which has plates %s."
+                                     "broadcastable subset of the plates of "
+                                     "this node (%s).  The message has shape "
+                                     "%s, meaning plates %s. The mask has "
+                                     "plates %s. This node has plates %s with "
+                                     "respect to the parent[%d], which has "
+                                     "plates %s."
                                      % (index,
                                         parent.name,
                                         self.name,
                                         np.shape(m[i]), 
                                         plates_m, 
-                                        plates_self, 
-                                        index,
+                                        plates_mask,
+                                        plates_self,
+                                        index, 
                                         parent.plates))
 
+                # Add variable axes to the mask
+                shape_mask = np.shape(mask) + (1,) * len(parent.dims[i])
+                mask_i = np.reshape(mask, shape_mask)
+
+                # Sum over plates that are not in the message nor in the parent
                 shape_parent = parent.get_shape(i)
+                shape_msg = utils.broadcasted_shape(shape_m, shape_parent)
+                axes_mask = utils.axes_to_collapse(shape_mask, shape_msg)
+                mask_i = np.sum(mask_i, axis=axes_mask, keepdims=True)
 
-                s = utils.axes_to_collapse(shape_m, shape_parent)
-                m[i] = np.sum(m[i], axis=s, keepdims=True)
+                # Compute the masked message and sum over the plates that the
+                # parent does not have.
+                axes_msg = utils.axes_to_collapse(shape_msg, shape_parent)
+                m[i] = utils.sum_multiply(mask_i, m[i], r, 
+                                          axes_to_sum=axes_msg, 
+                                          keepdims=True)
 
+                # Remove leading singular plates if the parent does not have
+                # those plate axes.
                 m[i] = utils.squeeze_to_dim(m[i], len(shape_parent))
-                m[i] *= r
 
         return m
 

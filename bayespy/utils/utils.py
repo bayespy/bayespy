@@ -271,7 +271,7 @@ def is_numeric(a):
             isinstance(a, list) or
             isinstance(a, np.ndarray))
 
-def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
+def sum_multiply(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
 
     # Computes sum(arg[0]*arg[1]*arg[2]*..., axis=axes_to_sum) without
     # explicitly computing the intermediate product
@@ -330,6 +330,9 @@ def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
         y = np.reshape(y, s)
 
     return y
+
+def sum_product(*args, **kwargs):
+    return sum_multiply(*args, **kwargs)
 
 def moveaxis(A, axis_from, axis_to):
 
