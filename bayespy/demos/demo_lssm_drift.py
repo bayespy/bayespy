@@ -241,7 +241,7 @@ def simulate_drifting_lssm(M, N):
 def run():
 
     seed = 495
-    maxiter = 10
+    maxiter = 1000
         
     print("seed = ", seed)
     np.random.seed(seed)
@@ -296,7 +296,6 @@ def run():
     # Then, fine tune by learning everything jointly
     Q.update(X, C, gamma, tau, B, beta, S, A, alpha, v_s, repeat=maxiter)
 
-    
     X_vb = X.u[0]
     varX_vb = utils.diagonal(X.u[1] - X_vb[...,np.newaxis,:] * X_vb[...,:,np.newaxis])
 

@@ -231,3 +231,5 @@ class ExponentialFamily(Stochastic):
         self.g = group['g'][...]
         super().load(group)
 
+        
+

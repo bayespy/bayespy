@@ -54,7 +54,7 @@ if __name__ == "__main__":
                                                        np.get_include()])
 
     # Setup for BayesPy
-    setup(requires = ['numpy (>=1.7.0)',
+    setup(requires = ['numpy (>=1.7.1)', # 1.7.0 contains a memory leak bug
                       'scipy (>=0.11.0)',
                       'scikits.sparse (>=0.1)',
                       'matplotlib (>=1.2.0)',

@@ -212,4 +212,3 @@ class Stochastic(Node):
         if np.any(old_observed != self.observed):
             self._update_mask()
 
-

@@ -228,6 +228,7 @@ class Node():
     #    raise NotImplementedError()
 
     def _message_to_parent(self, index):
+
         # Compute the message, check plates, apply mask and sum over some plates
         if index >= len(self.parents):
             raise ValueError("Parent index larger than the number of parents")

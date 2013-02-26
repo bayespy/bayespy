@@ -29,10 +29,6 @@ import time
 import h5py
 import datetime
 import tempfile
-from pympler import tracker
-from pympler.classtracker import ClassTracker
-
-import gc
 
 from bayespy import utils
 
@@ -62,13 +58,6 @@ class VB():
 
     def update(self, *nodes, repeat=1):
 
-        #mem_tracker = tracker.SummaryTracker()
-        #node_tracker = ClassTracker()
-        #tracker.track_object(factory)
-        #node_tracker.track_class(Node)
-        #for node in self.model:
-        #    node_tracker.track_object(node)
-
         # Append the cost arrays
         self.L = np.append(self.L, utils.utils.nans(repeat))
         for (node, l) in self.l.items():
@@ -77,7 +66,7 @@ class VB():
         # By default, update all nodes
         if len(nodes) == 0:
             nodes = self.model
-            
+
         for i in range(repeat):
             t = time.clock()
 
@@ -85,7 +74,6 @@ class VB():
             for node in nodes:
                 node.update()
                 # Force garbage collection
-                gc.collect()
 
             # Compute lower bound
             L = self.loglikelihood_lowerbound()
@@ -114,12 +102,6 @@ class VB():
             self.L[self.iter] = L
             self.iter += 1
 
-            # Memory debugging
-            #all_objects = muppy.get_objects()
-            #mem_tracker.print_diff()
-            #node_tracker.create_snapshot()
-            #node_tracker.stats.print_summary()
-            
             
 
     def loglikelihood_lowerbound(self):
@@ -175,7 +157,7 @@ class VB():
 
     def load(self, filename):
         # Open HDF5 file
-        h5f = h5py.File(filename)
+        h5f = h5py.File(filename, 'r')
         # Read each node
         for node in self.model:
             if node.name == '':

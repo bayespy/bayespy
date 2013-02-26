@@ -74,4 +74,3 @@ class Deterministic(Node):
     def _compute_moments(self, *u_parents):
         # Sub-classes should implement this
         raise NotImplementedError()
-
