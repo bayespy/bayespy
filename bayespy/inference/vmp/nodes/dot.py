@@ -31,6 +31,45 @@ from .deterministic import Deterministic
 from .constant import Constant
 from .gaussian import Gaussian
 
+def _message_sum_multiply(plates_parent, dims_parent, *arrays):
+    """
+    Compute message to parent and sum over plates.
+    """
+    # The shape of the full message
+    shapes = [np.shape(array) for array in arrays]
+    shape_full = utils.broadcasted_shape(*shapes)
+    # Find axes that should be summed
+    shape_parent = plates_parent + dims_parent
+    sum_axes = utils.axes_to_collapse(shape_full, shape_parent)
+    # Compute the multiplier for cancelling the
+    # plate-multiplier.  Because we are summing over the
+    # dimensions already in this function (for efficiency), we
+    # need to cancel the effect of the plate-multiplier
+    # applied in the message_to_parent function.
+    r = 1
+    for j in sum_axes:
+        if j >= 0 and j < len(plates_parent):
+            r *= shape_full[j]
+        elif j < 0 and j < -len(dims_parent):
+            r *= shape_full[j]
+    # Compute the sum-product
+    m = utils.sum_multiply(*arrays,
+                           axis=sum_axes,
+                           sumaxis=True,
+                           keepdims=True) / r
+    # Remove extra axes
+    m = utils.squeeze_to_dim(m, len(shape_parent))
+    return m
+
+def _mask_sum(plates_parent, mask):
+
+    # Compute the mask
+    axes = utils.axes_to_collapse(np.shape(mask), plates_parent)
+    mask = np.any(mask, axis=axes, keepdims=True)
+    mask = utils.squeeze_to_dim(mask, len(plates_parent))
+    return mask
+
+
 class Dot(Deterministic):
     """
     A deterministic node for computing vector product of two Gaussians.
@@ -111,9 +150,6 @@ class Dot(Deterministic):
         
 
     def _compute_message_and_mask_to_parent(self, index, m, *u_parents):
-        #def get_message(self, index, u_parents):
-        
-        #(m, mask) = self.message_from_children()
 
         # Normally we don't need to care about masks when computing the
         # message. However, in this node we want to avoid computing huge message
@@ -127,21 +163,7 @@ class Dot(Deterministic):
         for i in range(2):
 
             # Add extra axes to the message from children
-            #m_shape = np.shape(m[i]) + (1,) * (i+1)
-            #m[i] = np.reshape(m[i], m_shape)
-
-            # Put masked elements to zero
-            np.copyto(m[i], 0, where=np.logical_not(mask))
-                
-            # Add extra axes to the mask from children
-            #mask_shape = np.shape(mask) + (1,) * (i+1)
-            #mask_i = np.reshape(mask, mask_shape)
-
-            #mask_i = mask
             m[i] = utils.add_trailing_axes(m[i], i+1)
-            #for k in range(i+1):
-                #m[i] = np.expand_dims(m[i], axis=-1)
-                #mask_i = np.expand_dims(mask_i, axis=-1)
 
             # List of elements to multiply together
             A = [m[i]]
@@ -149,20 +171,9 @@ class Dot(Deterministic):
                 if k != index:
                     A.append(u_parents[k][i])
 
-            # Find out which axes are summed over. Also, 
-            full_shape = utils.broadcasted_shape_from_arrays(*A)
-            axes = utils.axes_to_collapse(full_shape, parent.get_shape(i))
-            # Compute the multiplier for cancelling the
-            # plate-multiplier.  Because we are summing over the
-            # dimensions already in this function (for efficiency), we
-            # need to cancel the effect of the plate-multiplier
-            # applied in the message_to_parent function.
-            r = 1
-            for j in axes:
-                r *= full_shape[j]
-
-            # Compute dot product (and cancel plate-multiplier)
-            m[i] = utils.sum_product(*A, axes_to_sum=axes, keepdims=True) / r
+            # Compute the sum over some axes already here in order to avoid huge
+            # message matrices.
+            m[i] = _message_sum_multiply(parent.plates, parent.dims[i], *A)
 
         # Compute the mask
         s = utils.axes_to_collapse(np.shape(mask), parent.plates)
@@ -170,8 +181,6 @@ class Dot(Deterministic):
         mask = utils.squeeze_to_dim(mask, len(parent.plates))
 
         return (m, mask)
-    #return (m, mask)
-
 
 
 
@@ -228,19 +237,14 @@ class MatrixDot(Deterministic):
         Get the moments of the Gaussian output.
         """
 
-        # Get parents' moments
-        #u_A = self.parents[0].get_moments()
-        #u_X = self.parents[1].get_moments()
-
         # Helpful variables to clarify the code
         A = u_A[0]
         AA = u_A[1]
         X = u_X[0]
         XX = u_X[1]
 
-        (A, AA) = self._reshape_to_matrix(A, AA, X.shape[-1])
-
-        #print('debug in matrixdot.moments', np.shape(A), np.shape(AA), np.shape(X), np.shape(XX))
+        (A, AA) = self._reshape_to_matrix(A, AA)
+        #(A, AA) = self._reshape_to_matrix(A, AA, X.shape[-1])
 
         # Compute matrix-vector products
         Y = np.einsum('...ij,...j->...i', A, X)
@@ -248,36 +252,71 @@ class MatrixDot(Deterministic):
 
         return [Y, YY]
 
-    def _compute_message_to_parent(self, index, m, *u_parents):
+    def _compute_message_and_mask_to_parent(self, index, m, u_A, u_X):
         """
         Compute the message to a parent node.
         """
 
-        # Get the message from children
-        #(m, mask) = self.message_from_children()
-        VY = m[0]
-        V = m[1]
+        mask = self.mask
+        parent = self.parents[index]
+
+        # Message from children
+        VY = m[0] # (..., D)
+        V = m[1]  # (..., D, D)
+        D = np.shape(V)[-1]
 
         if index == 0: # Message to A
-            X = u_parents[1][0]
-            XX = u_parents[1][1]
-            m0 = VY[...,:,np.newaxis] * X[...,np.newaxis,:]
-            m1 = np.einsum('...ik,...jl->...ijkl', V, XX)
-            (m0, m1) = self._reshape_to_vector(m0, m1)
-        elif index == 1: # Message to X
-            (A, AA) = self._reshape_to_matrix(u_parents[0][0],
-                                              u_parents[0][1],
-                                              self.parents[1].dims[0][0])
-            m0 = np.einsum('...ij,...i->...j', A, VY)
-            m1 = np.einsum('...kilj,...kl->...ij', AA, V)
+            X = u_X[0]  # (..., K)
+            XX = u_X[1] # (..., K, K)
+            K = np.shape(X)[-1]
 
-            #m = [m0, m1]
-            #return (m, mask)
-        m = [m0, m1]
-        return m
+            # m0 : (..., D,K)     -> (...,D*K)
+            # m1 : (..., D,K,D,K) -> (...,D*K,D*K)
+
+            # In order to avoid huge memory consumption, compute the sum-product
+            # already in this method (instead of Node._message_to_parent).  That
+            # is, some axes are summed over already here.
+            m0 = _message_sum_multiply(parent.plates, (D,K),
+                                       VY[...,:,np.newaxis],
+                                       X[...,np.newaxis,:])
+
+            m1 = _message_sum_multiply(parent.plates, (D,K,D,K),
+                                       V[...,:,np.newaxis,:,np.newaxis],
+                                       XX[...,np.newaxis,:,np.newaxis,:])
+            # Do the same for the mask
+            mask = _mask_sum(parent.plates, mask)
+
+            (m0, m1) = self._reshape_to_vector(m0, m1)
+
+        elif index == 1: # Message to X
+            (A, AA) = self._reshape_to_matrix(u_A[0], u_A[1])
+            #K = parent.dims[0][0]
+            K = np.shape(A)[-1]
+            
+            # A : (...,D,K)
+            # AA : (...,D,K,D,K)
+
+            # In order to avoid huge memory consumption, compute the sum-product
+            # already in this method (instead of Node._message_to_parent).  That
+            # is, some axes are summed over already here.
+            m0 = _message_sum_multiply(parent.plates, (1,K),
+                                       A,
+                                       VY[...,:,np.newaxis])
+            m0 = m0[...,0,:]
+            
+            m1 = _message_sum_multiply(parent.plates, (1,K,1,K),
+                                       AA,
+                                       V[...,:,np.newaxis,:,np.newaxis])
+            m1 = m1[...,0,:,0,:]
+            # Do the same for the mask
+            mask = _mask_sum(parent.plates, mask)
+            #m0 = np.einsum('...ij,...i->...j', A, VY)
+            #m1 = np.einsum('...kilj,...kl->...ij', AA, V)
+
+        return ([m0,m1], mask)
 
     
-    def _reshape_to_matrix(self, A, AA, N):
+    def _reshape_to_matrix(self, A, AA):
         """
         Reshape vector form moments to matrix form.
 
