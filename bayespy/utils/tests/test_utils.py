@@ -57,6 +57,33 @@ class TestBroadcasting(unittest.TestCase):
         self.assertFalse(f( (4,3,), (1,3,) ))
         self.assertFalse(f( (6,1,4,3,), (6,1,1,3,) ))
 
+class TestMultiplyShapes(unittest.TestCase):
+
+    def test_multiply_shapes(self):
+        f = lambda *shapes: tuple(utils.multiply_shapes(*shapes))
+
+        # Basic test
+        self.assertEqual(f((2,),
+                           (3,)),
+                         (6,))
+        # Test multiple arguments
+        self.assertEqual(f((2,),
+                           (3,),
+                           (4,)),
+                         (24,))
+        # Test different lengths and multiple arguments
+        self.assertEqual(f((  2,3,),
+                           (4,5,6,),
+                           (    7,)),
+                         (4,10,126,))
+        # Test empty shapes
+        self.assertEqual(f((),
+                           ()),
+                         ())
+        self.assertEqual(f((),
+                           (5,)),
+                         (5,))
+
 class TestSumMultiply(unittest.TestCase):
 
     def check_sum_multiply(self, *shapes, **kwargs):

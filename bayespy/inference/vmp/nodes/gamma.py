@@ -32,6 +32,14 @@ from .constant import Constant
 
 from bayespy.utils import utils
 
+def diagonal(alpha):
+    """
+    Create a diagonal Wishart node from a Gamma node.
+    """
+    return _GammaToDiagonalWishart(alpha,
+                                   name=alpha.name + " as Wishart")
+
+
 class GammaPrior(Node):
 
     """ Conjugate prior node for the shape of the gamma

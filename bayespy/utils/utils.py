@@ -272,6 +272,38 @@ def is_numeric(a):
             isinstance(a, list) or
             isinstance(a, np.ndarray))
 
+def multiply_shapes(*shapes):
+    """
+    Compute element-wise product of lists/tuples.
+
+    Shorter lists are concatenated with leading 1s in order to get lists with
+    the same length.
+    """
+
+    # Make the shapes equal length
+    shapes = make_equal_length(*shapes)
+
+    # Compute element-wise product
+    f = lambda X,Y: (x*y for (x,y) in zip(X,Y))
+    shape = functools.reduce(f, shapes)
+
+    return shape
+
+def make_equal_length(*shapes):
+    """
+    Make tuples equal length.
+
+    Add leading 1s to shorter tuples.
+    """
+    
+    # Get maximum length
+    max_len = max((len(shape) for shape in shapes))
+
+    # Make the shapes equal length
+    shapes = ((1,)*(max_len-len(shape)) + tuple(shape) for shape in shapes)
+
+    return shapes
+
 def sum_multiply(*args, axis=None, sumaxis=True, keepdims=False):
 
     # Computes sum(arg[0]*arg[1]*arg[2]*..., axis=axes_to_sum) without

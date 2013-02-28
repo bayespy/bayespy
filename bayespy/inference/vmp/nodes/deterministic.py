@@ -21,11 +21,19 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+import functools
+
 import numpy as np
 
 from bayespy.utils import utils
 
 from .node import Node
+
+def tile(X):
+    """
+    Tile the plates of the input node.
+    """
+    return 
 
 class Deterministic(Node):
     """
@@ -74,3 +82,83 @@ class Deterministic(Node):
     def _compute_moments(self, *u_parents):
         # Sub-classes should implement this
         raise NotImplementedError()
+
+def tile(X, tiles):
+    
+    # Make sure `tiles` is tuple (even if an integer is given)
+    tiles = tuple(np.ravel(tiles))
+    dims = X.dims
+
+    class _Tile(Deterministic):
+
+        def __init__(self, X, **kwargs):
+            super().__init__(X, dims=X.dims, **kwargs)
+    
+        def _plates_to_parent(self, index):
+            plates = list(self.plates)
+            for i in range(-len(tiles), 0):
+                plates[i] = plates[i] // tiles[i]
+            return tuple(plates)
+
+        def _plates_from_parent(self, index):
+            return tuple(utils.multiply_shapes(self.parents[index].plates,
+                                               tiles))
+
+        #@staticmethod
+        def _compute_message_to_parent(self, index, m, u_X):
+            m = list(m)
+            for ind in range(len(m)):
+
+                # TODO/FIXME: Does this handle broadcasting properly if message
+                # has singular plates for non-singular plates?
+
+                # Idea: Reshape the message array such that every other axis
+                # will be summed and every other kept.
+                
+                #shape_ind = np.shape(m[ind])
+                shape_ind = self._plates_to_parent(index) + self.dims[ind]
+                # Add variable dimensions to tiles
+                tiles_ind = tiles + (1,)*len(self.dims[ind])
+
+                # Make shape tuples equal length
+                shape_m = np.shape(m[ind])
+                (tiles_ind, shape, shape_m) = utils.make_equal_length(tiles_ind,
+                                                                      shape_ind,
+                                                                      shape_m)
+
+                # Handle broadcasting rules for axes that have unit length in
+                # the message (although the plate may be non-unit length). Also,
+                # compute the corresponding plate_multiplier.
+                r = 1
+                shape = list(shape)
+                tiles_ind = list(tiles_ind)
+                for j in range(len(shape)):
+                    if shape_m[j] == 1:
+                        r *= tiles_ind[j]
+                        shape[j] = 1
+                        tiles_ind[j] = 1
+
+                # Combine the tuples by picking every other from tiles_ind and
+                # every other from shape
+                shape = functools.reduce(lambda x,y: x+y,
+                                         zip(tiles_ind, shape))
+                # And reshape the array
+                m[ind] = np.reshape(m[ind], shape)
+
+                # Sum over every other axis
+                axes = tuple(range(0,len(shape),2))
+                m[ind] = r * np.sum(m[ind], axis=axes)
+            
+            return m
+
+        def _compute_moments(self, u_X):
+            """
+            Tile the plates of the parent's moments.
+            """
+            u = list()
+            for ind in range(len(u_X)):
+                tiles_ind = tiles + (1,)*len(self.dims[ind])
+                u.append(np.tile(u_X[ind], tiles_ind))
+            return u
+            
+    return _Tile(X, name=X.name+" tiled")

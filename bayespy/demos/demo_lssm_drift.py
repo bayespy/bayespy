@@ -94,18 +94,6 @@ def run_dlssm(y, f, mask, D, K, maxiter):
         
     (M, N) = np.shape(y)
 
-    # B : (D) x (D*K)
-    beta = Gamma(1e-5,
-                 1e-5,
-                 name='beta')
-    B = Gaussian(np.zeros(D*K),
-                 1e-6*np.identity(D*K),
-                 plates=(D,),
-                 name='B')
-    b = np.zeros((D,D,K))
-    b[np.arange(D),np.arange(D),np.zeros(D,dtype=int)] = 1
-    B.initialize_from_value(np.reshape(1*b, (D,D*K)))
-
     # Dynamics matrix with ARD
     # alpha : (D) x ()
     alpha = Gamma(1e-5,
@@ -133,6 +121,22 @@ def run_dlssm(y, f, mask, D, K, maxiter):
                             n=N-1,
                             name='S')
     S.initialize_from_value(1*np.ones((N-1,K)))
+
+    # Projection matrix of the dynamics matrix
+    # beta : (K) x ()
+    beta = Gamma(1e-5,
+                 1e-5,
+                 plates=(K,),
+                 name='beta')
+    # B : (D) x (D*K)
+    B = Gaussian(np.zeros(D*K),
+                 diagonal(tile(beta, D)),
+    #1e-6*np.identity(D*K),
+                 plates=(D,),
+                 name='B')
+    b = np.zeros((D,D,K))
+    b[np.arange(D),np.arange(D),np.zeros(D,dtype=int)] = 1
+    B.initialize_from_value(np.reshape(1*b, (D,D*K)))
 
     # A : (N-1,D) x (D)
     BS = MatrixDot(B, 
