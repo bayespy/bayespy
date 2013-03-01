@@ -156,15 +156,9 @@ class TestTile(unittest.TestCase):
         # Set up the dummy model
         class Dummy(Node):
             pass
-            #def _get_message_and_mask_to_parent(self, index):
-            #    return (m_children, True)
-
         X = Dummy(dims=dims, plates=plates_parent)
         Y = tile(X, tiles)
-        #Y.mask = True
-        #Z = Dummy(dims=dims, plates=plates_children)
 
-        #m = Y._message_to_parent(0)
         m = Y._compute_message_to_parent(0, m_children, None)
 
         for (x,y) in zip(m, m_true):
@@ -269,6 +263,91 @@ class TestTile(unittest.TestCase):
               dims=[(2,),()],
               plates_parent=(2,),
               plates_children=(4,))
+        
+    def check_mask_to_parent(self, tiles, mask_child, mask_true,
+                             plates_parent=None,
+                             plates_children=None):
+        # Set up the dummy model
+        class Dummy(Node):
+            pass
+        X = Dummy(dims=[()], plates=plates_parent)
+        Y = tile(X, tiles)
+
+        mask = Y._compute_mask_to_parent(0, mask_child)
+
+        self.assertEqual(np.shape(mask), np.shape(mask_true),
+                         msg="Incorrect shape.")
+        testing.assert_equal(mask, mask_true,
+                             err_msg="Incorrect mask.")
+
+
+    def test_mask_to_parent(self):
+        """
+        Test the mask message to parent of Tile node.
+        """
+        # Define th check function
+        check = self.check_mask_to_parent
+        # Check scalar parent
+        check(2,
+              [True,False], 
+              True,
+              plates_parent=(),
+              plates_children=(2,))
+        check(2,
+              [False,False], 
+              False,
+              plates_parent=(),
+              plates_children=(2,))
+        # Check 1-D
+        check(2,
+              [True,False,False,False],
+              [True,False],
+              plates_parent=(2,),
+              plates_children=(4,))
+        # Check N-D
+        check(2,
+              [[True,False,True,False],
+               [False,True,False,False]],
+              [[True,False],
+               [False,True]],
+              plates_parent=(2,2),
+              plates_children=(2,4))
+        # Check not-last plate
+        check([2,1],
+              [[True,False],
+               [False,True],
+               [True,False],
+               [False,False]],
+              [[True,False],
+               [False,True]],
+              plates_parent=(2,2),
+              plates_children=(4,2))
+        # Check several plates
+        check([2,3],
+              [[False,False,True,False,False,False],
+               [False,False,False,False,False,False],
+               [False,False,False,False,False,False],
+               [False,True,False,False,False,False]],
+              [[True,False],
+               [False,True]],
+              plates_parent=(2,2),
+              plates_children=(4,6))
+        # Check broadcasting if message has unit axis for tiled plate
+        check(2,
+              [[True,],
+               [False,],
+               [True,]],
+              [[True,],
+               [False,],
+               [True,]],
+              plates_parent=(3,2),
+              plates_children=(3,4))
+        # Check broadcasting if message has unit axis for non-tiled plate
+        check(2,
+              [[False,False,False,True]],
+              [[False,True]],
+              plates_parent=(3,2),
+              plates_children=(3,4))
         
         
         

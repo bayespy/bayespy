@@ -95,7 +95,6 @@ def tile(X, tiles):
     
     # Make sure `tiles` is tuple (even if an integer is given)
     tiles = tuple(np.ravel(tiles))
-    #dims = X.dims
 
     class _Tile(Deterministic):
 
@@ -112,10 +111,46 @@ def tile(X, tiles):
             return tuple(utils.multiply_shapes(self.parents[index].plates,
                                                tiles))
 
-        def _compute_mask_to_parent(index, mask):
-            raise NotImplementedError()
+        def _compute_mask_to_parent(self, index, mask):
+            # Idea: Reshape the message array such that every other axis
+            # will be summed and every other kept.
 
-        #@staticmethod
+            # Make plates equal length
+            plates = self._plates_to_parent(index)
+            shape_m = np.shape(mask)
+            (plates, tiles_m, shape_m) = utils.make_equal_length(plates, 
+                                                                 tiles,
+                                                                 shape_m)
+            
+            # Handle broadcasting rules for axes that have unit length in
+            # the message (although the plate may be non-unit length). Also,
+            # compute the corresponding plate_multiplier.
+            plates = list(plates)
+            tiles_m = list(tiles_m)
+            for j in range(len(plates)):
+                if shape_m[j] == 1:
+                    plates[j] = 1
+                    tiles_m[j] = 1
+                    
+            # Combine the tuples by picking every other from tiles_ind and
+            # every other from shape
+            shape = functools.reduce(lambda x,y: x+y,
+                                     zip(tiles_m, plates))
+            # ..and reshape the array, that is, every other axis corresponds
+            # to tiles and every other to plates/dimensions in parents
+            mask = np.reshape(mask, shape)
+
+            # Sum over every other axis
+            axes = tuple(range(0,len(shape),2))
+            mask = np.any(mask, axis=axes)
+
+            # Remove extra leading axes
+            ndim_parent = len(self.parents[index].plates)
+            mask = utils.squeeze_to_dim(mask, ndim_parent)
+
+            return mask
+
+
         def _compute_message_to_parent(self, index, m, u_X):
             m = list(m)
             for ind in range(len(m)):
@@ -149,7 +184,8 @@ def tile(X, tiles):
                 # every other from shape
                 shape = functools.reduce(lambda x,y: x+y,
                                          zip(tiles_ind, shape))
-                # And reshape the array
+                # ..and reshape the array, that is, every other axis corresponds
+                # to tiles and every other to plates/dimensions in parents
                 m[ind] = np.reshape(m[ind], shape)
 
                 # Sum over every other axis
