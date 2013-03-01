@@ -37,9 +37,9 @@ class Deterministic(Node):
     1. For implementing the deterministic function:
        _compute_moments(self, *u)
     2. One of the following options:
-       a) Simple static methods:
-          _compute_message_to_parent(index, m, *u)
-          _compute_mask_to_parent(index, mask)
+       a) Simple methods:
+          _compute_message_to_parent(self, index, m, *u)
+          _compute_mask_to_parent(self, index, mask)
        b) More control with:
           _compute_message_and_mask_to_parent(self, index, m, *u)
 
@@ -81,12 +81,18 @@ def tile(X, tiles):
     """
     Tile the plates of the input node.
 
+    x = [a,b,c]
+    y = tile(x, 2) = [a,b,c,a,b,c]
+
+    There should be no need to tile plates that have unit length because they
+    are handled properly by the broadcasting rules already.
+
     Parameters:
     -----------
     X : Node
         Input node to be tiled.
     tiles : int, tuple
-        Tiling of the plates (broadcasting rules apply).
+        Tiling of the plates (broadcasting rules for plates apply).
 
     See also:
     ---------
@@ -227,4 +233,4 @@ def tile(X, tiles):
                 u.append(ui)
             return u
             
-    return _Tile(X, name="tile(" + X.name + ")")
+    return _Tile(X, name="tile(%s, %s)" % (X.name, tiles))

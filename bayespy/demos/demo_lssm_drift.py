@@ -103,7 +103,7 @@ def run_dlssm(y, f, mask, D, K, maxiter):
                   name='alpha')
     # A : (K) x (K)
     A = Gaussian(np.identity(K),
-                 alpha.as_diagonal_wishart(),
+                 diagonal(alpha),
                  plates=(K,),
                  name='A_S')
     A.initialize_from_value(np.identity(K))
@@ -162,7 +162,7 @@ def run_dlssm(y, f, mask, D, K, maxiter):
                   name='gamma')
     # C : (M,1) x (D)
     C = Gaussian(np.zeros(D),
-                 gamma.as_diagonal_wishart(),
+                 diagonal(gamma),
                  plates=(M,1),
                  name='C')
     C.initialize_from_value(np.random.randn(M,1,D))
@@ -226,7 +226,7 @@ def run_lssm(y, f, mask, D, maxiter):
                   name='alpha')
     # A : (D) x (D)
     A = Gaussian(np.zeros(D),
-                 alpha.as_diagonal_wishart(),
+                 diagonal(alpha),
                  plates=(D,),
                  name='A')
     A.initialize_from_value(np.identity(D))
@@ -250,7 +250,7 @@ def run_lssm(y, f, mask, D, maxiter):
                   name='gamma')
     # C : (M,1) x (D)
     C = Gaussian(np.zeros(D),
-                 gamma.as_diagonal_wishart(),
+                 diagonal(gamma),
                  plates=(M,1),
                  name='C')
     C.initialize_from_value(np.random.randn(M,1,D))
