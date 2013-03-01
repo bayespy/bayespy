@@ -29,12 +29,6 @@ from bayespy.utils import utils
 
 from .node import Node
 
-def tile(X):
-    """
-    Tile the plates of the input node.
-    """
-    return 
-
 class Deterministic(Node):
     """
     Base class for nodes that are deterministic.
@@ -84,10 +78,24 @@ class Deterministic(Node):
         raise NotImplementedError()
 
 def tile(X, tiles):
+    """
+    Tile the plates of the input node.
+
+    Parameters:
+    -----------
+    X : Node
+        Input node to be tiled.
+    tiles : int, tuple
+        Tiling of the plates (broadcasting rules apply).
+
+    See also:
+    ---------
+    numpy.tile
+    """
     
     # Make sure `tiles` is tuple (even if an integer is given)
     tiles = tuple(np.ravel(tiles))
-    dims = X.dims
+    #dims = X.dims
 
     class _Tile(Deterministic):
 
@@ -104,18 +112,17 @@ def tile(X, tiles):
             return tuple(utils.multiply_shapes(self.parents[index].plates,
                                                tiles))
 
+        def _compute_mask_to_parent(index, mask):
+            raise NotImplementedError()
+
         #@staticmethod
         def _compute_message_to_parent(self, index, m, u_X):
             m = list(m)
             for ind in range(len(m)):
 
-                # TODO/FIXME: Does this handle broadcasting properly if message
-                # has singular plates for non-singular plates?
-
                 # Idea: Reshape the message array such that every other axis
                 # will be summed and every other kept.
                 
-                #shape_ind = np.shape(m[ind])
                 shape_ind = self._plates_to_parent(index) + self.dims[ind]
                 # Add variable dimensions to tiles
                 tiles_ind = tiles + (1,)*len(self.dims[ind])
@@ -148,6 +155,10 @@ def tile(X, tiles):
                 # Sum over every other axis
                 axes = tuple(range(0,len(shape),2))
                 m[ind] = r * np.sum(m[ind], axis=axes)
+
+                # Remove extra leading axes
+                ndim_parent = len(self.parents[index].get_shape(ind))
+                m[ind] = utils.squeeze_to_dim(m[ind], ndim_parent)
             
             return m
 
@@ -155,10 +166,29 @@ def tile(X, tiles):
             """
             Tile the plates of the parent's moments.
             """
+            # Utilize broadcasting: If a tiled axis is unit length in u_X, there
+            # is no need to tile it.
             u = list()
             for ind in range(len(u_X)):
-                tiles_ind = tiles + (1,)*len(self.dims[ind])
-                u.append(np.tile(u_X[ind], tiles_ind))
+                ui = u_X[ind]
+                shape_u = np.shape(ui)
+                if np.ndim(ui) > 0:
+                    # Add variable dimensions
+                    tiles_ind = tiles + (1,)*len(self.dims[ind])
+                    # Utilize broadcasting: Do not tile leading empty axes
+                    nd = min(len(tiles_ind), np.ndim(ui))
+                    tiles_ind = tiles_ind[(-nd):]
+                    # For simplicity, make tiles and shape equal length
+                    (tiles_ind, shape_u) = utils.make_equal_length(tiles_ind,
+                                                                   shape_u)
+                    # Utilize broadcasting: Use tiling only if the parent's
+                    # moment has non-unit axis length.
+                    tiles_ind = [tile if sh > 1 else 1
+                                 for (tile, sh) in zip(tiles_ind, shape_u)]
+                        
+                    # Tile
+                    ui = np.tile(ui, tiles_ind)
+                u.append(ui)
             return u
             
-    return _Tile(X, name=X.name+" tiled")
+    return _Tile(X, name="tile(" + X.name + ")")

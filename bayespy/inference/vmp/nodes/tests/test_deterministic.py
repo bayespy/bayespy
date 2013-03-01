@@ -52,6 +52,8 @@ class TestTile(unittest.TestCase):
         u_Y = Y._compute_moments(u_parent)
 
         for (x,y) in zip(u_Y, u_tiled):
+            self.assertEqual(np.shape(x), np.shape(y),
+                             msg="Incorrect shape.")
             testing.assert_allclose(x, y,
                                     err_msg="Incorrect moments.")
 
@@ -62,10 +64,10 @@ class TestTile(unittest.TestCase):
         """
         # Define th check function
         check_message_to_children = self.check_message_to_children
-        # Check scalar
+        # Check scalar (and broadcasting)
         check_message_to_children(2,
                                   (5,),
-                                  ([5,5],), 
+                                  (5,), 
                                   dims=[()],
                                   plates=()),
         # Check 1-D
@@ -126,6 +128,26 @@ class TestTile(unittest.TestCase):
                                    [1,2,1,2]),
                                   dims=[(2,),()],
                                   plates=(2,))
+        # Check broadcasting of tiled plate
+        check_message_to_children(2,
+                                  ([[1,],
+                                    [2,]],),
+                                  ([[1,],
+                                    [2,]],),
+                                  dims=[()],
+                                  plates=(2,2))
+        # Check broadcasting of non-tiled plate
+        check_message_to_children(2,
+                                  ([[1,2]],),
+                                  ([[1,2,1,2]],),
+                                  dims=[()],
+                                  plates=(2,2))
+        # Check broadcasting of leading plates that are not in parent
+        check_message_to_children([2,1],
+                                  ([1,2],),
+                                  ([1,2],),
+                                  dims=[()],
+                                  plates=(2,))
         
         
     def check_message_to_parent(self, tiles, m_children, m_true,
@@ -146,6 +168,8 @@ class TestTile(unittest.TestCase):
         m = Y._compute_message_to_parent(0, m_children, None)
 
         for (x,y) in zip(m, m_true):
+            self.assertEqual(np.shape(x), np.shape(y),
+                             msg="Incorrect shape.")
             testing.assert_allclose(x, y,
                                     err_msg="Incorrect message.")
 

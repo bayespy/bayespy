@@ -31,9 +31,10 @@ import matplotlib.pyplot as plt
 
 from bayespy.inference.vmp.nodes.gaussian_markov_chain import GaussianMarkovChain
 from bayespy.inference.vmp.nodes.gaussian import Gaussian
-from bayespy.inference.vmp.nodes.gamma import Gamma
+from bayespy.inference.vmp.nodes.gamma import Gamma, diagonal
 from bayespy.inference.vmp.nodes.normal import Normal
 from bayespy.inference.vmp.nodes.dot import Dot, MatrixDot
+from bayespy.inference.vmp.nodes.deterministic import tile
 
 from bayespy.utils import utils
 from bayespy.utils import random
@@ -131,7 +132,6 @@ def run_dlssm(y, f, mask, D, K, maxiter):
     # B : (D) x (D*K)
     B = Gaussian(np.zeros(D*K),
                  diagonal(tile(beta, D)),
-    #1e-6*np.identity(D*K),
                  plates=(D,),
                  name='B')
     b = np.zeros((D,D,K))
@@ -304,8 +304,8 @@ def run(method):
     print("seed = ", seed)
 
     # Create data
-    M = 100
-    N = 50000
+    M = 10
+    N = 200
     (y, f) = simulate_drifting_lssm(M, N)
 
     # Add missing values randomly
@@ -316,9 +316,9 @@ def run(method):
 
     # Run the method
     if method == 'lssm':
-        run_lssm(y, f, mask, 3, 1000)
+        run_lssm(y, f, mask, 3, 200)
     elif method == 'dlssm':
-        run_dlssm(y, f, mask, 10, 3, 1000)
+        run_dlssm(y, f, mask, 3, 2, 200)
     else:
         raise Exception("Unknown method requested")
 
