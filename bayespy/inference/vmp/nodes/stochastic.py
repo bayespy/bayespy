@@ -168,6 +168,11 @@ class Stochastic(Node):
         self.observed = mask
         self._update_mask()
 
+    def unobserve(self):
+        # Update mask
+        self.observed = False
+        self._update_mask()
+
     def lowerbound(self):
         # Sub-class should implement this
         raise NotImplementedError()

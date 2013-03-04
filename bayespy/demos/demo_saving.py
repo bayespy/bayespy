@@ -111,7 +111,7 @@ def run(M=10, N=100, D_y=3, D=5):
     Q.update(X, W, alpha, tau, repeat=10)
 
     # Reload the state from the HDF5 file
-    Q.load(filename)
+    Q.load(filename=filename)
 
     # Inference loop again.
     Q.update(X, W, alpha, tau, repeat=10)

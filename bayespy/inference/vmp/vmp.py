@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011,2012 Jaakko Luttinen
+# Copyright (C) 2011-2013 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -41,7 +41,10 @@ class VB():
                  tol=1e-6, 
                  autosave_iterations=0, 
                  autosave_filename=None):
-        self.model = set(nodes)
+
+        # Remove duplicate nodes
+        self.model = utils.utils.unique(nodes)
+        
         self.iter = 0
         self.L = np.array(())
         self.l = dict(zip(self.model, 
@@ -57,6 +60,14 @@ class VB():
         else:
             self.autosave_filename = autosave_filename
             self.filename = autosave_filename
+
+        # Check uniqueness of the node names
+        names = [node.name for node in self.model]
+        if len(names) != len(self.model):
+            raise Exception("Use unique names for nodes.")
+
+        # Dictionary for mapping node names to nodes
+        self.dictionary = {node.name: node for node in self.model}
 
     def update(self, *nodes, repeat=1):
 
@@ -166,7 +177,7 @@ class VB():
         # Close file
         h5f.close()
 
-    def load(self, filename=None):
+    def load(self, *nodes, filename=None):
 
         # By default, use the same file as for auto-saving
         if not filename:
@@ -177,8 +188,13 @@ class VB():
             
         # Open HDF5 file
         h5f = h5py.File(filename, 'r')
+        # Get nodes to load
+        if len(nodes) == 0:
+            nodes = self.model
+        else:
+            nodes = [self[node] for node in nodes]
         # Read each node
-        for node in self.model:
+        for node in nodes:
             if node.name == '':
                 raise Exception("In order to load nodes, they must have "
                                 "(unique) names.")
@@ -196,3 +212,8 @@ class VB():
         # Close file
         h5f.close()
         
+    def __getitem__(self, name):
+        if name in self.model:
+            return name
+        else:
+            return self.dictionary[name]        

@@ -27,6 +27,77 @@ import scipy.sparse as sp
 import matplotlib.pyplot as plt
 #from matplotlib.pyplot import *
 
+from bayespy import utils
+
+def timeseries_gaussian(X, axis=-1):
+    """
+    Parameters:
+    X : node
+        Node with Gaussian moments.
+    axis : int
+        The index of the time axis.
+    """
+    u_X = X.get_moments()
+    x = u_X[0]
+    xx = u_X[1]
+    std = np.sqrt(np.einsum('...ii->...i', xx) - x**2)
+    shape = np.shape(x)
+
+    D = np.shape(x)[axis]
+    for d in range(D):
+        plt.subplot(D,1,d+1)
+        errorplot(y=x[...,d],
+                  error=2*std[...,d])
+    
+def timeseries_normal(X, axis=-1):
+    """
+    Parameters:
+    X : node
+        Node with Gaussian moments.
+    axis : int
+        The index of the time axis.
+    """
+    u_X = X.get_moments()
+    x = u_X[0]
+    xx = u_X[1]
+    std = np.sqrt(xx - x**2)
+
+    # TODO/FIXME: You must multiply by ones(plates) in order to plot
+    # broadcasted plates properly
+    
+    shape = list(np.shape(x))
+
+    # Get and remove the length of the time axis
+    T = shape.pop(axis)
+
+    # Move time axis to first
+    x = np.rollaxis(x, axis)
+    std = np.rollaxis(std, axis)
+    
+    x = np.reshape(x, (T, -1))
+    std = np.reshape(std, (T, -1))
+
+    # Remove 1s
+    shape = [s for s in shape if s > 1]
+
+    # Calculate number of rows and columns
+    shape = utils.utils.multiply_shapes(shape, (1,1))
+    if len(shape) > 2:
+        raise Exception("Can plot only in 2 dimensions (rows and columns)")
+    (M, N) = shape
+
+    # Prefer plotting to rows
+    if M == 1:
+        M = N
+        N = 1
+
+    # Plot each timeseries
+    M = 2
+    for i in range(M*N):
+        plt.subplot(M,N,i+1)
+        errorplot(y=x[:,i], error=2*std[:,i])
+    
+
 def matrix(A):
     A = np.atleast_2d(A)
     vmax = np.max(np.abs(A))

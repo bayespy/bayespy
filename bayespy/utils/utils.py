@@ -37,6 +37,14 @@ import scipy.optimize as optimize
 import scipy.sparse as sparse
 #import scikits.sparse.cholmod as cholmod
 
+def unique(l):
+    """
+    Remove duplicate items from a list while preserving order.
+    """
+    seen = set()
+    seen_add = seen.add
+    return [ x for x in l if x not in seen and not seen_add(x)]    
+
 def write_to_hdf5(group, data, name):
     """
     Writes the given array into the HDF5 file.
@@ -287,7 +295,7 @@ def multiply_shapes(*shapes):
     f = lambda X,Y: (x*y for (x,y) in zip(X,Y))
     shape = functools.reduce(f, shapes)
 
-    return shape
+    return tuple(shape)
 
 def make_equal_length(*shapes):
     """
