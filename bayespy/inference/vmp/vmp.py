@@ -47,14 +47,16 @@ class VB():
         self.l = dict(zip(self.model, 
                           len(self.model)*[np.array([])]))
         self.autosave_iterations = autosave_iterations
-        if autosave_filename is None or autosave_filename == '':
+        if not autosave_filename:
             date = datetime.datetime.today().strftime('%Y%m%d%H%M%S')
             prefix = 'vb_autosave_%s_' % date
             tmpfile = tempfile.NamedTemporaryFile(prefix=prefix,
                                                   suffix='.hdf5')
             self.autosave_filename = tmpfile.name
+            self.filename = None
         else:
             self.autosave_filename = autosave_filename
+            self.filename = autosave_filename
 
     def update(self, *nodes, repeat=1):
 
@@ -72,8 +74,8 @@ class VB():
 
             # Update nodes
             for node in nodes:
-                node.update()
-                # Force garbage collection
+                if hasattr(node, 'update') and callable(node.update):
+                    node.update()
 
             # Compute lower bound
             L = self.loglikelihood_lowerbound()
@@ -136,7 +138,15 @@ class VB():
         return self.l
 
 
-    def save(self, filename):
+    def save(self, filename=None):
+
+        # By default, use the same file as for auto-saving
+        if not filename:
+            if self.filename:
+                filename = self.filename
+            else:
+                raise Exception("Filename must be given.")
+            
         # Open HDF5 file
         h5f = h5py.File(filename, 'w')
         # Write each node
@@ -145,7 +155,8 @@ class VB():
             if node.name == '':
                 raise Exception("In order to save nodes, they must have "
                                 "(unique) names.")
-            node.save(nodegroup.create_group(node.name))
+            if hasattr(node, 'save') and callable(node.save):
+                node.save(nodegroup.create_group(node.name))
         # Write iteration statistics
         utils.utils.write_to_hdf5(h5f, self.L, 'L')
         utils.utils.write_to_hdf5(h5f, self.iter, 'iter')
@@ -155,7 +166,15 @@ class VB():
         # Close file
         h5f.close()
 
-    def load(self, filename):
+    def load(self, filename=None):
+
+        # By default, use the same file as for auto-saving
+        if not filename:
+            if self.filename:
+                filename = self.filename
+            else:
+                raise Exception("Filename must be given.")
+            
         # Open HDF5 file
         h5f = h5py.File(filename, 'r')
         # Read each node
@@ -163,7 +182,12 @@ class VB():
             if node.name == '':
                 raise Exception("In order to load nodes, they must have "
                                 "(unique) names.")
-            node.load(h5f['nodes'][node.name])
+            if hasattr(node, 'load') and callable(node.load):
+                try:
+                    node.load(h5f['nodes'][node.name])
+                except KeyError:
+                    raise Exception("File does not contain variable %s"
+                                    % node.name)
         # Read iteration statistics
         self.L = h5f['L'][...]
         self.iter = h5f['iter'][...]
