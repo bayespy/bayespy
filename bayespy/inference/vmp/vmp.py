@@ -66,9 +66,6 @@ class VB():
         if len(names) != len(self.model):
             raise Exception("Use unique names for nodes.")
 
-        # Dictionary for mapping node names to nodes
-        self.dictionary = {node.name: node for node in self.model}
-
     def update(self, *nodes, repeat=1):
 
         # Append the cost arrays
@@ -216,4 +213,31 @@ class VB():
         if name in self.model:
             return name
         else:
-            return self.dictionary[name]        
+            # Dictionary for mapping node names to nodes
+            dictionary = {node.name: node for node in self.model}
+            return dictionary[name]        
+
+
+def cost_rotate_gaussian(R, X, alpha):
+    # Compute q(alpha)
+
+    # Compute entropy change in q(X)
+
+    # Compute entropy change in q(alpha)
+
+    # Compute <log p(X|alpha)>
+
+    # Compute <log p(alpha)>
+    pass
+
+def cost_rotate_gmc(X, A, alpha):
+    pass
+
+
+def rotate(C, X):
+    """
+    Optimize rotation of C and X.
+
+    (C*R) * (inv(R)*X)
+    """
+    pass

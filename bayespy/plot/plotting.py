@@ -41,13 +41,8 @@ def timeseries_gaussian(X, axis=-1):
     x = u_X[0]
     xx = u_X[1]
     std = np.sqrt(np.einsum('...ii->...i', xx) - x**2)
-    shape = np.shape(x)
-
-    D = np.shape(x)[axis]
-    for d in range(D):
-        plt.subplot(D,1,d+1)
-        errorplot(y=x[...,d],
-                  error=2*std[...,d])
+    
+    _timeseries_mean_and_std(x, std, axis=axis)
     
 def timeseries_normal(X, axis=-1):
     """
@@ -61,7 +56,11 @@ def timeseries_normal(X, axis=-1):
     x = u_X[0]
     xx = u_X[1]
     std = np.sqrt(xx - x**2)
+    _timeseries_mean_and_std(x, std, axis=axis)
 
+
+
+def _timeseries_mean_and_std(x, std, axis=-1):
     # TODO/FIXME: You must multiply by ones(plates) in order to plot
     # broadcasted plates properly
     
@@ -92,11 +91,10 @@ def timeseries_normal(X, axis=-1):
         N = 1
 
     # Plot each timeseries
-    M = 2
+    #M = 2
     for i in range(M*N):
         plt.subplot(M,N,i+1)
         errorplot(y=x[:,i], error=2*std[:,i])
-    
 
 def matrix(A):
     A = np.atleast_2d(A)
