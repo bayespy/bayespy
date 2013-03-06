@@ -26,7 +26,8 @@ Stochastic nodes in VMP
 
 .. currentmodule:: bayespy.inference.vmp.nodes
 
-.. autosummary::
+.. 
+   autosummary::
    :toctree: generated/
 
    normal.Normal
@@ -41,7 +42,8 @@ Stochastic nodes in VMP
 Deterministic
 =============
 
-.. autosummary::
+.. 
+   autosummary::
    :toctree: generated/
 
    dot.Dot
@@ -53,7 +55,8 @@ Utility functions
 
 .. currentmodule:: bayespy.utils.utils
 
-.. autosummary::
+.. 
+   autosummary::
    :toctree: generated/
 
    kalman_filter
@@ -61,7 +64,8 @@ Utility functions
 
 .. currentmodule:: bayespy
 
-.. autosummary::
+.. 
+   autosummary::
    :toctree: generated/
 
    demos
