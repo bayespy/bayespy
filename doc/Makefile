@@ -159,12 +159,10 @@ doctest:
 gh-pages:
 	rm -rf build/html
 	git clone ../ build/html
-	cd build/html
-	git checkout gh-pages
-	cd ../..
+	cd build/html && git checkout gh-pages && pwd
 	make html
-	cd build/html
-	git add -A
-	git commit -m "Generated gh-pages for `git log master -1 --pretty=short --abbrev-commit`"
+	cd build/html && \
+	git add -A && \
+	git commit -m "Generated gh-pages for `git log master -1 --pretty=short --abbrev-commit`" && \
 	git push origin gh-pages
 
