@@ -133,7 +133,7 @@ class TestGaussianMarkovChain(unittest.TestCase):
 
         # Compute the entropy H(X)
         ldet = utils.linalg.logdet_cov(Cov)
-        H = utils.random.gaussian_entropy(ldet, N*D)
+        H = utils.random.gaussian_entropy(-ldet, N*D)
         # Compute <log p(X|...)>
         xx = np.reshape(xx, (N*D, N*D))
         mu = np.reshape(mu, (N*D,))

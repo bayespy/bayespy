@@ -154,6 +154,12 @@ def logdet_chol(U):
     elif isinstance(U, cholmod.Factor):
         return np.sum(np.log(U.D()))
     
+def logdet_tri(R):
+    """
+    Absolute value of the log-determinant of a triangular matrix.
+    """
+    return np.sum(np.log(np.abs(np.einsum('...ii->...i', R))))
+    
 def m_solve_triangular(U, B, **kwargs):
     # Allocate memory
     U = np.atleast_2d(U)

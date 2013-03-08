@@ -67,28 +67,104 @@ def wishart_rand(nu, V):
     """
     raise NotImplementedError()
 
-def gaussian_logpdf(yVy, yVmu, muVmu, logdet_cov, D):
+def gaussian_logpdf(yVy, yVmu, muVmu, logdet_V, D):
     """
-    Compute the log probability density of a Gaussian distribution.
+    Log-density of a Gaussian distribution.
 
-    Parameters:
-    yVy : ndarray or double
-    yVmu : ndarray or double
-    muVmu : ndarray or double
-    logdet_cov : ndarray or double
-    D : int
-    """
-    return -0.5*yVy + yVmu - 0.5*muVmu - 0.5*logdet_cov - 0.5*D*np.log(2*np.pi)
-
-def gaussian_entropy(logdet_cov, D):
-    """
-    Compute the entropy of a Gaussian distribution.
+    :math:`\mathcal{G}(\mathbf{y}|\boldsymbol{\mu},\mathbf{V}^{-1})`
 
     Parameters:
     -----------
-    logdet_cov : ndarray or double
-        The log-determinant of the covariance matrix.
+    yVy : ndarray or double
+        :math:`\mathbf{y}^T\mathbf{Vy}`
+    yVmu : ndarray or double
+        :math:`\mathbf{y}^T\mathbf{V}\boldsymbol{\mu}`
+    muVmu : ndarray or double
+        :math:`\boldsymbol{\mu}^T\mathbf{V}\boldsymbol{\mu}`
+    logdet_V : ndarray or double
+        :math:`\log|\mathbf{V}|`
+    D : int
+        Dimensionality of the distribution.
+    """
+    return -0.5*yVy + yVmu - 0.5*muVmu - 0.5*logdet_V - 0.5*D*np.log(2*np.pi)
+
+def gaussian_logpdf(d_yVy, d_yVmu, d_muVmu, d_logdet_V):
+    """
+    Log-density of a Gaussian distribution.
+
+    :math:`\mathcal{G}(\mathbf{y}|\boldsymbol{\mu},\mathbf{V}^{-1})`
+
+    Parameters:
+    -----------
+    d_yVy : ndarray or double
+        :math:`\mathbf{y}^T\mathbf{Vy}`
+    d_yVmu : ndarray or double
+        :math:`\mathbf{y}^T\mathbf{V}\boldsymbol{\mu}`
+    d_muVmu : ndarray or double
+        :math:`\boldsymbol{\mu}^T\mathbf{V}\boldsymbol{\mu}`
+    d_logdet_V : ndarray or double
+        :math:`\log|\mathbf{V}|`
+    """
+    return -0.5*d_yVy + d_yVmu - 0.5*muVmu - 0.5*logdet_V - 0.5*D*np.log(2*np.pi)
+
+def gaussian_entropy(logdet_V, D):
+    """
+    Compute the entropy of a Gaussian distribution.
+
+    If you want to get the gradient, just let each parameter be a gradient of
+    that term.
+
+    Parameters:
+    -----------
+    logdet_V : ndarray or double
+        The log-determinant of the precision matrix.
     D : int
         The dimensionality of the distribution.
     """
-    return 0.5*logdet_cov + 0.5*D + 0.5*D*np.log(2*np.pi)
+    return -0.5*logdet_V + 0.5*D + 0.5*D*np.log(2*np.pi)
+
+def gamma_logpdf(logx, a_logx, bx, a_logb, gammaln_a):
+    """
+    Log-density of :math:`\mathcal{G}(x|a,b)`.
+    
+    If you want to get the gradient, just let each parameter be a gradient of
+    that term.
+
+    Parameters:
+    -----------
+    logx : ndarray
+        :math:`\log(x)`
+    a_logx : ndarray
+        :math:`a \log(x)`
+    bx : ndarray
+        :math:`bx`
+    a_logb : ndarray
+        :math:`a \log(b)`
+    gammaln_a : ndarray
+        :math:`\log\Gamma(a)`
+    """
+    return a_logb - gammaln_a + a_logx - logx - bx
+#def gamma_logpdf(a, log_b, gammaln_a, 
+
+def gamma_entropy(a, log_b, gammaln_a, psi_a, a_psi_a):
+    """
+    Entropy of :math:`\mathcal{G}(a,b)`.
+
+    If you want to get the gradient, just let each parameter be a gradient of
+    that term.
+
+    Parameters:
+    -----------
+    a : ndarray
+        :math:`a`
+    log_b : ndarray
+        :math:`\log(b)`
+    gammaln_a : ndarray
+        :math:`\log\Gamma(a)`
+    psi_a : ndarray
+        :math:`\psi(a)`
+    a_psi_a : ndarray
+        :math:`a\psi(a)`
+    """
+    return a - log_b + gammaln_a + psi_a - a_psi_a
+
