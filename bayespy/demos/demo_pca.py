@@ -32,6 +32,9 @@ from bayespy import utils
 from bayespy.inference.vmp import nodes
 
 from bayespy.inference.vmp.vmp import VB
+from bayespy.inference.vmp import transformations
+
+from bayespy.inference.vmp.nodes.gamma import diagonal
 
 def pca_model(M, N, D):
     # Construct the PCA model with ARD
@@ -44,7 +47,7 @@ def pca_model(M, N, D):
 
     # Loadings
     W = nodes.Gaussian(np.zeros(D),
-                       alpha.as_diagonal_wishart(),
+                       diagonal(alpha),
                        name="W",
                        plates=(M,1))
 
@@ -70,6 +73,7 @@ def run(M=10, N=100, D_y=3, D=5):
     seed = 45
     print('seed =', seed)
     np.random.seed(seed)
+    
     # Generate data
     w = np.random.normal(0, 1, size=(M,1,D_y))
     x = np.random.normal(0, 1, size=(1,N,D_y))
@@ -82,6 +86,7 @@ def run(M=10, N=100, D_y=3, D=5):
     # Data with missing values
     mask = utils.random.mask(M, N, p=0.9) # randomly missing
     mask[:,20:40] = False # gap missing
+    mask[:] = True
     y[~mask] = np.nan
     Y.observe(y, mask=mask)
 
@@ -100,7 +105,22 @@ def run(M=10, N=100, D_y=3, D=5):
     # Inference loop.
     Q.update(X, W, repeat=1)
     Q.update(alpha, tau, repeat=1)
-    Q.update(X, W, alpha, tau, repeat=300)
+    Q.update(X, W, alpha, tau, repeat=1)
+
+    # Rotation speed-up
+    r1 = transformations.RotateGaussian(X)
+    r2 = transformations.RotateGaussian(W)
+    #r2 = transformations.RotateGaussianARD(W, alpha)
+    for ind in range(30):
+        Q.update(X, W, alpha, tau, repeat=1)
+        transformations.optimize_rotation(r1, r2, D)
+        #transformations.optimize_rotation(r1, r2, D)
+    #transformations.optimize_rotation(r1, r2, D)
+    #transformations.optimize_rotation(r1, r2, D)
+    #print("ALPHA", alpha.get_moments()[0])
+    #bound1 = transformations.bound_rotate_gaussian
+    #bound2 = transformations.bound_rotate_gaussian_ard
+    return
 
     plt.clf()
     WX_params = WX.get_parameters()

@@ -139,6 +139,12 @@ class ExponentialFamily(Stochastic):
         for i in range(len(self.phi)):
             self.phi[i] = self.phi[i] + m_children[i]
 
+        self._update_moments_and_cgf()
+
+    def _update_moments_and_cgf(self):
+        """
+        Update moments and cgf based on current phi.
+        """
         # Mask for plates to update (i.e., unobserved plates)
         update_mask = np.logical_not(self.observed)
 

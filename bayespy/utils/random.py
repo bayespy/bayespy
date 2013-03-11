@@ -82,30 +82,11 @@ def gaussian_logpdf(yVy, yVmu, muVmu, logdet_V, D):
     muVmu : ndarray or double
         :math:`\boldsymbol{\mu}^T\mathbf{V}\boldsymbol{\mu}`
     logdet_V : ndarray or double
-        :math:`\log|\mathbf{V}|`
+        Log-determinant of the precision matrix, :math:`\log|\mathbf{V}|`.
     D : int
         Dimensionality of the distribution.
     """
-    return -0.5*yVy + yVmu - 0.5*muVmu - 0.5*logdet_V - 0.5*D*np.log(2*np.pi)
-
-def gaussian_logpdf(d_yVy, d_yVmu, d_muVmu, d_logdet_V):
-    """
-    Log-density of a Gaussian distribution.
-
-    :math:`\mathcal{G}(\mathbf{y}|\boldsymbol{\mu},\mathbf{V}^{-1})`
-
-    Parameters:
-    -----------
-    d_yVy : ndarray or double
-        :math:`\mathbf{y}^T\mathbf{Vy}`
-    d_yVmu : ndarray or double
-        :math:`\mathbf{y}^T\mathbf{V}\boldsymbol{\mu}`
-    d_muVmu : ndarray or double
-        :math:`\boldsymbol{\mu}^T\mathbf{V}\boldsymbol{\mu}`
-    d_logdet_V : ndarray or double
-        :math:`\log|\mathbf{V}|`
-    """
-    return -0.5*d_yVy + d_yVmu - 0.5*muVmu - 0.5*logdet_V - 0.5*D*np.log(2*np.pi)
+    return -0.5*yVy + yVmu - 0.5*muVmu + 0.5*logdet_V - 0.5*D*np.log(2*np.pi)
 
 def gaussian_entropy(logdet_V, D):
     """
@@ -123,7 +104,7 @@ def gaussian_entropy(logdet_V, D):
     """
     return -0.5*logdet_V + 0.5*D + 0.5*D*np.log(2*np.pi)
 
-def gamma_logpdf(logx, a_logx, bx, a_logb, gammaln_a):
+def gamma_logpdf(bx, logx, a_logx, a_logb, gammaln_a):
     """
     Log-density of :math:`\mathcal{G}(x|a,b)`.
     
@@ -132,12 +113,12 @@ def gamma_logpdf(logx, a_logx, bx, a_logb, gammaln_a):
 
     Parameters:
     -----------
+    bx : ndarray
+        :math:`bx`
     logx : ndarray
         :math:`\log(x)`
     a_logx : ndarray
         :math:`a \log(x)`
-    bx : ndarray
-        :math:`bx`
     a_logb : ndarray
         :math:`a \log(b)`
     gammaln_a : ndarray

@@ -23,175 +23,266 @@
 ######################################################################
 
 import numpy as np
-import matplotlib.pyplot as plt
-import warnings
-import time
-import h5py
-import datetime
-import tempfile
+#from scipy import optimize
+
+#import matplotlib.pyplot as plt
+#import warnings
+#import time
+#import h5py
+#import datetime
+#import tempfile
 
 from bayespy import utils
 
-def bound_rotate_gaussian_ard(V, X, alpha):
+def optimize_rotation(block1, block2, D, maxiter=None, check_gradient=False,
+                      verbose=False):
     """
-    Rotate q(X) and q(alpha).
+    Optimize the rotation of two separate model blocks jointly.
 
-    Assume:
-    p(X|alpha) = prod_m N(x_m|0,diag(alpha))
-    p(alpha) = prod_d G(a_d,b_d)
-    """
+    If some variable is the dot product of two Gaussians, rotating the two
+    Gaussians optimally can make the inference algorithm orders of magnitude
+    faster.
 
-    # TODO/FIXME: X and alpha should NOT contain observed values!! Check that.
+    First block is rotated with :math:`\mathbf{R}` and the second with
+    :math:`\mathbf{R}^{-T}`.
 
-    cost = 0
-
-    # Compute the sum <XX> over plates
-    mask = X.mask[...,np.newaxis,np.newaxis]
-    XX = utils.utils.sum_multiply(X.get_moments()[1],
-                                  mask,
-                                  axis=(-1,-2),
-                                  sumaxis=False,
-                                  keepdims=False)
-    # Compute rotated second moment
-    XX_V = np.einsum('ik,kl,jl', V, XX, V)
-    
-    # Compute q(alpha)
-    a_0 = np.ravel(alpha.parents[0].get_moments()[0])
-    b_0 = np.ravel(alpha.parents[1].get_moments()[0])
-    a_alpha = np.ravel(alpha.phi[1])
-    b_alpha = b0 + 0.5*np.diag(XX_V)
-    alpha_V = a_alpha / b_alpha
-    logalpha_V = - log(b_alpha) # + const
-
-    N = np.sum(X.mask)
-    (Q, R) = np.linalg.qr(V)
-    logdet_V = utils.linalg.logdet_tri(R)
-
-    # Compute entropy H(X)
-    logH_X = utils.random.gaussian_entropy(-N*2*logdet_V, 
-                                           0)
-
-    # Compute entropy H(alpha)
-    logH_alpha = utils.random.gamma_entropy(0,
-                                            np.sum(log(b_alpha)),
-                                            0,
-                                            0,
-                                            0)
-
-    # Compute <log p(X|alpha)>
-    logp_X = utils.random.gaussian_logpdf(np.einsum('ii,i', XX_V, alpha_V),
-                                          0,
-                                          0,
-                                          N*np.sum(logalpha_V),
-                                          0)
-
-    # Compute <log p(alpha)>
-    logp_alpha = utils.random.gamma_logpdf(b_0*np.sum(alpha_V),
-                                           np.sum(logalpha_V),
-                                           a_0*np.sum(logalpha_V),
-                                           0,
-                                           0)
-
-    # Compute dH(X)
-    dlogH_X = utils.random.gaussian_entropy(-2*N*inv_V.T,
-                                            0)
-
-    # Compute dH(alpha)
-    d_log_b = np.einsum('i,ik,kj->ij', 1/b_alpha, V, XX)
-    dlogH_alpha = utils.random.gamma_entropy(0,
-                                             d_log_b,
-                                             0,
-                                             0,
-                                             0)
-
-    # Compute d<log p(X|alpha)>
-    d_log_alpha = -d_log_b
-    dXX_alpha = 2*np.einsum('i,ik,kj->ij', alpha_V, V, XX)
-    XX_dalpha = -np.einsum('i,i,ii,ik,kj->ij', alpha_V, 1/b_alpha, XX_V, V, XX)
-    dlogp_X = utils.random.gaussian_logpdf(dXX_alpha + XX_dalpha,
-                                           0,
-                                           0,
-                                           N*d_log_alpha,
-                                           0)
-
-    # Compute d<log p(alpha)>
-    d_alpha = -np.einsum('i,i,ik,kj->ij', alpha_V, 1/b_alpha, V, XX)
-    dlogp_alpha = utils.random.gamma_logpdf(b_0*d_alpha,
-                                            d_log_alpha,
-                                            a_0*d_log_alpha,
-                                            0,
-                                            0)
-
-    # Compute the bound
-    bound = logp_X + logp_alpha + logH_X + logH_alpha
-    d_bound = dlogp_X + dlogp_alpha + dlogH_X + dlogH_alpha
-    return (bound, d_bound)
-
-def bound_rotate_gaussian(V, X):
-    """
-    Rotate q(X) as X->RX.
-
-    Assume:
-    :math:`p(\mathbf{X}) = \prod^M_{m=1} 
-           N(\mathbf{x}_m|0, \mathbf{\Lambda})`
+    Blocks must have methods: `bound(U,s,V)` and `rotate(R)`.
     """
 
-    # TODO/FIXME: X and alpha should NOT contain observed values!! Check that.
+    def cost(r):
+        # Make vector-r into matrix-R
+        R = np.reshape(r, (D,D))
 
-    # Compute the sum <XX> over plates
-    mask = X.mask[...,np.newaxis,np.newaxis]
-    XX = utils.utils.sum_multiply(X.get_moments()[1],
-                                  mask,
-                                  axis=(-1,-2),
-                                  sumaxis=False,
-                                  keepdims=False)
-    # Compute rotated moments
-    XX_V = np.einsum('ik,kl,jl', V, XX, V)
-    
+        # Compute SVD
+        (U,s,V) = np.linalg.svd(R)
+        invR = np.linalg.inv(R)
 
-    N = np.sum(X.mask)
-    (Q, R) = np.linalg.qr(V)
-    logdet_V = utils.linalg.logdet_tri(R)
+        # Compute lower bound terms
+        (b1,db1) = block1.bound(R, svd=(U,s,V), inv=invR)
+        (b2,db2) = block2.bound(invR.T, svd=(U,1/s,V), inv=R.T)
+        db2 = -np.dot(invR.T, np.dot(db2.T, invR.T))
 
-    # Compute entropy H(X)
-    logH_X = utils.random.gaussian_entropy(-N*2*logdet_V, 
-                                           0)
+        # Compute the cost function
+        c = -(b1+b2)
+        dc = -(db1+db2)
 
-    # Compute <log p(X)>
-    Lambda = X.parents[1].get_moments()[0]
-    logp_X = utils.random.gaussian_logpdf(np.einsum('ij,ij', XX_V, Lambda),
-                                          0,
-                                          0,
-                                          0,
-                                          0)
+        return (c, np.ravel(dc))
 
-    # Compute dH(X)
-    dlogH_X = utils.random.gaussian_entropy(-2*N*inv_V.T,
-                                            0)
+    if check_gradient:
+        R0 = np.random.randn(D*D)
+        utils.optimize.check_gradient(cost, R0)
+        utils.optimize.check_gradient(cost, np.ravel(np.identity(D)))
 
-    # Compute d<log p(X)>
-    d_log_alpha = -d_log_b
-    dXX = 2*np.einsum('ik,kl,lj->ij', Lambda, V, XX)
-    dlogp_X = utils.random.gaussian_logpdf(dXX,
-                                           0,
-                                           0,
-                                           0,
-                                           0)
+    # Run optimization
+    if verbose:
+        print("Optimize rotation...")
+    r = utils.optimize.minimize(cost, np.ravel(np.identity(D)))
+    R = np.reshape(r, (D,D))
+    if verbose:
+        print("Done.")
 
-    # Compute the bound
-    bound = logp_X + logH_X
-    d_bound = dlogp_X + dlogH_X
-    return (bound, d_bound)
+    # Apply the optimal rotation
+    invR = np.linalg.inv(R)
+    block1.rotate(R, inv=invR)
+    block2.rotate(invR.T, inv=R.T)
+
+class RotateGaussianARD():
+
+    def __init__(self, X, alpha):
+        self.X = X
+        self.alpha = alpha
+
+    def rotate(self, R, svd=None):
+        pass
+
+    def bound(self, R, svd=None):
+        """
+        Rotate q(X) and q(alpha).
+
+        Assume:
+        p(X|alpha) = prod_m N(x_m|0,diag(alpha))
+        p(alpha) = prod_d G(a_d,b_d)
+        """
+
+        # TODO/FIXME: X and alpha should NOT contain observed values!! Check that.
+
+        cost = 0
+
+        # Compute the sum <XX> over plates
+        mask = X.mask[...,np.newaxis,np.newaxis]
+        XX = utils.utils.sum_multiply(X.get_moments()[1],
+                                      mask,
+                                      axis=(-1,-2),
+                                      sumaxis=False,
+                                      keepdims=False)
+        # Compute rotated second moment
+        XX_R = np.einsum('ik,kl,jl', R, XX, R)
+
+        # Compute q(alpha)
+        a_0 = np.ravel(alpha.parents[0].get_moments()[0])
+        b_0 = np.ravel(alpha.parents[1].get_moments()[0])
+        a_alpha = np.ravel(alpha.phi[1])
+        b_alpha = b0 + 0.5*np.diag(XX_R)
+        alpha_R = a_alpha / b_alpha
+        logalpha_R = - log(b_alpha) # + const
+
+        N = np.sum(X.mask)
+        #(Q, R) = np.linalg.qr(R)
+        if not svd:
+            (U,s,V) = np.linalg.svd(R)
+        logdet_R = np.sum(np.log(np.abs(s)))
+        #utils.linalg.logdet_tri(R)
+
+        # Compute entropy H(X)
+        logH_X = utils.random.gaussian_entropy(-N*2*logdet_R, 
+                                               0)
+
+        # Compute entropy H(alpha)
+        logH_alpha = utils.random.gamma_entropy(0,
+                                                np.sum(log(b_alpha)),
+                                                0,
+                                                0,
+                                                0)
+
+        # Compute <log p(X|alpha)>
+        logp_X = utils.random.gaussian_logpdf(np.einsum('ii,i', XX_R, alpha_R),
+                                              0,
+                                              0,
+                                              N*np.sum(logalpha_R),
+                                              0)
+
+        # Compute <log p(alpha)>
+        logp_alpha = utils.random.gamma_logpdf(b_0*np.sum(alpha_R),
+                                               np.sum(logalpha_R),
+                                               a_0*np.sum(logalpha_R),
+                                               0,
+                                               0)
+
+        # Compute dH(X)
+        dlogH_X = utils.random.gaussian_entropy(-2*N*inv_R.T,
+                                                0)
+
+        # Compute dH(alpha)
+        d_log_b = np.einsum('i,ik,kj->ij', 1/b_alpha, R, XX)
+        dlogH_alpha = utils.random.gamma_entropy(0,
+                                                 d_log_b,
+                                                 0,
+                                                 0,
+                                                 0)
+
+        # Compute d<log p(X|alpha)>
+        d_log_alpha = -d_log_b
+        dXX_alpha = 2*np.einsum('i,ik,kj->ij', alpha_R, R, XX)
+        XX_dalpha = -np.einsum('i,i,ii,ik,kj->ij', alpha_R, 1/b_alpha, XX_R, R, XX)
+        dlogp_X = utils.random.gaussian_logpdf(dXX_alpha + XX_dalpha,
+                                               0,
+                                               0,
+                                               N*d_log_alpha,
+                                               0)
+
+        # Compute d<log p(alpha)>
+        d_alpha = -np.einsum('i,i,ik,kj->ij', alpha_R, 1/b_alpha, R, XX)
+        dlogp_alpha = utils.random.gamma_logpdf(b_0*d_alpha,
+                                                d_log_alpha,
+                                                a_0*d_log_alpha,
+                                                0,
+                                                0)
+
+        # Compute the bound
+        bound = logp_X + logp_alpha + logH_X + logH_alpha
+        d_bound = dlogp_X + dlogp_alpha + dlogH_X + dlogH_alpha
+        return (bound, d_bound)
+
+class RotateGaussian():
+
+    def __init__(self, X):
+        self.X = X
+
+    def rotate(self, R, inv=None):
+        self.X.rotate(R, inv=inv)
+
+    def bound(self, R, svd=None, inv=None):
+        """
+        Rotate q(X) as X->RX.
+
+        Assume:
+        :math:`p(\mathbf{X}) = \prod^M_{m=1} 
+               N(\mathbf{x}_m|0, \mathbf{\Lambda})`
+        """
+
+        # TODO/FIXME: X and alpha should NOT contain observed values!! Check
+        # that.
+
+        # TODO/FIXME: Allow non-zero prior mean!
+
+        # Assume constant mean and precision matrix over plates..
+
+        N = np.sum(self.X.mask)
+
+        # Compute the sum <XX> over plates
+        mask = self.X.mask[...,np.newaxis,np.newaxis]
+        XX = utils.utils.sum_multiply(self.X.get_moments()[1],
+                                      mask,
+                                      axis=(-1,-2),
+                                      sumaxis=False,
+                                      keepdims=False)
+        # Compute rotated moments
+        XX_R = np.einsum('ik,kl,jl', R, XX, R)
 
 
-def cost_rotate_gmc(X, A, alpha):
-    pass
+        if svd is None:
+            (U,s,V) = np.linalg.svd(R)
+        else:
+            (U,s,V) = svd
+
+        if inv is None:
+            # TODO/FIXME: Use SVD!
+            inv_R = np.linalg.inv(R)
+        else:
+            inv_R = inv
+        
+        logdet_R = np.sum(np.log(np.abs(s)))
+
+        # Compute entropy H(X)
+        logH_X = utils.random.gaussian_entropy(-2*N*logdet_R, 
+                                               0)
+
+        # Compute <log p(X)>
+        Lambda = self.X.parents[1].get_moments()[0]
+        logp_X = utils.random.gaussian_logpdf(np.einsum('ij,ij', XX_R, Lambda),
+                                              0,
+                                              0,
+                                              0,
+                                              0)
+
+        # Compute dH(X)
+        dlogH_X = utils.random.gaussian_entropy(-2*N*inv_R.T,
+                                                0)
+
+        # Compute d<log p(X)>
+        dXX = 2*np.einsum('ik,kl,lj->ij', Lambda, R, XX)
+        dlogp_X = utils.random.gaussian_logpdf(dXX,
+                                               0,
+                                               0,
+                                               0,
+                                               0)
+
+        # Compute the bound
+        bound = logp_X + logH_X
+        d_bound = dlogp_X + dlogH_X
+        #bound = logH_X
+        #d_bound = dlogH_X
+
+        return (bound, d_bound)
 
 
-def rotate(C, X):
-    """
-    Optimize rotation of C and X.
+## def cost_rotate_gmc(X, A, alpha):
+##     pass
 
-    (C*R) * (inv(R)*X)
-    """
-    pass
+## def rotate(C, X):
+##     """
+##     Optimize rotation of C and X.
+
+##     (C*R) * (inv(R)*X)
+##     """
+##     pass

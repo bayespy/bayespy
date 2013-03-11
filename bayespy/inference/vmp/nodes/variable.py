@@ -273,12 +273,18 @@ class Variable(Node):
                         # mask when adding the message!!!!???
                         self.phi[i] = self.phi[i] + m[i]
 
-            # Mask for plates to update (i.e., unobserved plates)
-            update_mask = np.logical_not(self.observed)
-            # Compute u and g
-            (u, g) = self.compute_u_and_g(self.phi, mask=update_mask)
-            # Update moments
-            self.update_u_and_g(u, g, mask=update_mask)
+            self.update_from_phi()
+
+    def _update_from_phi(self):
+        """
+        Update moments and cgf based on current phi.
+        """
+        # Mask for plates to update (i.e., unobserved plates)
+        update_mask = np.logical_not(self.observed)
+        # Compute u and g
+        (u, g) = self.compute_u_and_g(self.phi, mask=update_mask)
+        # Update moments
+        self.update_u_and_g(u, g, mask=update_mask)
 
     def phi_from_parents(self, gradient=False):
         # Messages from parents

@@ -304,87 +304,19 @@ class Gaussian(ExponentialFamily):
         print("  Cov = ")
         print(str(Cov))
 
-    ## @staticmethod
-    ## def compute_rotated_moments(R, x, xx):
-    ##     x = np.einsum('...ij,...j->...i', R, x)
-    ##     xx = np.einsum('...ij,...jk,...lk->...il', R, xx, R)
-    ##     return [x, xx]
+    def rotate(self, R, inv=None):
+        if inv is not None:
+            invR = inv
+        else:
+            invR = np.linalg.inv(R)
 
-    ## @staticmethod
-    ## def rotation_entropy(U,s,V, n=1, gradient=False):
-    ##     # Entropy
-    ##     e = n*np.sum(np.log(S))
-    ##     if gradient:
-    ##         # Derivative w.r.t. rotation matrix R=U*S*V is inv(R).T
-    ##         dR = n*np.dot(V.T, np.dot(np.diag(1/s), U.T))
-    ##         return (e, dR)
-    ##     else:
-    ##         return e
-
-
-    ## def start_rotation(self):
-
-    ##     R = None
-    ##     U = None
-    ##     s = None
-    ##     V = None
-
-    ##     # There should not be any observed/fixed values.
-
-    ##     u = self.u
-    ##     u0 = self.u
-
-    ##     self.u = None
-
-    ##     dR = None
-        
-
-    ##     def transform_rotation(A, svd=None):
-    ##         # Rotation matrix
-    ##         R = np.atleast_2d(A)
-    ##         if svd is None:
-    ##             (U,s,V) = np.svd(R)
-    ##         else:
-    ##             (U,s,V) = svd
-                
-    ##         # Transform moments
-    ##         u = self.compute_rotated_moments(R, *u0)
-
-    ##         # Put gradient to zero
-    ##         dR = np.zeros(np.shape(R))
-
-    ##         # Return transformed moments
-    ##         return u
-            
-
-    ##     def cost_rotation(gradient=True):
-    ##         # Compute E[phi] over the parents' distribution
-    ##         phi_p_X = self.phi_from_parents(gradient=gradient)
-            
-    ##         # Compute the cost
-
-    ##         # Entropy term
-    ##         #log_qh_X = N_X * np.sum(np.log(S))
-    ##         log_qh_X = self.rotation_entropy(U, s, V,
-    ##                                          n=N_X,
-    ##                                          gradient=gradient)
-
-    ##         # Prior term
-    ##         log_ph_X = X.compute_logpdf(u,
-    ##                                     phi_p_X,
-    ##                                     0,
-    ##                                     0,
-    ##                                     gradient=gradient)
-    ##         # Total cost
-    ##         l = log_qh_X + log_ph_X
-    ##         return l
-
-    ##     def gradient_rotation():
-    ##         return dR
-
-    ##     #def stop_rotation():
-    ##     #    self.u = 
-
-    ##     return (transform_rotation, cost_rotation, gradient_rotation)
-        
-
+        # It would be more efficient and simpler, if you just rotated the
+        # moments and didn't touch phi. However, then you would need to call
+        # update() before lower_bound_contribution. This is more error-safe.
+        #self.phi[0] = np.einsum('...ij,...j->...i', 
+        #                        invR.T, self.phi[0])
+        self.phi[0] = np.einsum('...j,...ij->...i', 
+                                self.phi[0], invR.T)
+        self.phi[1] = np.einsum('...ik,...kl,...jl->...ij', 
+                                invR.T, self.phi[1], invR.T)
+        self._update_moments_and_cgf()
