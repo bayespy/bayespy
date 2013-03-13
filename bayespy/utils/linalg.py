@@ -156,7 +156,7 @@ def logdet_chol(U):
     
 def logdet_tri(R):
     """
-    Absolute value of the log-determinant of a triangular matrix.
+    Logarithm of the absolute value of the determinant of a triangular matrix.
     """
     return np.sum(np.log(np.abs(np.einsum('...ii->...i', R))))
     
@@ -229,7 +229,43 @@ def m_outer(A,B):
     # shape (..., M), then the result has shape (..., N, M)
     return A[...,np.newaxis]*B[...,np.newaxis,:]
 
+def dot(*arrays):
+    """
+    Compute matrix multiplication.
+
+    Can be given several arrays and computes A1*A2*A3*...*AN. Shapes of the
+    arrays must be consistent.
+
+    The dot product is computed over the last two axes of each arrays. Thus, all
+    other axes must be broadcastable.
+    """
+    M = len(arrays)
+    if M == 0:
+        return 0
+    
+    # Check shape consistency
+    for ind in range(M-1):
+        if np.shape(arrays[ind])[-1] != np.shape(arrays[ind+1])[-2]:
+            raise ValueError("Shapes are inconsistent")
+
+    # Number of broadcasted axes (last two axes are for dot product)
+    N = max((np.ndim(A) for A in arrays)) - 2
+
+    # Construct (array, axes) mapping pairs
+    args = []
+    for (ind, A) in enumerate(arrays):
+        n = np.ndim(A) - 2
+        axes = tuple(range(n-1, -1, -1)) + (N+ind, N+ind+1)
+        args += [A, axes]
+
+    # Output axes: (N-1,N-2,...,0,N,N+M
+    out = tuple(range(N-1, -1, -1)) + (N, N+M)
+    args += [out]
+
+    return np.einsum(*args)
+
 def m_dot(A,b):
+    raise DeprecationWarning()
     # Compute matrix-vector product over the last two axes of A and
     # the last axes of b.  Other axes are broadcasted. If A has shape
     # (..., M, N) and b has shape (..., N), then the result has shape

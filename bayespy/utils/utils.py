@@ -37,6 +37,30 @@ import scipy.optimize as optimize
 import scipy.sparse as sparse
 #import scikits.sparse.cholmod as cholmod
 
+import tempfile as tmp
+
+import unittest
+from numpy import testing
+
+class TestCase(unittest.TestCase):
+    """
+    Simple base class for unit testing.
+
+    Adds NumPy's features to Python's unittest.
+    """
+
+    def assertAllClose(self, A, B, msg="Arrays not almost equal"):
+
+        self.assertEqual(np.shape(A), np.shape(B), msg=msg)
+        
+        testing.assert_allclose(A, B, err_msg=msg)
+
+def symm(X):
+    """
+    Make X symmetric.
+    """
+    return 0.5 * (X + np.swapaxes(X, -1, -2))
+
 def unique(l):
     """
     Remove duplicate items from a list while preserving order.
@@ -44,6 +68,9 @@ def unique(l):
     seen = set()
     seen_add = seen.add
     return [ x for x in l if x not in seen and not seen_add(x)]    
+
+def tempfile(prefix='', suffix=''):
+    return tmp.NamedTemporaryFile(prefix=prefix, suffix=suffix).name
 
 def write_to_hdf5(group, data, name):
     """
@@ -591,12 +618,6 @@ def logdet_chol(U):
     elif isinstance(U, cholmod.Factor):
         return np.sum(np.log(U.D()))
 
-def logdet_tri(R):
-    """
-    Absolute value of the log-determinant of a triangular matrix.
-    """
-    return np.sum(np.log(np.abs(np.einsum('...ii->...i', R))))
-    
 def m_solve_triangular(U, B, **kwargs):
     # Allocate memory
     U = np.atleast_2d(U)
