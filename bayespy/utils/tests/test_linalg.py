@@ -40,6 +40,10 @@ from .. import linalg
 class TestDot(TestCase):
 
     def test_dot(self):
+        """
+        Test dot product multiple multi-dimensional arrays.
+        """
+        
         # If no arrays, return 0
         self.assertAllClose(linalg.dot(),
                             0)
