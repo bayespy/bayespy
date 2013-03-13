@@ -147,7 +147,7 @@ class TestGaussianMarkovChain(unittest.TestCase):
                                          np.einsum('...ij,...ij', 
                                                    mumu0,
                                                    icov0),
-                                         ldet,
+                                         -ldet,
                                          N*D)
                                                    
         # The VB bound from the net
