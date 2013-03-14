@@ -43,7 +43,9 @@ class TestDot(TestCase):
         """
         Test dot product multiple multi-dimensional arrays.
         """
-        
+
+        pass
+    
         # If no arrays, return 0
         self.assertAllClose(linalg.dot(),
                             0)
@@ -118,4 +120,16 @@ class TestDot(TestCase):
                             [7,8]],
                            [[9,1],
                             [2,3]]])
-
+        # Do not broadcast matrix axes: (2,1) * (3,2)
+        self.assertRaises(ValueError,
+                          linalg.dot,
+                          [[1],
+                           [2]],
+                          [[1,2,3],
+                           [4,5,6]])
+        # Do not accept less than 2-D arrays: (2) * (2,2)
+        self.assertRaises(ValueError,
+                          linalg.dot,
+                          [1,2],
+                          [[1,2,3],
+                           [4,5,6]])

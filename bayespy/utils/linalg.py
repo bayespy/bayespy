@@ -231,38 +231,25 @@ def m_outer(A,B):
 
 def dot(*arrays):
     """
-    Compute matrix multiplication.
+    Compute matrix product.
 
-    Can be given several arrays and computes A1*A2*A3*...*AN. Shapes of the
-    arrays must be consistent.
+    You can give multiple arrays, the dot product is computed from left to
+    right: A1*A2*A3*...*AN. The dot product is computed over the last two axes
+    of each arrays. All other axes must be broadcastable.
 
-    The dot product is computed over the last two axes of each arrays. Thus, all
-    other axes must be broadcastable.
     """
-    M = len(arrays)
-    if M == 0:
+    if len(arrays) == 0:
         return 0
-    
-    # Check shape consistency
-    for ind in range(M-1):
-        if np.shape(arrays[ind])[-1] != np.shape(arrays[ind+1])[-2]:
-            raise ValueError("Shapes are inconsistent")
-
-    # Number of broadcasted axes (last two axes are for dot product)
-    N = max((np.ndim(A) for A in arrays)) - 2
-
-    # Construct (array, axes) mapping pairs
-    args = []
-    for (ind, A) in enumerate(arrays):
-        n = np.ndim(A) - 2
-        axes = tuple(range(n-1, -1, -1)) + (N+ind, N+ind+1)
-        args += [A, axes]
-
-    # Output axes: (N-1,N-2,...,0,N,N+M
-    out = tuple(range(N-1, -1, -1)) + (N, N+M)
-    args += [out]
-
-    return np.einsum(*args)
+    else:
+        Y = arrays[0]
+        for X in arrays[1:]:
+            if np.ndim(Y) < 2 or np.ndim(X) < 2:
+                raise ValueError("Must be at least 2-D arrays")
+            if np.shape(Y)[-1] != np.shape(X)[-2]:
+                raise ValueError("Dimensions do not match")
+            # TODO/FIXME: Use the new GUFUNCs instead of einsum!
+            Y = np.einsum('...ik,...kj->...ij', Y, X)
+        return Y
 
 def m_dot(A,b):
     raise DeprecationWarning()
