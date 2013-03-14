@@ -132,13 +132,13 @@ class ExponentialFamily(Stochastic):
 
     def _update_distribution_and_lowerbound(self, m_children, *u_parents):
 
-        # Initialize phi from the prior
+        # Update phi first from parents..
         self._update_phi_from_parents(*u_parents)
-
-        # Just add children's message to phi
+        # .. then just add children's message
         for i in range(len(self.phi)):
             self.phi[i] = self.phi[i] + m_children[i]
 
+        # Update u and g
         self._update_moments_and_cgf()
 
     def _update_moments_and_cgf(self):

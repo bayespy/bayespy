@@ -33,58 +33,74 @@ import numpy as np
 #import tempfile
 
 from bayespy import utils
+from bayespy.utils.linalg import dot
 
-def optimize_rotation(block1, block2, D, maxiter=None, check_gradient=False,
-                      verbose=False):
-    """
-    Optimize the rotation of two separate model blocks jointly.
+class RotationOptimizer():
 
-    If some variable is the dot product of two Gaussians, rotating the two
-    Gaussians optimally can make the inference algorithm orders of magnitude
-    faster.
+    def __init__(self, block1, block2, D):
+        self.block1 = block1
+        self.block2 = block2
+        self.D = D
 
-    First block is rotated with :math:`\mathbf{R}` and the second with
-    :math:`\mathbf{R}^{-T}`.
+    def rotate(self, maxiter=None, check_gradient=False, verbose=False):
+        """
+        Optimize the rotation of two separate model blocks jointly.
 
-    Blocks must have methods: `bound(U,s,V)` and `rotate(R)`.
-    """
+        If some variable is the dot product of two Gaussians, rotating the two
+        Gaussians optimally can make the inference algorithm orders of magnitude
+        faster.
 
-    def cost(r):
-        # Make vector-r into matrix-R
-        R = np.reshape(r, (D,D))
+        First block is rotated with :math:`\mathbf{R}` and the second with
+        :math:`\mathbf{R}^{-T}`.
 
-        # Compute SVD
-        (U,s,V) = np.linalg.svd(R)
+        Blocks must have methods: `bound(U,s,V)` and `rotate(R)`.
+        """
+
+        def cost(r):
+
+            # Make vector-r into matrix-R
+            R = np.reshape(r, (self.D,self.D))
+
+            # Compute SVD
+            (U,s,V) = np.linalg.svd(R)
+            invR = np.linalg.inv(R)
+
+            # Compute lower bound terms
+            (b1,db1) = self.block1.bound(R, svd=(U,s,V), inv=invR)
+            (b2,db2) = self.block2.bound(invR.T, svd=(U,1/s,V), inv=R.T)
+
+            # Apply chain rule for the second gradient:
+            # d b(invR.T) 
+            # = tr(db.T * d(invR.T)) 
+            # = tr(db * d(invR))
+            # = -tr(db * invR * (dR) * invR) 
+            # = -tr(invR * db * invR * dR)
+            db2 = -dot(invR.T, db2.T, invR.T)
+            #db2 = -np.einsum('ik,kl,lj->ij', invR.T, db2.T, invR.T)
+            #db2 = -np.dot(invR.T, np.dot(db2.T, invR.T))
+
+            # Compute the cost function
+            c = -(b1+b2)
+            dc = -(db1+db2)
+
+            return (c, np.ravel(dc))
+
+        if check_gradient:
+            print("Rotator: Check gradient.")
+            R0 = np.random.randn(self.D*self.D)
+            utils.optimize.check_gradient(cost, R0)
+            utils.optimize.check_gradient(cost, np.ravel(np.identity(self.D)))
+
+        # Run optimization
+        r0 = np.ravel(np.identity(self.D))
+        r = utils.optimize.minimize(cost, r0)
+        R = np.reshape(r, (self.D,self.D))
+
+        # Apply the optimal rotation
         invR = np.linalg.inv(R)
-
-        # Compute lower bound terms
-        (b1,db1) = block1.bound(R, svd=(U,s,V), inv=invR)
-        (b2,db2) = block2.bound(invR.T, svd=(U,1/s,V), inv=R.T)
-        db2 = -np.dot(invR.T, np.dot(db2.T, invR.T))
-
-        # Compute the cost function
-        c = -(b1+b2)
-        dc = -(db1+db2)
-
-        return (c, np.ravel(dc))
-
-    if check_gradient:
-        R0 = np.random.randn(D*D)
-        utils.optimize.check_gradient(cost, R0)
-        utils.optimize.check_gradient(cost, np.ravel(np.identity(D)))
-
-    # Run optimization
-    if verbose:
-        print("Optimize rotation...")
-    r = utils.optimize.minimize(cost, np.ravel(np.identity(D)))
-    R = np.reshape(r, (D,D))
-    if verbose:
-        print("Done.")
-
-    # Apply the optimal rotation
-    invR = np.linalg.inv(R)
-    block1.rotate(R, inv=invR)
-    block2.rotate(invR.T, inv=R.T)
+        logdetR = np.linalg.slogdet(R)[1]
+        self.block1.rotate(R, inv=invR, logdet=logdetR)
+        self.block2.rotate(invR.T, inv=R.T, logdet=-logdetR)
 
 class RotateGaussianARD():
 
@@ -116,7 +132,8 @@ class RotateGaussianARD():
                                       sumaxis=False,
                                       keepdims=False)
         # Compute rotated second moment
-        XX_R = np.einsum('ik,kl,jl', R, XX, R)
+        XX_R = dot(R, XX, R.T)
+        #XX_R = np.einsum('ik,kl,jl', R, XX, R)
 
         # Compute q(alpha)
         a_0 = np.ravel(alpha.parents[0].get_moments()[0])
@@ -198,10 +215,10 @@ class RotateGaussian():
     def __init__(self, X):
         self.X = X
 
-    def rotate(self, R, inv=None):
-        self.X.rotate(R, inv=inv)
+    def rotate(self, R, inv=None, logdet=None):
+        self.X.rotate(R, inv=inv, logdet=logdet)
 
-    def bound(self, R, svd=None, inv=None):
+    def bound(self, R, svd=None, inv=None, verbose=False, lu=None):
         """
         Rotate q(X) as X->RX.
 
@@ -227,20 +244,20 @@ class RotateGaussian():
                                       sumaxis=False,
                                       keepdims=False)
         # Compute rotated moments
-        XX_R = np.einsum('ik,kl,jl', R, XX, R)
+        #XX_R = utils.utils.symm(np.einsum('ik,kl,jl->ij', R, XX, R))
+        XX_R = dot(R, XX, R.T)
 
 
-        if svd is None:
-            (U,s,V) = np.linalg.svd(R)
-        else:
-            (U,s,V) = svd
+        #if svd is None:
+        #    (U,s,V) = np.linalg.svd(R)
+        #else:
+        (U,s,V) = svd
 
-        if inv is None:
-            # TODO/FIXME: Use SVD!
-            inv_R = np.linalg.inv(R)
-        else:
-            inv_R = inv
-        
+        ## if inv is None:
+        ##     inv_R = np.linalg.inv(R)
+        ## else:
+        inv_R = inv
+
         logdet_R = np.sum(np.log(np.abs(s)))
 
         # Compute entropy H(X)
@@ -260,7 +277,8 @@ class RotateGaussian():
                                                 0)
 
         # Compute d<log p(X)>
-        dXX = 2*np.einsum('ik,kl,lj->ij', Lambda, R, XX)
+        #dXX = 2*np.einsum('ik,kl,lj->ij', Lambda, R, XX)
+        dXX = 2*dot(Lambda, R, XX)
         dlogp_X = utils.random.gaussian_logpdf(dXX,
                                                0,
                                                0,
@@ -270,19 +288,14 @@ class RotateGaussian():
         # Compute the bound
         bound = logp_X + logH_X
         d_bound = dlogp_X + dlogH_X
-        #bound = logH_X
-        #d_bound = dlogH_X
+
+        #bound = logp_X
+        #d_bound = dlogp_X
+
+        #if verbose:
+        #    print("debug:", logp_X, logH_X, bound)
+
+        if np.isnan(bound) or np.any(np.isnan(d_bound)):
+            raise Exception("Gradient contains nans!")
 
         return (bound, d_bound)
-
-
-## def cost_rotate_gmc(X, A, alpha):
-##     pass
-
-## def rotate(C, X):
-##     """
-##     Optimize rotation of C and X.
-
-##     (C*R) * (inv(R)*X)
-##     """
-##     pass

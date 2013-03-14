@@ -36,6 +36,10 @@ from bayespy.inference.vmp import transformations
 
 from bayespy.inference.vmp.nodes.gamma import diagonal
 
+"""
+Demonstrate the effect of speed-up transformations for PCA model.
+"""
+
 def pca_model(M, N, D):
     # Construct the PCA model with ARD
 
@@ -61,15 +65,15 @@ def pca_model(M, N, D):
     WX = nodes.Dot(W, X, name="WX")
 
     # Noise
-    tau = nodes.Gamma(1e-2, 1e-2, name="tau", plates=())
+    tau = nodes.Gamma(1e-2, 1e-2, name="tau")
 
     # Noisy observations
-    Y = nodes.Normal(WX, tau, name="Y", plates=(M,N))
+    Y = nodes.Normal(WX, tau, name="Y")
 
     return (Y, WX, W, X, tau, alpha)
 
 
-def run(M=10, N=100, D_y=3, D=5):
+def run(M=10, N=100, D_y=5, D=9, maxiter=100):
     seed = 45
     print('seed =', seed)
     np.random.seed(seed)
@@ -90,26 +94,46 @@ def run(M=10, N=100, D_y=3, D=5):
     Y.observe(y, mask=mask)
 
     # Construct inference machine
-    Q = VB(Y, W, X, tau, alpha)
+    Q = VB(Y, W, X, tau, alpha,
+           autosave_filename=utils.utils.tempfile())
 
-    # Initialize some nodes randomly
+    # Initialize nodes (from prior and randomly)
+    alpha.initialize_from_prior()
+    tau.initialize_from_prior()
+    X.initialize_from_prior()
+    W.initialize_from_prior()
     X.initialize_from_value(X.random())
     W.initialize_from_value(W.random())
 
-    # Inference loop.
-    Q.update(repeat=100)
+    Q.update(repeat=10)
+    Q.save()
 
-    # Plot results
-    plt.clf()
-    WX_params = WX.get_parameters()
-    fh = WX_params[0] * np.ones(y.shape)
-    err_fh = 2*np.sqrt(WX_params[1] + 1/tau.get_moments()[0]) * np.ones(y.shape)
-    for m in range(M):
-        plt.subplot(M,1,m+1)
-        myplt.errorplot(fh[m], x=np.arange(N), error=err_fh[m])
-        plt.plot(np.arange(N), f[m], 'g')
-        plt.plot(np.arange(N), y[m], 'r+')
+    #
+    # Run inference with rotations.
+    #
+    R = transformations.RotationOptimizer(transformations.RotateGaussian(X),
+                                          transformations.RotateGaussian(W),
+                                          D)
 
+    for ind in range(maxiter//3):
+        Q.update(repeat=3)
+        R.rotate()
+
+    L_rot = Q.L
+
+    #
+    # Re-run inference without rotations.
+    #
+    Q.load()
+    Q.update(repeat=maxiter)
+    L_norot = Q.L
+
+    #
+    # Plot comparison
+    #
+    plt.plot(L_rot)
+    plt.plot(L_norot)
+    plt.legend(['With rotations', 'Without rotations'], loc='lower right')
     plt.show()
 
 if __name__ == '__main__':

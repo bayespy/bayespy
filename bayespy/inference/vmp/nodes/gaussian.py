@@ -24,7 +24,8 @@
 
 import numpy as np
 
-from bayespy.utils import utils
+from bayespy import utils
+from bayespy.utils.linalg import dot, mvdot
 
 from .expfamily import ExponentialFamily
 from .constant import Constant
@@ -166,11 +167,11 @@ class Gaussian(ExponentialFamily):
         self.parameter_distributions = (Gaussian, Wishart)
         
         # Check for constant mu
-        if utils.is_numeric(mu):
+        if utils.utils.is_numeric(mu):
             mu = Constant(Gaussian)(np.atleast_1d(mu))
 
         # Check for constant Lambda
-        if utils.is_numeric(Lambda):
+        if utils.utils.is_numeric(Lambda):
             Lambda = Constant(Wishart)(np.atleast_2d(Lambda))
 
         ## # You could check whether the dimensions of mu and Lambda
@@ -185,19 +186,19 @@ class Gaussian(ExponentialFamily):
     @staticmethod
     def compute_fixed_moments(x):
         """ Compute moments for fixed x. """
-        return [x, utils.m_outer(x,x)]
+        return [x, utils.utils.m_outer(x,x)]
 
     @staticmethod
     def _compute_phi_from_parents(*u_parents):
-        return [utils.m_dot(u_parents[1][0], u_parents[0][0]),
+        return [utils.utils.m_dot(u_parents[1][0], u_parents[0][0]),
                 -0.5 * u_parents[1][0]]
 
     @staticmethod
-    def _compute_cgf_from_parents(*u_parents):
-        mu = u_parents[0][0]
-        mumu = u_parents[0][1]
-        Lambda = u_parents[1][0]
-        logdet_Lambda = u_parents[1][1]
+    def _compute_cgf_from_parents(u_mu, u_Lambda):
+        mu = u_mu[0]
+        mumu = u_mu[1]
+        Lambda = u_Lambda[0]
+        logdet_Lambda = u_Lambda[1]
         g = (-0.5 * np.einsum('...ij,...ij',mumu,Lambda)
              + 0.5 * logdet_Lambda)
         return g
@@ -205,15 +206,15 @@ class Gaussian(ExponentialFamily):
     @staticmethod
     def _compute_moments_and_cgf(phi, mask=True):
         # TODO: Compute -2*phi[1] and simplify the formulas
-        L = utils.m_chol(-2*phi[1])
+        L = utils.utils.m_chol(-2*phi[1])
         k = np.shape(phi[0])[-1]
         # Moments
-        u0 = utils.m_chol_solve(L, phi[0])
-        u1 = utils.m_outer(u0, u0) + utils.m_chol_inv(L)
+        u0 = utils.utils.m_chol_solve(L, phi[0])
+        u1 = utils.utils.m_outer(u0, u0) + utils.utils.m_chol_inv(L)
         u = [u0, u1]
         # G
         g = (-0.5 * np.einsum('...i,...i', u[0], phi[0])
-             + 0.5 * utils.m_chol_logdet(L))
+             + 0.5 * utils.utils.m_chol_logdet(L))
              #+ 0.5 * np.log(2) * self.dims[0][0])
         return (u, g)
 
@@ -221,7 +222,7 @@ class Gaussian(ExponentialFamily):
     def _compute_fixed_moments_and_f(x, mask=True):
         """ Compute u(x) and f(x) for given x. """
         k = np.shape(x)[-1]
-        u = [x, utils.m_outer(x,x)]
+        u = [x, utils.utils.m_outer(x,x)]
         f = -k/2*np.log(2*np.pi)
         return (u, f)
 
@@ -229,10 +230,10 @@ class Gaussian(ExponentialFamily):
     def _compute_message_to_parent(index, u, *u_parents):
         """ . """
         if index == 0:
-            return [utils.m_dot(u_parents[1][0], u[0]),
+            return [utils.utils.m_dot(u_parents[1][0], u[0]),
                     -0.5 * u_parents[1][0]]
         elif index == 1:
-            xmu = utils.m_outer(u[0], u_parents[0][0])
+            xmu = utils.utils.m_outer(u[0], u_parents[0][0])
             return [-0.5 * (u[1] - xmu - xmu.swapaxes(-1,-2) + u_parents[0][1]),
                     0.5]
 
@@ -287,36 +288,45 @@ class Gaussian(ExponentialFamily):
         # observed/fixed elements!
 
         # Note that phi[1] is -0.5*inv(Cov)
-        U = utils.m_chol(-2*self.phi[1])
+        U = utils.utils.m_chol(-2*self.phi[1])
         mu = self.u[0]
         z = np.random.normal(0, 1, self.get_shape(0))
         # Compute mu + U'*z
-        z = utils.m_solve_triangular(U, z, trans='T', lower=False)
+        z = utils.utils.m_solve_triangular(U, z, trans='T', lower=False)
         return mu + z
             
 
     def show(self):
         mu = self.u[0]
-        Cov = self.u[1] - utils.m_outer(mu, mu)
+        Cov = self.u[1] - utils.utils.m_outer(mu, mu)
         print("%s ~ Gaussian(mu, Cov)" % self.name)
         print("  mu = ")
         print(mu)
         print("  Cov = ")
         print(str(Cov))
 
-    def rotate(self, R, inv=None):
+    def rotate(self, R, inv=None, logdet=None):
+
         if inv is not None:
             invR = inv
         else:
             invR = np.linalg.inv(R)
 
+        if logdet is not None:
+            logdetR = logdet
+        else:
+            logdetR = np.linalg.slogdet(R)[1]
+
         # It would be more efficient and simpler, if you just rotated the
         # moments and didn't touch phi. However, then you would need to call
         # update() before lower_bound_contribution. This is more error-safe.
-        #self.phi[0] = np.einsum('...ij,...j->...i', 
-        #                        invR.T, self.phi[0])
-        self.phi[0] = np.einsum('...j,...ij->...i', 
-                                self.phi[0], invR.T)
-        self.phi[1] = np.einsum('...ik,...kl,...jl->...ij', 
-                                invR.T, self.phi[1], invR.T)
-        self._update_moments_and_cgf()
+
+        # Transform parameters
+        self.phi[0] = mvdot(invR.T, self.phi[0])
+        self.phi[1] = dot(invR.T, self.phi[1], invR)
+
+        # Transform moments and g
+        u0 = mvdot(R, self.u[0])
+        u1 = dot(R, self.u[1], R.T)
+        self.u = [u0, u1]
+        self.g -= logdetR

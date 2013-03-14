@@ -112,7 +112,13 @@ class VB():
             self.L[self.iter] = L
             self.iter += 1
 
-            
+
+    def compute_lowerbound(self):
+        L = 0
+        for node in self.model:
+            L += node.lower_bound_contribution()
+        return L
+        
 
     def loglikelihood_lowerbound(self):
         L = 0
@@ -147,6 +153,16 @@ class VB():
 
 
     def save(self, filename=None):
+
+        if self.iter == 0:
+            # Check HDF5 version.
+            if h5py.version.hdf5_version_tuple < (1,8,7): 
+                warnings.warn("WARNING! Your HDF5 version is %s. HDF5 versions "
+                              "<1.8.7 are not able to save empty arrays, thus "
+                              "you may experience problems if you for instance "
+                              "try to save before running any iteration steps."
+                              % str(h5py.version.hdf5_version_tuple))
+            
 
         # By default, use the same file as for auto-saving
         if not filename:
