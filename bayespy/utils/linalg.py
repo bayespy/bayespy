@@ -36,6 +36,10 @@ import scipy.optimize as optimize
 import scipy.sparse as sparse
 #import scikits.sparse.cholmod as cholmod
 
+# THIS IS SOME NEW GENERALIZED UFUNC FOR LINALG FEATURE, NOT IN OFFICIAL NUMPY
+# REPO YET
+import numpy.core.gufuncs_linalg as gula
+
 from .utils import nested_iterator
 
 def logdet_cov(C):
@@ -231,25 +235,39 @@ def m_outer(A,B):
 
 def dot(*arrays):
     """
-    Compute matrix product.
+    Compute matrix-matrix product.
 
     You can give multiple arrays, the dot product is computed from left to
     right: A1*A2*A3*...*AN. The dot product is computed over the last two axes
     of each arrays. All other axes must be broadcastable.
-
     """
     if len(arrays) == 0:
         return 0
     else:
-        Y = arrays[0]
+        Y = np.asanyarray(arrays[0])
         for X in arrays[1:]:
+            X = np.asanyarray(X)
             if np.ndim(Y) < 2 or np.ndim(X) < 2:
                 raise ValueError("Must be at least 2-D arrays")
             if np.shape(Y)[-1] != np.shape(X)[-2]:
                 raise ValueError("Dimensions do not match")
-            # TODO/FIXME: Use the new GUFUNCs instead of einsum!
-            Y = np.einsum('...ik,...kj->...ij', Y, X)
+            Y = Y[...,:,np.newaxis,:]
+            X = np.swapaxes(X, -1, -2)[...,np.newaxis,:,:]
+            Y = gula.inner1d(Y, X)
+            # TODO/FIXME: sum(a*b) is terrible, use new GUFUNC or einsum
+            #Y = np.sum(Y[...,:,:,np.newaxis]*X[...,np.newaxis,:,:], axis=-2)
+            # TODO/FIXME: Use the new GUFUNCs instead of einsum! Einsum has a
+            # bug: https://github.com/numpy/numpy/issues/3142
+            #Y = np.einsum('...ik,...kj->...ij', Y, X)
         return Y
+
+def mvdot(A, b):
+    """
+    Compute matrix-vector product.
+
+    Applies broadcasting.
+    """
+    return gula.inner1d(A, b[...,np.newaxis,:])
 
 def m_dot(A,b):
     raise DeprecationWarning()
