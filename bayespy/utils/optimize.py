@@ -30,7 +30,7 @@ def minimize(f, x0):
 
     The given function must return a tuple: (value, gradient).
     """
-    opt = optimize.minimize(f, x0, jac=True)
+    opt = optimize.minimize(f, x0, jac=True, method='BFGS')
     return opt.x
 
 def check_gradient(f, x0, verbose=True):

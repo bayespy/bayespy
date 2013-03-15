@@ -74,7 +74,7 @@ def pca_model(M, N, D):
 
 
 def run(M=10, N=100, D_y=5, D=9, maxiter=100):
-    seed = 45
+    seed = 45 # bug with 45
     print('seed =', seed)
     np.random.seed(seed)
     
@@ -98,27 +98,25 @@ def run(M=10, N=100, D_y=5, D=9, maxiter=100):
            autosave_filename=utils.utils.tempfile())
 
     # Initialize nodes (from prior and randomly)
-    alpha.initialize_from_prior()
-    tau.initialize_from_prior()
-    X.initialize_from_prior()
-    W.initialize_from_prior()
     X.initialize_from_value(X.random())
     W.initialize_from_value(W.random())
 
-    Q.update(repeat=10)
+    Q.update(repeat=20)
     Q.save()
 
     #
     # Run inference with rotations.
     #
-    R = transformations.RotationOptimizer(transformations.RotateGaussian(X),
-                                          transformations.RotateGaussian(W),
-                                          D)
+    rotX = transformations.RotateGaussian(X)
+    rotW = transformations.RotateGaussian(W)
+    #rotW = transformations.RotateGaussianARD(W, alpha)
+    R = transformations.RotationOptimizer(rotX, rotW, D)
 
-    for ind in range(maxiter//3):
-        Q.update(repeat=3)
+    for ind in range(maxiter//2):
+        Q.update(repeat=2)
         R.rotate()
 
+    return
     L_rot = Q.L
 
     #

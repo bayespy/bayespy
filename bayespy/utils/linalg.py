@@ -227,7 +227,7 @@ def m_solve_triangular(U, B, **kwargs):
     
 
 
-def m_outer(A,B):
+def outer(A,B):
     # Computes outer product over the last axes of A and B. The other
     # axes are broadcasted. Thus, if A has shape (..., N) and B has
     # shape (..., M), then the result has shape (..., N, M)
