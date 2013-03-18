@@ -108,15 +108,14 @@ def run(M=10, N=100, D_y=5, D=9, maxiter=100):
     # Run inference with rotations.
     #
     rotX = transformations.RotateGaussian(X)
-    rotW = transformations.RotateGaussian(W)
-    #rotW = transformations.RotateGaussianARD(W, alpha)
+    #rotW = transformations.RotateGaussian(W)
+    rotW = transformations.RotateGaussianARD(W, alpha)
     R = transformations.RotationOptimizer(rotX, rotW, D)
 
     for ind in range(maxiter//2):
         Q.update(repeat=2)
-        R.rotate()
+        R.rotate(check_gradient=True)
 
-    return
     L_rot = Q.L
 
     #

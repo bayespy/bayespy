@@ -38,11 +38,19 @@ def check_gradient(f, x0, verbose=True):
     Simple wrapper for SciPy's gradient checker.
 
     The given function must return a tuple: (value, gradient).
+
+    Returns relative
     """
-    err = optimize.check_grad(lambda x: f(x)[0],
-                              lambda x: f(x)[1],
-                              np.atleast_1d(x0))
+    df = f(x0)[1]
+    df_num = optimize.approx_fprime(x0, 
+                                    lambda x: f(x)[0], 
+                                    optimize.optimize._epsilon)
+    err = np.linalg.norm(df-df_num) / np.linalg.norm(df_num)
+    ## sqrt(sum((grad(x0, *args) - approx_fprime(x0, func, _epsilon, *args))**2))
+    ## err = optimize.check_grad(lambda x: f(x)[0],
+    ##                           lambda x: f(x)[1],
+    ##                           np.atleast_1d(x0))
     if verbose:
-        print("Gradient error = %g" % err)
+        print("Gradient relative error = %g" % err)
     return err
     

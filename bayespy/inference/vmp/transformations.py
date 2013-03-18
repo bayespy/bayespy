@@ -61,7 +61,7 @@ class RotationOptimizer():
         I = np.identity(self.D)
         piv = np.arange(self.D)
         
-        def cost_r(r):
+        def cost(r):
 
             # Make vector-r into matrix-R
             R = np.reshape(r, (self.D,self.D))
@@ -81,67 +81,10 @@ class RotationOptimizer():
             # = -tr(db * invR * (dR) * invR) 
             # = -tr(invR * db * invR * dR)
             db2 = -dot(invR.T, db2.T, invR.T)
-            #db2 = -np.einsum('ik,kl,lj->ij', invR.T, db2.T, invR.T)
-            #db2 = -np.dot(invR.T, np.dot(db2.T, invR.T))
 
             # Compute the cost function
             c = -(b1+b2)
             dc = -(db1+db2)
-
-            #print("DEBUG", np.linalg.norm(dc))
-            
-            #print("DEBUG", np.allclose(np.dot(invR,R), I))
-            #return (b2, np.ravel(db2))
-            return (c, np.ravel(dc))
-
-        def cost(lu):
-
-            # Make vector-r into matrix-R
-            LU = np.reshape(lu, (self.D,self.D))
-
-            # Compute SVD
-            #(U,s,V) = np.linalg.svd(R)
-            #LU = scipy.linalg.lu_factor(R)
-            L = np.tril(LU, k=-1) + I
-            U = np.triu(LU)
-            R = np.dot(L, U)
-            invR = scipy.linalg.lu_solve((LU, piv), I)
-            logdetR = utils.linalg.logdet_tri(LU)
-            #logdetR = np.linalg.slogdet(R)[1]
-
-            ## invR2 = np.linalg.inv(R)
-            ## print(np.max(invR), np.min(invR))
-            ## if not np.allclose(invR, invR2):
-            ##     raise Exception("Should be close but not?!")
-            
-            # Compute lower bound terms
-            (b1,db1) = self.block1.bound(R, logdet=logdetR, inv=invR)
-            (b2,db2) = self.block2.bound(invR.T, logdet=-logdetR, inv=R.T)
-
-            # Apply chain rule for the second gradient:
-            # d b(invR.T) 
-            # = tr(db.T * d(invR.T)) 
-            # = tr(db * d(invR))
-            # = -tr(db * invR * (dR) * invR) 
-            # = -tr(invR * db * invR * dR)
-            db2 = -dot(invR.T, db2.T, invR.T)
-            #db2 = -scipy.linalg.lu_solve((LU,piv), db2.T, trans=True)
-            #db2 = scipy.linalg.lu_solve((LU,piv), db2.T).T
-            
-            #db2 = -np.einsum('ik,kl,lj->ij', invR.T, db2.T, invR.T)
-            #db2 = -np.dot(invR.T, np.dot(db2.T, invR.T))
-
-            # Compute the cost function
-            c = -(b1+b2)
-            dc = -(db1+db2)
-
-            c = b2
-            dc = db2
-
-            if not np.allclose(np.dot(invR,R), I):
-                raise Exception("WTF?!")
-            # Gradients for LU
-            dc = np.tril(np.dot(dc, U.T), k=-1) + np.triu(np.dot(L.T, dc))
 
             return (c, np.ravel(dc))
 
@@ -150,35 +93,17 @@ class RotationOptimizer():
         
         if check_gradient:
             R = np.random.randn(self.D, self.D)
-            print("Rotator: Check gradient.", np.linalg.cond(R))
-            #R = np.identity(self.D) + 0.2*np.random.randn(self.D, self.D)
-            utils.optimize.check_gradient(cost_r, np.ravel(R))
-            #utils.optimize.check_gradient(cost_r, np.ravel(np.identity(self.D)))
-            raise Exception('Jou')
+            utils.optimize.check_gradient(cost, np.ravel(R))
+            #utils.optimize.check_gradient(cost, np.ravel(np.identity(self.D)))
 
-        if False:
-            # Run optimization
-            lu0 = np.ravel(np.identity(self.D))
-            lu = utils.optimize.minimize(cost_r, lu0)
-            LU = np.reshape(lu, (self.D,self.D))
-
-            L = np.tril(LU, k=-1) + I
-            U = np.triu(LU)
-            R = np.dot(L, U)
-            invR = scipy.linalg.lu_solve((LU, piv), I)
-            logdetR = utils.linalg.logdet_tri(LU)
-        else:
-            # Run optimization
-            r0 = np.ravel(np.identity(self.D))
-            r = utils.optimize.minimize(cost_r, r0)
-            R = np.reshape(r, (self.D,self.D))
-
-            invR = np.linalg.inv(R)
-            logdetR = np.linalg.slogdet(R)[1]
+        # Run optimization
+        r0 = np.ravel(np.identity(self.D))
+        r = utils.optimize.minimize(cost, r0)
+        R = np.reshape(r, (self.D,self.D))
+        invR = np.linalg.inv(R)
+        logdetR = np.linalg.slogdet(R)[1]
 
         # Apply the optimal rotation
-        #invR = np.linalg.inv(R)
-        #logdetR = np.linalg.slogdet(R)[1]
         self.block1.rotate(R, inv=invR, logdet=logdetR)
         self.block2.rotate(invR.T, inv=R.T, logdet=-logdetR)
 
@@ -192,6 +117,27 @@ class RotateGaussianARD():
         self.X.rotate(R, inv=inv, logdet=logdet)
         self.alpha.update()
 
+    def setup(self):
+        """
+        This method should be called just before optimization.
+        """
+        
+        mask = self.X.mask[...,np.newaxis,np.newaxis]
+
+        # Number of plates
+        self.N = np.sum(mask)
+
+        # Compute the sum <XX> over plates
+        self.XX = utils.utils.sum_multiply(self.X.get_moments()[1],
+                                           mask,
+                                           axis=(-1,-2),
+                                           sumaxis=False,
+                                           keepdims=False)
+        # Parent's moments
+        self.a0 = np.ravel(self.alpha.parents[0].get_moments()[0])
+        self.b0 = np.ravel(self.alpha.parents[1].get_moments()[0])
+        self.Lambda = self.X.parents[1].get_moments()[0]
+
 
     def bound(self, R, logdet=None, inv=None):
         """
@@ -204,34 +150,20 @@ class RotateGaussianARD():
 
         # TODO/FIXME: X and alpha should NOT contain observed values!! Check that.
 
-        # Compute the sum <XX> over plates
-        mask = self.X.mask[...,np.newaxis,np.newaxis]
-        XX = utils.utils.sum_multiply(self.X.get_moments()[1],
-                                      mask,
-                                      axis=(-1,-2),
-                                      sumaxis=False,
-                                      keepdims=False)
         # Compute rotated second moment
-        XX_R = dot(R, XX, R.T)
+        XX_R = dot(R, self.XX, R.T)
 
         # Compute q(alpha)
-        a0 = np.ravel(self.alpha.parents[0].get_moments()[0])
-        b0 = np.ravel(self.alpha.parents[1].get_moments()[0])
         a_alpha = np.ravel(self.alpha.phi[1])
-        b_alpha = b0 + 0.5*np.diag(XX_R)
+        b_alpha = self.b0 + 0.5*np.diag(XX_R)
         alpha_R = a_alpha / b_alpha
         logalpha_R = - np.log(b_alpha) # + const
 
-        N = np.sum(mask)
-        #(Q, R) = np.linalg.qr(R)
-        #if not svd:
-        #(U,s,V) = np.linalg.svd(R)
-        logdet_R = logdet #np.sum(np.log(np.abs(s)))
+        logdet_R = logdet
         inv_R = inv
-        #utils.linalg.logdet_tri(R)
 
         # Compute entropy H(X)
-        logH_X = utils.random.gaussian_entropy(-N*2*logdet_R, 
+        logH_X = utils.random.gaussian_entropy(-self.N*2*logdet_R, 
                                                0)
 
         # Compute entropy H(alpha)
@@ -245,22 +177,22 @@ class RotateGaussianARD():
         logp_X = utils.random.gaussian_logpdf(np.einsum('ii,i', XX_R, alpha_R),
                                               0,
                                               0,
-                                              N*np.sum(logalpha_R),
+                                              self.N*np.sum(logalpha_R),
                                               0)
 
         # Compute <log p(alpha)>
-        logp_alpha = utils.random.gamma_logpdf(b0*np.sum(alpha_R),
+        logp_alpha = utils.random.gamma_logpdf(self.b0*np.sum(alpha_R),
                                                np.sum(logalpha_R),
-                                               a0*np.sum(logalpha_R),
+                                               self.a0*np.sum(logalpha_R),
                                                0,
                                                0)
 
         # Compute dH(X)
-        dlogH_X = utils.random.gaussian_entropy(-2*N*inv_R.T,
+        dlogH_X = utils.random.gaussian_entropy(-2*self.N*inv_R.T,
                                                 0)
 
         # Compute dH(alpha)
-        d_log_b = np.einsum('i,ik,kj->ij', 1/b_alpha, R, XX)
+        d_log_b = np.einsum('i,ik,kj->ij', 1/b_alpha, R, self.XX)
         dlogH_alpha = utils.random.gamma_entropy(0,
                                                  d_log_b,
                                                  0,
@@ -269,19 +201,19 @@ class RotateGaussianARD():
 
         # Compute d<log p(X|alpha)>
         d_log_alpha = -d_log_b
-        dXX_alpha = 2*np.einsum('i,ik,kj->ij', alpha_R, R, XX)
-        XX_dalpha = -np.einsum('i,i,ii,ik,kj->ij', alpha_R, 1/b_alpha, XX_R, R, XX)
+        dXX_alpha = 2*np.einsum('i,ik,kj->ij', alpha_R, R, self.XX)
+        XX_dalpha = -np.einsum('i,i,ii,ik,kj->ij', alpha_R, 1/b_alpha, XX_R, R, self.XX)
         dlogp_X = utils.random.gaussian_logpdf(dXX_alpha + XX_dalpha,
                                                0,
                                                0,
-                                               N*d_log_alpha,
+                                               self.N*d_log_alpha,
                                                0)
 
         # Compute d<log p(alpha)>
-        d_alpha = -np.einsum('i,i,ik,kj->ij', alpha_R, 1/b_alpha, R, XX)
-        dlogp_alpha = utils.random.gamma_logpdf(b0*d_alpha,
+        d_alpha = -np.einsum('i,i,ik,kj->ij', alpha_R, 1/b_alpha, R, self.XX)
+        dlogp_alpha = utils.random.gamma_logpdf(self.b0*d_alpha,
                                                 d_log_alpha,
-                                                a0*d_log_alpha,
+                                                self.a0*d_log_alpha,
                                                 0,
                                                 0)
 
