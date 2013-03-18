@@ -44,7 +44,7 @@ class RotationOptimizer():
         self.block2 = block2
         self.D = D
 
-    def rotate(self, maxiter=None, check_gradient=False, verbose=False):
+    def rotate(self, maxiter=10, check_gradient=False, verbose=False):
         """
         Optimize the rotation of two separate model blocks jointly.
 
@@ -94,11 +94,10 @@ class RotationOptimizer():
         if check_gradient:
             R = np.random.randn(self.D, self.D)
             utils.optimize.check_gradient(cost, np.ravel(R))
-            #utils.optimize.check_gradient(cost, np.ravel(np.identity(self.D)))
 
         # Run optimization
         r0 = np.ravel(np.identity(self.D))
-        r = utils.optimize.minimize(cost, r0)
+        r = utils.optimize.minimize(cost, r0, maxiter=maxiter, verbose=verbose)
         R = np.reshape(r, (self.D,self.D))
         invR = np.linalg.inv(R)
         logdetR = np.linalg.slogdet(R)[1]
@@ -266,12 +265,11 @@ class RotateGaussian():
         # Assume constant mean and precision matrix over plates..
 
         # Compute rotated moments
-        XX_R = np.dot(R, np.dot(self.XX, R.T))
-        #XX_R = dot(R, self.XX, R.T)
+        #XX_R = np.dot(R, np.dot(self.XX, R.T))
+        XX_R = dot(R, self.XX, R.T)
 
-        #(U,s,V) = svd
         inv_R = inv
-        logdet_R = logdet #np.sum(np.log(np.abs(s)))
+        logdet_R = logdet
 
         # Compute entropy H(X)
         logH_X = utils.random.gaussian_entropy(-2*self.N*logdet_R, 
@@ -281,8 +279,7 @@ class RotateGaussian():
         # just before starting optimization!
         
         # Compute <log p(X)>
-        logp_X = utils.random.gaussian_logpdf(np.einsum('ij,ij', XX_R, self.Lambda),
-        #logp_X = utils.random.gaussian_logpdf(np.vdot(XX_R, self.Lambda),
+        logp_X = utils.random.gaussian_logpdf(np.vdot(XX_R, self.Lambda),
                                               0,
                                               0,
                                               0,
@@ -293,8 +290,7 @@ class RotateGaussian():
                                                 0)
 
         # Compute d<log p(X)>
-        dXX = 2*np.dot(self.Lambda, np.dot(R, self.XX))
-        #dXX = 2*dot(self.Lambda, R, self.XX)
+        dXX = 2*dot(self.Lambda, R, self.XX)
         dlogp_X = utils.random.gaussian_logpdf(dXX,
                                                0,
                                                0,
@@ -304,7 +300,5 @@ class RotateGaussian():
         # Compute the bound
         bound = logp_X + logH_X
         d_bound = dlogp_X + dlogH_X
-        #bound = logH_X
-        #d_bound = dlogH_X
 
         return (bound, d_bound)

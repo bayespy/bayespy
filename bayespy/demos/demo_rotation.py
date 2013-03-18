@@ -24,6 +24,7 @@
 
 import time
 import numpy as np
+import scipy
 import matplotlib.pyplot as plt
 
 from bayespy.plot import plotting as myplt
@@ -73,16 +74,18 @@ def pca_model(M, N, D):
     return (Y, WX, W, X, tau, alpha)
 
 
-def run(M=10, N=100, D_y=5, D=9, maxiter=100):
-    seed = 45 # bug with 45
+def run(M=50, N=200, D_y=10, D=20, maxiter=100):
+    seed = 45
     print('seed =', seed)
     np.random.seed(seed)
     
-    # Generate data
-    w = np.random.normal(0, 1, size=(M,1,D_y))
-    x = np.random.normal(0, 1, size=(1,N,D_y))
-    f = utils.utils.sum_product(w, x, axes_to_sum=[-1])
-    y = f + np.random.normal(0, 0.5, size=(M,N))
+    # Generate data (covariance eigenvalues: 1,1,...,1,2^2,3^2,...,(D_y+1)^2
+    (q,r) = scipy.linalg.qr(np.random.randn(M,M))
+    C = np.diag(np.arange(2,2+D_y))
+    C = np.ones(M)
+    C[:D_y] += np.arange(1,1+D_y)
+    y = C[:,np.newaxis] * np.random.randn(M,N)
+    y = np.dot(q, y)
 
     # Construct model
     (Y, WX, W, X, tau, alpha) = pca_model(M, N, D)
@@ -101,20 +104,19 @@ def run(M=10, N=100, D_y=5, D=9, maxiter=100):
     X.initialize_from_value(X.random())
     W.initialize_from_value(W.random())
 
-    Q.update(repeat=20)
+    Q.update(repeat=1)
     Q.save()
 
     #
     # Run inference with rotations.
     #
     rotX = transformations.RotateGaussian(X)
-    #rotW = transformations.RotateGaussian(W)
     rotW = transformations.RotateGaussianARD(W, alpha)
     R = transformations.RotationOptimizer(rotX, rotW, D)
 
-    for ind in range(maxiter//2):
-        Q.update(repeat=2)
-        R.rotate(check_gradient=True)
+    for ind in range(maxiter):
+        Q.update()
+        R.rotate(check_gradient=False, maxiter=10, verbose=False)
 
     L_rot = Q.L
 
