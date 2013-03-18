@@ -24,13 +24,16 @@
 import numpy as np
 from scipy import optimize
 
-def minimize(f, x0):
+def minimize(f, x0, maxiter=None, verbose=False):
     """
     Simple wrapper for SciPy's optimize.
 
     The given function must return a tuple: (value, gradient).
     """
-    opt = optimize.minimize(f, x0, jac=True, method='BFGS')
+    options = {'disp': verbose}
+    if maxiter is not None:
+        options['maxiter'] = maxiter
+    opt = optimize.minimize(f, x0, jac=True, method='CG', options=options)
     return opt.x
 
 def check_gradient(f, x0, verbose=True):
@@ -46,10 +49,6 @@ def check_gradient(f, x0, verbose=True):
                                     lambda x: f(x)[0], 
                                     optimize.optimize._epsilon)
     err = np.linalg.norm(df-df_num) / np.linalg.norm(df_num)
-    ## sqrt(sum((grad(x0, *args) - approx_fprime(x0, func, _epsilon, *args))**2))
-    ## err = optimize.check_grad(lambda x: f(x)[0],
-    ##                           lambda x: f(x)[1],
-    ##                           np.atleast_1d(x0))
     if verbose:
         print("Gradient relative error = %g" % err)
     return err
