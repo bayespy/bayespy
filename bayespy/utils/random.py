@@ -40,9 +40,34 @@ def mask(*shape, p=0.5):
     """
     return np.random.rand(*shape) < p
 
+def wishart_rand(nu, V):
+    """
+    Draw a random sample from the Wishart distribution.
+
+    Parameters:
+    -----------
+    nu : int
+    """
+    # TODO/FIXME: Are these correct..
+    D = np.shape(V)[0]
+    if nu < D:
+        raise ValueError("Degrees of freedom must be equal or greater than the "
+                         "dimensionality of the matrix.")
+    X = np.random.multivariate_normal(np.zeros(D), V, size=nu)
+    return np.dot(X, X.T)
+
+def invwishart_rand(nu, V):
+    # TODO/FIXME: Are these correct..
+    return np.linalg.inv(wishart_rand(nu, V))
+
 def covariance(D):
     """
     Draw a random covariance matrix.
+
+    Draws from inverse-Wishart distribution. The distribution of each element is
+    independent of the dimensionality of the matrix.
+
+    C ~ Inv-W(I, D)
 
     Parameters:
     -----------
@@ -54,18 +79,19 @@ def covariance(D):
     C : (D,D) ndarray
         Positive-definite symmetric :math:`D\times D` matrix.
     """
-    X = np.random.randn(D,D)
-    return np.dot(X, X.T) / D
+    
+    C = np.random.randn(D,D)
+    return np.linalg.inv(np.dot(C, C.T))
 
-def wishart_rand(nu, V):
+def correlation(D):
     """
-    Draw a random sample from the Wishart distribution.
+    Draw a random correlation matrix.
+    """
+    X = np.random.randn(D,D);
+    s = np.sqrt(np.sum(X**2, axis=-1, keepdims=True))
+    X = X / s
+    return np.dot(X, X.T)
 
-    Parameters:
-    -----------
-    nu : int
-    """
-    raise NotImplementedError()
 
 def gaussian_logpdf(yVy, yVmu, muVmu, logdet_V, D):
     """
