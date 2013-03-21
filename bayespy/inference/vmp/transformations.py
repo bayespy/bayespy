@@ -302,3 +302,91 @@ class RotateGaussian():
         d_bound = dlogp_X + dlogH_X
 
         return (bound, d_bound)
+
+class RotateGaussianMarkovChain():
+    """
+    Assume the following model.
+
+    Constant innovation noise, diagonal.
+
+    A may vary in time.
+
+    No plates for X.
+    """
+
+    def __init__(self, X, A):
+        self.X_node = X
+        self.A_node = A
+
+    def rotate(self, R, inv=None, logdet=None):
+        self.X_node.rotate(R, inv=inv, logdet=logdet)
+        self.A_node.rotate()
+
+    def setup(self):
+        """
+        This method should be called just before optimization.
+        """
+        
+        # Number of plates
+        #self.N = np.sum(mask)
+
+        # Compute the sum of the moments over time
+        (self.X, self.XnXn, self.XpXn) = self.X_node.get_moments()
+        self.X = np.sum(self.X, axis=tuple(range(np.ndim(self.X)-1)))
+        self.XnXn = np.sum(self.XnXn, axis=tuple(range(np.ndim(self.X)-2)))
+        self.XpXn = np.sum(self.XpXn, axis=tuple(range(np.ndim(self.X)-2)))
+
+    def bound(self, R, logdet=None, inv=None):
+        """
+        Rotate q(X) as X->RX: q(X)=N(R*mu, R*Cov*R')
+
+        Assume:
+        :math:`p(\mathbf{X}) = \prod^M_{m=1} 
+               N(\mathbf{x}_m|0, \mathbf{\Lambda})`
+        """
+
+        # TODO/FIXME: X and alpha should NOT contain observed values!! Check
+        # that.
+
+        # TODO/FIXME: Allow non-zero prior mean!
+
+        # Assume constant mean and precision matrix over plates..
+
+        # Compute rotated moments
+        #XX_R = np.dot(R, np.dot(self.XX, R.T))
+        R_XnXn_R = dot(R, self.XX, R.T)
+
+        inv_R = inv
+        logdet_R = logdet
+
+        # Compute entropy H(X)
+        logH_X = utils.random.gaussian_entropy(-2*self.N*logdet_R, 
+                                               0)
+
+        # TODO/FIXME: Lambda and other parent moments etc should be obtained
+        # just before starting optimization!
+        
+        # Compute <log p(X)>
+        logp_X = utils.random.gaussian_logpdf(np.vdot(XX_R, self.Lambda),
+                                              0,
+                                              0,
+                                              0,
+                                              0)
+
+        # Compute dH(X)
+        dlogH_X = utils.random.gaussian_entropy(-2*self.N*inv_R.T,
+                                                0)
+
+        # Compute d<log p(X)>
+        dXX = 2*dot(self.Lambda, R, self.XX)
+        dlogp_X = utils.random.gaussian_logpdf(dXX,
+                                               0,
+                                               0,
+                                               0,
+                                               0)
+
+        # Compute the bound
+        bound = logp_X + logH_X
+        d_bound = dlogp_X + dlogH_X
+
+        return (bound, d_bound)

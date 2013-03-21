@@ -27,6 +27,8 @@ General functions random sampling and distributions.
 
 import numpy as np
 
+from . import linalg
+
 def mask(*shape, p=0.5):
     """
     Return a boolean array of the given shape.
@@ -60,7 +62,7 @@ def invwishart_rand(nu, V):
     # TODO/FIXME: Are these correct..
     return np.linalg.inv(wishart_rand(nu, V))
 
-def covariance(D):
+def covariance(D, size=()):
     """
     Draw a random covariance matrix.
 
@@ -79,9 +81,15 @@ def covariance(D):
     C : (D,D) ndarray
         Positive-definite symmetric :math:`D\times D` matrix.
     """
-    
-    C = np.random.randn(D,D)
-    return np.linalg.inv(np.dot(C, C.T))
+
+    if isinstance(size, int):
+        size = (size,)
+        
+    shape = tuple(size) + (D,D)
+    C = np.random.randn(*shape)
+    C = linalg.dot(C, np.swapaxes(C, -1, -2))
+    return linalg.inv(C)
+#return np.linalg.inv(np.dot(C, C.T))
 
 def correlation(D):
     """

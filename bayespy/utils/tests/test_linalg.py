@@ -44,8 +44,6 @@ class TestDot(TestCase):
         Test dot product multiple multi-dimensional arrays.
         """
 
-        pass
-    
         # If no arrays, return 0
         self.assertAllClose(linalg.dot(),
                             0)

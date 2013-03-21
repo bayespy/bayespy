@@ -251,15 +251,18 @@ def dot(*arrays):
                 raise ValueError("Must be at least 2-D arrays")
             if np.shape(Y)[-1] != np.shape(X)[-2]:
                 raise ValueError("Dimensions do not match")
-            Y = Y[...,:,np.newaxis,:]
-            X = np.swapaxes(X, -1, -2)[...,np.newaxis,:,:]
-            Y = gula.inner1d(Y, X)
-            # TODO/FIXME: sum(a*b) is terrible, use new GUFUNC or einsum
-            #Y = np.sum(Y[...,:,:,np.newaxis]*X[...,np.newaxis,:,:], axis=-2)
+            # TODO/FIXME: These GUFUNC's seem surprisingly slow?!?!?!
+            #Y = Y[...,:,np.newaxis,:]
+            #X = np.swapaxes(X, -1, -2)[...,np.newaxis,:,:]
+            #Y = gula.inner1d(Y, X)
             # TODO/FIXME: Use the new GUFUNCs instead of einsum! Einsum has a
             # bug: https://github.com/numpy/numpy/issues/3142
-            #Y = np.einsum('...ik,...kj->...ij', Y, X)
+            Y = np.einsum('...ik,...kj->...ij', Y, X)
+            #Y = gula.matrix_multiply(Y, X)
         return Y
+
+def inv(A):
+    return gula.inv(A)
 
 def mvdot(A, b):
     """
