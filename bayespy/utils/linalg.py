@@ -257,9 +257,15 @@ def dot(*arrays):
             #Y = gula.inner1d(Y, X)
             # TODO/FIXME: Use the new GUFUNCs instead of einsum! Einsum has a
             # bug: https://github.com/numpy/numpy/issues/3142
-            Y = np.einsum('...ik,...kj->...ij', Y, X)
-            #Y = gula.matrix_multiply(Y, X)
+            #Y = np.einsum('...ik,...kj->...ij', Y, X)
+            Y = gula.matrix_multiply(Y, X)
         return Y
+
+def tracedot(A, B):
+    """
+    Computes trace(A*B).
+    """
+    return np.einsum('...ij,...ji->...', A, B)
 
 def inv(A):
     return gula.inv(A)
