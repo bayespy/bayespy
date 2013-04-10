@@ -34,11 +34,13 @@ from bayespy.inference.vmp.nodes.gaussian import Gaussian
 from bayespy.inference.vmp.nodes.gamma import Gamma
 from bayespy.inference.vmp.nodes.normal import Normal
 from bayespy.inference.vmp.nodes.dot import Dot
+from bayespy.inference.vmp.nodes.gamma import diagonal
 
 from bayespy.utils import utils
 from bayespy.utils import random
 
 from bayespy.inference.vmp.vmp import VB
+from bayespy.inference.vmp import transformations
 
 import bayespy.plot.plotting as bpplt
 
@@ -50,7 +52,7 @@ def linear_state_space_model(D=3, N=100, M=10):
                   plates=(D,),
                   name='alpha')
     A = Gaussian(np.zeros(D),
-                 alpha.as_diagonal_wishart(),
+                 diagonal(alpha),
                  plates=(D,),
                  name='A')
 
@@ -68,7 +70,7 @@ def linear_state_space_model(D=3, N=100, M=10):
                   plates=(D,),
                   name='gamma')
     C = Gaussian(np.zeros(D),
-                 gamma.as_diagonal_wishart(),
+                 diagonal(gamma),
                  plates=(M,1),
                  name='C')
 
@@ -85,7 +87,7 @@ def linear_state_space_model(D=3, N=100, M=10):
 
     return (Y, CX, X, tau, C, gamma, A, alpha)
 
-def run():
+def run(maxiter=100):
 
     seed = 496#np.random.randint(1000)
     print("seed = ", seed)
@@ -100,7 +102,6 @@ def run():
     a = np.array([[np.cos(w), -np.sin(w), 0], 
                   [np.sin(w), np.cos(w),  0], 
                   [0,         0,          1]])
-    #a = 0.9*scipy.linalg.orth(np.random.randn(D,D))
     x = np.empty((N,D))
     f = np.empty((M,N))
     y = np.empty((M,N))
@@ -114,8 +115,6 @@ def run():
 
     # Create the model
     (Y, CX, X, tau, C, gamma, A, alpha) = linear_state_space_model(D, N, M)
-
-    # Hmm.. does the mask go properly from X to A?
     
     # Add missing values randomly
     mask = random.mask(M, N, p=0.3)
@@ -127,12 +126,30 @@ def run():
     
 
     # Initialize nodes (must use some randomness for C)
-    C.initialize_from_parameters(C.random(), np.identity(D))
+    C.initialize_from_random()
 
     # Run inference
-    Q = VB(Y, X, tau, C, gamma, A, alpha)
-    #Q.update(X, C, tau, A, repeat=5)
-    Q.update(X, C, tau, gamma, A, alpha, repeat=2000)
+    Q = VB(Y, X, C, gamma, A, alpha, tau)
+
+    #
+    # Run inference with rotations.
+    #
+    rotA = transformations.RotateGaussianARD(A, alpha)
+    rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
+    rotC = transformations.RotateGaussianARD(C, gamma)
+    R = transformations.RotationOptimizer(rotX, rotC, D)
+
+    #maxiter = 84
+    for ind in range(maxiter):
+        Q.update()
+        #print('C term', C.lower_bound_contribution())
+        R.rotate(maxiter=10, 
+                 check_gradient=True,
+                 verbose=False,
+                 check_bound=Q.compute_lowerbound,
+        #check_bound=None,
+                 check_bound_terms=Q.compute_lowerbound_terms)
+        #check_bound_terms=None)
 
     X_vb = X.u[0]
     varX_vb = utils.diagonal(X.u[1] - X_vb[...,np.newaxis,:] * X_vb[...,:,np.newaxis])
@@ -142,17 +159,6 @@ def run():
     varCX_vb = u_CX[1] - CX_vb**2
 
     # Show results
-    ## plt.figure(1)
-    ## plt.clf()
-    ## for d in range(D):
-    ##     plt.subplot(D,1,d+1)
-    ##     plt.plot(x[:,d], 'r-')
-    ##     #plt.figure(2)
-    ##     #plt.clf()
-    ##     #for d in range(D):
-    ##     #plt.subplot(D,1,d)
-    ##     bpplt.errorplot(y=X_vb[:,d],
-    ##                     error=2*np.sqrt(varX_vb[:,d]))
     plt.figure(3)
     plt.clf()
     for m in range(M):
@@ -162,12 +168,8 @@ def run():
         bpplt.errorplot(y=CX_vb[m,:],
                         error=2*np.sqrt(varCX_vb[m,:]))
 
-    tau.show()
-    gamma.show()
-    alpha.show()
-
-    
-    return
+    plt.figure()
+    Q.plot_iteration_by_nodes()
     
 
 if __name__ == '__main__':

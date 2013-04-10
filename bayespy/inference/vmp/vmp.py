@@ -118,7 +118,12 @@ class VB():
         for node in self.model:
             L += node.lower_bound_contribution()
         return L
-        
+
+    def compute_lowerbound_terms(self, *nodes):
+        if len(nodes) == 0:
+            nodes = self.model
+        return {node: node.lower_bound_contribution()
+                for node in nodes}
 
     def loglikelihood_lowerbound(self):
         L = 0
@@ -144,7 +149,7 @@ class VB():
             L[:,d] = self.l[node]
             legends += [node.name]
         plt.plot(np.arange(N)+1, L)
-        plt.legend(legends)
+        plt.legend(legends, loc='lower right')
         plt.title('Lower bound contributions by nodes')
         plt.xlabel('Iteration')
 

@@ -116,7 +116,12 @@ def run(M=50, N=200, D_y=10, D=20, maxiter=100):
 
     for ind in range(maxiter):
         Q.update()
-        R.rotate(check_gradient=False, maxiter=10, verbose=False)
+        R.rotate(check_gradient=False, 
+                 maxiter=10, 
+                 verbose=False,
+                 check_bound=Q.compute_lowerbound,
+                 #check_bound=None,
+                 check_bound_terms=Q.compute_lowerbound_terms)
 
     L_rot = Q.L
 

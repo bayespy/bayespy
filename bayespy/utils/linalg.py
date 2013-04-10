@@ -42,9 +42,6 @@ import numpy.core.gufuncs_linalg as gula
 
 from .utils import nested_iterator
 
-def logdet_cov(C):
-    return chol_logdet(chol(C))
-
 def chol(C):
     if sparse.issparse(C):
         # Sparse Cholesky decomposition (returns a Factor object)
@@ -164,6 +161,9 @@ def logdet_tri(R):
     """
     return np.sum(np.log(np.abs(np.einsum('...ii->...i', R))))
     
+def logdet_cov(C):
+    return logdet_chol(chol(C))
+
 def m_solve_triangular(U, B, **kwargs):
     # Allocate memory
     U = np.atleast_2d(U)
@@ -251,12 +251,6 @@ def dot(*arrays):
                 raise ValueError("Must be at least 2-D arrays")
             if np.shape(Y)[-1] != np.shape(X)[-2]:
                 raise ValueError("Dimensions do not match")
-            # TODO/FIXME: These GUFUNC's seem surprisingly slow?!?!?!
-            #Y = Y[...,:,np.newaxis,:]
-            #X = np.swapaxes(X, -1, -2)[...,np.newaxis,:,:]
-            #Y = gula.inner1d(Y, X)
-            # TODO/FIXME: Use the new GUFUNCs instead of einsum! Einsum has a
-            # bug: https://github.com/numpy/numpy/issues/3142
             #Y = np.einsum('...ik,...kj->...ij', Y, X)
             Y = gula.matrix_multiply(Y, X)
         return Y

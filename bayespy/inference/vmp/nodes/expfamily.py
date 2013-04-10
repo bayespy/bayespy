@@ -103,6 +103,11 @@ class ExponentialFamily(Stochastic):
         (u, f) = self._compute_fixed_moments_and_f(x, mask=mask)
         self._set_moments_and_cgf(u, np.inf, mask=mask)
 
+    def initialize_from_random(self):
+        self.initialize_from_prior()
+        X = self.random()
+        self.initialize_from_value(X)
+
     def _update_phi_from_parents(self, *u_parents):
 
         # TODO/FIXME: Could this be combined to the function

@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import bayespy.plot.plotting as bpplt
 
 from bayespy import utils
+from bayespy.utils.linalg import dot, mvdot
 
 from .node import Node
 from .deterministic import Deterministic
@@ -513,6 +514,37 @@ class GaussianMarkovChain(ExponentialFamily):
             plt.subplot(D,1,d+1)
             bpplt.errorplot(y=x[...,d],
                             error=2*np.sqrt(var[...,d]))
+
+
+    def rotate(self, R, inv=None, logdet=None):
+
+        if inv is not None:
+            invR = inv
+        else:
+            invR = np.linalg.inv(R)
+
+        if logdet is not None:
+            logdetR = logdet
+        else:
+            logdetR = np.linalg.slogdet(R)[1]
+
+        # It would be more efficient and simpler, if you just rotated the
+        # moments and didn't touch phi. However, then you would need to call
+        # update() before lower_bound_contribution. This is more error-safe.
+
+        # Transform parameters
+        self.phi[0] = mvdot(invR.T, self.phi[0])
+        self.phi[1] = dot(invR.T, self.phi[1], invR)
+        self.phi[2] = dot(invR.T, self.phi[2], invR)
+
+        N = self.dims[0][0]
+
+        # Transform moments and g
+        u0 = mvdot(R, self.u[0])
+        u1 = dot(R, self.u[1], R.T)
+        u2 = dot(R, self.u[2], R.T)
+        self.u = [u0, u1, u2]
+        self.g -= N*logdetR
 
 
 class _MarkovChainToGaussian(Deterministic):

@@ -42,6 +42,9 @@ import tempfile as tmp
 import unittest
 from numpy import testing
 
+def is_callable(f):
+    return hasattr(f, '__call__')
+
 class TestCase(unittest.TestCase):
     """
     Simple base class for unit testing.

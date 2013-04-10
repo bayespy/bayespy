@@ -305,7 +305,7 @@ class Gaussian(ExponentialFamily):
         print("  Cov = ")
         print(str(Cov))
 
-    def rotate(self, R, inv=None, logdet=None):
+    def rotate(self, R, inv=None, logdet=None, Q=None):
 
         if inv is not None:
             invR = inv
@@ -321,12 +321,41 @@ class Gaussian(ExponentialFamily):
         # moments and didn't touch phi. However, then you would need to call
         # update() before lower_bound_contribution. This is more error-safe.
 
-        # Transform parameters
+        # Rotate plates, if plate rotation matrix is given. Assume that there's
+        # only one plate-axis
+
+        #logdet_old = np.sum(utils.linalg.logdet_cov(-2*self.phi[1]))
+        if Q is not None:
+            # Rotate moments using Q
+            #Cov = self.u[1] - utils.linalg.outer(self.u[0], self.u[0])
+            self.u[0] = np.einsum('ik,kj->ij', Q, self.u[0])
+            #self.u[0] = np.einsum('ik,k...->i...', Q, self.u[0])
+            sumQ = np.sum(Q, axis=0)
+            #Cov = np.einsum('d...,d...->d...', sumQ**2, Cov) 
+            #Cov = np.einsum('d,d...->d...', sumQ**2, Cov) 
+            #self.u[1] = Cov + utils.linalg.outer(self.u[0], self.u[0])
+            # Rotate natural parameters using Q
+            self.phi[1] = np.einsum('d,dij->dij', sumQ**(-2), self.phi[1]) 
+            #self.phi[1] = np.einsum('d,d...->d...', sumQ**(-2), self.phi[1]) 
+            self.phi[0] = np.einsum('dij,dj->di', -2*self.phi[1], self.u[0])
+            #self.g = self.g - 2*np.log(np.abs(sumQ))
+
+        # Transform parameters using R
         self.phi[0] = mvdot(invR.T, self.phi[0])
         self.phi[1] = dot(invR.T, self.phi[1], invR)
 
-        # Transform moments and g
-        u0 = mvdot(R, self.u[0])
-        u1 = dot(R, self.u[1], R.T)
-        self.u = [u0, u1]
-        self.g -= logdetR
+        if Q is not None:
+            self._update_moments_and_cgf()
+            #logdet_new = np.sum(utils.linalg.logdet_cov(-2*self.phi[1]))
+            #g_new = np.sum(self.g)
+            #print("in gaussian.rotate", self.name, np.shape(self.phi[1]))
+            #print(0.5*(logdet_old - logdet_new))
+        else:
+            # Transform moments and g using R
+            self.u[0] = mvdot(R, self.u[0])
+            self.u[1] = dot(R, self.u[1], R.T)
+            self.g -= logdetR
+
+            #print("in gaussian.rotate", self.name)
+            #print(np.sum(self.u[1],axis=(0,1)))
+
