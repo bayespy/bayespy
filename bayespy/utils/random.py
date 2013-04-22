@@ -183,3 +183,20 @@ def gamma_entropy(a, log_b, gammaln_a, psi_a, a_psi_a):
     """
     return a - log_b + gammaln_a + psi_a - a_psi_a
 
+def orth(D):
+    """
+    Draw random orthogonal matrix.
+    """
+    Q = np.random.randn(D,D)
+    (Q, _) = np.linalg.qr(Q)
+    return Q
+
+def svd(s):
+    """
+    Draw a random matrix given its singular values.
+    """
+    D = len(s)
+    U = orth(D) * s
+    V = orth(D)
+    return np.dot(U, V.T)
+    

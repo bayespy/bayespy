@@ -904,6 +904,9 @@ def block_banded_solve(A, B, y):
     # In the forward recursion, store the Cholesky factor in V. So you
     # don't need to recompute them in the backward recursion.
 
+    # TODO/FIXME: You could store chol_solve(V[n], B[n]) in forward recursion to
+    # C, because it is used in backward recursion too!
+
     x[0] = y[0]
     V[0] = chol(A[0])
     ldet = chol_logdet(V[0])

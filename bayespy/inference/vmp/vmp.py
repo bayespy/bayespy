@@ -40,7 +40,8 @@ class VB():
                  *nodes, 
                  tol=1e-6, 
                  autosave_iterations=0, 
-                 autosave_filename=None):
+                 autosave_filename=None,
+                 callback=None):
 
         # Remove duplicate nodes
         self.model = utils.utils.unique(nodes)
@@ -66,6 +67,15 @@ class VB():
         if len(names) != len(self.model):
             raise Exception("Use unique names for nodes.")
 
+        self.callback = callback
+        self.callback_output = None
+
+    def set_autosave(self, filename, iterations=None):
+        self.autosave_filename = filename
+        self.filename = filename
+        if iterations is not None:
+            self.autosave_iterations = iterations
+
     def update(self, *nodes, repeat=1):
 
         # Append the cost arrays
@@ -85,6 +95,17 @@ class VB():
                 if hasattr(node, 'update') and callable(node.update):
                     node.update()
 
+            # Call the custom function provided by the user
+            if callable(self.callback):
+                z = self.callback()
+                if z is not None:
+                    z = np.array(z)[...,np.newaxis]
+                    if self.callback_output is None:
+                        self.callback_output = z
+                    else:
+                        self.callback_output = np.concatenate((self.callback_output,z),
+                                                              axis=-1)
+
             # Compute lower bound
             L = self.loglikelihood_lowerbound()
             print("Iteration %d: loglike=%e (%.3f seconds)" 
@@ -102,15 +123,16 @@ class VB():
                 if L - self.L[self.iter-1] < 1e-12:
                     print("Converged.")
 
+            self.L[self.iter] = L
+            self.iter += 1
+
             # Auto-save, if requested
             if (self.autosave_iterations > 0 
-                and np.mod(self.iter+1, self.autosave_iterations) == 0):
+                and np.mod(self.iter, self.autosave_iterations) == 0):
 
                 self.save(self.autosave_filename)
                 print('Auto-saved to %s' % self.autosave_filename)
 
-            self.L[self.iter] = L
-            self.iter += 1
 
 
     def compute_lowerbound(self):
@@ -189,6 +211,10 @@ class VB():
         # Write iteration statistics
         utils.utils.write_to_hdf5(h5f, self.L, 'L')
         utils.utils.write_to_hdf5(h5f, self.iter, 'iter')
+        if self.callback_output is not None:
+            utils.utils.write_to_hdf5(h5f, 
+                                      self.callback_output,
+                                      'callback_output')
         boundgroup = h5f.create_group('boundterms')
         for node in self.model:
             utils.utils.write_to_hdf5(boundgroup, self.l[node], node.name)
@@ -210,7 +236,7 @@ class VB():
         if len(nodes) == 0:
             nodes = self.model
         else:
-            nodes = [self[node] for node in nodes]
+            nodes = [self[node] for node in nodes if node is not None]
         # Read each node
         for node in nodes:
             if node.name == '':
@@ -227,6 +253,10 @@ class VB():
         self.iter = h5f['iter'][...]
         for node in self.model:
             self.l[node] = h5f['boundterms'][node.name][...]
+        try:
+            self.callback_output = h5f['callback_output'][...]
+        except KeyError:
+            pass
         # Close file
         h5f.close()
         

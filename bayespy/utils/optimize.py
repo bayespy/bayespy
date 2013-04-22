@@ -34,11 +34,6 @@ def minimize(f, x0, maxiter=None, verbose=False):
     if maxiter is not None:
         options['maxiter'] = maxiter
     opt = optimize.minimize(f, x0, jac=True, method='CG', options=options)
-    ## for i in range(maxiter):
-    ##     options['maxiter'] = 1
-    ##     opt = optimize.minimize(f, x0, jac=True, method='CG', options=options)
-    ##     print("final gradient", np.linalg.norm(opt.jac))
-    ##     x0 = opt.x
     return opt.x
 
 def check_gradient(f, x0, verbose=True):
