@@ -345,3 +345,58 @@ class Gaussian(ExponentialFamily):
             self.u[1] = dot(R, self.u[1], R.T)
             self.g -= logdetR
 
+    def rotate_matrix(self, R1, R2, inv1=None, logdet1=None, inv2=None, logdet2=None, Q=None):
+        """
+        The vector is reshaped into a matrix by stacking the row vectors.
+
+        Computes R1*X*R2', which is identical to kron(R1,R2)*x (??)
+
+        Note that this is slightly different from the standard Kronecker product
+        definition because Numpy stacks row vectors instead of column vectors.
+        """
+
+        if Q is not None:
+            # Rotate moments using Q
+            #print("Debug in rotate matrix", np.shape(self.u[0]), self.get_shape(0))
+            self.u[0] = np.einsum('ik,kj->ij', Q, self.u[0])
+            sumQ = np.sum(Q, axis=0)
+            # Rotate natural parameters using Q
+            self.phi[1] = np.einsum('d,dij->dij', sumQ**(-2), self.phi[1]) 
+            self.phi[0] = np.einsum('dij,dj->di', -2*self.phi[1], self.u[0])
+
+        if inv1 is None:
+            inv1 = np.linalg.inv(R1)
+        if logdet1 is None:
+            logdet1 = np.linalg.slogdet(R1)[1]
+        if inv2 is None:
+            inv2 = np.linalg.inv(R2)
+        if logdet2 is None:
+            logdet2 = np.linalg.slogdet(R2)[1]
+
+        D1 = np.shape(R1)[0]
+        D2 = np.shape(R2)[0]
+
+        # Reshape into matrices
+        sh0 = np.shape(self.phi[0])[:-1] + (D1,D2)
+        sh1 = np.shape(self.phi[1])[:-2] + (D1,D2,D1,D2)
+        phi0 = np.reshape(self.phi[0], sh0)
+        phi1 = np.reshape(self.phi[1], sh1)
+
+        # Apply rotations to phi
+        #phi0 = dot(inv1, phi0, inv2.T)
+        phi0 = dot(inv1.T, phi0, inv2)
+        phi1 = np.einsum('...ia,...abcd->...ibcd', inv1.T, phi1)
+        phi1 = np.einsum('...ic,...abcd->...abid', inv1.T, phi1)
+        phi1 = np.einsum('...ib,...abcd->...aicd', inv2.T, phi1)
+        phi1 = np.einsum('...id,...abcd->...abci', inv2.T, phi1)
+
+        # Reshape back into vectors
+        self.phi[0] = np.reshape(phi0, self.phi[0].shape)
+        self.phi[1] = np.reshape(phi1, self.phi[1].shape)
+
+        # It'd be better to rotate the moments too..
+        self._update_moments_and_cgf()
+
+        ## XX = np.sum(np.reshape(self.u[1], (-1,D1,D2,D1,D2)),
+        ##             axis=(0,1,3))
+        ## print("DEBUG", XX)

@@ -40,6 +40,7 @@ from bayespy.utils import utils
 from bayespy.utils import random
 
 from bayespy.inference.vmp.vmp import VB
+from bayespy.inference.vmp import transformations
 
 import bayespy.plot.plotting as bpplt
 
@@ -102,23 +103,24 @@ def run_dlssm(y, f, mask, D, K, maxiter):
                   plates=(K,),
                   name='alpha')
     # A : (K) x (K)
-    A = Gaussian(np.identity(K),
+    A = Gaussian(np.zeros(K),
+    #np.identity(K),
                  diagonal(alpha),
                  plates=(K,),
                  name='A_S')
     A.initialize_from_value(np.identity(K))
 
     # rho
-    rho = Gamma(1e-5,
-                1e-5,
-                plates=(K,),
-                name="rho")
+    ## rho = Gamma(1e-5,
+    ##             1e-5,
+    ##             plates=(K,),
+    ##             name="rho")
 
     # S : () x (N-1,K)
     S = GaussianMarkovChain(np.ones(K),
                             1e-6*np.identity(K),
                             A,
-                            rho,
+                            np.ones(K),
                             n=N-1,
                             name='S')
     S.initialize_from_value(1*np.ones((N-1,K)))
@@ -187,9 +189,40 @@ def run_dlssm(y, f, mask, D, K, maxiter):
     # Observe data
     Y.observe(y, mask=mask)
     # Construct inference machine
-    Q = VB(Y, X, S, A, alpha, rho, B, beta, C, gamma, tau)
+    Q = VB(Y, X, S, A, alpha, B, beta, C, gamma, tau)
+
+    #
+    # Run inference with rotations.
+    #
+
+    # Rotate the D-dimensional state space (C, X)
+    rotB = transformations.RotateGaussianMatrixARD(B, beta, axis='rows')
+    rotX = transformations.RotateDriftingMarkovChain(X, B, S, rotB)
+    rotC = transformations.RotateGaussianARD(C, gamma)
+    R_X = transformations.RotationOptimizer(rotX, rotC, D)
+
+    # Rotate the K-dimensional latent dynamics space (B, S)
+    rotA = transformations.RotateGaussianARD(A, alpha)
+    rotS = transformations.RotateGaussianMarkovChain(S, A, rotA)
+    rotB = transformations.RotateGaussianMatrixARD(B, beta, axis='cols')
+    R_S = transformations.RotationOptimizer(rotS, rotB, K)
+
     # Iterate
-    Q.update(X, S, A, alpha, rho, B, beta, C, gamma, tau, repeat=maxiter)
+    for ind in range(int(maxiter/5)):
+        Q.update(repeat=5)
+        #Q.update(X, S, A, alpha, rho, B, beta, C, gamma, tau, repeat=maxiter)
+        R_X.rotate()
+        R_S.rotate()
+        ## R_X.rotate(
+        ## check_bound=Q.compute_lowerbound,
+        ## check_bound_terms=Q.compute_lowerbound_terms,
+        ## check_gradient=True
+        ##     )
+        ## R_S.rotate(
+        ## check_bound=Q.compute_lowerbound,
+        ## check_bound_terms=Q.compute_lowerbound_terms,
+        ## check_gradient=True
+        ##     )
 
     #
     # SHOW RESULTS
@@ -312,6 +345,7 @@ def run(method):
     mask = random.mask(M, N, p=0.3)
     # Add missing values to a period of time
     mask[:,70:120] = False
+    mask[:] = True
     y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
 
     # Run the method

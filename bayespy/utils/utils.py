@@ -45,6 +45,18 @@ from numpy import testing
 def is_callable(f):
     return hasattr(f, '__call__')
 
+def atleast_nd(X, d):
+    if np.ndim(X) < d:
+        sh = (d-np.ndim(X))*(1,) + np.shape(X)
+        X = np.reshape(X, sh)
+    return X
+
+def T(X):
+    """
+    Transpose the matrix.
+    """
+    return np.swapaxes(X, -1, -2)
+
 class TestCase(unittest.TestCase):
     """
     Simple base class for unit testing.

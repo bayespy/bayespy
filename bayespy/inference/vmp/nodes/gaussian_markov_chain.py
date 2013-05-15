@@ -546,6 +546,8 @@ class GaussianMarkovChain(ExponentialFamily):
         self.u = [u0, u1, u2]
         self.g -= N*logdetR
 
+        #print("DEBUG", np.sum(u1[1:], axis=0))
+
 
 class _MarkovChainToGaussian(Deterministic):
     """

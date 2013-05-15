@@ -120,7 +120,6 @@ def run(M=50, N=200, D_y=10, D=20, maxiter=100):
                  maxiter=10, 
                  verbose=False,
                  check_bound=Q.compute_lowerbound,
-                 #check_bound=None,
                  check_bound_terms=Q.compute_lowerbound_terms)
 
     L_rot = Q.L
