@@ -154,7 +154,7 @@ def Mixture(distribution, cluster_plate=-1):
             return distribution._compute_fixed_moments_and_f(x, mask=True)
 
         @staticmethod
-        def _compute_message_to_parent(index, u, *u_parents):
+        def _compute_message_to_parent(parent, index, u, *u_parents):
             """ . """
 
             #print('Mixture.compute_message:')

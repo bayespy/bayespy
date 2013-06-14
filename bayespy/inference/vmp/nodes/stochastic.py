@@ -35,7 +35,7 @@ class Stochastic(Node):
     observed
 
     Sub-classes must implement:
-       _compute_message_to_parent(index, u_self, *u_parents)
+       _compute_message_to_parent(parent, index, u_self, *u_parents)
        _update_distribution_and_lowerbound(self, m, *u)
        lowerbound(self)
        _compute_dims
@@ -79,7 +79,7 @@ class Stochastic(Node):
 
     def _get_message_and_mask_to_parent(self, index):
         u_parents = self._message_from_parents(exclude=index)
-        m = self._compute_message_to_parent(index, self.u, *u_parents)
+        m = self._compute_message_to_parent(self.parents[index], index, self.u, *u_parents)
         mask = self._compute_mask_to_parent(index, self.mask)
         return (m, mask)
 

@@ -345,7 +345,7 @@ def run(method):
     mask = random.mask(M, N, p=0.3)
     # Add missing values to a period of time
     mask[:,70:120] = False
-    mask[:] = True
+    #mask[:] = True
     y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
 
     # Run the method

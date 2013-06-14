@@ -227,7 +227,7 @@ class Gaussian(ExponentialFamily):
         return (u, f)
 
     @staticmethod
-    def _compute_message_to_parent(index, u, *u_parents):
+    def _compute_message_to_parent(parent, index, u, *u_parents):
         """ . """
         if index == 0:
             return [utils.utils.m_dot(u_parents[1][0], u[0]),
@@ -395,7 +395,14 @@ class Gaussian(ExponentialFamily):
         self.phi[1] = np.reshape(phi1, self.phi[1].shape)
 
         # It'd be better to rotate the moments too..
+
+        #g0 = np.sum(np.ones(self.plates)*self.g)
         self._update_moments_and_cgf()
+        #g1 = np.sum(np.ones(self.plates)*self.g)
+
+        #dg = g1 - g0
+
+        #print("debug rotate", np.sum(self.u[1],axis=0), self.name)
 
         ## XX = np.sum(np.reshape(self.u[1], (-1,D1,D2,D1,D2)),
         ##             axis=(0,1,3))

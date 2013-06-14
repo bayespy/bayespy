@@ -34,7 +34,7 @@ import bayespy.plot.plotting as bpplt
 from bayespy import utils
 from bayespy.utils.linalg import dot, mvdot
 
-from .node import Node
+from .node import Node, message_sum_multiply
 from .deterministic import Deterministic
 from .expfamily import ExponentialFamily
 from .constant import Constant, ConstantNumeric
@@ -314,7 +314,7 @@ class GaussianMarkovChain(ExponentialFamily):
 
 
     @staticmethod
-    def _compute_message_to_parent(index, u, u_mu, u_Lambda, u_A, u_v, u_N):
+    def _compute_message_to_parent(parent, index, u, u_mu, u_Lambda, u_A, u_v, u_N):
         """
         Compute a message to a parent.
 
@@ -345,7 +345,15 @@ class GaussianMarkovChain(ExponentialFamily):
             XpXn = u[2]
             v = u_v[0]
             m0 = v[...,np.newaxis] * XpXn.swapaxes(-1,-2)
-            m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
+            # The following message matrix could be huge, so let's use a help
+            # function which computes sum(v*XnXn) without computing the huge
+            # v*XnXn explicitly.
+            m1 = -0.5 * message_sum_multiply(parent.plates,
+                                             parent.dims[1],
+                                             v[...,np.newaxis,np.newaxis],
+                                             XnXn[..., :-1, np.newaxis, :, :])
+                                      
+            #m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
         elif index == 3: # v
             XnXn = u[1] # (...,N,D,D)
             XpXn = u[2] # (...,N-1,D,D)
@@ -532,6 +540,8 @@ class GaussianMarkovChain(ExponentialFamily):
         # moments and didn't touch phi. However, then you would need to call
         # update() before lower_bound_contribution. This is more error-safe.
 
+        #print('rotate debug in gmc', self.phi[0])
+        #print(R, invR, np.shape(self.phi[0]))
         # Transform parameters
         self.phi[0] = mvdot(invR.T, self.phi[0])
         self.phi[1] = dot(invR.T, self.phi[1], invR)
@@ -539,12 +549,16 @@ class GaussianMarkovChain(ExponentialFamily):
 
         N = self.dims[0][0]
 
-        # Transform moments and g
-        u0 = mvdot(R, self.u[0])
-        u1 = dot(R, self.u[1], R.T)
-        u2 = dot(R, self.u[2], R.T)
-        self.u = [u0, u1, u2]
-        self.g -= N*logdetR
+        if True:
+            #print(self.phi[0])
+            self._update_moments_and_cgf()
+        else:
+            # Transform moments and g
+            u0 = mvdot(R, self.u[0])
+            u1 = dot(R, self.u[1], R.T)
+            u2 = dot(R, self.u[2], R.T)
+            self.u = [u0, u1, u2]
+            self.g -= N*logdetR
 
         #print("DEBUG", np.sum(u1[1:], axis=0))
 

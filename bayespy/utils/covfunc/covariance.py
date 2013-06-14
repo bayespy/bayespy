@@ -130,8 +130,7 @@ def squared_distance(x1, x2):
     if m1 == 0 or m2 == 0:
         D2 = np.empty((m1,m2))
     else:
-        # Compute squared Euclidean distance
-        D2 = dist.cdist(x1, x2, metric='sqeuclidean')
+        D2 = distance.cdist(x1, x2, metric='sqeuclidean')
     #D2 = np.asmatrix(D2)
     # Reshape the result
     #D2 = np.reshape(D2, sh1 + sh2)

@@ -354,6 +354,16 @@ def make_equal_length(*shapes):
 
     return shapes
 
+def sum_to_dim(A, dim):
+    """
+    Sum leading axes of A such that A has dim dimensions.
+    """
+    dimdiff = np.ndim(A) - dim
+    if dimdiff > 0:
+        axes = np.arange(dimdiff)
+        A = np.sum(A, axis=axes)
+    return A
+
 def sum_multiply(*args, axis=None, sumaxis=True, keepdims=False):
 
     # Computes sum(arg[0]*arg[1]*arg[2]*..., axis=axes_to_sum) without

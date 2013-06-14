@@ -30,6 +30,38 @@ from bayespy.utils import utils
 This module contains a sketch of a new implementation of the framework.
 """
 
+def message_sum_multiply(plates_parent, dims_parent, *arrays):
+    """
+    Compute message to parent and sum over plates.
+
+    Divide by the plate multiplier.
+    """
+    # The shape of the full message
+    shapes = [np.shape(array) for array in arrays]
+    shape_full = utils.broadcasted_shape(*shapes)
+    # Find axes that should be summed
+    shape_parent = plates_parent + dims_parent
+    sum_axes = utils.axes_to_collapse(shape_full, shape_parent)
+    # Compute the multiplier for cancelling the
+    # plate-multiplier.  Because we are summing over the
+    # dimensions already in this function (for efficiency), we
+    # need to cancel the effect of the plate-multiplier
+    # applied in the message_to_parent function.
+    r = 1
+    for j in sum_axes:
+        if j >= 0 and j < len(plates_parent):
+            r *= shape_full[j]
+        elif j < 0 and j < -len(dims_parent):
+            r *= shape_full[j]
+    # Compute the sum-product
+    m = utils.sum_multiply(*arrays,
+                           axis=sum_axes,
+                           sumaxis=True,
+                           keepdims=True) / r
+    # Remove extra axes
+    m = utils.squeeze_to_dim(m, len(shape_parent))
+    return m
+
 class Node():
     """
     Base class for all nodes.

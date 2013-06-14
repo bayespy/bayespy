@@ -71,7 +71,7 @@ class Normal(ExponentialFamily):
         return (u, f)
 
     @staticmethod
-    def _compute_message_to_parent(index, u, *u_parents):
+    def _compute_message_to_parent(parent, index, u, *u_parents):
         """ . """
         if index == 0:
             return [u_parents[1][0] * u[0],
@@ -120,3 +120,23 @@ class Normal(ExponentialFamily):
 
     def plot(self):
         pass
+
+    def predict(self):
+        """
+        Compute posterior predictive distribution.
+
+        Integrate out the mean parameter analytically by forming Q(X|mu) and
+        then integrating out mu.  This gives more accurate posterior predictive
+        distribution.  Observations are ignored.  The predictive distribution is
+        returned as a tuple containing the predictive mean and variance.
+        """
+        m = self._message_from_children()
+        tau = self.parents[1].get_moments()[0]
+        (mu, mu2) = self.parents[0].get_moments()
+        varmu = mu2 - mu**2
+
+        z1 = 1 / (tau + m[1])
+        z2 = tau*mu + m[0]
+
+        return (z1 * z2,
+                z1 + z1**2 * tau**2 * varmu)

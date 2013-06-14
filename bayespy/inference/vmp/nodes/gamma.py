@@ -93,6 +93,7 @@ class Gamma(ExponentialFamily):
     def compute_fixed_moments(x):
         """ Compute moments for fixed x. """
         u0 = x
+        # TODO/FIXME: Shouldn't this be just log?
         u1 = special.gammaln(x)
         return [u0, u1]
 
@@ -121,7 +122,14 @@ class Gamma(ExponentialFamily):
         
 
     @staticmethod
-    def _compute_message_to_parent(index, u, *u_parents):
+    def _compute_fixed_moments_and_f(x, mask=True):
+        """ Compute u(x) and f(x) for given x. """
+        u = [x, np.log(x)]
+        f = 0
+        return (u, f)
+
+    @staticmethod
+    def _compute_message_to_parent(parent, index, u, *u_parents):
         """ . """
         if index == 0:
             raise Exception("No analytic solution exists")
@@ -139,6 +147,10 @@ class Gamma(ExponentialFamily):
         """ Compute the dimensions of phi and u. """
         return ( (), () )
 
+    def get_shape_of_value(self):
+        # Dimensionality of a realization
+        return ()
+    
     def show(self):
         a = self.phi[1]
         b = -self.phi[0]

@@ -25,6 +25,7 @@
 import numpy as np
 import scipy.sparse as sp
 import matplotlib.pyplot as plt
+from matplotlib import animation
 #from matplotlib.pyplot import *
 
 from bayespy import utils
@@ -59,21 +60,23 @@ def timeseries_normal(X, axis=-1):
     _timeseries_mean_and_std(x, std, axis=axis)
 
 
+def timeseries(x, axis=-1):
+    return _timeseries_mean_and_std(x, 0*x, axis=axis)
 
-def _timeseries_mean_and_std(x, std, axis=-1):
+def _timeseries_mean_and_std(y, std, axis=-1, **kwargs):
     # TODO/FIXME: You must multiply by ones(plates) in order to plot
     # broadcasted plates properly
     
-    shape = list(np.shape(x))
+    shape = list(np.shape(y))
 
     # Get and remove the length of the time axis
     T = shape.pop(axis)
 
     # Move time axis to first
-    x = np.rollaxis(x, axis)
+    y = np.rollaxis(y, axis)
     std = np.rollaxis(std, axis)
     
-    x = np.reshape(x, (T, -1))
+    y = np.reshape(y, (T, -1))
     std = np.reshape(std, (T, -1))
 
     # Remove 1s
@@ -94,16 +97,63 @@ def _timeseries_mean_and_std(x, std, axis=-1):
     #M = 2
     for i in range(M*N):
         plt.subplot(M,N,i+1)
-        errorplot(y=x[:,i], error=2*std[:,i])
+        errorplot(y=y[:,i], error=2*std[:,i], **kwargs)
 
 def matrix(A):
     A = np.atleast_2d(A)
     vmax = np.max(np.abs(A))
-    plt.imshow(A, 
-               interpolation='nearest', 
-               cmap='RdBu_r',
-               vmin=-vmax,
-               vmax=vmax)
+    return  plt.imshow(A, 
+                       interpolation='nearest', 
+                       cmap='RdBu_r',
+                       vmin=-vmax,
+                       vmax=vmax)
+
+def matrix_animation(A, **kwargs):
+
+    A = np.atleast_3d(A)
+    vmax = np.max(np.abs(A))
+    x = plt.imshow(A[0],
+                   interpolation='nearest',
+                   cmap='RdBu_r',
+                   vmin=-vmax,
+                   vmax=vmax,
+                   **kwargs)
+    s = plt.title('t = %d' % 0)
+
+    for (t, a) in enumerate(A):
+        x.set_array(a)
+        s.set_text('t = %d' % t)
+        plt.draw()
+
+def matrix_movie(A, filename, 
+                 fps=25,
+                 title='Matrix Movie',
+                 artist='BayesPy',
+                 dpi=100,
+                 **kwargs):
+
+    FFMpegWriter = animation.writers['ffmpeg']
+    metadata = dict(title=title,
+                    artist=artist)
+    writer = FFMpegWriter(fps=fps, metadata=metadata)        
+        
+    A = np.atleast_3d(A)
+    vmax = np.max(np.abs(A))
+    x = plt.imshow(A[0],
+                   interpolation='nearest',
+                   cmap='RdBu_r',
+                   vmin=-vmax,
+                   vmax=vmax,
+                   **kwargs)
+    s = plt.title('t = %d' % 0)
+    fig = plt.gcf()
+    
+    with writer.saving(fig, filename, dpi):
+        for (t, a) in enumerate(A):
+            x.set_array(a)
+            s.set_text('t = %d' % t)
+            plt.draw()
+            writer.grab_frame()
 
 def binary_matrix(A):
     A = np.atleast_2d(A)

@@ -38,7 +38,8 @@ import scipy.sparse as sparse
 
 # THIS IS SOME NEW GENERALIZED UFUNC FOR LINALG FEATURE, NOT IN OFFICIAL NUMPY
 # REPO YET
-import numpy.core.gufuncs_linalg as gula
+import numpy.linalg._gufuncs_linalg as gula
+#import numpy.core.gufuncs_linalg as gula
 
 from .utils import nested_iterator
 
@@ -270,7 +271,14 @@ def mvdot(A, b):
 
     Applies broadcasting.
     """
-    return gula.inner1d(A, b[...,np.newaxis,:])
+    # TODO/FIXME: A bug in inner1d:
+    # https://github.com/numpy/numpy/issues/3338
+    #
+    # b = np.asanyarray(b)
+    # return gula.inner1d(A, b[...,np.newaxis,:])
+    # 
+    # Use einsum instead:
+    return np.einsum('...ik,...k->...i', A, b)
 
 def m_dot(A,b):
     raise DeprecationWarning()

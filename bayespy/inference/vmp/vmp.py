@@ -78,6 +78,11 @@ class VB():
 
     def update(self, *nodes, repeat=1):
 
+        # TODO/FIXME:
+        #
+        # If no nodes are given and thus everything is updated, the update order
+        # should be from down to bottom. Or something similar..
+
         # Append the cost arrays
         self.L = np.append(self.L, utils.utils.nans(repeat))
         for (node, l) in self.l.items():
@@ -92,8 +97,9 @@ class VB():
 
             # Update nodes
             for node in nodes:
-                if hasattr(node, 'update') and callable(node.update):
-                    node.update()
+                X = self[node]
+                if hasattr(X, 'update') and callable(X.update):
+                    X.update()
 
             # Call the custom function provided by the user
             if callable(self.callback):
@@ -197,29 +203,32 @@ class VB():
                 filename = self.filename
             else:
                 raise Exception("Filename must be given.")
-            
+
         # Open HDF5 file
         h5f = h5py.File(filename, 'w')
-        # Write each node
-        nodegroup = h5f.create_group('nodes')
-        for node in self.model:
-            if node.name == '':
-                raise Exception("In order to save nodes, they must have "
-                                "(unique) names.")
-            if hasattr(node, 'save') and callable(node.save):
-                node.save(nodegroup.create_group(node.name))
-        # Write iteration statistics
-        utils.utils.write_to_hdf5(h5f, self.L, 'L')
-        utils.utils.write_to_hdf5(h5f, self.iter, 'iter')
-        if self.callback_output is not None:
-            utils.utils.write_to_hdf5(h5f, 
-                                      self.callback_output,
-                                      'callback_output')
-        boundgroup = h5f.create_group('boundterms')
-        for node in self.model:
-            utils.utils.write_to_hdf5(boundgroup, self.l[node], node.name)
-        # Close file
-        h5f.close()
+
+        try:
+            # Write each node
+            nodegroup = h5f.create_group('nodes')
+            for node in self.model:
+                if node.name == '':
+                    raise Exception("In order to save nodes, they must have "
+                                    "(unique) names.")
+                if hasattr(node, 'save') and callable(node.save):
+                    node.save(nodegroup.create_group(node.name))
+            # Write iteration statistics
+            utils.utils.write_to_hdf5(h5f, self.L, 'L')
+            utils.utils.write_to_hdf5(h5f, self.iter, 'iter')
+            if self.callback_output is not None:
+                utils.utils.write_to_hdf5(h5f, 
+                                          self.callback_output,
+                                          'callback_output')
+            boundgroup = h5f.create_group('boundterms')
+            for node in self.model:
+                utils.utils.write_to_hdf5(boundgroup, self.l[node], node.name)
+        finally:
+            # Close file
+            h5f.close()
 
     def load(self, *nodes, filename=None):
 
@@ -232,33 +241,40 @@ class VB():
             
         # Open HDF5 file
         h5f = h5py.File(filename, 'r')
-        # Get nodes to load
-        if len(nodes) == 0:
-            nodes = self.model
-        else:
-            nodes = [self[node] for node in nodes if node is not None]
-        # Read each node
-        for node in nodes:
-            if node.name == '':
-                raise Exception("In order to load nodes, they must have "
-                                "(unique) names.")
-            if hasattr(node, 'load') and callable(node.load):
-                try:
-                    node.load(h5f['nodes'][node.name])
-                except KeyError:
-                    raise Exception("File does not contain variable %s"
-                                    % node.name)
-        # Read iteration statistics
-        self.L = h5f['L'][...]
-        self.iter = h5f['iter'][...]
-        for node in self.model:
-            self.l[node] = h5f['boundterms'][node.name][...]
+
         try:
-            self.callback_output = h5f['callback_output'][...]
-        except KeyError:
-            pass
-        # Close file
-        h5f.close()
+            # Get nodes to load
+            if len(nodes) == 0:
+                nodes = self.model
+            else:
+                nodes = [self[node] for node in nodes if node is not None]
+            # Read each node
+            for node_id in nodes:
+                node = self[node_id]
+                if node.name == '':
+                    h5f.close()
+                    raise Exception("In order to load nodes, they must have "
+                                    "(unique) names.")
+                if hasattr(node, 'load') and callable(node.load):
+                    try:
+                        node.load(h5f['nodes'][node.name])
+                    except KeyError:
+                        h5f.close()
+                        raise Exception("File does not contain variable %s"
+                                        % node.name)
+            # Read iteration statistics
+            self.L = h5f['L'][...]
+            self.iter = h5f['iter'][...]
+            for node in self.model:
+                self.l[node] = h5f['boundterms'][node.name][...]
+            try:
+                self.callback_output = h5f['callback_output'][...]
+            except KeyError:
+                pass
+
+        finally:
+            # Close file
+            h5f.close()
         
     def __getitem__(self, name):
         if name in self.model:
