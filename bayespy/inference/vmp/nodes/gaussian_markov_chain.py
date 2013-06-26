@@ -549,7 +549,7 @@ class GaussianMarkovChain(ExponentialFamily):
 
         N = self.dims[0][0]
 
-        if True:
+        if False:
             #print(self.phi[0])
             self._update_moments_and_cgf()
         else:
