@@ -316,6 +316,10 @@ class RotateGaussianARD():
         If using Q, set rotate_plates to True.
         """
         
+        # Get the mean parameter. It is not rotated.
+        node_mu = self.node_X.parents[0]
+        (mu, self.mumu) = node_mu.get_moments()
+
         mask = self.node_X.mask[...,np.newaxis,np.newaxis]
 
         # Number of plates
@@ -329,9 +333,16 @@ class RotateGaussianARD():
                                                axis=(-1,-2),
                                                sumaxis=False,
                                                keepdims=False)
+            self.Xmu = utils.utils.sum_multiply(self.X[...,:,np.newaxis],
+                                                mu[...,np.newaxis,:],
+                                                axis=(-1,-2),
+                                                sumaxis=False,
+                                                keepdims=False)
         else:
             XX = self.node_X.get_moments()[1] * mask
             self.CovX = XX - utils.linalg.outer(self.X, self.X)
+            self.mu = mu
+            #self.Xmu = self.X[...,:,np.newaxis] * mu[...,np.newaxis,:]
             
         # Parent's moments
         self.a = np.ravel(self.node_alpha.phi[1])
@@ -339,11 +350,9 @@ class RotateGaussianARD():
         self.a0 = self.node_alpha.parents[0].get_moments()[0]
         self.b0 = self.node_alpha.parents[1].get_moments()[0]
 
-        # Get the mean parameter. It is not rotated.
-        node_mu = self.node_X.parents[0]
-        (self.mu, self.mumu) = node_mu.get_moments()
+        # Compute <X*mu'> (summed over plates)
         #self.mu = np.atleast_2d(self.mu)
-        if False: #len(node_mu.plates) == 0 or node_mu.plates[0] == 1:
+        if len(node_mu.plates) == 0 or node_mu.plates[0] == 1:
             self.mumu = self.N * np.diag(utils.utils.sum_to_dim(self.mumu, 2))
             #print("no plates", node_mu.plates)
         else:
@@ -374,19 +383,26 @@ class RotateGaussianARD():
                   + np.einsum('d,dij->ij', sumQ**2, self.CovX))
             logdet_Q = np.sum(np.log(np.abs(sumQ)))
             X = QX
+            X_mu = utils.utils.sum_multiply(X[...,:,np.newaxis],
+                                            self.mu[...,np.newaxis,:],
+                                            axis=(-1,-2),
+                                            sumaxis=False,
+                                            keepdims=False)
         else:
             X = self.X
             XX = self.XX
             logdet_Q = 0
+            X_mu = self.Xmu
 
         # TODO/FIXME: X can be summed to the plates of mu!?
-        X_R = np.einsum('...jk,...k->...j', R, X)
+        #X_R = np.einsum('...jk,...k->...j', R, X)
         XX_R = dot(R, XX, R.T)
+        X_mu = dot(R, X_mu)
 
-        X_mu = utils.utils.sum_multiply(X_R[...,:,np.newaxis], 
-                                        self.mu[...,np.newaxis,:],
-                                        sumaxis=False,
-                                        axis=(-1,-2))
+        ## X_mu = utils.utils.sum_multiply(X_R[...,:,np.newaxis], 
+        ##                                 self.mu[...,np.newaxis,:],
+        ##                                 sumaxis=False,
+        ##                                 axis=(-1,-2))
 
         XmuXmu = (XX_R - X_mu - X_mu.T + self.mumu)
 
