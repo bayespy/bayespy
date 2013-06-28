@@ -33,8 +33,8 @@ posterior inference using variational Bayesian message passing.
 
 NAME         = 'bayespy'
 DESCRIPTION  = 'Bayesian inference tools for Python'
-AUTHOR       = 'Jaakko Luttinen',
-AUTHOR_EMAIL = 'jaakko.luttinen@iki.fi',
+AUTHOR       = 'Jaakko Luttinen'
+AUTHOR_EMAIL = 'jaakko.luttinen@iki.fi'
 URL          = 'https://github.com/bayespy/bayespy'
 LICENSE      = 'GPLv3'
 VERSION      = '0.0'
@@ -94,6 +94,6 @@ if __name__ == "__main__":
               'Topic :: Scientific/Engineering :: Information Analysis'
             ],
           cmdclass = {'build_ext': build_ext},
-          ext_modules = [sparse_distance],
+          ext_modules = [sparse_distance]
           )
 
