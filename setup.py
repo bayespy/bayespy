@@ -41,7 +41,8 @@ VERSION      = '0.0'
 
 if __name__ == "__main__":
 
-    from distutils.core import setup, Extension
+    from setuptools import setup, Extension, find_packages
+    #from distutils.core import setup, Extension
     from Cython.Distutils import build_ext
     import numpy as np
     
@@ -54,24 +55,32 @@ if __name__ == "__main__":
                                                        np.get_include()])
 
     # Setup for BayesPy
-    setup(requires = ['numpy (>=1.7.1)', # 1.7.0 contains a memory leak bug
-                      'scipy (>=0.11.0)',
-                      'scikits.sparse (>=0.1)',
-                      'matplotlib (>=1.2.0)',
-                      'cython',
-                      'h5py'],
-          packages = ['bayespy',
-                      'bayespy.demos',
-                      'bayespy.inference',
-                      'bayespy.inference.vmp',
-                      'bayespy.inference.vmp.nodes',
-                      'bayespy.inference.vmp.nodes.tests',
-                      'bayespy.nodes',
-                      'bayespy.plot',
-                      'bayespy.utils',
-                      'bayespy.utils.tests',
-                      'bayespy.utils.covfunc',
-                      'bayespy.utils.covfunc.tests'],
+    setup(
+          install_requires = ['numpy>=1.7.1', # 1.7.0 contains a memory leak bug
+                              'scipy>=0.11.0',
+                              #'scikits.sparse>=0.1', # required for sparse GPs only
+                              'matplotlib>=1.2.0',
+                              'cython',
+                              'h5py'],
+          ## requires = ['numpy (>=1.7.1)', # 1.7.0 contains a memory leak bug
+          ##             'scipy (>=0.11.0)',
+          ##             'scikits.sparse (>=0.1)',
+          ##             'matplotlib (>=1.2.0)',
+          ##             'cython',
+          ##             'h5py'],
+          packages = find_packages(),
+                     ## ['bayespy',
+                     ##  'bayespy.demos',
+                     ##  'bayespy.inference',
+                     ##  'bayespy.inference.vmp',
+                     ##  'bayespy.inference.vmp.nodes',
+                     ##  'bayespy.inference.vmp.nodes.tests',
+                     ##  'bayespy.nodes',
+                     ##  'bayespy.plot',
+                     ##  'bayespy.utils',
+                     ##  'bayespy.utils.tests',
+                     ##  'bayespy.utils.covfunc',
+                     ##  'bayespy.utils.covfunc.tests'],
           name             = NAME,
           version          = VERSION,
           author           = AUTHOR,
