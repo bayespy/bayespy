@@ -43,16 +43,21 @@ if __name__ == "__main__":
 
     from setuptools import setup, Extension, find_packages
     #from distutils.core import setup, Extension
-    from Cython.Distutils import build_ext
-    import numpy as np
+    
+    ## from Cython.Distutils import build_ext
+    ## import numpy as np
     
     # Sparse distance extension.
     # Use numpy.get_include() in order to use the correct NumPy for building.
-    sparse_distance = Extension('bayespy.utils.covfunc.distance',
-                                sources=['bayespy/utils/covfunc/distance.pyx',
-                                         'bayespy/utils/covfunc/sparse_distance/sparse_distance.c'],
-                                         include_dirs=['bayespy/utils/covfunc/sparse_distance',
-                                                       np.get_include()])
+
+    # Remove Cython dependency for now, in order to keep the installation
+    # simpler.
+    #
+    ## sparse_distance = Extension('bayespy.utils.covfunc.distance',
+    ##                             sources=['bayespy/utils/covfunc/distance.pyx',
+    ##                                      'bayespy/utils/covfunc/sparse_distance/sparse_distance.c'],
+    ##                                      include_dirs=['bayespy/utils/covfunc/sparse_distance',
+    ##                                                    np.get_include()])
 
     # Setup for BayesPy
     setup(
@@ -60,7 +65,7 @@ if __name__ == "__main__":
                               'scipy>=0.11.0',
                               #'scikits.sparse>=0.1', # required for sparse GPs only
                               'matplotlib>=1.2.0',
-                              'cython',
+                              #'cython',
                               'h5py'],
           ## requires = ['numpy (>=1.7.1)', # 1.7.0 contains a memory leak bug
           ##             'scipy (>=0.11.0)',
