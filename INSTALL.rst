@@ -35,13 +35,20 @@ https://github.com/bayespy/bayespy/issues.
 Installing requirements
 -----------------------
 
-BayesPy requires Python 3.2 and packages NumPy (>=1.7.1), SciPy (>=0.11) and
-matplotlib (>=1.2).  A proper installation of these packages can be a bit tricky
-and you may refer to http://www.scipy.org/install.html for more detailed
-instructions.  If your system has an older version of any of the packages
-(NumPy, SciPy or matplotlib) or it does not provide the packages for Python 3.2,
-you may set up a virtual environment and install the latest versions there.  To
-create and activate a new virtual environment, run
+BayesPy requires Python 3.2 and the following packages:
+
+* NumPy (>=1.7.1), 
+* SciPy (>=0.11) 
+* matplotlib (>=1.2)
+* Cython
+* h5py
+
+A proper installation of these packages can be a bit tricky and you may refer to
+http://www.scipy.org/install.html for more detailed instructions about the SciPy
+stack.  If your system has an older version of any of the packages (NumPy, SciPy
+or matplotlib) or it does not provide the packages for Python 3.2, you may set
+up a virtual environment and install the latest versions there.  To create and
+activate a new virtual environment, run
 
 .. code-block:: console
 
@@ -49,9 +56,9 @@ create and activate a new virtual environment, run
     source ENV/bin/activate
 
 If your system is properly set up, you may be able to install them from PyPI (a
-C compiler, Python development files and BLAS/LAPACK may be required).  For
-instance, on Ubuntu (>= 12.10), you may install the dependencies for each
-package as:
+C compiler, Python development files, BLAS/LAPACK and other system files may be
+required).  For instance, on Ubuntu (>= 12.10), you may install the dependencies
+for each package as:
 
 ..
     sudo aptitude install build-essential python3.2-dev libatlas-base-dev gfortran
@@ -63,7 +70,7 @@ package as:
     sudo apt-get build-dep python3-matplotlib
     sudo apt-get build-dep cython
     sudo apt-get build-dep python-h5py
-    # sudo aptitude install python3-tk tk-dev ?
+    # sudo aptitude install python3-tk tk-dev (for matplotlib?)
 
 This guarantees that the required system libraries are installed.  Then
 installation/upgrade from PyPI should work:
@@ -79,6 +86,9 @@ h5py, for instance, from PyPI:
 .. code-block:: console
 
     pip install cython h5py
+
+If you have problems installing any of these packages, refer to the manual of
+that package.
 
 Installing BayesPy
 ------------------
@@ -98,6 +108,13 @@ instead:
 .. code-block:: console
 
     pip install https://github.com/bayespy/bayespy/archive/master.zip
+
+If you have nose installed in the virtual environment, you can check that
+BayesPy is working:
+
+.. code-block:: console
+
+    nosetests bayespy
 
 Compiling documentation
 -----------------------

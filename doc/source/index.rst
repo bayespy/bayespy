@@ -28,6 +28,7 @@ Documentation for BayesPy -- Bayesian Python
    intro
    install
    userguide
+   examples
    devguide
    nodes
    vmp

@@ -20,8 +20,8 @@
 
 
 
-User guide
-==========
+Quick user guide
+================
 
 * Construct the model (Bayesian network)
 
@@ -408,9 +408,3 @@ to obtain the sufficient statistics of the node.
    arbitrarily complex further analysis.
 
 
-Example: Principal component analysis
--------------------------------------
-
-
-Example: Gaussian mixture model
--------------------------------

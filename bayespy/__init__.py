@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011,2012 Jaakko Luttinen
+# Copyright (C) 2011-2013 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -23,5 +23,8 @@
 ######################################################################
 
 from . import utils
-from . import nodes
 from . import inference
+
+# Currently, model construction and the inference network are not separated so
+# the model is constructed using variational message passing nodes.
+from .inference.vmp import nodes

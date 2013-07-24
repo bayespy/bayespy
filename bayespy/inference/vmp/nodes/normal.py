@@ -109,7 +109,7 @@ class Normal(ExponentialFamily):
 
     def show(self, parameters=True, mean=True, mode=True, median=True):
         mu = self.u[0]
-        tau = self.phi[1]
+        tau = -2 * self.phi[1]
         #s2 = self.u[1] - mu**2
         print("%s ~ Normal(mu, tau)" % self.name)
         print("  mu =", mu)
