@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
-Welcome to BayesPy's documentation!
-===================================
+Documentation for BayesPy -- Bayesian Python
+============================================
 
 
 .. toctree::
