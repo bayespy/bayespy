@@ -38,7 +38,7 @@ import scipy.sparse as sparse
 
 # THIS IS SOME NEW GENERALIZED UFUNC FOR LINALG FEATURE, NOT IN OFFICIAL NUMPY
 # REPO YET
-import numpy.linalg._gufuncs_linalg as gula
+#import numpy.linalg._gufuncs_linalg as gula
 #import numpy.core.gufuncs_linalg as gula
 
 from .utils import nested_iterator
@@ -252,8 +252,8 @@ def dot(*arrays):
                 raise ValueError("Must be at least 2-D arrays")
             if np.shape(Y)[-1] != np.shape(X)[-2]:
                 raise ValueError("Dimensions do not match")
-            #Y = np.einsum('...ik,...kj->...ij', Y, X)
-            Y = gula.matrix_multiply(Y, X)
+            Y = np.einsum('...ik,...kj->...ij', Y, X)
+            #Y = gula.matrix_multiply(Y, X)
         return Y
 
 def tracedot(A, B):
@@ -263,7 +263,11 @@ def tracedot(A, B):
     return np.einsum('...ij,...ji->...', A, B)
 
 def inv(A):
-    return gula.inv(A)
+    if np.ndim(A) == 2:
+        return np.linalg.inv(A)
+    else:
+        raise NotImplementedError()
+    # return gula.inv(A)
 
 def mvdot(A, b):
     """
