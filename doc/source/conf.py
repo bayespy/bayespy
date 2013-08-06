@@ -33,12 +33,15 @@ extensions = [
     'sphinx.ext.autodoc', 
     'sphinx.ext.mathjax',
     'sphinx.ext.todo',
+    'numpydoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.viewcode',
     'sphinxcontrib.tikz',
     'sphinxcontrib.bayesnet',
-    'numpydoc'
     ]
+
+
+numpydoc_show_class_members = True
 
 # Include TODOs in the documentation?
 todo_include_todos = True
@@ -50,6 +53,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
     os.environ["LD_LIBRARY_PATH"] = os.path.abspath('bin')
 
 # Generate autosummary stub pages automatically
+# Or manually: sphinx-autogen -o source/generated source/*.rst
 #autosummary_generate = False
 autosummary_generate = True
 

@@ -24,7 +24,8 @@
 
 from . import utils
 from . import inference
+from . import nodes
 
 # Currently, model construction and the inference network are not separated so
 # the model is constructed using variational message passing nodes.
-from .inference.vmp import nodes
+#from .inference.vmp import nodes

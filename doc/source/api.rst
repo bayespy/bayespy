@@ -24,30 +24,49 @@ API
 Stochastic nodes in VMP
 =======================
 
-.. currentmodule:: bayespy.inference.vmp.nodes
+.. currentmodule:: bayespy.nodes
 
-.. 
-   autosummary::
+For testing, I can tell that :class:`Gaussian` is used for modelling Gaussian
+variables.
+
+.. autosummary::
    :toctree: generated/
 
-   normal.Normal
-   gamma.Gamma
-   gaussian.Gaussian
-   wishart.Wishart
-   dirichlet.Dirichlet
-   categorical.Categorical
-   mixture.Mixture
-   gaussian_markov_chain.GaussianMarkovChain
+   Normal
+   Gaussian
+   Gamma
+   Wishart
+   Dirichlet
+
+.. autosummary::
+   :toctree: generated/
+
+   normal
+   Categorical
+   Mixture
+   GaussianMarkovChain
+
+.. autosummary::
+   :toctree: generated/
+
+   Normal.lowerbound
+
+.. autoclass:: Normal
 
 Deterministic
 =============
 
-.. 
-   autosummary::
+.. autosummary::
    :toctree: generated/
 
-   dot.Dot
+   Dot
 
+.. currentmodule:: bayespy.inference.vmp
+
+.. autosummary::
+   :toctree: generated/
+
+   nodes
 
 
 Utility functions
