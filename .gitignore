@@ -15,3 +15,4 @@ dist
 MANIFEST
 *.backup
 *.egg-info
+doc/source/generated
