@@ -1,5 +1,5 @@
 ..
-   Copyright (C) 2011,2012 Jaakko Luttinen
+   Copyright (C) 2011-2013 Jaakko Luttinen
 
    This file is licensed under Version 3.0 of the GNU General Public
    License. See LICENSE for a text of the license.
@@ -21,13 +21,15 @@
 API
 ***
 
-Stochastic nodes in VMP
-=======================
+Stochastic nodes
+================
 
 .. currentmodule:: bayespy.nodes
 
 For testing, I can tell that :class:`Gaussian` is used for modelling Gaussian
 variables.
+
+Random variable nodes
 
 .. autosummary::
    :toctree: generated/
@@ -37,56 +39,43 @@ variables.
    Gamma
    Wishart
    Dirichlet
-
-.. autosummary::
-   :toctree: generated/
-
-   normal
-   Categorical
-   Mixture
    GaussianMarkovChain
 
 .. autosummary::
    :toctree: generated/
 
-   Normal.lowerbound
+   Categorical
+   Mixture
 
-.. autoclass:: Normal
 
-Deterministic
-=============
+
+Deterministic nodes
+===================
 
 .. autosummary::
    :toctree: generated/
 
    Dot
 
-.. currentmodule:: bayespy.inference.vmp
+
+
+Base nodes
+==========
+
+.. currentmodule:: bayespy.inference.vmp.nodes
+
+These nodes should be interesting only for developers.
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/myclass.rst
+
+   node.Node
+   stochastic.Stochastic
+   deterministic.Deterministic
 
 .. autosummary::
    :toctree: generated/
 
-   nodes
+   constant.Constant
 
-
-Utility functions
-=================
-
-.. currentmodule:: bayespy.utils.utils
-
-.. 
-   autosummary::
-   :toctree: generated/
-
-   kalman_filter
-   rts_smoother
-
-.. currentmodule:: bayespy
-
-.. 
-   autosummary::
-   :toctree: generated/
-
-   demos
-   inference
-   utils.utils

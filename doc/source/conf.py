@@ -41,7 +41,7 @@ extensions = [
     ]
 
 
-numpydoc_show_class_members = True
+numpydoc_show_class_members = False
 
 # Include TODOs in the documentation?
 todo_include_todos = True
@@ -55,7 +55,8 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 # Generate autosummary stub pages automatically
 # Or manually: sphinx-autogen -o source/generated source/*.rst
 #autosummary_generate = False
-autosummary_generate = True
+import glob
+autosummary_generate = glob.glob("*.rst")
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

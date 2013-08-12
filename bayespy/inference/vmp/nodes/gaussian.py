@@ -59,11 +59,7 @@ class Gaussian(ExponentialFamily):
 
     See also
     --------
-    bayespy.inference.vmp.nodes.wishart.Wishart
-    inference.vmp.nodes.wishart.Wishart
-    vmp.nodes.wishart.Wishart
-    nodes.wishart.Wishart
-    wishart.Wishart
+    Normal
     Wishart
     
     Notes
@@ -245,8 +241,8 @@ class Gaussian(ExponentialFamily):
         Also, check that the dimensionalities of the parents are
         consistent with each other.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         mu : Node
             A VB node with ( (D,), (D,D) ) dimensional Gaussian
             output.
@@ -270,8 +266,8 @@ class Gaussian(ExponentialFamily):
         The last axis tells the dimensionality, the other axes are
         plates.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         x : ndarray
         """
         if np.ndim(x) == 0:
@@ -353,6 +349,13 @@ class Gaussian(ExponentialFamily):
 
         Note that this is slightly different from the standard Kronecker product
         definition because Numpy stacks row vectors instead of column vectors.
+
+        Parameters
+        ----------
+        R1 : ndarray
+            A matrix from the left
+        R2 : ndarray
+            A matrix from the right        
         """
 
         if Q is not None:
