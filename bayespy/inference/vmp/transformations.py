@@ -189,7 +189,8 @@ class RotationOptimizer():
                                   % (rot.nodes()[0].name,
                                      true_bound_change,
                                      opt_bound_change))
-                    raise Exception()
+                    pass
+                    #raise Exception()
                 
 
 class RotateGaussian():
@@ -450,17 +451,23 @@ class RotateGaussianARD():
                                                0)
 
         # Compute the bound
-        bound = (
-            logp_X
-            + logp_alpha
-            + logH_X
-            + logH_alpha
+        bound = (0
+            + logp_X
+            #+ logp_alpha
+            #+ logH_X
+            #+ logH_alpha
             )
 
         #print(np.shape(bound), np.shape(logp_X), np.shape(logp_alpha), np.shape(logH_X), np.shape(logH_alpha))
 
         if not gradient:
             return bound
+
+        # TODO/FIXME: Gradient errors by terms:
+        # * A LOT
+        # * probably some
+        # * nothing, or very small?
+        # * probably some
 
         #
         # Compute the gradient with respect R
@@ -498,11 +505,11 @@ class RotateGaussianARD():
                                                 0,
                                                 0)
 
-        dR_bound = (
-            dlogp_X
-            + dlogp_alpha
-            + dlogH_X
-            + dlogH_alpha
+        dR_bound = (0*dlogp_X
+            + dlogp_X
+        #+ dlogp_alpha
+        #+ dlogH_X
+        #+ dlogH_alpha
             )
 
         if Q is None:
@@ -561,11 +568,11 @@ class RotateGaussianARD():
                                                  0,
                                                  0)
 
-        dQ_bound = (
-            dQ_logpX
-            + dQ_logpalpha
-            + dQ_logHX
-            + dQ_logHalpha
+        dQ_bound = (0*dQ_logpX
+            + dQ_logpX
+        #+ dQ_logpalpha
+        #+ dQ_logHX
+        #+ dQ_logHalpha
             )
 
         return (bound, dR_bound, dQ_bound)
@@ -717,10 +724,12 @@ class RotateGaussianMarkovChain():
                                                 0)
 
         # Compute the bound
-        bound = logp_X + logH_X
+        bound = (0
+                 + logp_X 
+                 + logH_X
+                 )
 
-        #if not gradient:
-        #    print("Debug in transformations", bound)
+        # TODO/FIXME: There might be a very small error in the gradient?
         
         if gradient:
             # Compute d<log p(X)>
@@ -733,7 +742,10 @@ class RotateGaussianMarkovChain():
                                                    0,
                                                    0)
 
-            d_bound = dlogp_X + dlogH_X
+            d_bound = (0*dlogp_X
+                       + dlogp_X 
+                       + dlogH_X
+                       )
 
             return (bound, d_bound)
 
@@ -786,7 +798,7 @@ class RotateGaussianMatrixARD():
     Reshape vector x to matrix X and multiply either on the left or on the
     right: R*X or X*R'.
     """
-    def __init__(self, X, alpha, axis='rows', D1=None, D2=None):
+    def __init__(self, X, alpha, D1, D2, axis='rows'):
         self.X_node = X
         self.alpha_node = alpha
 
@@ -1028,19 +1040,8 @@ class RotateGaussianMatrixARD():
                  + logp_alpha
                  + logH_X
                  + logH_alpha
-            )
+                 )
 
-        ## if not gradient:
-        ##     print("debug xx", 
-        ##           dot(R_XX, R.T), 
-        ##           np.shape(XX),
-        ##           self.X_node.name,
-        ##           logp_X,
-        ##           logp_alpha,
-        ##           logH_X,
-        ##           logH_alpha,
-        ##           alpha_R)
-            
         if not gradient:
             return bound
 
@@ -1163,394 +1164,6 @@ class RotateGaussianMatrixARD():
                                     gradient=False)
         
         return {self: bound}
-        
-    
-## class RotateGaussianMatrixARD():
-##     """
-##     Assume the following model:
-
-##     :math:`p(X|\alpha) = \prod_{dk} N(x_{dk} | 0, 1 / \alpha_k)`
-
-##     :math:`p(\alpha) = \prod_k G(\alpha_k | a, b)`
-
-##     Reshape vector x to matrix X and multiply either on the left or on the
-##     right: R*X or X*R'.
-##     """
-##     def __init__(self, X, alpha, axis='rows'):
-##         self.X_node = X
-##         self.alpha_node = alpha
-
-##         D = X.dims[0][0]
-##         self.D2 = alpha.plates[0]
-##         self.D1 = D / self.D2
-        
-##         # Whether to multiply on the left or on the right
-##         if axis == 'rows':
-##             self.axis = 'rows'
-##         elif axis == 'cols':
-##             self.axis = 'cols'
-##         else:
-##             raise Exception("Unknown axis")
-
-##     def nodes(self):
-##         return [self.X_node, self.alpha_node]
-
-##     def rotate(self, R, inv=None, logdet=None, Q=None):
-##         if self.axis == 'rows':
-##             # Multiply on the left by R
-##             R1 = R
-##             inv1 = inv
-##             logdet1 = logdet
-##             R2 = np.identity(self.D2)
-##             inv2 = R2
-##             logdet2 = 0
-##         else:
-##             # Multiply on the right by R'
-##             R1 = np.identity(self.D1)
-##             inv1 = R1
-##             logdet1 = 0
-##             R2 = R
-##             inv2 = inv
-##             logdet2 = logdet
-            
-##         self.X_node.rotate_matrix(R1, R2, 
-##                                   inv1=inv1,
-##                                   logdet1=logdet1,
-##                                   inv2=inv2, 
-##                                   logdet2=logdet2,
-##                                   Q=Q)
-
-##         self.alpha_node.update()
-##         #print("debug in rotazione", self.alpha_node.get_moments()[0])
-
-##     def setup(self, rotate_plates=False):
-##         """
-##         This method should be called just before optimization.
-##         """
-        
-        
-##         #mask = self.X_node.mask[...,np.newaxis,np.newaxis]
-
-##         # Number of plates
-##         self.N = self.X_node.plates[0] #np.sum(mask)
-
-##         if not rotate_plates:
-##             # Compute the sum <XX> over plates
-##             self.XX = utils.utils.sum_multiply(self.X_node.get_moments()[1],
-##                                                self.X_node.mask[...,np.newaxis,np.newaxis],
-##                                                axis=(-1,-2),
-##                                                sumaxis=False,
-##                                                keepdims=False)
-##         else:
-##             self.X = (self.X_node.get_moments()[0] 
-##                       * self.X_node.mask[...,np.newaxis])
-##             XX = (self.X_node.get_moments()[1] 
-##                   * self.X_node.mask[...,np.newaxis,np.newaxis])
-##             self.CovX = XX - utils.linalg.outer(self.X, self.X)
-            
-##         # Parent's moments
-##         self.a = np.ravel(self.alpha_node.phi[1])
-##         #self.b = -np.ravel(self.alpha_node.phi[0])
-##         # TODO/FIXME: Handle vector valued parents a0 and b0
-##         self.a0 = self.alpha_node.parents[0].get_moments()[0]
-##         self.b0 = self.alpha_node.parents[1].get_moments()[0]
-
-##     def _compute_bound(self, R, logdet=None, inv=None, Q=None, gradient=False):
-##         """
-##         Rotate q(X) and q(alpha).
-##         """
-
-##         # TODO/FIXME: X and alpha should NOT contain observed values!! Check that.
-
-##         #
-##         # Transform the distributions and moments
-##         #
-
-##         D1 = self.D1
-##         D2 = self.D2
-##         N = self.N
-##         D = D1 * D2
-
-##         # Compute rotated second moment
-##         if Q is not None:
-##             X = np.reshape(self.X, (N,D1,D2))
-##             CovX = np.reshape(self.CovX, (N,D1,D2,D1,D2))
-##             # Rotate plates
-##             sumQ = np.sum(Q, axis=0)
-##             QX = np.einsum('ik,kab->iab', Q, X)
-##             logdet_Q = np.sum(np.log(np.abs(sumQ)))
-
-##             if self.axis == 'cols':
-##                 # Sum "rows"
-##                 X = np.einsum('nkj->nj', X)
-##                 # Rotate "columns"
-##                 X_R = np.einsum('jk,nk->nj', R, X)
-##                 r_CovX_r = np.einsum('ik,il,nakal->ni', R, R, CovX)
-##                 XX = (np.einsum('kai,kaj->aij', QX, QX)
-##                       + np.einsum('d,daiaj->aij', sumQ**2, CovX))
-##             else:
-##                 # Rotate "rows"
-##                 #print("OR THE BUG IS HERE...")
-##                 X_R = np.einsum('ik,nkj->nj', R, X)
-##                 r_CovX_r = np.einsum('ak,al,nkili->ni', R, R, CovX)
-##                 XX = (np.einsum('kib,kjb->bij', QX, QX)
-##                       + np.einsum('d,dibjb->bij', sumQ**2, CovX))
-
-##             Q_X_R = np.einsum('nk,ki->ni', Q, X_R)
-
-##         else:
-##             # Reshape into matrix form
-##             sh = (D1,D2,D1,D2)
-##             XX = np.reshape(self.XX, sh)
-##             if self.axis == 'cols':
-##                 XX = np.einsum('aiaj->aij', XX)
-##             else:
-##                 XX = np.einsum('ibjb->bij', XX)
-                
-##             logdet_Q = 0
-
-##         # Reshape vector to matrix
-##         if self.axis == 'cols':
-
-##             # Apply rotation on the right
-##             R_XX = np.einsum('ik,akj->aij', R, XX)
-##             r_XX_r = np.einsum('ik,il,akl->ai', R, R, XX)
-
-##             if Q is not None:
-##                 # Debug stuff:
-##                 #print("debug for Q", np.shape(XX_R))
-##                 r_XQQX_r = np.einsum('ab->b', r_XX_r) #r_XX_r #np.einsum('abab->b', XX_R)
-                
-##             # Compute q(alpha)
-##             a_alpha = self.a
-##             b_alpha = self.b0 + 0.5 * np.einsum('ab->b', r_XX_r)
-##             alpha_R = a_alpha / b_alpha
-##             logalpha_R = -np.log(b_alpha) # + const
-
-##             logdet_R = logdet
-##             inv_R = inv
-
-##             # Bug in here:
-##             XX_dalpha = -np.einsum('b,ab,abj->bj', alpha_R/b_alpha, r_XX_r, R_XX)
-
-##             #XX = np.einsum('aiaj->ij', XX)
-##             #XX_R = np.einsum('aiaj->ij', XX_R)
-
-##             #print("THERE")
-##             alpha_R_XX = np.einsum('i,aij->ij', alpha_R, R_XX) # BUG IN HERE? In gradient
-##             dalpha_R_XX = np.einsum('i,aij->ij', alpha_R/b_alpha, R_XX)
-##             invb_R_XX = np.einsum('i,aij->ij', 1/b_alpha, R_XX)
-##             #dalpha_RXXR = np.einsum('i,ii->i', alpha_R/b_alpha, XX_R)
-
-##             ND = self.N * D1
-            
-            
-##         else:
-##             # Apply rotation on the left
-
-##             R_XX = np.einsum('ik,bkj->bij', R, XX)
-##             r_XX_r = np.einsum('ik,il,bkl->bi', R, R, XX)
-
-##             if Q is not None:
-##                 # Debug stuff:
-##                 #print("debug for Q", np.shape(XX_R))
-##                 r_XQQX_r = np.einsum('bi->b', r_XX_r) #np.einsum('abab->b', XX_R)
-                
-##             # Compute q(alpha)
-##             a_alpha = self.a
-##             b_alpha = self.b0 + 0.5 * np.einsum('bi->b', r_XX_r)
-##             #b_alpha = self.b0 + 0.5 * np.einsum('abab->b', XX_R)
-##             alpha_R = a_alpha / b_alpha
-##             logalpha_R = -np.log(b_alpha) # + const
-
-##             logdet_R = logdet
-##             inv_R = inv
-
-##             #print("HERE IS THE BUG SOMEWHERE")
-##             # Compute: <alpha>_* R <
-##             alpha_R_XX = dot(R, np.einsum('b,bij->ij', alpha_R, XX))
-##             dalpha_R_XX = dot(R, np.einsum('b,bij->ij', alpha_R/b_alpha, XX))
-##             invb_R_XX = dot(R, np.einsum('b,bij->ij', 1/b_alpha, XX))
-##             #dalpha_RXXR = np.einsum('b,ibib->i', alpha_R/b_alpha, XX_R)
-##             XX_dalpha = -np.einsum('b,ba,baj->aj', alpha_R/b_alpha, r_XX_r, R_XX)
-
-##             #XX = np.einsum('ibjb->ij', XX)
-##             #XX_R = np.nan * np.einsum('ibjb->ij', XX_R)
-
-##             ND = self.N * D2
-
-
-##         #
-##         # Compute the cost
-##         #
-        
-##         # Compute entropy H(X)
-##         logH_X = utils.random.gaussian_entropy(-2*ND*logdet_R - 2*D*logdet_Q, 
-##                                                0)
-
-##         # Compute entropy H(alpha)
-##         logH_alpha = utils.random.gamma_entropy(0,
-##                                                 np.sum(np.log(b_alpha)),
-##                                                 0,
-##                                                 0,
-##                                                 0)
-
-##         # Compute <log p(X|alpha)>
-##         #logp_X = utils.random.gaussian_logpdf(np.einsum('ii,i', XX_R, alpha_R),
-##         logp_X = utils.random.gaussian_logpdf(tracedot(alpha_R_XX, R.T),
-##                                               0,
-##                                               0,
-##                                               (N*D1)*np.sum(logalpha_R),
-##                                               0)
-
-##         # Compute <log p(alpha)>
-##         logp_alpha = utils.random.gamma_logpdf(self.b0*np.sum(alpha_R),
-##                                                np.sum(logalpha_R),
-##                                                self.a0*np.sum(logalpha_R),
-##                                                0,
-##                                                0)
-
-##         # Compute the bound
-##         bound = (0
-##                  + logp_X
-##                  + logp_alpha
-##                  + logH_X
-##                  + logH_alpha
-##             )
-
-##         ## if not gradient:
-##         ##     print("debug xx", 
-##         ##           dot(R_XX, R.T), 
-##         ##           np.shape(XX),
-##         ##           self.X_node.name,
-##         ##           logp_X,
-##         ##           logp_alpha,
-##         ##           logH_X,
-##         ##           logH_alpha,
-##         ##           alpha_R)
-            
-##         if not gradient:
-##             return bound
-
-##         #
-##         # Compute the gradient with respect to R
-##         #
-
-##         # Compute dH(X)
-##         dlogH_X = utils.random.gaussian_entropy(-2*ND*inv_R.T,
-##                                                 0)
-
-##         # Compute dH(alpha)
-##         d_log_b = invb_R_XX #np.einsum('i,ik,kj->ij', 1/b_alpha, R, XX)
-##         dlogH_alpha = utils.random.gamma_entropy(0,
-##                                                  d_log_b,
-##                                                  0,
-##                                                  0,
-##                                                  0)
-
-##         # Compute d<log p(X|alpha)>
-##         d_log_alpha = -d_log_b
-##         dXX_alpha =  2*alpha_R_XX #np.einsum('i,ik,kj->ij', alpha_R, R, XX)
-##         #dalpha_xx = np.einsum('id,di', dalpha_R_XX, R.T)
-##         #XX_dalpha = -np.einsum('i,ik,kj', dalpha_RXXR, R, XX) # BUG IS IN THIS TERM!!!!
-##         #np.einsum('i,i,ii,ik,kj->ij', alpha_R, 1/b_alpha, XX_R, R, XX)
-
-##         # TODO/FIXME: This gradient term seems to have a bug.
-##         #
-##         # DEBUG: If you set these gradient terms to zero, the gradient is more
-##         # accurate..?!
-##         #dXX_alpha = 0
-##         #XX_dalpha = 0
-##         dlogp_X = utils.random.gaussian_logpdf(dXX_alpha + XX_dalpha,
-##                                                0,
-##                                                0,
-##                                                (N*D1)*d_log_alpha,
-##                                                0)
-
-##         # Compute d<log p(alpha)>
-##         d_alpha = -dalpha_R_XX #np.einsum('i,i,ik,kj->ij', alpha_R, 1/b_alpha, R, XX)
-##         dlogp_alpha = utils.random.gamma_logpdf(self.b0*d_alpha,
-##                                                 d_log_alpha,
-##                                                 self.a0*d_log_alpha,
-##                                                 0,
-##                                                 0)
-
-##         dR_bound = (0*dlogp_X
-##                     + dlogp_X
-##                     + dlogp_alpha
-##                     + dlogH_X
-##                     + dlogH_alpha
-##                     )
-
-##         if Q is None:
-##             return (bound, dR_bound)
-
-##         #
-##         # Compute the gradient with respect to Q (if Q given)
-##         #
-
-##         def d_helper(v):
-##             return (np.einsum('id,d,jd->ij', Q_X_R, v, X_R)
-##                     + np.einsum('n,d,nd->n', sumQ, v, r_CovX_r))
-            
-
-##         # Compute dH(X)
-##         dQ_logHX = utils.random.gaussian_entropy(-2*D/sumQ,
-##                                                  0)
-
-##         # Compute dH(alpha)
-##         d_log_b = d_helper(1/b_alpha)
-##         dQ_logHalpha = utils.random.gamma_entropy(0,
-##                                                   d_log_b,
-##                                                   0,
-##                                                   0,
-##                                                   0)
-
-##         # Compute d<log p(X|alpha)>
-##         dXX_alpha = 2*d_helper(alpha_R)
-##         XX_dalpha = -d_helper(r_XQQX_r*alpha_R/b_alpha)
-##         d_log_alpha = -d_log_b
-##         dQ_logpX = utils.random.gaussian_logpdf(dXX_alpha + XX_dalpha,
-##                                                 0,
-##                                                 0,
-##                                                 (N*D1)*d_log_alpha,
-##                                                 0)
-
-
-##         # Compute d<log p(alpha)>
-##         d_alpha = -d_helper(alpha_R/b_alpha)
-##         dQ_logpalpha = utils.random.gamma_logpdf(self.b0*d_alpha,
-##                                                  d_log_alpha,
-##                                                  self.a0*d_log_alpha,
-##                                                  0,
-##                                                  0)
-
-##         dQ_bound = (0*dQ_logpX
-##                     + dQ_logpX
-##                     + dQ_logpalpha
-##                     + dQ_logHX
-##                     + dQ_logHalpha
-##                     )
-
-##         return (bound, dR_bound, dQ_bound)
-
-
-
-##     def bound(self, R, logdet=None, inv=None, Q=None):
-##         return self._compute_bound(R, 
-##                                    logdet=logdet, 
-##                                    inv=inv, 
-##                                    Q=Q,
-##                                    gradient=True)
-            
-##     def get_bound_terms(self, R, logdet=None, inv=None, Q=None):
-##         bound = self._compute_bound(R, 
-##                                     logdet=logdet, 
-##                                     inv=inv, 
-##                                     Q=Q,
-##                                     gradient=False)
-        
-##         return {self: bound}
         
     
 class RotateDriftingMarkovChain():
