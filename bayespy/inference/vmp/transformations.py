@@ -342,7 +342,7 @@ class RotateGaussianARD():
         else:
             XX = self.node_X.get_moments()[1] * mask
             self.CovX = XX - utils.linalg.outer(self.X, self.X)
-            self.mu = mu
+            self.mu = np.atleast_2d(mu)
             #self.Xmu = self.X[...,:,np.newaxis] * mu[...,np.newaxis,:]
             
         # Parent's moments
@@ -396,21 +396,14 @@ class RotateGaussianARD():
             X_mu = self.Xmu
 
         # TODO/FIXME: X can be summed to the plates of mu!?
-        #X_R = np.einsum('...jk,...k->...j', R, X)
-        XX_R = dot(R, XX, R.T)
-        X_mu = dot(R, X_mu)
+        RX_mu = dot(R, X_mu)
 
-        ## X_mu = utils.utils.sum_multiply(X_R[...,:,np.newaxis], 
-        ##                                 self.mu[...,np.newaxis,:],
-        ##                                 sumaxis=False,
-        ##                                 axis=(-1,-2))
-
-        XmuXmu = (XX_R - X_mu - X_mu.T + self.mumu)
+        XmuXmu_R = (dot(R, XX, R.T) - RX_mu - RX_mu.T + self.mumu)
 
         # Compute q(alpha)
         a_alpha = self.a
-        b_alpha = self.b0 + 0.5*np.diag(XmuXmu)
-        #b_alpha = self.b0 + 0.5*np.diag(XX_R)
+        b_alpha = self.b0 + 0.5*np.diag(XmuXmu_R)
+        #b_alpha = self.b0 + 0.5*np.diag(RXXR)
         alpha_R = a_alpha / b_alpha
         logalpha_R = - np.log(b_alpha) # + const
 
@@ -436,8 +429,7 @@ class RotateGaussianARD():
                                                 0)
 
         # Compute <log p(X|alpha)>
-        #print(np.shape(self.mu), np.shape(X_R), np.shape(alpha_R))
-        logp_X = utils.random.gaussian_logpdf(np.einsum('ii,i', XmuXmu, alpha_R),
+        logp_X = utils.random.gaussian_logpdf(np.einsum('ii,i', XmuXmu_R, alpha_R),
                                               0,
                                               0,
                                               N*np.sum(logalpha_R),
@@ -452,22 +444,14 @@ class RotateGaussianARD():
 
         # Compute the bound
         bound = (0
-            + logp_X
-            #+ logp_alpha
-            #+ logH_X
-            #+ logH_alpha
+        + logp_X
+        + logp_alpha
+        + logH_X
+        + logH_alpha
             )
-
-        #print(np.shape(bound), np.shape(logp_X), np.shape(logp_alpha), np.shape(logH_X), np.shape(logH_alpha))
 
         if not gradient:
             return bound
-
-        # TODO/FIXME: Gradient errors by terms:
-        # * A LOT
-        # * probably some
-        # * nothing, or very small?
-        # * probably some
 
         #
         # Compute the gradient with respect R
@@ -478,7 +462,8 @@ class RotateGaussianARD():
                                                 0)
 
         # Compute dH(alpha)
-        d_log_b = np.einsum('i,ik,kj->ij', 1/b_alpha, R, XX)
+        dXmuXmu_R = 2*np.dot(R, XX) - 2*X_mu.T
+        d_log_b = np.einsum('i,ij->ij', 1/b_alpha, dXmuXmu_R)
         dlogH_alpha = utils.random.gamma_entropy(0,
                                                  d_log_b,
                                                  0,
@@ -488,17 +473,16 @@ class RotateGaussianARD():
         # Compute d<log p(X|alpha)>
         # TODO/FIXME: Fix these gradients!
         d_log_alpha = -d_log_b
-        dXX_alpha = 2*np.einsum('i,ik,kj->ij', alpha_R, R, XX)
-        XX_dalpha = -np.einsum('i,i,ii,ik,kj->ij', alpha_R, 1/b_alpha, XX_R, R, XX)
-        dXmu_alpha = 0
-        dlogp_X = utils.random.gaussian_logpdf(dXX_alpha + XX_dalpha,
-                                               dXmu_alpha,
+        dXmuXmu_alpha = np.einsum('i,ij->ij', alpha_R, dXmuXmu_R)
+        XmuXmu_dalpha = -np.einsum('i,i,ii,ij->ij', alpha_R, 1/b_alpha, XmuXmu_R, dXmuXmu_R)
+        dlogp_X = utils.random.gaussian_logpdf(dXmuXmu_alpha + XmuXmu_dalpha,
+                                               0,
                                                0,
                                                N*d_log_alpha,
                                                0)
 
         # Compute d<log p(alpha)>
-        d_alpha = -np.einsum('i,i,ik,kj->ij', alpha_R, 1/b_alpha, R, XX)
+        d_alpha = -np.einsum('i,i,ij->ij', alpha_R, 1/b_alpha, dXmuXmu_R)
         dlogp_alpha = utils.random.gamma_logpdf(self.b0*d_alpha,
                                                 d_log_alpha,
                                                 self.a0*d_log_alpha,
@@ -506,10 +490,10 @@ class RotateGaussianARD():
                                                 0)
 
         dR_bound = (0*dlogp_X
-            + dlogp_X
-        #+ dlogp_alpha
-        #+ dlogH_X
-        #+ dlogH_alpha
+        + dlogp_X
+        + dlogp_alpha
+        + dlogH_X
+        + dlogH_alpha
             )
 
         if Q is None:
@@ -522,8 +506,10 @@ class RotateGaussianARD():
         def d_helper(v):
             R_v_R = np.einsum('ki,k,kj->ij', R, v, R)
             tr_R_v_R_Cov = np.einsum('ij,dji->d', R_v_R, self.CovX)
+            mu_v_R = np.einsum('ik,k,kj', self.mu, v, R)
             return (dot(QX, R_v_R, self.X.T)
-                    + sumQ * tr_R_v_R_Cov)
+                    + sumQ * tr_R_v_R_Cov
+                    - dot(mu_v_R, self.X.T))
             
 
         # Compute dH(X)
@@ -531,10 +517,6 @@ class RotateGaussianARD():
                                                  0)
 
         # Compute dH(alpha)
-        ## R_b_R = np.einsum('ki,k,kj->ij', R, 1/b_alpha, R)
-        ## tr_R_b_R_Cov = np.einsum('ij,dji->d', R_b_R, self.CovX)
-        ## d_log_b = (dot(QX, R_b_R, self.X.T)
-        ##            + sumQ * tr_R_b_R_Cov)
         d_log_b = d_helper(1/b_alpha)
         dQ_logHalpha = utils.random.gamma_entropy(0,
                                                   d_log_b,
@@ -543,9 +525,8 @@ class RotateGaussianARD():
                                                   0)
 
         # Compute d<log p(X|alpha)>
-        # TODO/FIXME: Fix these gradients to take into account the mean parameter!
         dXX_alpha = 2*d_helper(alpha_R)
-        XX_dalpha = -d_helper(np.diag(XX_R)*alpha_R/b_alpha)
+        XX_dalpha = -d_helper(np.diag(XmuXmu_R)*alpha_R/b_alpha)
         d_log_alpha = -d_log_b
         dQ_logpX = utils.random.gaussian_logpdf(dXX_alpha + XX_dalpha,
                                                 0,
@@ -555,12 +536,6 @@ class RotateGaussianARD():
 
 
         # Compute d<log p(alpha)>
-        ## R_alpha_b_R = np.einsum('ki,k,kj->ij', 
-        ##                         R, alpha_R/b_alpha, R)
-        ## tr_R_alpha_b_R_Cov = np.einsum('ij,dji->d', 
-        ##                                R_alpha_b_R, self.CovX)
-        ## d_alpha = (dot(QX, R_alpha_b_R, self.X.T)
-        ##            + sumQ * tr_R_alpha_b_R_Cov)
         d_alpha = -d_helper(alpha_R/b_alpha)
         dQ_logpalpha = utils.random.gamma_logpdf(self.b0*d_alpha,
                                                  d_log_alpha,
@@ -569,10 +544,10 @@ class RotateGaussianARD():
                                                  0)
 
         dQ_bound = (0*dQ_logpX
-            + dQ_logpX
-        #+ dQ_logpalpha
-        #+ dQ_logHX
-        #+ dQ_logHalpha
+        + dQ_logpX
+        + dQ_logpalpha
+        + dQ_logHX
+        + dQ_logHalpha
             )
 
         return (bound, dR_bound, dQ_bound)
