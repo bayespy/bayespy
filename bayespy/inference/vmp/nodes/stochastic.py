@@ -39,6 +39,8 @@ class Stochastic(Node):
        _update_distribution_and_lowerbound(self, m, *u)
        lowerbound(self)
        _compute_dims
+       initialize_from_prior()
+    
 
     If you want to be able to observe the variable:
        _compute_fixed_moments_and_f

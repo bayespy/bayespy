@@ -37,6 +37,7 @@ class ExponentialFamily(Stochastic):
        _compute_message_to_parent(index, u_self, *u_parents)
        _compute_phi_from_parents(*u_parents, mask)
        _compute_moments_and_cgf(phi, mask)
+       _compute_fixed_moments_and_f(x, mask=True)
 
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
@@ -48,6 +49,10 @@ class ExponentialFamily(Stochastic):
 
     def __init__(self, *args, initialize=True, **kwargs):
 
+        # Terms for the lower bound (G for latent and F for observed)
+        self.g = np.array(np.nan)
+        self.f = np.array(np.nan)
+
         super().__init__(*args,
                          initialize=initialize,
                          **kwargs)
@@ -55,10 +60,6 @@ class ExponentialFamily(Stochastic):
         if not initialize:
             axes = len(self.plates)*(1,)
             self.phi = [utils.nans(axes+dim) for dim in self.dims]
-
-        # Terms for the lower bound (G for latent and F for observed)
-        self.g = np.array(0)
-        self.f = np.array(0)
 
 
     def initialize_from_prior(self):
@@ -194,6 +195,33 @@ class ExponentialFamily(Stochastic):
                                          np.shape(L),
                                          np.shape(self.mask)))
         #return L
+
+    def logpdf(self, X, mask=True):
+        """
+        Compute the log probability density function Q(X) of this node.
+        """
+        if mask is not True:
+            raise NotImplementedError('Mask not yet implemented')
+        (u, f) = self._compute_fixed_moments_and_f(X, mask=mask)
+        Z = 0
+        for (phi_d, u_d, dims) in zip(self.phi, u, self.dims):
+            axis_sum = tuple(range(-len(dims),0))
+            # TODO/FIXME: Use einsum here?
+            Z = Z + np.sum(phi_d * u_d, axis=axis_sum)
+            #Z = Z + utils.sum_multiply(phi_d, u_d, axis=axis_sum)
+
+        ## print('Z', Z)
+        ## print('f', f)
+        ## print('g', self.g)
+        return (self.g + f + Z)
+        
+
+    def pdf(self, X, mask=True):
+        """
+        Compute the probability density function of this node.
+        """
+        return np.exp(self.logpdf(X, mask=mask))
+        
 
     @classmethod
     def _compute_logpdf(cls, u, phi, g, f):

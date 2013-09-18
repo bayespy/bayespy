@@ -799,6 +799,8 @@ def m_outer(A,B):
     # Computes outer product over the last axes of A and B. The other
     # axes are broadcasted. Thus, if A has shape (..., N) and B has
     # shape (..., M), then the result has shape (..., N, M)
+    A = np.asanyarray(A)
+    B = np.asanyarray(B)
     return A[...,np.newaxis]*B[...,np.newaxis,:]
 
 def diagonal(A):
