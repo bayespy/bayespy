@@ -86,7 +86,8 @@ class ExponentialFamily(Stochastic):
         #u_parents = self.compute_fixed_parameter_moments(*args)
         u_parents = list()
         for (ind, x) in enumerate(args):
-            u = self.parameter_distributions[ind].compute_fixed_moments(x)
+            distribution = self.parameter_distributions[ind]
+            u = distribution.compute_fixed_moments(np.asanyarray(x))
             u_parents.append(u)
         # Update natural parameters
         self._update_phi_from_parents(*u_parents)
