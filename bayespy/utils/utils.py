@@ -42,6 +42,9 @@ import tempfile as tmp
 import unittest
 from numpy import testing
 
+def rmse(y1, y2, axis=None):
+    return np.sqrt(np.mean((y1-y2)**2, axis=axis))
+
 def is_callable(f):
     return hasattr(f, '__call__')
 

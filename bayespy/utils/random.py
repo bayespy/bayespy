@@ -29,6 +29,32 @@ import numpy as np
 
 from . import linalg
 
+def intervals(N, length, amount=1, gap=0):
+    """
+    Return random non-overlapping parts of a sequence.
+
+    For instance, N=16, length=2 and amount=4:
+    [0, |1, 2|, 3, 4, 5, |6, 7|, 8, 9, |10, 11|, |12, 13|, 14, 15]
+    that is,
+    [1,2,6,7,10,11,12,13]
+
+    However, the function returns only the indices of the beginning of the
+    sequences, that is, in the example:
+    [1,6,10,12]
+    """
+
+    if length * amount + gap * (amount-1) > N:
+        raise ValueError("Too short sequence")
+
+    # In practice, we draw the sizes of the gaps between the sequences
+    total_gap = N - length*amount - gap*(amount-1)
+    gaps = np.random.multinomial(total_gap, np.ones(amount+1)/(amount+1))
+
+    # And then we get the beginning index of each sequence
+    intervals = np.cumsum(gaps[:-1]) + np.arange(amount)*(length+gap)
+
+    return intervals
+
 def mask(*shape, p=0.5):
     """
     Return a boolean array of the given shape.
