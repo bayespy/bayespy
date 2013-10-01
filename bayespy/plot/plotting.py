@@ -71,7 +71,7 @@ def timeseries_normal(X, axis=-1, scale=2):
 def timeseries(x, *args, axis=-1, **kwargs):
     return _timeseries_mean_and_std(x, None, *args, axis=axis, **kwargs)
 
-def _timeseries_mean_and_std(y, std, *args, axis=-1, **kwargs):
+def _timeseries_mean_and_error(y, std, *args, axis=-1, **kwargs):
     # TODO/FIXME: You must multiply by ones(plates) in order to plot
     # broadcasted plates properly
     
@@ -111,7 +111,7 @@ def _timeseries_mean_and_std(y, std, *args, axis=-1, **kwargs):
         else:
             if len(args) > 0:
                 raise Exception("Can't handle extra arguments")
-            errorplot(y=y[:,i], error=2*std[:,i], **kwargs)
+            errorplot(y=y[:,i], error=std[:,i], **kwargs)
 
 def matrix(A):
     A = np.atleast_2d(A)
