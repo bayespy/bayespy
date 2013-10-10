@@ -33,7 +33,43 @@ import numpy as np
 from numpy import testing
 
 from .. import utils
-#from bayespy.utils import utils
+
+class TestAddAxes(utils.TestCase):
+
+    def test_add_axes(self):
+        """
+        Test the add_axes method.
+        """
+        f = lambda X, **kwargs: np.shape(utils.add_axes(X, **kwargs))
+
+        # By default, add one leading axis
+        self.assertEqual(f(np.ones((3,))),
+                         (1,3))
+
+        # By default, add leading axes
+        self.assertEqual(f(np.ones((3,)), num=3),
+                         (1,1,1,3))
+
+        # By default, add one axis               
+        self.assertEqual(f(np.ones((3,)), axis=1),
+                         (3,1))
+                         
+        # Add axes to the beginning
+        self.assertEqual(f(np.ones((2,3,4,)), axis=0, num=3),
+                         (1,1,1,2,3,4))
+        self.assertEqual(f(np.ones((2,3,4,)), axis=-3, num=3),
+                         (1,1,1,2,3,4))
+        
+        # Add axes to the middle
+        self.assertEqual(f(np.ones((2,3,4,)), axis=1, num=3),
+                         (2,1,1,1,3,4))
+        self.assertEqual(f(np.ones((2,3,4,)), axis=-2, num=3),
+                         (2,1,1,1,3,4))
+                         
+        # Add axes to the end
+        self.assertEqual(f(np.ones((2,3,4,)), axis=3, num=3),
+                         (2,3,4,1,1,1))
+
 
 class TestBroadcasting(unittest.TestCase):
 
