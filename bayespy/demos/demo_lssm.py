@@ -87,11 +87,11 @@ def linear_state_space_model(D=3, N=100, M=10):
 
     return (Y, CX, X, tau, C, gamma, A, alpha)
 
-def run(maxiter=100):
+def run(maxiter=100, debug=False, seed=42):
 
-    seed = 496#np.random.randint(1000)
-    print("seed = ", seed)
-    np.random.seed(seed)
+    # Use deterministic random numbers
+    if seed is not None:
+        np.random.seed(seed)
 
     # Simulate some data
     D = 3
@@ -139,37 +139,23 @@ def run(maxiter=100):
     rotC = transformations.RotateGaussianARD(C, gamma)
     R = transformations.RotationOptimizer(rotX, rotC, D)
 
-    #maxiter = 84
     for ind in range(maxiter):
         Q.update()
-        #print('C term', C.lower_bound_contribution())
-        R.rotate(maxiter=10, 
-                 check_gradient=True,
-                 verbose=False,
-                 check_bound=Q.compute_lowerbound,
-        #check_bound=None,
-                 check_bound_terms=Q.compute_lowerbound_terms)
-        #check_bound_terms=None)
-
-    X_vb = X.u[0]
-    varX_vb = utils.diagonal(X.u[1] - X_vb[...,np.newaxis,:] * X_vb[...,:,np.newaxis])
-
-    u_CX = CX.get_moments()
-    CX_vb = u_CX[0]
-    varCX_vb = u_CX[1] - CX_vb**2
-
+        if not debug:
+            R.rotate()
+        else:
+            R.rotate(maxiter=10, 
+                     check_gradient=True,
+                     verbose=False,
+                     check_bound=Q.compute_lowerbound,
+                     check_bound_terms=Q.compute_lowerbound_terms)
+        
     # Show results
-    plt.figure(3)
-    plt.clf()
-    for m in range(M):
-        plt.subplot(M,1,m+1)
-        plt.plot(y[m,:], 'r.')
-        plt.plot(f[m,:], 'b-')
-        bpplt.errorplot(y=CX_vb[m,:],
-                        error=2*np.sqrt(varCX_vb[m,:]))
-
     plt.figure()
-    Q.plot_iteration_by_nodes()
+    bpplt.timeseries_normal(CX)
+    bpplt.timeseries(f, 'b-')
+    bpplt.timeseries(y, 'r.')
+
     
 
 if __name__ == '__main__':
