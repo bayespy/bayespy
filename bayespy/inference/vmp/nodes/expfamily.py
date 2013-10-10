@@ -179,9 +179,11 @@ class ExponentialFamily(Stochastic):
         for (phi_p, phi_q, u_q, dims) in zip(phi, self.phi, self.u, self.dims):
             # Form a mask which puts observed variables to zero and
             # broadcasts properly
-            latent_mask_i = utils.add_axes(latent_mask,
-                                   len(self.plates) - np.ndim(latent_mask),
-                                   len(dims))
+            latent_mask_i = utils.add_trailing_axes(
+                                utils.add_leading_axes(
+                                    latent_mask,
+                                    len(self.plates) - np.ndim(latent_mask)),
+                                len(dims))
             axis_sum = tuple(range(-len(dims),0))
 
             # Compute the term

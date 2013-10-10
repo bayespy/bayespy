@@ -41,7 +41,8 @@ import scipy.sparse as sparse
 #import numpy.linalg._gufuncs_linalg as gula
 #import numpy.core.gufuncs_linalg as gula
 
-from .utils import nested_iterator
+#from .utils import nested_iterator
+from . import utils
 
 def chol(C):
     if sparse.issparse(C):
@@ -52,7 +53,7 @@ def chol(C):
         # The last two axes of C are considered as the matrix.
         C = np.atleast_2d(C)
         U = np.empty(np.shape(C))
-        for i in nested_iterator(np.shape(U)[:-2]):
+        for i in utils.nested_iterator(np.shape(U)[:-2]):
             try:
                 U[i] = linalg.cho_factor(C[i])[0]
             except np.linalg.linalg.LinAlgError:
@@ -60,14 +61,14 @@ def chol(C):
                 raise Exception("Matrix not positive definite")
         return U
 
-def chol_solve(U, b):
+def chol_solve(U, b, out=None):
     if isinstance(U, np.ndarray):
         if sparse.issparse(b):
             b = b.toarray()
             
         # Allocate memory
         U = np.atleast_2d(U)
-        B = np.atleast_1d(B)
+        B = np.atleast_1d(b)
         sh_u = U.shape[:-2]
         sh_b = B.shape[:-1]
         l_u = len(sh_u)
@@ -80,10 +81,10 @@ def chol_solve(U, b):
 
         if out == None:
             # Shape of the result (broadcasting rules)
-            sh = broadcasted_shape(sh_u, sh_b)
+            sh = utils.broadcasted_shape(sh_u, sh_b)
             #out = np.zeros(np.shape(B))
             out = np.zeros(sh + B.shape[-1:])
-        for i in nested_iterator(np.shape(U)[:-2]):
+        for i in utils.nested_iterator(np.shape(U)[:-2]):
 
             # The goal is to run Cholesky solver once for all vectors of B
             # for which the matrices of U are the same (according to the
@@ -127,7 +128,7 @@ def chol_inv(U):
     if isinstance(U, np.ndarray):
         # Allocate memory
         V = np.tile(np.identity(np.shape(U)[-1]), np.shape(U)[:-2]+(1,1))
-        for i in nested_iterator(np.shape(U)[:-2]):
+        for i in utils.nested_iterator(np.shape(U)[:-2]):
             V[i] = linalg.cho_solve((U[i], False),
                                     V[i],
                                     overwrite_b=True) # This would need Fortran order
@@ -143,7 +144,7 @@ def chol_inv(U):
 
 def chol_logdet(U):
     if isinstance(U, np.ndarray):
-        return 2*np.sum(np.log(np.diag(U)))
+        return 2*np.sum(np.log(np.einsum('...ii->...i',U)))
     elif isinstance(U, cholmod.Factor):
         return np.sum(np.log(U.D()))
     else:
@@ -188,7 +189,7 @@ def m_solve_triangular(U, B, **kwargs):
     ##     sh = broadcasted_shape(sh_u, sh_b)
     ##     #out = np.zeros(np.shape(B))
     ##     out = np.zeros(sh + B.shape[-1:])
-    for i in nested_iterator(np.shape(U)[:-2]):
+    for i in utils.nested_iterator(np.shape(U)[:-2]):
 
         # The goal is to run triangular solver once for all vectors of
         # B for which the matrices of U are the same (according to the
@@ -228,11 +229,32 @@ def m_solve_triangular(U, B, **kwargs):
     
 
 
-def outer(A,B):
-    # Computes outer product over the last axes of A and B. The other
-    # axes are broadcasted. Thus, if A has shape (..., N) and B has
-    # shape (..., M), then the result has shape (..., N, M)
-    return A[...,np.newaxis]*B[...,np.newaxis,:]
+def outer(A, B, ndim=1):
+    """
+    Computes outer product over the last axes of A and B.
+
+    The other axes are broadcasted. Thus, if A has shape (..., N) and B has
+    shape (..., M), then the result has shape (..., N, M).
+
+    Using the argument `ndim` it is possible to change that how many axes
+    trailing axes are used for the outer product. For instance, if ndim=3, A and
+    B have shapes (...,N1,N2,N3) and (...,M1,M2,M3), the result has shape
+    (...,N1,M1,N2,M2,N3,M3).
+    """
+    if not utils.is_integer(ndim) or ndim < 0:
+        raise ValueError('ndim must be non-negative integer')
+    if ndim > 0:
+        if ndim > np.ndim(A):
+            raise ValueError('Argument ndim larger than ndim of the first '
+                             'parameter')
+        if ndim > np.ndim(B):
+            raise ValueError('Argument ndim larger than ndim of the second '
+                             'parameter')
+        shape_A = np.shape(A) + (1,)*ndim
+        shape_B = np.shape(B)[:-ndim] + (1,)*ndim + np.shape(B)[-ndim:]
+        A = np.reshape(A, shape_A)
+        B = np.reshape(B, shape_B)
+    return A * B
 
 def dot(*arrays):
     """
