@@ -34,6 +34,7 @@ import scipy
 from numpy import testing
 
 from ..gaussian import GaussianArrayARD#, Gaussian
+from ..gamma import Gamma
 #from ..normal import Normal
 
 from ...vmp import VB
@@ -46,13 +47,132 @@ from bayespy.utils.utils import TestCase
 
 class TestGaussianArrayARD(TestCase):
 
-    def test_parent_validity(self):
+    def test_init(self):
         """
-        Test that the parent nodes are validated properly in the constructor
+        Test the constructor
         """
-        # Create from constant parents
-        GaussianArrayARD(0,
-                         1)
-        GaussianArrayARD(np.ones((2,)),
-                         np.ones((2,)))
+        
+        def check_init(true_plates, true_shape, mu, alpha, **kwargs):
+            X = GaussianArrayARD(mu, alpha, **kwargs)
+            self.assertEqual(X.dims, (true_shape, true_shape+true_shape),
+                             msg="Constructed incorrect dimensionality")
+            self.assertEqual(X.plates, true_plates,
+                             msg="Constructed incorrect plates")
 
+        #
+        # Create from constant parents
+        #
+
+        # Take the broadcasted shape of the parents
+        check_init((), 
+                   (), 
+                   0, 
+                   1)
+        check_init((),
+                   (3,2),
+                   np.zeros((3,2,)),
+                   np.ones((2,)))
+        check_init((),
+                   (4,2,2,3),
+                   np.zeros((2,1,3,)),
+                   np.ones((4,1,2,3)))
+        # Use ndim
+        check_init((4,2),
+                   (2,3),
+                   np.zeros((2,1,3,)),
+                   np.ones((4,1,2,3)),
+                   ndim=2)
+        # Use shape
+        check_init((4,2),
+                   (2,3),
+                   np.zeros((2,1,3,)),
+                   np.ones((4,1,2,3)),
+                   shape=(2,3))
+        # Use ndim and shape
+        check_init((4,2),
+                   (2,3),
+                   np.zeros((2,1,3,)),
+                   np.ones((4,1,2,3)),
+                   ndim=2,
+                   shape=(2,3))
+
+        #
+        # Create from node parents
+        #
+
+        # Take broadcasted shape
+        check_init((),
+                   (4,2,2,3),
+                   GaussianArrayARD(np.zeros((2,1,3)),
+                                    np.ones((2,1,3))),
+                   Gamma(np.ones((4,1,2,3)),
+                         np.ones((4,1,2,3))))
+        # Use ndim
+        check_init((4,),
+                   (2,2,3),
+                   GaussianArrayARD(np.zeros((4,2,3)),
+                                    np.ones((4,2,3)),
+                                    ndim=2),
+                   Gamma(np.ones((4,2,1,3)),
+                         np.ones((4,2,1,3))),
+                   ndim=3)
+        # Use shape
+        check_init((4,),
+                   (2,2,3),
+                   GaussianArrayARD(np.zeros((4,2,3)),
+                                    np.ones((4,2,3)),
+                                    ndim=2),
+                   Gamma(np.ones((4,2,1,3)),
+                         np.ones((4,2,1,3))),
+                   shape=(2,2,3))
+        # Use ndim and shape
+        check_init((4,2),
+                   (2,3),
+                   GaussianArrayARD(np.zeros((2,1,3)),
+                                    np.ones((2,1,3)),
+                                    ndim=2),
+                   Gamma(np.ones((4,1,2,3)),
+                         np.ones((4,1,2,3))),
+                   ndim=2,
+                   shape=(2,3))
+
+        #
+        # Errors
+        #
+
+        # Inconsistent dims of mu and alpha
+        self.assertRaises(ValueError,
+                          GaussianArrayARD,
+                          np.zeros((2,3)),
+                          np.ones((2,)))
+        # Inconsistent plates of mu and alpha
+        self.assertRaises(ValueError,
+                          GaussianArrayARD,
+                          GaussianArrayARD(np.zeros((4,2,3)),
+                                           np.ones((4,2,3)),
+                                           ndim=2),
+                          np.ones((3,4,2,3)),
+                          ndim=3)
+        # Inconsistent ndim and shape
+        self.assertRaises(ValueError,
+                          GaussianArrayARD,
+                          np.zeros((2,3)),
+                          np.ones((2,)),
+                          shape=(2,3),
+                          ndim=1)
+        # Parent mu has more axes
+        self.assertRaises(ValueError,
+                          GaussianArrayARD,
+                          GaussianArrayARD(np.zeros((2,3)),
+                                           np.ones((2,3))),
+                          np.ones((2,3)),
+                          ndim=1)
+        # Incorrect shape
+        self.assertRaises(ValueError,
+                          GaussianArrayARD,
+                          GaussianArrayARD(np.zeros((2,3)),
+                                           np.ones((2,3)),
+                                           ndim=2),
+                          np.ones((2,3)),
+                          shape=(2,2))
+                          

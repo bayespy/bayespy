@@ -417,6 +417,26 @@ class Gaussian(ExponentialFamily):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
 ###
 ###
 ###
@@ -437,6 +457,8 @@ def GaussianArrayARD(mu, alpha, ndim=None, shape=None, **kwargs):
     # Check consistency
     if ndim is not None and shape is not None and ndim != len(shape):
         raise ValueError("Given shape and ndim inconsistent")
+    if ndim is None and shape is not None:
+        ndim = len(shape)
 
     # Infer shape of mu
     try:
@@ -444,34 +466,33 @@ def GaussianArrayARD(mu, alpha, ndim=None, shape=None, **kwargs):
     except:
         if ndim is None and shape is None:
             shape_mu = np.shape(mu)
-        elif ndim == 0 or len(shape) == 0:
+        elif ndim == 0:
             shape_mu = ()
         elif ndim is not None and ndim > 0:
             shape_mu = np.shape(mu)[-ndim:]
-        elif shape is not None and len(shape) > 0:
-            shape_mu = np.shape(mu)[-len(shape):]
         else:
             raise ValueError("Can't infer the shape of the parent mu")
     ndim_mu = len(shape_mu)
 
-    # Infer dimensionality
-    if ndim is None:
-        if shape is not None:
-            ndim = len(shape)
-        else:
-            ndim = ndim_mu
-    elif ndim < ndim_mu:
-        raise ValueError("Parent mu has more axes")
-
     # Infer shape of alpha
+    try:
+        shape_alpha = alpha.plates
+    except:
+        shape_alpha = np.shape(alpha)
     if ndim == 0:
         shape_alpha = ()
-    else:
-        try:
-            shape_alpha = alpha.plates[-ndim:]
-        except:
-            shape_alpha = np.shape(alpha)[-ndim:]
+    elif ndim is not None and ndim > 0:
+        shape_alpha = shape_alpha[-ndim:]
+    elif ndim is not None:
+        raise ValueError("Can't infer the shape of the parent alpha")
+    ndim_alpha = len(shape_alpha)
         
+    # Infer dimensionality
+    if ndim is None:
+        ndim = max(ndim_mu, ndim_alpha)
+    elif ndim < ndim_mu or ndim < ndim_alpha:
+        raise ValueError("Parent mu has more axes")
+
     # Infer shape of the node
     shape_bc = utils.utils.broadcasted_shape(shape_mu, shape_alpha)
     if shape is None:
@@ -481,58 +502,8 @@ def GaussianArrayARD(mu, alpha, ndim=None, shape=None, **kwargs):
                          "broadcast to the given shape %s" 
                          % (shape_bc, shape))
 
-    ## if shape is None:
-    ##     try:
-    ##         # Infer shape from parent node
-    ##         shape_mu = mu.dims[0]
-    ##     except:
-    ##         if ndim is None:
-    ##             shape_mu = np.shape(mu)
-    ##             shape = shape_mu
-    ##         elif ndim == 0:
-    ##             shape_mu = ()
-    ##             shape = shape_mu
-    ##         elif ndim > 0:
-    ##             ndim_mu = np.ndim(mu)
-    ##             if ndim_mu == 0:
-    ##                 shape_mu = ()
-    ##             else
-    ##             shape_mu = np.shape(mu)
-                
-    ##             [-ndim:]
-    ##         else:
-    ##             raise ValueError("ndim must be non-negative integer")
-    ##         shape = shape_mu
-    ##     else:
-    ##         # Add leading unit axes
-    ##         if ndim is not None and len(shape_mu) < ndim:
-    ##             shape = (ndim-len(shape_mu))*(1,) + shape_mu
-    ##         else:
-    ##             shape = shape_mu
-
-    ## if ndim is not None and len(shape) != ndim:
-    ##     raise ValueError("Given shape and ndim inconsistent")
-
     # Construct the Gaussian array variable
     return _GaussianArrayARD(shape, shape_mu=shape_mu)(mu, alpha, **kwargs)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
