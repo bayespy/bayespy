@@ -509,10 +509,10 @@ def GaussianArrayARD(mu, alpha, ndim=None, shape=None, **kwargs):
 
 def _GaussianArrayARD(shape, shape_mu=None):
 
-    _ndim = len(shape)
+    ndim = len(shape)
     if shape_mu is None:
         shape_mu = shape
-    _ndim_mu = len(shape_mu)
+    ndim_mu = len(shape_mu)
     
     class __GaussianArrayARD(ExponentialFamily):
         r"""
@@ -636,19 +636,19 @@ def _GaussianArrayARD(shape, shape_mu=None):
         """
 
         # Number of axes for the mean and covariance
-        ndims = (_ndim, 2*_ndim)
+        ndims = (ndim, 2*ndim)
         # Number of axes for the parameters of the parents
-        ndims_parents = [(_ndim_mu, 2*_ndim_mu), (0, 0)]
+        ndims_parents = [(ndim_mu, 2*ndim_mu), (0, 0)]
         # Observations are scalar/vectors/matrices/tensors based on ndim:
-        ndim_observations = _ndim
+        ndim_observations = ndim
 
         def __init__(self, mu, alpha, **kwargs):
 
             # Check for constant mu
             if utils.utils.is_numeric(mu):
-                ## mu_ndim = np.min(np.ndim(mu), ndim)
-                ## if mu_ndim > 0:
-                ##     mu_shape = np.shape(mu)[-mu_ndim:]
+                ## mundim = np.min(np.ndim(mu), ndim)
+                ## if mundim > 0:
+                ##     mu_shape = np.shape(mu)[-mundim:]
                 ## else:
                 ##     mu_shape = ()
                 mu = Constant(_GaussianArrayARD(shape_mu))(mu)
@@ -670,32 +670,32 @@ def _GaussianArrayARD(shape, shape_mu=None):
                 return super()._plates_to_parent(index)
                 
         def _plates_from_parent(self, index):
-            if index == 1 and _ndim > 0:
-                return self.parents[index].plates[:-_ndim]
+            if index == 1 and ndim > 0:
+                return self.parents[index].plates[:-ndim]
             else:
                 return super()._plates_from_parent(index)
             
         @staticmethod
         def compute_fixed_moments(x):
             """ Compute moments for fixed x. """
-            return [x, utils.linalg.outer(x,x,ndim=_ndim)]
+            return [x, utils.linalg.outer(x,x,ndim=ndim)]
 
         @staticmethod
         def _compute_phi_from_parents(u_mu, u_alpha):
             mu = u_mu[0]
             alpha = u_alpha[0]
             mu = utils.utils.add_axes(mu, 
-                                      axis=np.ndim(mu)-_ndim_mu, 
-                                      num=_ndim-min(_ndim_mu,np.ndim(mu)))
+                                      axis=np.ndim(mu)-ndim_mu, 
+                                      num=ndim-min(ndim_mu,np.ndim(mu)))
             phi0 = alpha * mu
             phi1 = -0.5 * alpha
-            if _ndim > 0:
-                shape_phi = np.shape(phi0)[:-_ndim] + shape
+            if ndim > 0:
+                shape_phi = np.shape(phi0)[:-ndim] + shape
                 phi0 = utils.utils.repeat_to_shape(phi0, shape_phi)
                 phi1 = utils.utils.repeat_to_shape(phi1, shape_phi)
 
             # Make a diagonal matrix
-            phi1 = utils.utils.diag(phi1, ndim=_ndim)
+            phi1 = utils.utils.diag(phi1, ndim=ndim)
             return [phi0, phi1]
 
         @staticmethod
@@ -711,7 +711,7 @@ def _GaussianArrayARD(shape, shape_mu=None):
 
         @staticmethod
         def _compute_moments_and_cgf(phi, mask=True):
-            if _ndim == 0:
+            if ndim == 0:
                 # Use scalar equations
                 u0 = -phi[0] / (2*phi[1])
                 u1 = u0**2 - 1 / (2*phi[1])
@@ -719,15 +719,15 @@ def _GaussianArrayARD(shape, shape_mu=None):
                 g = (-0.5 * u[0] * phi[0] + 0.5 * np.log(-2*phi[1]))
 
                 # TODO/FIXME: You could use these equations if phi is a scalar
-                # in practice although _ndim>0 (because the shape can be, e.g.,
-                # (1,1,1,1) for _ndim=4).
+                # in practice although ndim>0 (because the shape can be, e.g.,
+                # (1,1,1,1) for ndim=4).
             
             else:
 
                 # Reshape to standard vector and matrix
                 D = np.prod(shape)
-                phi0 = np.reshape(phi[0], phi[0].shape[:-_ndim] + (D,))
-                phi1 = np.reshape(phi[1], phi[1].shape[:-2*_ndim] + (D,D))
+                phi0 = np.reshape(phi[0], phi[0].shape[:-ndim] + (D,))
+                phi1 = np.reshape(phi[1], phi[1].shape[:-2*ndim] + (D,D))
 
                 # Compute the moments
                 L = utils.linalg.chol(-2*phi1)
@@ -749,23 +749,65 @@ def _GaussianArrayARD(shape, shape_mu=None):
         @staticmethod
         def _compute_fixed_moments_and_f(x, mask=True):
             """ Compute u(x) and f(x) for given x. """
-            raise NotImplementedError()
-            k = np.shape(x)[-1]
-            u = [x, utils.utils.m_outer(x,x)]
+            if ndim > 0 and np.shape(x)[-ndim:] != shape:
+                raise ValueError("Invalid shape")
+            k = np.prod(shape)
+            u = [x, utils.linalg.outer(x, x, ndim=ndim)]
             f = -k/2*np.log(2*np.pi)
             return (u, f)
 
         @staticmethod
-        def _compute_message_to_parent(parent, index, u, *u_parents):
+        def _compute_mask_to_parent(index, mask):
+            """
+            Compute the mask used for messages sent to parent[index].
+
+            The mask tells which plates in the messages are active. This method
+            is used for obtaining the mask which is used to set plates in the
+            messages to parent to zero.
+            """
+
+            if index == 1:
+                # Add trailing axes
+                mask = np.reshape(mask, np.shape(mask) + (1,)*ndim)
+
+            return mask
+
+        @staticmethod
+        def _compute_message_to_parent(parent, index, u, u_mu, u_alpha):
             """ . """
-            raise NotImplementedError()
             if index == 0:
-                return [utils.utils.m_dot(u_parents[1][0], u[0]),
-                        -0.5 * u_parents[1][0]]
+                x = u[0]
+                alpha = u_alpha[0]
+                
+                axes0 = list(range(-ndim, -ndim_mu))
+                m0 = utils.utils.sum_multiply(alpha, x, axis=axes0)
+
+                Alpha = utils.utils.diag(alpha, ndim=ndim)
+                axes1 = [axis+ndim for axis in axes0] + axes0
+                m1 = -0.5 * utils.utils.sum_multiply(Alpha, 
+                                                     np.ones(shape+shape),
+                                                     axis=axes1)
+                
+                return [m0, m1]
+            
             elif index == 1:
-                xmu = utils.utils.m_outer(u[0], u_parents[0][0])
-                return [-0.5 * (u[1] - xmu - xmu.swapaxes(-1,-2) + u_parents[0][1]),
-                        0.5]
+                x = u[0]
+                x2 = utils.utils.get_diag(u[1], ndim=ndim)
+                mu = u_mu[0]
+                mu2 = utils.utils.get_diag(u_mu[1], ndim=ndim_mu)
+                if ndim_mu == 0:
+                    mu_shape = np.shape(mu) + (1,)*ndim
+                else:
+                    mu_shape = (np.shape(mu)[:-ndim_mu] 
+                                + (1,)*(ndim-ndim_mu)
+                                + np.shape(mu)[-ndim_mu:])
+                mu = np.reshape(mu, mu_shape)
+                mu2 = np.reshape(mu2, mu_shape)
+                m0 = -0.5*x2 + x*mu - 0.5*mu2
+                m1 = 0.5
+                return [m0, m1]
+                ## return [-0.5 * (u[1] - xmu - xmu.swapaxes(-1,-2) + u_parents[0][1]),
+                ##         0.5]
 
         @staticmethod
         def compute_dims(mu, alpha):
@@ -787,7 +829,7 @@ def _GaussianArrayARD(shape, shape_mu=None):
             # everything is consistent
 
             # Check consistency with respect to parent mu
-            shape_mean = shape[-_ndim_mu:]
+            shape_mean = shape[-ndim_mu:]
             # Check mean
             if not utils.utils.is_shape_subset(mu.dims[0], shape_mean):
                 raise ValueError("Parent node %s with mean shaped %s does not "
@@ -796,7 +838,7 @@ def _GaussianArrayARD(shape, shape_mu=None):
                                     mu.dims[0],
                                     shape))
             # Check covariance
-            shape_cov = shape[-_ndim_mu:] + shape[-_ndim_mu:]
+            shape_cov = shape[-ndim_mu:] + shape[-ndim_mu:]
             if not utils.utils.is_shape_subset(mu.dims[1], shape_cov):
                 raise ValueError("Parent node %s with covariance shaped %s "
                                  "does not broadcast to the shape %s of this "
@@ -806,10 +848,10 @@ def _GaussianArrayARD(shape, shape_mu=None):
                                     shape+shape))
 
             # Check consistency with respect to parent alpha
-            if _ndim == 0:
+            if ndim == 0:
                 shape_alpha = ()
             else:
-                shape_alpha = alpha.plates[-_ndim:]
+                shape_alpha = alpha.plates[-ndim:]
             if not utils.utils.is_shape_subset(shape_alpha, shape):
                 raise ValueError("Parent node (precision) does not broadcast "
                                  "to the shape of this node")

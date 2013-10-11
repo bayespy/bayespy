@@ -176,3 +176,132 @@ class TestGaussianArrayARD(TestCase):
                           np.ones((2,3)),
                           shape=(2,2))
                           
+        pass
+
+    def test_message_to_child(self):
+        """
+        Test that GaussianArrayARD computes the message to children correctly.
+        """
+
+        # Check that moments have full shape when broadcasting
+        X = GaussianArrayARD(np.zeros((2,)),
+                             np.ones((3,2)),
+                             shape=(4,3,2))
+        (u0, u1) = X._message_to_child()
+        self.assertEqual(np.shape(u0),
+                         (4,3,2))
+        self.assertEqual(np.shape(u1),
+                         (4,3,2,4,3,2))
+
+        # Check the formula
+        X = GaussianArrayARD(2, 3)
+        (u0, u1) = X._message_to_child()
+        self.assertAllClose(u0, 2)
+        self.assertAllClose(u1, 2**2 + 1/3)
+
+        # Check the formula for multidimensional arrays
+        X = GaussianArrayARD(2*np.ones((2,1,4)),
+                             3*np.ones((2,3,1)),
+                             ndim=3)
+        (u0, u1) = X._message_to_child()
+        self.assertAllClose(u0, 2*np.ones((2,3,4)))
+        self.assertAllClose(u1, 
+                            2**2 * np.ones((2,3,4,2,3,4))
+                            + 1/3 * utils.identity(2,3,4))
+                            
+
+        # Check posterior
+        X = GaussianArrayARD(2, 3)
+        Y = GaussianArrayARD(X, 1)
+        Y.observe(10)
+        X.update()
+        (u0, u1) = X._message_to_child()
+        self.assertAllClose(u0,
+                            1/(3+1) * (3*2 + 1*10))
+        self.assertAllClose(u1,
+                            (1/(3+1) * (3*2 + 1*10))**2 + 1/(3+1))
+        
+        pass
+
+    def test_message_to_parent_mu(self):
+        """
+        Test that GaussianARD computes the message to the 1st parent correctly.
+        """
+
+        pass
+        
+    def test_message_to_parent_alpha(self):
+        """
+        Test that GaussianARD computes the message to the 2nd parent correctly.
+        """
+
+        # Check formula with uncertain parent mu
+        mu = GaussianArrayARD(1,1)
+        X = GaussianArrayARD(mu,
+                             0.5)
+        X.observe(3)
+        (m0, m1) = X._message_to_parent(1)
+        self.assertAllClose(m0,
+                            -0.5*(3**2 - 2*3*1 + 1**2+1))
+        self.assertAllClose(m1,
+                            0.5)
+
+        # Check formula with uncertain node
+        X = GaussianArrayARD(2, 1)
+        Y = GaussianArrayARD(X, 1)
+        Y.observe(5)
+        X.update()
+        (m0, m1) = X._message_to_parent(1)
+        self.assertAllClose(m0,
+                            -0.5*(1/(1+1)+3.5**2 - 2*3.5*2 + 2**2))
+        self.assertAllClose(m1,
+                            0.5)
+
+        # Check alpha larger than mu
+        X = GaussianArrayARD(np.ones((2,3)),
+                             np.ones((3,2,3)))
+        X.observe(2*np.ones((3,2,3)))
+        (m0, m1) = X._message_to_parent(1)
+        self.assertAllClose(m0,
+                            -0.5*(2**2 - 2*2*1 + 1**2) * np.ones((3,2,3)))
+        self.assertAllClose(m1,
+                            0.5)
+
+        # Check mu larger than alpha
+        X = GaussianArrayARD(np.ones((3,2,3)),
+                             np.ones((2,3)))
+        X.observe(2*np.ones((3,2,3)))
+        (m0, m1) = X._message_to_parent(1)
+        self.assertAllClose(m0,
+                            -0.5*(2**2 - 2*2*1 + 1**2) * 3 * np.ones((2,3)))
+        self.assertAllClose(m1,
+                            0.5 * 3)
+
+        # Check node larger than mu and alpha
+        X = GaussianArrayARD(np.ones((2,3)),
+                             np.ones((3,)),
+                             shape=(3,2,3))
+        X.observe(2*np.ones((3,2,3)))
+        (m0, m1) = X._message_to_parent(1)
+        self.assertAllClose(m0,
+                            -0.5*(2**2 - 2*2*1 + 1**2) * 6 * np.ones((3,)))
+        self.assertAllClose(m1,
+                            0.5 * 6)
+
+        # Check mask
+        X = GaussianArrayARD(np.ones(3),
+                             np.ones((4,3)),
+                             shape=(3,),
+                             plates=(2,4,))
+        X.observe(2*np.ones((2,4,3)), mask=[[True, False, True, False],
+                                            [False, True, True, False]])
+        (m0, m1) = X._message_to_parent(1)
+        self.assertAllClose(m0,
+                            (-0.5 * (1**2+1 - 2*1*1 + 1**2) 
+                             * np.ones((3,)) 
+                             * np.array([[1], [1], [2], [0]])))
+        self.assertAllClose(m1,
+                            0.5 * np.array([[1], [1], [2], [0]]))
+        
+        pass
+        

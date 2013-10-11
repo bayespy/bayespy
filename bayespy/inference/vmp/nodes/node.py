@@ -267,6 +267,7 @@ class Node():
 
         # Compute the message and mask
         (m, mask) = self._get_message_and_mask_to_parent(index)
+        mask = utils.squeeze(mask)
 
         # Plates in the mask
         plates_mask = np.shape(mask)

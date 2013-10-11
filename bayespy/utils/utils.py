@@ -565,6 +565,28 @@ def nested_iterator(max_inds):
     s = (range(i) for i in max_inds)
     return itertools.product(*s)
 
+def first(L):
+    """
+    """
+    for (n,l) in enumerate(L):
+        if l:
+            return n
+    return None
+
+def squeeze(X):
+    """
+    Remove leading axes that have unit length.
+
+    For instance, a shape (1,1,4,1,3) will be reshaped to (4,1,3).
+    """
+    shape = np.array(np.shape(X))
+    inds = np.nonzero(shape != 1)[0]
+    if len(inds) == 0:
+        shape = ()
+    else:
+        shape = shape[inds[0]:]
+    return np.reshape(X, shape)
+    
 def squeeze_to_dim(X, dim):
     s = tuple(range(np.ndim(X)-dim))
     return np.squeeze(X, axis=s)
@@ -813,6 +835,29 @@ def m_outer(A,B):
 
 def diagonal(A):
     return np.diagonal(A, axis1=-2, axis2=-1)
+
+def get_diag(X, ndim=1):
+    """
+    Get the diagonal of an array.
+
+    If ndim>1, take the diagonal of the last 2*ndim axes.
+    """
+    if ndim == 0:
+        return X
+
+    if ndim < 0:
+        raise ValueError("Parameter ndim must be non-negative integer")
+
+    if np.ndim(X) < 2*ndim:
+        raise ValueError("The array does not have enough axes")
+
+    if np.shape(X)[-ndim:] != np.shape(X)[-2*ndim:-ndim]:
+        raise ValueError("The array X is not square")
+
+    axes_out = tuple(range(np.ndim(X)-ndim, 0, -1))
+    axes_dim = tuple(range(ndim, 0, -1))
+    return np.einsum(X, axes_out+axes_dim, axes_out)
+    
 
 def diag(X, ndim=1):
     """
