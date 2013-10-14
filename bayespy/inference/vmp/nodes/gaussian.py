@@ -785,9 +785,9 @@ def _GaussianArrayARD(shape, shape_mu=None):
                 Alpha = utils.utils.diag(alpha, ndim=ndim)
                 axes1 = [axis+ndim for axis in axes0] + axes0
                 m1 = -0.5 * utils.utils.sum_multiply(Alpha, 
-                                                     np.ones(shape+shape),
+                                                     utils.utils.identity(*shape),
                                                      axis=axes1)
-                
+
                 return [m0, m1]
             
             elif index == 1:
