@@ -33,7 +33,7 @@ import scipy
 
 from numpy import testing
 
-from ..gaussian import GaussianArrayARD#, Gaussian
+from ..gaussian import Gaussian, GaussianArrayARD
 from ..gamma import Gamma
 #from ..normal import Normal
 
@@ -321,6 +321,26 @@ class TestGaussianArrayARD(TestCase):
                             (-0.5*2 * utils.identity(3)
                              * np.ones((2,1,1,1))
                              * np.array([[[[3]]], [[[2]]]])))
+
+        # Check non-ARD Gaussian child
+        mu = np.array([1,2])
+        alpha = np.array([3,4])
+        Lambda = np.array([[1, 0.5],
+                          [0.5, 1]])
+        X = GaussianArrayARD(mu, alpha)
+        Y = Gaussian(X, Lambda)
+        y = np.array([5,6])
+        Y.observe(y)
+        X.update()
+        (m0, m1) = X._message_to_parent(0)
+        mean = np.dot(np.linalg.inv(np.diag(alpha)+Lambda),
+                      np.dot(np.diag(alpha), mu)
+                      + np.dot(Lambda, y))
+        self.assertAllClose(m0,
+                            np.dot(np.diag(alpha), mean))
+        self.assertAllClose(m1,
+                            -0.5*np.diag(alpha))
+        
         
         pass
         
@@ -411,6 +431,29 @@ class TestGaussianArrayARD(TestCase):
                              * np.array([[1], [1], [2], [0]])))
         self.assertAllClose(m1,
                             0.5 * np.array([[1], [1], [2], [0]]))
+        
+        # Check non-ARD Gaussian child
+        mu = np.array([1,2])
+        alpha = np.array([3,4])
+        Lambda = np.array([[1, 0.5],
+                          [0.5, 1]])
+        X = GaussianArrayARD(mu, alpha)
+        Y = Gaussian(X, Lambda)
+        y = np.array([5,6])
+        Y.observe(y)
+        X.update()
+        (m0, m1) = X._message_to_parent(1)
+        Cov = np.linalg.inv(np.diag(alpha)+Lambda)
+        mean = np.dot(Cov, np.dot(np.diag(alpha), mu)
+                           + np.dot(Lambda, y))
+        self.assertAllClose(m0,
+                            -0.5 * np.diag(
+                                np.outer(mean, mean) + Cov
+                                - np.outer(mean, mu)
+                                - np.outer(mu, mean)
+                                + np.outer(mu, mu)))
+        self.assertAllClose(m1,
+                            0.5)
         
         pass
         

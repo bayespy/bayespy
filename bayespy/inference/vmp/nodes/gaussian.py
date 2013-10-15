@@ -646,11 +646,6 @@ def _GaussianArrayARD(shape, shape_mu=None):
 
             # Check for constant mu
             if utils.utils.is_numeric(mu):
-                ## mundim = np.min(np.ndim(mu), ndim)
-                ## if mundim > 0:
-                ##     mu_shape = np.shape(mu)[-mundim:]
-                ## else:
-                ##     mu_shape = ()
                 mu = Constant(_GaussianArrayARD(shape_mu))(mu)
 
             # Check for constant Lambda
@@ -806,8 +801,6 @@ def _GaussianArrayARD(shape, shape_mu=None):
                 m0 = -0.5*x2 + x*mu - 0.5*mu2
                 m1 = 0.5
                 return [m0, m1]
-                ## return [-0.5 * (u[1] - xmu - xmu.swapaxes(-1,-2) + u_parents[0][1]),
-                ##         0.5]
 
         @staticmethod
         def compute_dims(mu, alpha):
