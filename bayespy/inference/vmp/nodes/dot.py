@@ -414,7 +414,6 @@ class SumMultiply(Deterministic):
         out_all_keys = (list(range(2*D+N1-1, 2*D-1, -1)) 
                         + [D+key for key in self.out_keys] 
                         + self.out_keys)
-        #nodes_dim_keys = self.nodes_dim_keys
         in_all_keys = [list(range(2*D+plate_count-1, 2*D-1, -1)) 
                        + [D+key for key in node_keys]
                        + node_keys
@@ -422,25 +421,9 @@ class SumMultiply(Deterministic):
                                                            self.in_keys)]
         u1 = [u[1] for u in u_parents]
         args = utils.zipper_merge(u1, in_all_keys) + [out_all_keys]
-        print(in_all_keys, np.shape(u_parents[0][1]), out_all_keys)
         x1 = np.einsum(*args)
 
         return [x0, x1]
-
-        str1 = '...i' + ',...i' * (len(self.parents)-1)
-        str2 = '...ij' + ',...ij' * (len(self.parents)-1)
-
-        u1 = list()
-        u2 = list()
-        for u in u_parents:
-            u1.append(u[0])
-            u2.append(u[1])
-
-        x = [np.einsum(str1, *u1),
-             np.einsum(str2, *u2)]
-
-        return x
-        
 
 
     def get_parameters(self):
@@ -460,6 +443,74 @@ class SumMultiply(Deterministic):
         mask = self.mask
         parent = self.parents[index]
 
+        #
+        # Compute the first message
+        #
+
+        # Add mask and an array of ones to ensure proper shape
+        args = [mask, 
+                [Ellipsis],
+                np.ones(parent.dims[0]),
+                [Ellipsis] + self.in_keys[index]]
+
+        # Keys and moments of other parents
+        for (k, u) in enumerate(u_parents):
+            if k != index:
+                args = args + [u[0],
+                               [Ellipsis] + self.in_keys[k]]
+
+        # Keys and message from children
+        args = args + [m[0],
+                       [Ellipsis] + self.out_keys]
+
+        # Output keys, that is, the keys of the parent[index]
+        args = args + [[Ellipsis] + self.in_keys[index]]
+
+        # Compute the message
+        m0 = np.einsum(*args)
+
+        #
+        # Compute the second message
+        #
+
+        in_all_keys = [[self.N_keys + key for key in keys] + keys
+                       for keys in self.in_keys]
+        out_all_keys = ([self.N_keys + key for key in self.out_keys]
+                        + self.out_keys)
+
+        # Add mask and an array of ones to ensure proper shape
+        args = [mask, 
+                [Ellipsis],
+                np.ones(parent.dims[1]),
+                [Ellipsis] + in_all_keys[index]]
+
+        # Keys and moments of other parents
+        for (k, u) in enumerate(u_parents):
+            if k != index:
+                args = args + [u[1],
+                               [Ellipsis] + in_all_keys[k]]
+
+        # Keys and message from children
+        args = args + [m[1],
+                       [Ellipsis] + out_all_keys]
+
+        # Output keys, that is, the keys of the parent[index]
+        args = args + [[Ellipsis] + in_all_keys[index]]
+
+        # Compute the message
+        m1 = np.einsum(*args)
+
+        #print("in summultiply", args, np.shape(m1), self.plates, self.dims[0])
+
+        m = [m0, m1]
+        
+        # Compute the mask
+        s = utils.axes_to_collapse(np.shape(mask), parent.plates)
+        mask = np.any(mask, axis=s, keepdims=True)
+        mask = utils.squeeze_to_dim(mask, len(parent.plates))
+
+        return (m, mask)
+
         # Compute both messages
         for i in range(2):
 
@@ -474,6 +525,8 @@ class SumMultiply(Deterministic):
 
             # Compute the sum over some axes already here in order to avoid huge
             # message matrices.
+
+            # TODO/FIXME: Should mask be applied here?
             m[i] = _message_sum_multiply(parent.plates, parent.dims[i], *A)
 
         # Compute the mask

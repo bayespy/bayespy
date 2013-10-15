@@ -340,8 +340,7 @@ class TestGaussianArrayARD(TestCase):
                             np.dot(np.diag(alpha), mean))
         self.assertAllClose(m1,
                             -0.5*np.diag(alpha))
-        
-        
+
         pass
         
     def test_message_to_parent_alpha(self):

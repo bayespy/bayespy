@@ -143,227 +143,361 @@ class TestSumMultiply(TestCase):
                           'i,i->i',
                           X)
 
-    def compute_moments(self, string, einsum_mean, einsum_cov, *shapes):
-        Xs = [GaussianArrayARD(np.random.randn(*(plates+dims)),
-                               np.random.rand(*(plates+dims)),
-                               plates=plates,
-                               shape=dims)
-              for (plates, dims) in shapes]
-        Y = SumMultiply(string, *Xs)
-        u_Y = Y.get_moments()
-        u0 = [X.get_moments()[0] for X in Xs]
-        u1 = [X.get_moments()[1] for X in Xs]
-        # Check mean
-        self.assertAllClose(u_Y[0],
-                            np.einsum(einsum_mean, *u0))
-        self.assertAllClose(u_Y[1],
-                            np.einsum(einsum_cov, *u1))
+    def test_message_to_child(self):
+        """
+        Test the message from SumMultiply to its children.
+        """
 
-    def compare_moments(self, u0, u1, *args):
-        Y = SumMultiply(*args)
-        u_Y = Y.get_moments()
-        self.assertAllClose(u_Y[0], u0)
-        self.assertAllClose(u_Y[1], u1)
-        
-    def test_moments(self):
-        # (3,3,3) x 0-D Gaussian
-        V1 = GaussianArrayARD(np.random.randn(3,3,3),
-                              np.random.rand(3,3,3),
-                              plates=(3,3,3),
-                              shape=())
-        v1 = V1.get_moments()
-        # 1-D Gaussians
+        def compare_moments(u0, u1, *args):
+            Y = SumMultiply(*args)
+            u_Y = Y.get_moments()
+            self.assertAllClose(u_Y[0], u0)
+            self.assertAllClose(u_Y[1], u1)
+
+        # Do nothing for 2-D array
+        Y = GaussianArrayARD(np.random.randn(5,2,3),
+                             np.random.rand(5,2,3),
+                             plates=(5,),
+                             shape=(2,3))
+        y = Y.get_moments()
+        compare_moments(y[0],
+                        y[1],
+                        'ij->ij',
+                        Y)
+        compare_moments(y[0],
+                        y[1],
+                        Y,
+                        [0,1],
+                        [0,1])
+
+        # Sum over the rows of a matrix
+        Y = GaussianArrayARD(np.random.randn(5,2,3),
+                             np.random.rand(5,2,3),
+                             plates=(5,),
+                             shape=(2,3))
+        y = Y.get_moments()
+        mu = np.einsum('...ij->...j', y[0])
+        cov = np.einsum('...ijkl->...jl', y[1])
+        compare_moments(mu,
+                        cov,
+                        'ij->j',
+                        Y)
+        compare_moments(mu,
+                        cov,
+                        Y,
+                        [0,1],
+                        [1])
+
+        # Inner product of three vectors
+        X1 = GaussianArrayARD(np.random.randn(2),
+                              np.random.rand(2),
+                              plates=(),
+                              shape=(2,))
+        x1 = X1.get_moments()
+        X2 = GaussianArrayARD(np.random.randn(6,1,2),
+                              np.random.rand(6,1,2),
+                              plates=(6,1),
+                              shape=(2,))
+        x2 = X2.get_moments()
+        X3 = GaussianArrayARD(np.random.randn(7,6,5,2),
+                              np.random.rand(7,6,5,2),
+                              plates=(7,6,5),
+                              shape=(2,))
+        x3 = X3.get_moments()
+        mu = np.einsum('...i,...i,...i->...', x1[0], x2[0], x3[0])
+        cov = np.einsum('...ij,...ij,...ij->...', x1[1], x2[1], x3[1])
+        compare_moments(mu,
+                        cov,
+                        'i,i,i',
+                        X1,
+                        X2,
+                        X3)
+        compare_moments(mu,
+                        cov,
+                        'i,i,i->',
+                        X1,
+                        X2,
+                        X3)
+        compare_moments(mu,
+                        cov,
+                        X1,
+                        [9],
+                        X2,
+                        [9],
+                        X3,
+                        [9])
+        compare_moments(mu,
+                        cov,
+                        X1,
+                        [9],
+                        X2,
+                        [9],
+                        X3,
+                        [9],
+                        [])
+                            
+
+        # Outer product of two vectors
+        X1 = GaussianArrayARD(np.random.randn(2),
+                              np.random.rand(2),
+                              plates=(5,),
+                              shape=(2,))
+        x1 = X1.get_moments()
+        X2 = GaussianArrayARD(np.random.randn(6,1,2),
+                              np.random.rand(6,1,2),
+                              plates=(6,1),
+                              shape=(2,))
+        x2 = X2.get_moments()
+        mu = np.einsum('...i,...j->...ij', x1[0], x2[0])
+        cov = np.einsum('...ik,...jl->...ijkl', x1[1], x2[1])
+        compare_moments(mu,
+                        cov,
+                        'i,j->ij',
+                        X1,
+                        X2)
+        compare_moments(mu,
+                        cov,
+                        X1,
+                        [9],
+                        X2,
+                        [7],
+                        [9,7])
+
+        # Matrix product
+        Y1 = GaussianArrayARD(np.random.randn(3,2),
+                              np.random.rand(3,2),
+                              plates=(),
+                              shape=(3,2))
+        y1 = Y1.get_moments()
+        Y2 = GaussianArrayARD(np.random.randn(5,2,3),
+                              np.random.rand(5,2,3),
+                              plates=(5,),
+                              shape=(2,3))
+        y2 = Y2.get_moments()
+        mu = np.einsum('...ik,...kj->...ij', y1[0], y2[0])
+        cov = np.einsum('...ikjl,...kmln->...imjn', y1[1], y2[1])
+        compare_moments(mu,
+                        cov,
+                        'ik,kj->ij',
+                        Y1,
+                        Y2)
+        compare_moments(mu,
+                        cov,
+                        Y1,
+                        ['i','k'],
+                        Y2,
+                        ['k','j'],
+                        ['i','j'])
+
+        # Trace of a matrix product
+        Y1 = GaussianArrayARD(np.random.randn(3,2),
+                              np.random.rand(3,2),
+                              plates=(),
+                              shape=(3,2))
+        y1 = Y1.get_moments()
+        Y2 = GaussianArrayARD(np.random.randn(5,2,3),
+                              np.random.rand(5,2,3),
+                              plates=(5,),
+                              shape=(2,3))
+        y2 = Y2.get_moments()
+        mu = np.einsum('...ij,...ji->...', y1[0], y2[0])
+        cov = np.einsum('...ikjl,...kilj->...', y1[1], y2[1])
+        compare_moments(mu,
+                        cov,
+                        'ij,ji',
+                        Y1,
+                        Y2)
+        compare_moments(mu,
+                        cov,
+                        'ij,ji->',
+                        Y1,
+                        Y2)
+        compare_moments(mu,
+                        cov,
+                        Y1,
+                        ['i','j'],
+                        Y2,
+                        ['j','i'])
+        compare_moments(mu,
+                        cov,
+                        Y1,
+                        ['i','j'],
+                        Y2,
+                        ['j','i'],
+                        [])
+
+        # Vector-matrix-vector product
         X1 = GaussianArrayARD(np.random.randn(3),
                               np.random.rand(3),
                               plates=(),
                               shape=(3,))
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(3,1,3),
-                              np.random.rand(3,1,3),
-                              plates=(3,1),
-                              shape=(3,))
+        X2 = GaussianArrayARD(np.random.randn(6,1,2),
+                              np.random.rand(6,1,2),
+                              plates=(6,1),
+                              shape=(2,))
         x2 = X2.get_moments()
-        X3 = GaussianArrayARD(np.random.randn(3,3,3,3),
-                              np.random.rand(3,3,3,3),
-                              plates=(3,3,3),
-                              shape=(3,))
-        x3 = X3.get_moments()
-
-        # 2-D Gaussians
-        Y1 = GaussianArrayARD(np.random.randn(3,3),
-                              np.random.rand(3,3),
-                              plates=(),
-                              shape=(3,3))
-        y1 = Y1.get_moments()
-        Y2 = GaussianArrayARD(np.random.randn(3,3,3),
-                              np.random.rand(3,3,3),
-                              plates=(3,),
-                              shape=(3,3))
-        y2 = Y2.get_moments()
-
-        # 3-D Gaussians
-        Z1 = GaussianArrayARD(np.random.randn(3,3,3),
-                              np.random.rand(3,3,3),
-                              plates=(),
-                              shape=(3,3,3))
-        z1 = Z1.get_moments()
-
-        # Do nothing for 2-D array
-        self.compare_moments(y2[0],
-                             y2[1],
-                             'ij->ij',
-                             Y2)
-        self.compare_moments(y2[0],
-                             y2[1],
-                             Y2,
-                             [0,1],
-                             [0,1])
-
-        # Sum over the rows of a matrix
-        mu = np.einsum('...ij->...j', y2[0])
-        cov = np.einsum('...ijkl->...jl', y2[1])
-        self.compare_moments(mu,
-                             cov,
-                             'ij->j',
-                             Y2)
-        self.compare_moments(mu,
-                             cov,
-                             Y2,
-                             [0,1],
-                             [1])
-
-        # Inner product of three vectors
-        mu = np.einsum('...i,...i,...i->...', x1[0], x2[0], x3[0])
-        cov = np.einsum('...ij,...ij,...ij->...', x1[1], x2[1], x3[1])
-        self.compare_moments(mu,
-                             cov,
-                             'i,i,i',
-                             X1,
-                             X2,
-                             X3)
-        self.compare_moments(mu,
-                             cov,
-                             'i,i,i->',
-                             X1,
-                             X2,
-                             X3)
-        self.compare_moments(mu,
-                             cov,
-                             X1,
-                             [9],
-                             X2,
-                             [9],
-                             X3,
-                             [9])
-        self.compare_moments(mu,
-                             cov,
-                             X1,
-                             [9],
-                             X2,
-                             [9],
-                             X3,
-                             [9],
-                             [])
-                            
-
-        # Outer product of two vectors
-        mu = np.einsum('...i,...j->...ij', x2[0], x3[0])
-        cov = np.einsum('...ik,...jl->...ijkl', x2[1], x3[1])
-        self.compare_moments(mu,
-                             cov,
-                             'i,j->ij',
-                             X2,
-                             X3)
-        self.compare_moments(mu,
-                             cov,
-                             X2,
-                             [9],
-                             X3,
-                             [7],
-                             [9,7])
-
-        # Matrix product
-        mu = np.einsum('...ik,...kj->...ij', y1[0], y2[0])
-        cov = np.einsum('...ikjl,...kmln->...imjn', y1[1], y2[1])
-        self.compare_moments(mu,
-                             cov,
-                             'ik,kj->ij',
-                             Y1,
-                             Y2)
-        self.compare_moments(mu,
-                             cov,
-                             Y1,
-                             ['i','k'],
-                             Y2,
-                             ['k','j'],
-                             ['i','j'])
-
-        # Trace of a matrix product
-        mu = np.einsum('...ij,...ji->...', y1[0], y2[0])
-        cov = np.einsum('...ikjl,...kilj->...', y1[1], y2[1])
-        self.compare_moments(mu,
-                             cov,
-                             'ij,ji',
-                             Y1,
-                             Y2)
-        self.compare_moments(mu,
-                             cov,
-                             'ij,ji->',
-                             Y1,
-                             Y2)
-        self.compare_moments(mu,
-                             cov,
-                             Y1,
-                             ['i','j'],
-                             Y2,
-                             ['j','i'])
-        self.compare_moments(mu,
-                             cov,
-                             Y1,
-                             ['i','j'],
-                             Y2,
-                             ['j','i'],
-                             [])
-
-        # Vector-matrix-vector product
-        mu = np.einsum('...i,...ij,...j->...', x1[0], y2[0], x2[0])
-        cov = np.einsum('...ia,...ijab,...jb->...', x1[1], y2[1], x2[1])
-        self.compare_moments(mu,
-                             cov,
-                             'i,ij,j',
-                             X1,
-                             Y2,
-                             X2)
-        self.compare_moments(mu,
-                             cov,
-                             X1,
-                             [1],
-                             Y2,
-                             [1,2],
-                             X2,
-                             [2])
+        Y = GaussianArrayARD(np.random.randn(3,2),
+                             np.random.rand(3,2),
+                             plates=(),
+                             shape=(3,2))
+        y = Y.get_moments()
+        mu = np.einsum('...i,...ij,...j->...', x1[0], y[0], x2[0])
+        cov = np.einsum('...ia,...ijab,...jb->...', x1[1], y[1], x2[1])
+        compare_moments(mu,
+                        cov,
+                        'i,ij,j',
+                        X1,
+                        Y,
+                        X2)
+        compare_moments(mu,
+                        cov,
+                        X1,
+                        [1],
+                        Y,
+                        [1,2],
+                        X2,
+                        [2])
         
         # Complex sum-product of 0-D, 1-D, 2-D and 3-D arrays
-        mu = np.einsum('...,...i,...kj,...jik->...k', v1[0], x3[0], y2[0], z1[0])
-        cov = np.einsum('...,...ia,...kjcb,...jikbac->...kc', v1[1], x3[1], y2[1], z1[1])
-        self.compare_moments(mu,
-                             cov,
-                             ',i,kj,jik->k',
-                             V1,
-                             X3,
-                             Y2,
-                             Z1)
-        self.compare_moments(mu,
-                             cov,
-                             V1,
-                             [],
-                             X3,
-                             ['i'],
-                             Y2,
-                             ['k','j'],
-                             Z1,
-                             ['j','i','k'],
-                             ['k'])
+        V = GaussianArrayARD(np.random.randn(7,6,5),
+                             np.random.rand(7,6,5),
+                             plates=(7,6,5),
+                             shape=())
+        v = V.get_moments()
+        X = GaussianArrayARD(np.random.randn(6,1,2),
+                              np.random.rand(6,1,2),
+                              plates=(6,1),
+                              shape=(2,))
+        x = X.get_moments()
+        Y = GaussianArrayARD(np.random.randn(3,4),
+                             np.random.rand(3,4),
+                             plates=(5,),
+                             shape=(3,4))
+        y = Y.get_moments()
+        Z = GaussianArrayARD(np.random.randn(4,2,3),
+                              np.random.rand(4,2,3),
+                              plates=(6,5),
+                              shape=(4,2,3))
+        z = Z.get_moments()
+        mu = np.einsum('...,...i,...kj,...jik->...k', v[0], x[0], y[0], z[0])
+        cov = np.einsum('...,...ia,...kjcb,...jikbac->...kc', v[1], x[1], y[1], z[1])
+        compare_moments(mu,
+                        cov,
+                        ',i,kj,jik->k',
+                        V,
+                        X,
+                        Y,
+                        Z)
+        compare_moments(mu,
+                        cov,
+                        V,
+                        [],
+                        X,
+                        ['i'],
+                        Y,
+                        ['k','j'],
+                        Z,
+                        ['j','i','k'],
+                        ['k'])
+
+        pass
+
+    def test_message_to_parent(self):
+        """
+        Test the message from SumMultiply node to its parents.
+        """
+
+        data = 2
+        tau = 3
+        
+        def check_message(true_m0, true_m1, parent, *args, **kwargs):
+            A = SumMultiply(*args, **kwargs)
+            B = GaussianArrayARD(A, tau)
+            B.observe(data*np.ones(A.plates + A.dims[0]))
+            (A_m0, A_m1) = A._message_to_parent(parent)
+            self.assertAllClose(true_m0, A_m0)
+            self.assertAllClose(true_m1, A_m1)
+            pass
+
+        # Do nothing for 2-D array
+        Y = GaussianArrayARD(np.random.randn(5,3,2),
+                             np.random.rand(5,3,2),
+                             plates=(5,),
+                             shape=(3,2))
+        y = Y.get_moments()
+        m0 = tau * data * np.ones(np.shape(y[0]))
+        m1 = -0.5 * tau * utils.identity(*(Y.dims[0]))
+        check_message(m0, m1, 0,
+                      'ij->ij',
+                      Y)
+        check_message(m0, m1, 0,
+                      Y,
+                      [0,1],
+                      [0,1])
+
+
+        # Sum over the rows of a matrix
+        Y = GaussianArrayARD(np.random.randn(5,3,2),
+                             np.random.rand(5,3,2),
+                             plates=(5,),
+                             shape=(3,2))
+        y = Y.get_moments()
+        m0 = tau * data * np.ones((5,3,2))
+        m1 = -0.5 * tau * utils.identity(1,2) * np.ones((3,2,3,2))
+        check_message(m0, m1, 0,
+                      'ij->j',
+                      Y)
+        check_message(m0, m1, 0,
+                      Y,
+                      [0,1],
+                      [1])
+
+        # Inner product of three vectors
+        X1 = GaussianArrayARD(np.random.randn(2),
+                              np.random.rand(2),
+                              plates=(),
+                              shape=(2,))
+        x1 = X1.get_moments()
+        X2 = GaussianArrayARD(np.random.randn(6,1,2),
+                              np.random.rand(6,1,2),
+                              plates=(6,1),
+                              shape=(2,))
+        x2 = X2.get_moments()
+        X3 = GaussianArrayARD(np.random.randn(7,6,5,2),
+                              np.random.rand(7,6,5,2),
+                              plates=(7,6,5),
+                              shape=(2,))
+        x3 = X3.get_moments()
+        m0 = tau * data * np.sum(x2[0] * x3[0], axis=(0,1,2))
+        m1 = -0.5 * tau * np.sum(x2[1] * x3[1], axis=(0,1,2))
+        check_message(m0, m1, 0,
+                      'i,i,i',
+                      X1,
+                      X2,
+                      X3)
+        check_message(m0, m1, 0,
+                      'i,i,i->',
+                      X1,
+                      X2,
+                      X3)
+        check_message(m0, m1, 0,
+                      X1,
+                      [9],
+                      X2,
+                      [9],
+                      X3,
+                      [9])
+        check_message(m0, m1, 0,
+                      X1,
+                      [9],
+                      X2,
+                      [9],
+                      X3,
+                      [9],
+                      [])
+                            
+        pass
 
 
         

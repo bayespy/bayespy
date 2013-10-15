@@ -782,6 +782,7 @@ def _GaussianArrayARD(shape, shape_mu=None):
                 m1 = -0.5 * utils.utils.sum_multiply(Alpha, 
                                                      utils.utils.identity(*shape),
                                                      axis=axes1)
+                print("HEREHERE", np.shape(m1), axes0)
 
                 return [m0, m1]
             
