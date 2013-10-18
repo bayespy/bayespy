@@ -166,7 +166,7 @@ def logdet_tri(R):
 def logdet_cov(C):
     return logdet_chol(chol(C))
 
-def m_solve_triangular(U, B, **kwargs):
+def solve_triangular(U, B, **kwargs):
     # Allocate memory
     U = np.atleast_2d(U)
     B = np.atleast_1d(B)
@@ -182,13 +182,7 @@ def m_solve_triangular(U, B, **kwargs):
 
     # Shape of the result (broadcasting rules)
     sh = broadcasted_shape(sh_u, sh_b)
-    #out = np.zeros(np.shape(B))
     out = np.zeros(sh + B.shape[-1:])
-    ## if out == None:
-    ##     # Shape of the result (broadcasting rules)
-    ##     sh = broadcasted_shape(sh_u, sh_b)
-    ##     #out = np.zeros(np.shape(B))
-    ##     out = np.zeros(sh + B.shape[-1:])
     for i in utils.nested_iterator(np.shape(U)[:-2]):
 
         # The goal is to run triangular solver once for all vectors of
@@ -216,12 +210,9 @@ def m_solve_triangular(U, B, **kwargs):
         else:
             ind_out = tuple(ind_b) + (Ellipsis,)
 
-        #print('utils.m_solve_triangular', np.shape(U[i]), np.shape(b))
         out[ind_out] = linalg.solve_triangular(U[i],
                                                b.T,
                                                **kwargs).T.reshape(orig_shape)
-        #out[ind_out] = out[ind_out].T.reshape(orig_shape)
-
         
     return out
     
