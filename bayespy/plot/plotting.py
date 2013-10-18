@@ -51,7 +51,7 @@ def timeseries_gaussian(X, axis=-1, scale=2):
     xx = u_X[1]
     std = scale * np.sqrt(np.einsum('...ii->...i', xx) - x**2)
     
-    _timeseries_mean_and_std(x, std, axis=axis)
+    _timeseries_mean_and_error(x, std, axis=axis)
     
 def timeseries_normal(X, axis=-1, scale=2):
     """
@@ -65,11 +65,11 @@ def timeseries_normal(X, axis=-1, scale=2):
     x = u_X[0]
     xx = u_X[1]
     std = scale * np.sqrt(xx - x**2)
-    _timeseries_mean_and_std(x, std, axis=axis)
+    _timeseries_mean_and_error(x, std, axis=axis)
 
 
 def timeseries(x, *args, axis=-1, **kwargs):
-    return _timeseries_mean_and_std(x, None, *args, axis=axis, **kwargs)
+    return _timeseries_mean_and_error(x, None, *args, axis=axis, **kwargs)
 
 def _timeseries_mean_and_error(y, std, *args, axis=-1, **kwargs):
     # TODO/FIXME: You must multiply by ones(plates) in order to plot
