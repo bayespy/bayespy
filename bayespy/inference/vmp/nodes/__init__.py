@@ -34,6 +34,6 @@ from .normal import Normal
 from .gamma import Gamma
 from .dirichlet import Dirichlet
 from .categorical import Categorical
-from .dot import Dot, MatrixDot, SumMultiply
+from .dot import Dot, SumMultiply
 from .mixture import Mixture
 from .gaussian_markov_chain import GaussianMarkovChain

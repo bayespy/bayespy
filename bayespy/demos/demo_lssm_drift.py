@@ -33,7 +33,7 @@ from bayespy.inference.vmp.nodes.gaussian_markov_chain import GaussianMarkovChai
 from bayespy.inference.vmp.nodes.gaussian import Gaussian
 from bayespy.inference.vmp.nodes.gamma import Gamma, diagonal
 from bayespy.inference.vmp.nodes.normal import Normal
-from bayespy.inference.vmp.nodes.dot import Dot, MatrixDot
+from bayespy.inference.vmp.nodes.dot import Dot, SumMultiply
 from bayespy.inference.vmp.nodes.deterministic import tile
 
 from bayespy.utils import utils
