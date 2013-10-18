@@ -29,11 +29,11 @@ import numpy as np
 import scipy
 import matplotlib.pyplot as plt
 
-from bayespy.inference.vmp.nodes.gaussian_markov_chain import GaussianMarkovChain
-from bayespy.inference.vmp.nodes.gaussian import Gaussian
-from bayespy.inference.vmp.nodes.gamma import Gamma
-from bayespy.inference.vmp.nodes.normal import Normal
-from bayespy.inference.vmp.nodes.dot import Dot
+from bayespy.nodes import GaussianMarkovChain
+from bayespy.nodes import Gaussian, GaussianArrayARD
+from bayespy.nodes import Gamma
+from bayespy.nodes import Normal
+from bayespy.nodes import SumMultiply
 from bayespy.inference.vmp.nodes.gamma import diagonal
 
 from bayespy.utils import utils
@@ -80,7 +80,7 @@ def linear_state_space_model(D=3, N=100, M=10):
                 name='tau')
 
     # Observations
-    CX = Dot(C, X.as_gaussian())
+    CX = SumMultiply('i,i', C, X.as_gaussian())
     Y = Normal(CX,
                tau,
                name='Y')

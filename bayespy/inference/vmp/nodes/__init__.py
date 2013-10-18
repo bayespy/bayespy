@@ -28,7 +28,7 @@ from . import *
 #from .node import Node
 #from .variable import Variable
 #from .constant import Constant
-from .gaussian import Gaussian
+from .gaussian import Gaussian, GaussianArrayARD
 from .wishart import Wishart
 from .normal import Normal
 from .gamma import Gamma

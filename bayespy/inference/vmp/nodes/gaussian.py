@@ -874,11 +874,17 @@ def _GaussianArrayARD(shape, shape_mu=None):
             return self.dims[0]
 
         def random(self):
-            raise NotImplementedError()
             # TODO/FIXME: You shouldn't draw random values for
             # observed/fixed elements!
+            raise NotImplementedError()
+            U = utils.linalg.chol(-2*self.phi[1])
+            mu = self.u[0]
+            z = np.random.normal(0, 1, self.get_shape(0))
+            # Compute mu + U'*z
+            z = utils.linalg.solve_triangular(U, z, trans='T', lower=False)
+            return mu + z
 
-            # Note that phi[1] is -0.5*inv(Cov)
+        # Note that phi[1] is -0.5*inv(Cov)
             U = utils.utils.m_chol(-2*self.phi[1])
             mu = self.u[0]
             z = np.random.normal(0, 1, self.get_shape(0))
