@@ -78,14 +78,14 @@ def run(M=10, N=100, D_y=3, D=5):
     w = np.random.normal(0, 1, size=(M,1,D_y))
     x = np.random.normal(0, 1, size=(1,N,D_y))
     f = utils.utils.sum_product(w, x, axes_to_sum=[-1])
-    y = f + np.random.normal(0, 0.5, size=(M,N))
+    y = f + np.random.normal(0, 0.2, size=(M,N))
 
     # Construct model
     (Y, WX, W, X, tau, alpha) = pca_model(M, N, D)
 
     # Data with missing values
-    mask = utils.random.mask(M, N, p=0.9) # randomly missing
-    mask[:,20:40] = False # gap missing
+    mask = utils.random.mask(M, N, p=0.5) # randomly missing
+    #mask[:,20:40] = False # gap missing
     y[~mask] = np.nan
     Y.observe(y, mask=mask)
 

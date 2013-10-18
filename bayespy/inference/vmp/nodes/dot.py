@@ -41,6 +41,8 @@ class SumMultiply(Deterministic):
         
     would be given as
     
+        SumMultiply('abc,bd,ca->da', X, Y, Z)
+    or
         SumMultiply(X, [0,1,2], Y, [1,3], Z, [2,0], [3,0])
         
     which is similar to the other syntax of numpy.einsum.
@@ -52,6 +54,8 @@ class SumMultiply(Deterministic):
     nodes. Also, Ellipsis ('...') is not yet supported for simplicity.
 
     Each output axis must appear in the input mappings.
+
+    The keys must refer to variable dimension axes only, not plate axes.
 
     The convenient string notation of numpy.einsum is not yet implemented.
 
@@ -443,7 +447,7 @@ class SumMultiply(Deterministic):
         
         return msg
 
-def Dot(*args):
+def Dot(*args, **kwargs):
     """
     Node for computing inner product of several Gaussian vectors.
 
@@ -451,4 +455,4 @@ def Dot(*args):
     is here for backward compatibility.
     """
     einsum = 'i' + ',i'*(len(args)-1)
-    return SumMultiply(einsum, *args)
+    return SumMultiply(einsum, *args, **kwargs)
