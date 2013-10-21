@@ -29,12 +29,12 @@ import numpy as np
 import scipy
 import matplotlib.pyplot as plt
 
-from bayespy.inference.vmp.nodes.gaussian_markov_chain import GaussianMarkovChain
-from bayespy.inference.vmp.nodes.gaussian import Gaussian
-from bayespy.inference.vmp.nodes.gamma import Gamma, diagonal
-from bayespy.inference.vmp.nodes.normal import Normal
-from bayespy.inference.vmp.nodes.dot import Dot, SumMultiply
-from bayespy.inference.vmp.nodes.deterministic import tile
+from bayespy.nodes import GaussianMarkovChain
+from bayespy.nodes import GaussianArrayARD
+from bayespy.nodes import Gamma
+#from bayespy.normal import Normal
+from bayespy.nodes import SumMultiply
+#from bayespy.inference.vmp.nodes.deterministic import tile
 
 from bayespy.utils import utils
 from bayespy.utils import random
@@ -85,10 +85,11 @@ def run_dlssm(y, f, mask, D, K, maxiter):
                   plates=(K,),
                   name='alpha')
     # A : (K) x (K)
-    A = Gaussian(np.zeros(K),
-                 diagonal(alpha),
-                 plates=(K,),
-                 name='A_S')
+    A = GaussianArrayARD(np.zeros(K),
+                         alpha,
+                         plates=(K,),
+                         name='A_S',
+                         initialize=False)
     A.initialize_from_value(np.identity(K))
 
     # State of the drift
@@ -97,9 +98,10 @@ def run_dlssm(y, f, mask, D, K, maxiter):
                             1e-6*np.identity(K),
                             A,
                             np.ones(K),
-                            n=N-1,
+                            n=N,
                             name='S',
-                            initialize=np.ones((N,K)))
+                            initialize=False)
+    S.initialize_from_value(np.ones((N,K)))
 
     # Projection matrix of the dynamics matrix
     # Initialize S and B such that BS is identity matrix
@@ -111,18 +113,14 @@ def run_dlssm(y, f, mask, D, K, maxiter):
     # B : (D) x (D,K)
     b = np.zeros((D,D,K))
     b[np.arange(D),np.arange(D),np.zeros(D,dtype=int)] = 1
-    B = GaussianMatrix(np.zeros(D,K),
-                       beta,
-                       plates=(D,),
-                       name='B',
-                       initialize=np.reshape(1*b, (D,D,K)))
+    B = GaussianArrayARD(np.zeros((D,K)),
+                         beta,
+                         plates=(D,),
+                         name='B',
+                         initialize=False)
+    B.initialize_from_value(np.reshape(1*b, (D,D,K)))
     # BS : (N-1,D) x (D)
-    ## BS = DotMatrix(B, 
-    ##                S.as_gaussian()[1:].as_row_vector().add_plate_axis(-1), 
-    ##                sum_rows=False,
-    ##                sum_cols=True,
-    ##                iterator_axis=0,
-    ##                name='BS')
+    # TODO/FIXME: Implement __getitem__ method
     BS = SumMultiply('dk,k->d',
                      B, 
                      S.as_gaussian()[1:].add_plate_axis(-1), 
@@ -137,7 +135,8 @@ def run_dlssm(y, f, mask, D, K, maxiter):
                             np.ones(D),          # innovation
                             n=N,                 # time instances
                             name='X',
-                            initialize=np.random.randn(N,D))
+                            initialize=False)
+    X.initialize_from_value(np.random.randn(N,D))
 
     # Mixing matrix from latent space to observation space using ARD
     # gamma : (D) x ()
@@ -146,18 +145,12 @@ def run_dlssm(y, f, mask, D, K, maxiter):
                   plates=(D,K),
                   name='gamma')
     # C : (M,1) x (D,K)
-    C = GaussianMatrix(np.zeros(D,K),
-                       gamma,
-                       plates=(M,1),
-                       name='C',
-                       initialize='random')
-    # CS : (M,N) x (D)
-    ## CS = DotMatrix(C,
-    ##                S.as_gaussian().as_row_vector(),
-    ##                sum_rows=False,
-    ##                sum_cols=True,
-    ##                iterator_axis=-1,
-    ##                names='CS')
+    C = GaussianArrayARD(np.zeros((D,K)),
+                         gamma,
+                         plates=(M,1),
+                         name='C',
+                         initialize=False)
+    C.initialize_from_random()
 
     # Observation noise
     # tau : () x ()
@@ -167,13 +160,6 @@ def run_dlssm(y, f, mask, D, K, maxiter):
 
     # Observations
     # Y : (M,N) x ()
-    #CX = Dot(C, X.as_gaussian())
-    ## F = DotMatrix(C,
-    ##               X.as_gaussian().as_column_vector(),
-    ##               S.as_gaussian().as_row_vector(),
-    ##               sum_rows=True,
-    ##               sum_cols=True,
-    ##               name='F')
     F = SumMultiply('dk,d,k',
                     C,
                     X.as_gaussian(),
