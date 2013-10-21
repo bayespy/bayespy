@@ -42,6 +42,9 @@ import tempfile as tmp
 import unittest
 from numpy import testing
 
+def rmse(y1, y2, axis=None):
+    return np.sqrt(np.mean((y1-y2)**2, axis=axis))
+
 def is_callable(f):
     return hasattr(f, '__call__')
 
@@ -108,6 +111,9 @@ def nans(size=()):
 
 def trues(shape):
     return np.ones(shape, dtype=np.bool)
+
+def identity(*shape):
+    return np.reshape(np.identity(np.prod(shape)), shape+shape)
 
 def array_to_scalar(x):
     # This transforms an N-dimensional array to a scalar. It's most
@@ -315,12 +321,35 @@ def check_gradient(x0, f, df, eps):
     print('x: ' + str(x0))
     print('Numerical gradient: ' + str(grad))
     print('Exact gradient: ' + str(df(x0)))
-    
 
+def zipper_merge(*lists):
+    """
+    Combines lists by alternating elements from them.
+
+    Combining lists [1,2,3], ['a','b','c'] and [42,666,99] results in
+    [1,'a',42,2,'b',666,3,'c',99]
+
+    The lists should have equal length or they are assumed to have the length of
+    the shortest list.
+
+    This is known as alternating merge or zipper merge.
+    """
+    
+    return list(sum(zip(*lists), ()))
+
+def remove_whitespace(s):
+    return ''.join(s.split())
+    
 def is_numeric(a):
     return (np.isscalar(a) or
             isinstance(a, list) or
             isinstance(a, np.ndarray))
+
+def is_integer(x):
+    return isinstance(x, int)
+
+def is_string(s):
+    return isinstance(s, str)
 
 def multiply_shapes(*shapes):
     """
@@ -468,43 +497,12 @@ def moveaxis(A, axis_from, axis_to):
     
 
 
-def broadcasted_shape_from_arrays(*args):
-
-    """ Computes the resulting shape if shapes a and b are broadcasted
-    together. """
-
-    # The dimensionality (i.e., number of axes) of the result
-    dim = 0
-    for a in args:
-        dim = max(dim, np.ndim(a))
-    S = ()
-    for i in range(-dim,0):
-        s = 1
-        for a in args:
-            if -i <= np.ndim(a):
-                if s == 1:
-                    s = np.shape(a)[i]
-                elif np.shape(a)[i] != 1 and np.shape(a)[i] != s:
-                    raise Exception("Shapes do not broadcast")
-        S = S + (s,)
-    return S
-
-def is_shape_subset(sub_shape, full_shape):
-    """
-    """
-    if len(sub_shape) > len(full_shape):
-        return False
-    for i in range(len(sub_shape)):
-        ind = -1 - i
-        if sub_shape[ind] != 1 and sub_shape[ind] != full_shape[ind]:
-            return False
-    return True
-
 def broadcasted_shape(*shapes):
     """
-    Get the resulting shape if the given shapes were broadcasted.
+    Computes the resulting broadcasted shape for a given set of shapes.
 
-    Broadcasting rules of NumPy.
+    Uses the broadcasting rules of NumPy.  Raises an exception if the shapes do
+    not broadcast.
     """
     dim = 0
     for a in shapes:
@@ -521,24 +519,29 @@ def broadcasted_shape(*shapes):
         S = S + (s,)
     return S
 
+def broadcasted_shape_from_arrays(*arrays):
+    """
+    Computes the resulting broadcasted shape for a given set of arrays.
 
-## def broadcasted_shape(a,b):
-##     # Computes the resulting shape if shapes a and b are broadcasted
-##     # together
-##     l_max = max(len(a), len(b))
-##     s = ()
-##     for i in range(-l_max,0):
-##         if -i > len(b):
-##             s += (a[i],)
-##         elif -i > len(a) or a[i] == 1 or a[i] == b[i]:
-##             s += (b[i],)
-##         elif b[i] == 1:
-##             s += (a[i],)
-##         else:
-##             raise Exception("Shapes %s and %s do not broadcast" % (a,b))
-##     return s
+    Raises an exception if the shapes do not broadcast.
+    """
 
-    
+    shapes = [np.shape(array) for array in arrays]
+    return broadcasted_shape(*shapes)
+
+
+def is_shape_subset(sub_shape, full_shape):
+    """
+    """
+    if len(sub_shape) > len(full_shape):
+        return False
+    for i in range(len(sub_shape)):
+        ind = -1 - i
+        if sub_shape[ind] != 1 and sub_shape[ind] != full_shape[ind]:
+            return False
+    return True
+
+
 def add_leading_axes(x, n):
     shape = (1,)*n + np.shape(x)
     return np.reshape(x, shape)
@@ -547,9 +550,14 @@ def add_trailing_axes(x, n):
     shape = np.shape(x) + (1,)*n
     return np.reshape(x, shape)
 
-def add_axes(x, lead, trail):
-    shape = (1,)*lead + np.shape(x) + (1,)*trail
-    return np.reshape(x, shape)
+def add_axes(X, axis=0, num=1):
+    shape = np.shape(X)[:axis] + num*(1,) + np.shape(X)[axis:]
+    return np.reshape(X, shape)
+    
+    
+## def add_axes(x, lead, trail):
+##     shape = (1,)*lead + np.shape(x) + (1,)*trail
+##     return np.reshape(x, shape)
     
     
 
@@ -557,6 +565,28 @@ def nested_iterator(max_inds):
     s = (range(i) for i in max_inds)
     return itertools.product(*s)
 
+def first(L):
+    """
+    """
+    for (n,l) in enumerate(L):
+        if l:
+            return n
+    return None
+
+def squeeze(X):
+    """
+    Remove leading axes that have unit length.
+
+    For instance, a shape (1,1,4,1,3) will be reshaped to (4,1,3).
+    """
+    shape = np.array(np.shape(X))
+    inds = np.nonzero(shape != 1)[0]
+    if len(inds) == 0:
+        shape = ()
+    else:
+        shape = shape[inds[0]:]
+    return np.reshape(X, shape)
+    
 def squeeze_to_dim(X, dim):
     s = tuple(range(np.ndim(X)-dim))
     return np.squeeze(X, axis=s)
@@ -805,6 +835,49 @@ def m_outer(A,B):
 
 def diagonal(A):
     return np.diagonal(A, axis1=-2, axis2=-1)
+
+def get_diag(X, ndim=1):
+    """
+    Get the diagonal of an array.
+
+    If ndim>1, take the diagonal of the last 2*ndim axes.
+    """
+    if ndim == 0:
+        return X
+
+    if ndim < 0:
+        raise ValueError("Parameter ndim must be non-negative integer")
+
+    if np.ndim(X) < 2*ndim:
+        raise ValueError("The array does not have enough axes")
+
+    if np.shape(X)[-ndim:] != np.shape(X)[-2*ndim:-ndim]:
+        raise ValueError("The array X is not square")
+
+    axes_out = tuple(range(np.ndim(X)-ndim, 0, -1))
+    axes_dim = tuple(range(ndim, 0, -1))
+    return np.einsum(X, axes_out+axes_dim, axes_out)
+    
+
+def diag(X, ndim=1):
+    """
+    Create a diagonal array given the diagonal elements.
+
+    The diagonal array can be multi-dimensional. By default, the last axis is
+    transformed to two axes (diagonal matrix) but this can be changed using ndim
+    keyword. For instance, an array with shape (K,L,M,N) can be transformed to a
+    set of diagonal 4-D tensors with shape (K,L,M,N,M,N) by giving ndim=2. If
+    ndim=3, the result has shape (K,L,M,N,L,M,N), and so on.
+
+    Diagonality means that for the resulting array Y holds:
+    Y[...,i_1,i_2,..,i_ndim,j_1,j_2,..,j_ndim] is zero if i_n!=j_n for any n.
+    """
+    X = atleast_nd(X, ndim)
+    if ndim > 0:
+        I = identity(*(np.shape(X)[-ndim:]))
+        X = add_axes(X, axis=np.ndim(X), num=ndim)
+        X = I * X
+    return X
 
 def m_dot(A,b):
     # Compute matrix-vector product over the last two axes of A and

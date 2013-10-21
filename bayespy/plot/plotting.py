@@ -30,7 +30,15 @@ from matplotlib import animation
 
 from bayespy import utils
 
-def timeseries_gaussian(X, axis=-1):
+def timeseries_gaussian_mc(X, scale=2):
+    """
+    Parameters:
+    X : node
+        Node with Gaussian Markov chain moments.
+    """
+    timeseries_gaussian(X, axis=-2, scale=scale)
+    
+def timeseries_gaussian(X, axis=-1, scale=2):
     """
     Parameters:
     X : node
@@ -41,11 +49,11 @@ def timeseries_gaussian(X, axis=-1):
     u_X = X.get_moments()
     x = u_X[0]
     xx = u_X[1]
-    std = np.sqrt(np.einsum('...ii->...i', xx) - x**2)
+    std = scale * np.sqrt(np.einsum('...ii->...i', xx) - x**2)
     
-    _timeseries_mean_and_std(x, std, axis=axis)
+    _timeseries_mean_and_error(x, std, axis=axis)
     
-def timeseries_normal(X, axis=-1):
+def timeseries_normal(X, axis=-1, scale=2):
     """
     Parameters:
     X : node
@@ -56,14 +64,14 @@ def timeseries_normal(X, axis=-1):
     u_X = X.get_moments()
     x = u_X[0]
     xx = u_X[1]
-    std = np.sqrt(xx - x**2)
-    _timeseries_mean_and_std(x, std, axis=axis)
+    std = scale * np.sqrt(xx - x**2)
+    _timeseries_mean_and_error(x, std, axis=axis)
 
 
-def timeseries(x, axis=-1):
-    return _timeseries_mean_and_std(x, 0*x, axis=axis)
+def timeseries(x, *args, axis=-1, **kwargs):
+    return _timeseries_mean_and_error(x, None, *args, axis=axis, **kwargs)
 
-def _timeseries_mean_and_std(y, std, axis=-1, **kwargs):
+def _timeseries_mean_and_error(y, std, *args, axis=-1, **kwargs):
     # TODO/FIXME: You must multiply by ones(plates) in order to plot
     # broadcasted plates properly
     
@@ -74,10 +82,12 @@ def _timeseries_mean_and_std(y, std, axis=-1, **kwargs):
 
     # Move time axis to first
     y = np.rollaxis(y, axis)
-    std = np.rollaxis(std, axis)
+    if std is not None:
+        std = np.rollaxis(std, axis)
     
     y = np.reshape(y, (T, -1))
-    std = np.reshape(std, (T, -1))
+    if std is not None:
+        std = np.reshape(std, (T, -1))
 
     # Remove 1s
     shape = [s for s in shape if s > 1]
@@ -94,10 +104,14 @@ def _timeseries_mean_and_std(y, std, axis=-1, **kwargs):
         N = 1
 
     # Plot each timeseries
-    #M = 2
     for i in range(M*N):
         plt.subplot(M,N,i+1)
-        errorplot(y=y[:,i], error=2*std[:,i], **kwargs)
+        if std is None:
+            plt.plot(y[:,i], *args, **kwargs)
+        else:
+            if len(args) > 0:
+                raise Exception("Can't handle extra arguments")
+            errorplot(y=y[:,i], error=std[:,i], **kwargs)
 
 def matrix(A):
     A = np.atleast_2d(A)

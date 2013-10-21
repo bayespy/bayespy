@@ -267,6 +267,7 @@ class Node():
 
         # Compute the message and mask
         (m, mask) = self._get_message_and_mask_to_parent(index)
+        mask = utils.squeeze(mask)
 
         # Plates in the mask
         plates_mask = np.shape(mask)
@@ -369,6 +370,25 @@ class Node():
 
     @staticmethod
     def _plate_multiplier(plates, *args):
+        """
+        Compute the plate multiplier for given shapes.
+
+        The first shape is compared to all other shapes (using NumPy
+        broadcasting rules). All the elements which are non-unit in the first
+        shape but 1 in all other shapes are multiplied together.
+
+        This method is used, for instance, for computing a correction factor for
+        messages to parents: If this node has non-unit plates that are unit
+        plates in the parent, those plates are summed. However, if the message
+        has unit axis for that plate, it should be first broadcasted to the
+        plates of this node and then summed to the plates of the parent. In
+        order to avoid this broadcasting and summing, it is more efficient to
+        just multiply by the correct factor. This method computes that
+        factor. The first argument is the full plate shape of this node (with
+        respect to the parent). The other arguments are the shape of the message
+        array and the plates of the parent (with respect to this node).
+        """
+        
         # Check broadcasting of the shapes
         for arg in args:
             utils.broadcasted_shape(plates, arg)
@@ -383,6 +403,7 @@ class Node():
         for j in range(-len(plates),0):
             mult = True
             for arg in args:
+                # if -j <= len(arg) and arg[j] != 1:
                 if not (-j > len(arg) or arg[j] == 1):
                     mult = False
             if mult:

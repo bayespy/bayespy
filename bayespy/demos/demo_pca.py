@@ -22,19 +22,20 @@
 ######################################################################
 
 
-import time
 import numpy as np
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
 from bayespy.plot import plotting as myplt
 
 from bayespy import utils
-from bayespy.inference.vmp import nodes
+from bayespy import nodes
 
 from bayespy.inference.vmp.vmp import VB
 from bayespy.inference.vmp import transformations
 
 from bayespy.inference.vmp.nodes.gamma import diagonal
+
+import bayespy.plot.plotting as bpplt
 
 def pca_model(M, N, D):
     # Construct the PCA model with ARD
@@ -58,34 +59,33 @@ def pca_model(M, N, D):
                        plates=(1,N))
 
     # PCA
-    WX = nodes.Dot(W, X, name="WX")
+    F = nodes.SumMultiply('i,i', W, X, name="F")
 
     # Noise
     tau = nodes.Gamma(1e-2, 1e-2, name="tau", plates=())
 
     # Noisy observations
-    Y = nodes.Normal(WX, tau, name="Y", plates=(M,N))
+    Y = nodes.Normal(F, tau, name="Y", plates=(M,N))
 
-    return (Y, WX, W, X, tau, alpha)
+    return (Y, F, W, X, tau, alpha)
 
 
-def run(M=10, N=100, D_y=3, D=5):
-    seed = 45
-    print('seed =', seed)
-    np.random.seed(seed)
+def run(M=10, N=100, D_y=3, D=5, seed=42):
+
+    if seed is not None:
+        np.random.seed(seed)
     
     # Generate data
     w = np.random.normal(0, 1, size=(M,1,D_y))
     x = np.random.normal(0, 1, size=(1,N,D_y))
     f = utils.utils.sum_product(w, x, axes_to_sum=[-1])
-    y = f + np.random.normal(0, 0.5, size=(M,N))
+    y = f + np.random.normal(0, 0.2, size=(M,N))
 
     # Construct model
-    (Y, WX, W, X, tau, alpha) = pca_model(M, N, D)
+    (Y, F, W, X, tau, alpha) = pca_model(M, N, D)
 
     # Data with missing values
-    mask = utils.random.mask(M, N, p=0.9) # randomly missing
-    mask[:,20:40] = False # gap missing
+    mask = utils.random.mask(M, N, p=0.5) # randomly missing
     y[~mask] = np.nan
     Y.observe(y, mask=mask)
 
@@ -93,23 +93,18 @@ def run(M=10, N=100, D_y=3, D=5):
     Q = VB(Y, W, X, tau, alpha)
 
     # Initialize some nodes randomly
-    X.initialize_from_value(X.random())
-    W.initialize_from_value(W.random())
+    X.initialize_from_random()
+    W.initialize_from_random()
 
     # Inference loop.
+    # TODO/FIXME: Use rotations.
     Q.update(repeat=100)
 
     # Plot results
-    plt.clf()
-    WX_params = WX.get_parameters()
-    fh = WX_params[0] * np.ones(y.shape)
-    err_fh = 2*np.sqrt(WX_params[1] + 1/tau.get_moments()[0]) * np.ones(y.shape)
-    for m in range(M):
-        plt.subplot(M,1,m+1)
-        myplt.errorplot(fh[m], x=np.arange(N), error=err_fh[m])
-        plt.plot(np.arange(N), f[m], 'g')
-        plt.plot(np.arange(N), y[m], 'r+')
-
+    plt.figure()
+    bpplt.timeseries_normal(F)
+    bpplt.timeseries(f, 'g-')
+    bpplt.timeseries(y, 'r+')
     plt.show()
 
 if __name__ == '__main__':

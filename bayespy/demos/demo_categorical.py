@@ -21,26 +21,12 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
-
 import numpy as np
-import matplotlib.pyplot as plt
-import time
 
-from bayespy.utils import utils
-from bayespy.plot import plotting as myplt
-import bayespy.inference.vmp.nodes as EF
+from bayespy.utils import random
+from bayespy import nodes
 
-import imp
-imp.reload(utils)
-imp.reload(myplt)
-imp.reload(EF)
-
-def categorical_model(M, D):
-
-    p = EF.Dirichlet(1*np.ones(D), name='p')
-    z = EF.Categorical(p, plates=(M,), name='z')
-    return (z, p)
-
+from bayespy.inference.vmp.vmp import VB
 
 def run(M=30, D=5):
 
@@ -48,41 +34,21 @@ def run(M=30, D=5):
     y = np.random.randint(D, size=(M,))
 
     # Construct model
-    (z, p) = categorical_model(M, D)
-
-    # Initialize nodes
-    p.update()
-    z.update()
+    p = nodes.Dirichlet(1*np.ones(D),
+                        name='p')
+    z = nodes.Categorical(p, 
+                          plates=(M,), 
+                          name='z')
 
     # Observe the data with randomly missing values
-    mask = np.random.rand(M) < 0.5 # randomly missing
-    z.observe(y, mask)
+    mask = random.mask(M, p=0.5)
+    z.observe(y, mask=mask)
 
-    # Inference loop.
-    L_last = -np.inf
-    for i in range(10):
-        t = time.clock()
+    # Run VB-EM
+    Q = VB(p, z)
+    Q.update()
 
-        # Update nodes
-        p.update()
-        z.update()
-
-        # Compute lower bound
-        L_p = p.lower_bound_contribution()
-        L_z = z.lower_bound_contribution()
-        L = L_p + L_z
-
-        # Check convergence
-        print("Iteration %d: loglike=%e (%.3f seconds)" % (i+1, L, time.clock()-t))
-        if L_last > L:
-            L_diff = (L_last - L)
-
-        if L - L_last < 1e-12:
-            print("Converged.")
-
-        L_last = L
-
-
+    # Show results
     z.show()
     p.show()
 

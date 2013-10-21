@@ -1,7 +1,6 @@
 # Copyright (C) 2009 Nathaniel Smith <njs@pobox.com>
 # Copyright (C) 2012 Jaakko Luttinen <jaakko.luttinen@iki.fi>
-# Released under the terms of the GNU GPL v3, or, at your option, any
-# later version.
+# Released under the terms of the GNU GPL v3
 
 import warnings
 cimport stdlib

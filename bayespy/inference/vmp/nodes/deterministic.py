@@ -39,7 +39,7 @@ class Deterministic(Node):
     2. One of the following options:
        a) Simple methods:
           _compute_message_to_parent(self, index, m, *u)
-          _compute_mask_to_parent(self, index, mask)
+          not? _compute_mask_to_parent(self, index, mask)
        b) More control with:
           _compute_message_and_mask_to_parent(self, index, m, *u)
 
