@@ -870,7 +870,6 @@ def _GaussianArrayARD(shape, shape_mu=None):
 
         def get_shape_of_value(self):
             # Dimensionality of a realization
-            raise NotImplementedError()
             return self.dims[0]
 
         def random(self):
