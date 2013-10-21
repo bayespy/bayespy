@@ -42,6 +42,12 @@ import tempfile as tmp
 import unittest
 from numpy import testing
 
+def ceildiv(a, b):
+    """
+    Compute a divided by b and rounded up.
+    """
+    return -(-a // b)
+
 def rmse(y1, y2, axis=None):
     return np.sqrt(np.mean((y1-y2)**2, axis=axis))
 

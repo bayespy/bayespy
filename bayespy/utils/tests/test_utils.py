@@ -33,6 +33,50 @@ from numpy import testing
 
 from .. import utils
 
+class TestCeilDiv(utils.TestCase):
+
+    def test_ceildiv(self):
+        """
+        Test the ceil division
+        """
+
+        self.assertEqual(utils.ceildiv(3, 1),
+                         3)
+        
+        self.assertEqual(utils.ceildiv(6, 3),
+                         2)
+        
+        self.assertEqual(utils.ceildiv(7, 3),
+                         3)
+        
+        self.assertEqual(utils.ceildiv(8, 3),
+                         3)
+        
+        self.assertEqual(utils.ceildiv(-6, 3),
+                         -2)
+        
+        self.assertEqual(utils.ceildiv(-7, 3),
+                         -2)
+        
+        self.assertEqual(utils.ceildiv(-8, 3),
+                         -2)
+        
+        self.assertEqual(utils.ceildiv(-9, 3),
+                         -3)
+        
+        self.assertEqual(utils.ceildiv(6, -3),
+                         -2)
+        
+        self.assertEqual(utils.ceildiv(7, -3),
+                         -2)
+        
+        self.assertEqual(utils.ceildiv(8, -3),
+                         -2)
+        
+        self.assertEqual(utils.ceildiv(9, -3),
+                         -3)
+        
+
 class TestAddAxes(utils.TestCase):
 
     def test_add_axes(self):
