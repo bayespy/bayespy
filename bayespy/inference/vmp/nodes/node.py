@@ -420,8 +420,214 @@ class Node():
         return AddPlateAxis(to_plate)(self,
                                       name=self.name+".add_plate_axis")
 
+    def __getitem__(self, index):
+        return Slice(self, index,
+                     name=(self.name+".__getitem__(%s)" % index))
+
 
 from .deterministic import Deterministic
+
+class Slice(Deterministic):
+
+    """
+    Basic slicing for plates.
+    
+    Slicing occurs when index is a slice object (constructed by start:stop:step
+    notation inside of brackets), an integer, or a tuple of slice objects and
+    integers.
+
+    Currently, accept slices, newaxis, ellipsis and integers. For instance, does
+    not accept lists/tuples to pick multiple indices of the same axis.
+
+    Ellipsis expand to the number of : objects needed to make a selection tuple
+    of the same length as x.ndim. Only the first ellipsis is expanded, any
+    others are interpreted as :.
+
+    Similar to:
+    http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#basic-slicing
+    """
+
+    def __init__(self, X, slices, **kwargs):
+
+        # Force a tuple
+        if not isinstance(slices, tuple):
+            slices = (slices,)
+
+        #
+        # Expand Ellipsis
+        #
+
+        # Compute the number of required axes and how Ellipsis is expanded
+        num_axis = 0
+        ellipsis_index = None
+        for (k, s) in enumerate(slices):
+
+            if isinstance(s, int) or isinstance(s, slice):
+                num_axis += 1
+
+            elif s is None:
+                pass
+                
+            elif s is Ellipsis:
+                # Index is an ellipsis, e.g., [...]
+                
+                if ellipsis_index is None:
+                    # Expand ...
+                    ellipsis_index = k
+                else:
+                    # Interpret ... as :
+                    num_axis += 1
+                    slices[k] = slice(None)
+                    
+            else:
+                raise TypeError("Invalid argument type.")
+
+        if num_axis > len(X.plates):
+            raise IndexError("Too many indices")
+
+        # The number of plates that were not given explicit slicing (either
+        # Ellipsis was used or the number of slices was smaller than the number
+        # of plate axes)
+        expand_len = len(X.plates) - num_axis
+        
+        if ellipsis_index is not None:
+            # Replace Ellipsis with correct number of :
+            k = ellipsis_index
+            del slices[k]
+            slices = slices[:k] + [slice(None)] * expand_len + slices[k:]
+        else:
+            # Add trailing : so that each plate has explicit slicing
+            slices = slices + [slice(None)] * expand_len
+
+        #
+        # Preprocess indexing
+        #
+
+        # Index for parent plates
+        j = 0
+        
+        for (k, s) in enumerate(slices):
+
+            if isinstance(s, int):
+                # Index is an integer, e.g., [3]
+                
+                if s < 0:
+                    # Handle negative index
+                    s += plates[j]
+                if s < 0 or s >= plates[j]:
+                    raise IndexError("Index out of range")
+                # Store the preprocessed integer index
+                slices[k] = s
+                j += 1
+
+            elif isinstace(s, slice):
+                # Index is a slice, e.g., [2:6]
+                
+                # Normalize the slice
+                s = slice(*(s.indices(plates[j])))
+                if utils.ceildiv(s.stop - s.start, s.step) <= 0:
+                    raise IndexError("Slicing leads to empty plates")
+                slices[k] = s
+                j += 1
+
+        self.slices = slices
+
+        super().__init__(X,
+                         plates=None,
+                         dims=X.dims,
+                         **kwargs)
+
+    def _plates_to_parent(self, index):
+        return self.parents[index].plates
+
+    def _plates_from_parent(self, index):
+
+        plates = list(self.parents[index].plates)
+
+        # Compute the plates. Note that Ellipsis has already been preprocessed
+        # to a proper number of :
+        for (k, s) in enumerate(self.slices):
+            # Then, each case separately: slice, ..., newaxis, list
+            
+            if isinstance(s, slice):
+                # Slice, e.g., [2:5]
+                N = utils.ceildiv(s.stop - s.start, s.step)
+                if N <= 0:
+                    raise IndexError("Slicing leads to empty plates")
+                plates[k] = N
+                
+            elif s is None:
+                # [np.newaxis]
+                plates = plates[:k] + [1] + plates[k:]
+                
+            elif isinstance(s, int):
+                # Integer, e.g., [3]
+                plates[k] = 1
+
+            
+    def _compute_mask_to_parent(index, mask):
+
+        raise NotImplementedError()
+        return mask
+
+    def _compute_message_and_mask_to_parent(self, index, m, *u_parents):
+        """
+        Compute the message to a parent node.
+        """
+
+        raise NotImplementedError()
+
+        return (m, mask)
+
+    def _compute_moments(self, u):
+        """
+        Get the moments with an added plate axis.
+        """
+
+        # Process each moment
+        for n in range(len(u)):
+
+            ndim = len(self.dims[n])
+            if ndim > 0:
+                shape = np.shape(u[n])[:-ndim]
+            else:
+                shape = np.shape(u[n])
+
+            # Construct a list of slice objects
+            u_slices = []
+
+            # Index for the shape
+            j = -len(self.parents[0].plates)
+
+            for (k, s) in enumerate(self.slices):
+
+                # Each case separately: slice, int, newaxis
+                if isinstance(s, slice) or isinstance(s, int):
+
+                    if -j <= len(shape):
+                        # The moment has this axis, so it is not broadcasting it
+                        if shape[j] != 1:
+                            # Use the slice as it is
+                            u_slices.append(s)
+                        else:
+                            # The moment is using broadcasting, just pick the
+                            # first element
+                            u_slices.append(0)
+                    j += 1
+                            
+                else:
+
+                    # [np.newaxis]
+                    if -j < len(shape):
+                        # Only add newaxis if there are some axes before
+                        # this. It does not make any difference if you added
+                        # leading unit axes
+                        u_slices.append(s)
+                    
+
+            u[n] = u[n][tuple(u_slices)]
+        
+        return u
 
 def AddPlateAxis(to_plate):
     
