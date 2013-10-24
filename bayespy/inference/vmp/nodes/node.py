@@ -106,6 +106,9 @@ class Node():
         # Check plates
         parent_plates = [self._plates_from_parent(index) 
                          for index in range(len(self.parents))]
+        if any(p is None for p in parent_plates):
+            raise ValueError("Method _plates_from_parent returned None")
+        
         if plates is None:
             # By default, use the minimum number of plates determined
             # from the parent nodes
@@ -422,10 +425,16 @@ class Node():
 
     def __getitem__(self, index):
         return Slice(self, index,
-                     name=(self.name+".__getitem__(%s)" % index))
+                     name=(self.name+".__getitem__"))
 
 
 from .deterministic import Deterministic
+
+
+def slicelen(s, length=None):
+    if length is not None:
+        s = slice(*(s.indices(length)))
+    return max(0, utils.ceildiv(s.stop - s.start, s.step))
 
 class Slice(Deterministic):
 
@@ -449,9 +458,11 @@ class Slice(Deterministic):
 
     def __init__(self, X, slices, **kwargs):
 
-        # Force a tuple
+        # Force a list
         if not isinstance(slices, tuple):
-            slices = (slices,)
+            slices = [slices]
+        else:
+            slices = list(slices)
 
         #
         # Expand Ellipsis
@@ -500,7 +511,10 @@ class Slice(Deterministic):
             slices = slices + [slice(None)] * expand_len
 
         #
-        # Preprocess indexing
+        # Preprocess indexing:
+        # - integer indices to non-negative values
+        # - slice start/stop values to non-negative
+        # - slice start/stop values based on the size of the plate
         #
 
         # Index for parent plates
@@ -513,19 +527,19 @@ class Slice(Deterministic):
                 
                 if s < 0:
                     # Handle negative index
-                    s += plates[j]
-                if s < 0 or s >= plates[j]:
+                    s += X.plates[j]
+                if s < 0 or s >= X.plates[j]:
                     raise IndexError("Index out of range")
                 # Store the preprocessed integer index
                 slices[k] = s
                 j += 1
 
-            elif isinstace(s, slice):
+            elif isinstance(s, slice):
                 # Index is a slice, e.g., [2:6]
                 
                 # Normalize the slice
-                s = slice(*(s.indices(plates[j])))
-                if utils.ceildiv(s.stop - s.start, s.step) <= 0:
+                s = slice(*(s.indices(X.plates[j])))
+                if slicelen(s) <= 0:
                     raise IndexError("Slicing leads to empty plates")
                 slices[k] = s
                 j += 1
@@ -533,7 +547,6 @@ class Slice(Deterministic):
         self.slices = slices
 
         super().__init__(X,
-                         plates=None,
                          dims=X.dims,
                          **kwargs)
 
@@ -546,38 +559,124 @@ class Slice(Deterministic):
 
         # Compute the plates. Note that Ellipsis has already been preprocessed
         # to a proper number of :
-        for (k, s) in enumerate(self.slices):
-            # Then, each case separately: slice, ..., newaxis, list
+        k = 0
+        for s in self.slices:
+            # Then, each case separately: slice, newaxis, integer
             
             if isinstance(s, slice):
                 # Slice, e.g., [2:5]
-                N = utils.ceildiv(s.stop - s.start, s.step)
+                N = slicelen(s)
                 if N <= 0:
                     raise IndexError("Slicing leads to empty plates")
                 plates[k] = N
+                k += 1
                 
             elif s is None:
                 # [np.newaxis]
                 plates = plates[:k] + [1] + plates[k:]
+                k += 1
                 
             elif isinstance(s, int):
                 # Integer, e.g., [3]
-                plates[k] = 1
+                del plates[k]
 
-            
-    def _compute_mask_to_parent(index, mask):
+        return tuple(plates)
 
-        raise NotImplementedError()
-        return mask
+    @staticmethod
+    def __reverse_indexing(slices, m_child, plates, dims):
+        """
+        A helpful function for performing reverse indexing/slicing
+        """
 
-    def _compute_message_and_mask_to_parent(self, index, m, *u_parents):
+        j = -1 # plate index for parent
+        i = -1 # plate index for child
+        child_slices = ()
+        parent_slices = ()
+        msg_plates = ()
+
+        # Compute plate axes in the message from children
+        ndim = len(dims)
+        if ndim > 0:
+            m_plates = np.shape(m_child)[:-ndim]
+        else:
+            m_plates = np.shape(m_child)
+
+        for s in reversed(slices):
+
+            if isinstance(s, int):
+                # Case: integer
+                parent_slices = (s,) + parent_slices
+                msg_plates = (plates[j],) + msg_plates
+                j -= 1
+            elif s is None:
+                # Case: newaxis
+                if -i <= len(m_plates):
+                    child_slices = (0,) + child_slices
+                i -= 1
+            else:
+                # Case: slice
+                if -i <= len(m_plates):
+                    child_slices = (slice(None),) + child_slices
+                parent_slices = (s,) + parent_slices
+                if ((-i > len(m_plates) or m_plates[i] == 1)
+                    and slicelen(s) == plates[j]):
+                    # Broadcasting can be applied. The message does not need
+                    # to be explicitly shaped to the full size
+                    msg_plates = (1,) + msg_plates
+                else:
+                    # No broadcasting. Must explicitly form the full size
+                    # axis
+                    msg_plates = (plates[j],) + msg_plates
+                j -= 1
+                i -= 1
+
+        # Set the elements of the message
+        m_parent = np.zeros(msg_plates + dims)
+        if np.ndim(m_parent) == 0 and np.ndim(m_child) == 0:
+            m_parent = m_child
+        elif np.ndim(m_parent) == 0:
+            m_parent = m_child[child_slices]
+        elif np.ndim(m_child) == 0:
+            m_parent[parent_slices] = m_child
+        else:
+            m_parent[parent_slices] = m_child[child_slices]
+
+        return m_parent
+
+    
+    def _compute_mask_to_parent(self, index, mask):
+        """
+        Compute the mask to the parent node.
+        """
+        if index != 0:
+            raise ValueError("Invalid index")
+        parent = self.parents[0]
+        
+        return self.__reverse_indexing(self.slices,
+                                       self.mask, 
+                                       parent.plates, 
+                                       ())
+
+    def _compute_message_and_mask_to_parent(self, index, m, u):
         """
         Compute the message to a parent node.
         """
 
-        raise NotImplementedError()
+        if index != 0:
+            raise ValueError("Invalid index")
+        parent = self.parents[0]
 
-        return (m, mask)
+        # Apply reverse indexing for the message arrays
+        msg = [self.__reverse_indexing(self.slices, 
+                                       m_child,
+                                       parent.plates, 
+                                       dims)
+               for (m_child, dims) in zip(m, parent.dims)]
+
+        # Apply reverse indexing for the mask
+        mask = self._compute_mask_to_parent(0, self.mask)
+
+        return (msg, mask)
 
     def _compute_moments(self, u):
         """
@@ -587,6 +686,7 @@ class Slice(Deterministic):
         # Process each moment
         for n in range(len(u)):
 
+            # Compute the effective plates in the message/moment
             ndim = len(self.dims[n])
             if ndim > 0:
                 shape = np.shape(u[n])[:-ndim]
@@ -601,22 +701,7 @@ class Slice(Deterministic):
 
             for (k, s) in enumerate(self.slices):
 
-                # Each case separately: slice, int, newaxis
-                if isinstance(s, slice) or isinstance(s, int):
-
-                    if -j <= len(shape):
-                        # The moment has this axis, so it is not broadcasting it
-                        if shape[j] != 1:
-                            # Use the slice as it is
-                            u_slices.append(s)
-                        else:
-                            # The moment is using broadcasting, just pick the
-                            # first element
-                            u_slices.append(0)
-                    j += 1
-                            
-                else:
-
+                if s is None:
                     # [np.newaxis]
                     if -j < len(shape):
                         # Only add newaxis if there are some axes before
@@ -624,7 +709,29 @@ class Slice(Deterministic):
                         # leading unit axes
                         u_slices.append(s)
                     
+                else:
+                    # slice or integer index
 
+                    if -j <= len(shape):
+                        # The moment has this axis, so it is not broadcasting it
+                        if shape[j] != 1:
+                            # Use the slice as it is
+                            u_slices.append(s)
+                        elif isinstance(s, slice):
+                            # Slice.
+                            # The moment is using broadcasting, just pick the
+                            # first element but use slice in order to keep the
+                            # axis
+                            u_slices.append(slice(0,1,1))
+                        else:
+                            # Integer.
+                            # The moment is using broadcasting, just pick the
+                            # first element
+                            u_slices.append(0)
+                            
+                    j += 1
+
+            # Slice the message/moment
             u[n] = u[n][tuple(u_slices)]
         
         return u
