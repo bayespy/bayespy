@@ -76,8 +76,22 @@ class TestCase(unittest.TestCase):
     def assertAllClose(self, A, B, msg="Arrays not almost equal"):
 
         self.assertEqual(np.shape(A), np.shape(B), msg=msg)
-        
         testing.assert_allclose(A, B, err_msg=msg)
+        pass
+
+    def assertMessage(self, M1, M2):
+        
+        if len(M1) != len(M2):
+            self.fail("Message lists have different lengths")
+
+        for (m1, m2) in zip(M1, M2):
+            self.assertAllClose(m1, m2)
+
+        pass
+
+    def assertMessageToChild(self, X, u):
+        self.assertMessage(X._message_to_child(), u)
+        pass
 
 def symm(X):
     """
