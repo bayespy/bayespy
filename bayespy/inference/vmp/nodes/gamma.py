@@ -92,8 +92,7 @@ class Gamma(ExponentialFamily):
     def compute_fixed_moments(x):
         """ Compute moments for fixed x. """
         u0 = x
-        # TODO/FIXME: Shouldn't this be just log?
-        u1 = special.gammaln(x)
+        u1 = np.log(x)
         return [u0, u1]
 
     @staticmethod
