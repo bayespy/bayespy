@@ -146,7 +146,7 @@ class Stochastic(Node):
         """
 
         # Compute fixed moments
-        (u, f) = self._compute_fixed_moments_and_f(x, mask=mask)
+        (u, f) = self._compute_fixed_moments_and_f(np.asanyarray(x), mask=mask)
 
         # Check the dimensionality of the observations
         for (i,v) in enumerate(u):
