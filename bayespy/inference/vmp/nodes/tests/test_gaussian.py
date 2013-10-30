@@ -210,6 +210,51 @@ class TestGaussianArrayARD(TestCase):
                             + 1/3 * utils.identity(2,3,4))
                             
 
+        # Check the formula for dim-broadcasted mu
+        X = GaussianArrayARD(2*np.ones((3,1)),
+                             3*np.ones((2,3,4)),
+                             ndim=3)
+        (u0, u1) = X._message_to_child()
+        self.assertAllClose(u0, 2*np.ones((2,3,4)))
+        self.assertAllClose(u1, 
+                            2**2 * np.ones((2,3,4,2,3,4))
+                            + 1/3 * utils.identity(2,3,4))
+                            
+        # Check the formula for dim-broadcasted alpha
+        X = GaussianArrayARD(2*np.ones((2,3,4)),
+                             3*np.ones((3,1)),
+                             ndim=3)
+        (u0, u1) = X._message_to_child()
+        self.assertAllClose(u0, 2*np.ones((2,3,4)))
+        self.assertAllClose(u1, 
+                            2**2 * np.ones((2,3,4,2,3,4))
+                            + 1/3 * utils.identity(2,3,4))
+                            
+        # Check the formula for dim-broadcasted mu and alpha
+        X = GaussianArrayARD(2*np.ones((3,1)),
+                             3*np.ones((3,1)),
+                             shape=(2,3,4))
+        (u0, u1) = X._message_to_child()
+        self.assertAllClose(u0, 2*np.ones((2,3,4)))
+        self.assertAllClose(u1, 
+                            2**2 * np.ones((2,3,4,2,3,4))
+                            + 1/3 * utils.identity(2,3,4))
+                            
+        # Check the formula for dim-broadcasted mu with plates
+        mu = GaussianArrayARD(2*np.ones((5,3,4)),
+                              np.ones((5,3,4)),
+                              shape=(3,4),
+                              plates=(5,))
+        X = GaussianArrayARD(mu,
+                             3*np.ones((5,2,3,4)),
+                             shape=(2,3,4),
+                             plates=(5,))
+        (u0, u1) = X._message_to_child()
+        self.assertAllClose(u0, 2*np.ones((5,2,3,4)))
+        self.assertAllClose(u1, 
+                            2**2 * np.ones((5,2,3,4,2,3,4))
+                            + 1/3 * utils.identity(2,3,4))
+
         # Check posterior
         X = GaussianArrayARD(2, 3)
         Y = GaussianArrayARD(X, 1)
@@ -456,3 +501,90 @@ class TestGaussianArrayARD(TestCase):
         
         pass
         
+
+    def test_lowerbound(self):
+        """
+        Test the variational Bayesian lower bound term for GaussianArrayARD.
+        """
+
+        # Test vector formula with full noise covariance
+        m = np.random.randn(2)
+        alpha = np.random.rand(2)
+        y = np.random.randn(2)
+        X = GaussianArrayARD(m, alpha)
+        V = np.array([[3,1],[1,3]])
+        Y = Gaussian(X, V)
+        Y.observe(y)
+        X.update()
+        Cov = np.linalg.inv(np.diag(alpha) + V)
+        mu = np.dot(Cov, np.dot(V, y) + alpha*m)
+        x2 = np.outer(mu, mu) + Cov
+        logH_X = (+ 2*0.5*(1+np.log(2*np.pi)) 
+                  + 0.5*np.log(np.linalg.det(Cov)))
+        logp_X = (- 2*0.5*np.log(2*np.pi) 
+                  + 0.5*np.log(np.linalg.det(np.diag(alpha)))
+                  - 0.5*np.sum(np.diag(alpha)
+                               * (x2 
+                                  - np.outer(mu,m) 
+                                  - np.outer(m,mu) 
+                                  + np.outer(m,m))))
+        self.assertAllClose(logp_X + logH_X,
+                            X.lower_bound_contribution())
+
+        def check_lower_bound(shape_mu, shape_alpha, plates_mu=(), **kwargs):
+            M = GaussianArrayARD(np.ones(plates_mu + shape_mu),
+                                 np.ones(plates_mu + shape_mu),
+                                 shape=shape_mu,
+                                 plates=plates_mu)
+            X = GaussianArrayARD(M,
+                                 2*np.ones(shape_alpha),
+                                 **kwargs)
+            Y = GaussianArrayARD(X,
+                                 3*np.ones(X.get_shape(0)),
+                                 **kwargs)
+            Y.observe(4*np.ones(Y.get_shape(0)))
+            X.update()
+            Cov = 1/(2+3)
+            mu = Cov * (2*1 + 3*4)
+            x2 = mu**2 + Cov
+            logH_X = (+ 0.5*(1+np.log(2*np.pi)) 
+                      + 0.5*np.log(Cov))
+            logp_X = (- 0.5*np.log(2*np.pi) 
+                      + 0.5*np.log(2) 
+                      - 0.5*2*(x2 - 2*mu*1 + 1**2+1))
+            r = np.prod(X.get_shape(0))
+            self.assertAllClose(r * (logp_X + logH_X),
+                                X.lower_bound_contribution())
+            
+        # Test scalar formula
+        check_lower_bound((), ())
+
+        # Test array formula
+        check_lower_bound((2,3), (2,3))
+
+        # Test dim-broadcasting of mu
+        check_lower_bound((3,1), (2,3,4))
+
+        # Test dim-broadcasting of alpha
+        check_lower_bound((2,3,4), (3,1))
+
+        # Test dim-broadcasting of mu and alpha
+        check_lower_bound((3,1), (3,1),
+                          shape=(2,3,4))
+
+        # Test dim-broadcasting of mu with plates
+        check_lower_bound((), (),
+                          plates_mu=(),
+                          shape=(),
+                          plates=(5,))
+
+        # BUG: Scalar parents for array variable caused einsum error
+        check_lower_bound((), (),
+                          shape=(3,))
+        
+        # BUG: Log-det was summed over plates
+        check_lower_bound((), (),
+                          shape=(3,),
+                          plates=(4,))
+
+        pass
