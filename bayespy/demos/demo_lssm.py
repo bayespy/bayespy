@@ -51,10 +51,11 @@ def linear_state_space_model(D=3, N=100, M=10):
                   1e-5,
                   plates=(D,),
                   name='alpha')
-    A = Gaussian(np.zeros(D),
-                 diagonal(alpha),
-                 plates=(D,),
-                 name='A')
+    A = GaussianArrayARD(0,
+                         alpha,
+                         shape=(D,),
+                         plates=(D,),
+                         name='A')
 
     # Latent states with dynamics
     X = GaussianMarkovChain(np.zeros(D),         # mean of x0
@@ -69,23 +70,28 @@ def linear_state_space_model(D=3, N=100, M=10):
                   1e-5,
                   plates=(D,),
                   name='gamma')
-    C = Gaussian(np.zeros(D),
-                 diagonal(gamma),
-                 plates=(M,1),
-                 name='C')
+    C = GaussianArrayARD(0,
+                         gamma,
+                         shape=(D,),
+                         plates=(M,1),
+                         name='C')
 
     # Observation noise
     tau = Gamma(1e-5,
                 1e-5,
                 name='tau')
 
-    # Observations
-    CX = SumMultiply('i,i', C, X.as_gaussian())
-    Y = Normal(CX,
-               tau,
-               name='Y')
+    # Underlying noiseless function
+    F = SumMultiply('i,i', 
+                    C, 
+                    X.as_gaussian())
+    
+    # Noisy observations
+    Y = GaussianArrayARD(F,
+                         tau,
+                         name='Y')
 
-    return (Y, CX, X, tau, C, gamma, A, alpha)
+    return (Y, F, X, tau, C, gamma, A, alpha)
 
 def run(maxiter=100, debug=False, seed=42):
 
@@ -134,21 +140,21 @@ def run(maxiter=100, debug=False, seed=42):
     #
     # Run inference with rotations.
     #
-    rotA = transformations.RotateGaussianARD(A, alpha)
-    rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
-    rotC = transformations.RotateGaussianARD(C, gamma)
-    R = transformations.RotationOptimizer(rotX, rotC, D)
+    ## rotA = transformations.RotateGaussianARD(A, alpha)
+    ## rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
+    ## rotC = transformations.RotateGaussianARD(C, gamma)
+    ## R = transformations.RotationOptimizer(rotX, rotC, D)
 
     for ind in range(maxiter):
         Q.update()
-        if not debug:
-            R.rotate()
-        else:
-            R.rotate(maxiter=10, 
-                     check_gradient=True,
-                     verbose=False,
-                     check_bound=Q.compute_lowerbound,
-                     check_bound_terms=Q.compute_lowerbound_terms)
+        ## if not debug:
+        ##     R.rotate()
+        ## else:
+        ##     R.rotate(maxiter=10, 
+        ##              check_gradient=True,
+        ##              verbose=False,
+        ##              check_bound=Q.compute_lowerbound,
+        ##              check_bound_terms=Q.compute_lowerbound_terms)
         
     # Show results
     plt.figure()
