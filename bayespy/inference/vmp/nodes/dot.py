@@ -95,7 +95,7 @@ class SumMultiply(Deterministic):
     operation. This same effect applies also to numpy.einsum in general.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, iterator_axis=None, **kwargs):
         """
         SumMultiply(Node1, map1, Node2, map2, ..., NodeN, mapN [, map_out])
         """
@@ -104,6 +104,11 @@ class SumMultiply(Deterministic):
 
         if len(args) < 2:
             raise ValueError("Not enough inputs")
+
+        if iterator_axis is not None:
+            raise NotImplementedError("Iterator axis not implemented yet")
+        if iterator_axis is not None and not isinstance(iterator_axis, int):
+            raise ValueError("Iterator axis must be integer")
 
         # Two different parsing methods, depends on how the arguments are given
         if utils.is_string(args[0]):
