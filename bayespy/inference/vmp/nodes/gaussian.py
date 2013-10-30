@@ -679,30 +679,86 @@ def _GaussianArrayARD(shape, shape_mu=None):
         def _compute_phi_from_parents(u_mu, u_alpha):
             mu = u_mu[0]
             alpha = u_alpha[0]
+            if np.ndim(mu) < ndim_mu:
+                raise ValueError("Moment of mu does not have enough dimensions")
             mu = utils.utils.add_axes(mu, 
                                       axis=np.ndim(mu)-ndim_mu, 
-                                      num=ndim-min(ndim_mu,np.ndim(mu)))
+                                      num=ndim-ndim_mu)
             phi0 = alpha * mu
             phi1 = -0.5 * alpha
             if ndim > 0:
-                shape_phi = np.shape(phi0)[:-ndim] + shape
-                phi0 = utils.utils.repeat_to_shape(phi0, shape_phi)
-                phi1 = utils.utils.repeat_to_shape(phi1, shape_phi)
+                # Ensure that phi is not using broadcasting for variable
+                # dimension axes
+                ones = np.ones(shape)
+                phi0 = ones * phi0
+                phi1 = ones * phi1
 
             # Make a diagonal matrix
             phi1 = utils.utils.diag(phi1, ndim=ndim)
             return [phi0, phi1]
 
         @staticmethod
-        def _compute_cgf_from_parents(u_mu, u_Lambda):
-            raise NotImplementedError()
-            mu = u_mu[0]
+        def _compute_cgf_from_parents(u_mu, u_alpha):
+            """
+            Compute the value of the cumulant generating function.
+            """
+
+            # Compute sum(mu^2 * alpha) correctly for broadcasted shapes
             mumu = u_mu[1]
-            Lambda = u_Lambda[0]
-            logdet_Lambda = u_Lambda[1]
-            g = (-0.5 * np.einsum('...ij,...ij',mumu,Lambda)
-                 + 0.5 * logdet_Lambda)
-            return g
+            alpha = u_alpha[0]
+            if ndim == 0:
+                z = mumu * alpha
+            else:
+                if np.ndim(alpha) == 0 and np.ndim(mumu) == 0:
+                    # Einsum doesn't like scalar only inputs, so we have to
+                    # handle them separately..
+                    z = mumu * alpha
+                else:
+                    # Use ellipsis for the plates, sum other axes
+                    out_keys = [Ellipsis]
+                    # Take the diagonal of the second moment matrix mu*mu.T
+                    mu_keys = [Ellipsis] + 2 * list(range(ndim_mu,0,-1))
+                    # Keys for alpha
+                    if np.ndim(alpha) <= ndim:
+                        # Add empty Ellipsis just to avoid errors from einsum
+                        alpha_keys = [Ellipsis] + list(range(np.ndim(alpha),0,-1))
+                    else:
+                        alpha_keys = [Ellipsis] + list(range(ndim,0,-1))
+                    # Perform the computation
+                    z = np.einsum(mumu, mu_keys, alpha, alpha_keys, out_keys)
+
+                # Take into account broadcasting
+                if ndim_mu == 0:
+                    shape_mumu = ()
+                else:
+                    shape_mumu = np.shape(mumu)[-ndim_mu:]
+                if ndim == 0:
+                    shape_alpha = ()
+                else:
+                    shape_alpha = np.shape(alpha)[-ndim:]
+                z *= Gaussian._plate_multiplier(shape,
+                                                shape_mumu,
+                                                shape_alpha)
+
+            # Compute log(alpha) correctly for broadcasted alpha
+            logdet_alpha = u_alpha[1]
+            if np.ndim(logdet_alpha) <= ndim:
+                dims_logalpha = np.shape(logdet_alpha)
+                logdet_alpha = np.sum(logdet_alpha)
+            elif ndim == 0:
+                dims_logalpha = ()
+            else:
+                dims_logalpha = np.shape(logdet_alpha)[-ndim:]
+                logdet_alpha = np.sum(logdet_alpha,
+                                      axis=tuple(range(-ndim,0)))
+            logdet_alpha *= Gaussian._plate_multiplier(shape,
+                                                       dims_logalpha)
+
+            # Compute cumulant generating function
+            cgf = -0.5*z + 0.5*logdet_alpha
+                 
+            #print("Gaussian: G.par", -0.5*z, 0.5*logdet_alpha)
+            return cgf
 
         @staticmethod
         def _compute_moments_and_cgf(phi, mask=True):
@@ -873,24 +929,36 @@ def _GaussianArrayARD(shape, shape_mu=None):
             return self.dims[0]
 
         def random(self):
+            """
+            Draw a random sample from the Gaussian distribution.
+            """
             # TODO/FIXME: You shouldn't draw random values for
             # observed/fixed elements!
-            raise NotImplementedError()
-            U = utils.linalg.chol(-2*self.phi[1])
-            mu = self.u[0]
-            z = np.random.normal(0, 1, self.get_shape(0))
-            # Compute mu + U'*z
-            z = utils.linalg.solve_triangular(U, z, trans='T', lower=False)
-            return mu + z
-
-        # Note that phi[1] is -0.5*inv(Cov)
-            U = utils.utils.m_chol(-2*self.phi[1])
-            mu = self.u[0]
-            z = np.random.normal(0, 1, self.get_shape(0))
-            # Compute mu + U'*z
-            z = utils.utils.m_solve_triangular(U, z, trans='T', lower=False)
-            return mu + z
-
+            if np.prod(self.dims[1]) == 1.0:
+                # Scalar Gaussian
+                std = np.sqrt(-0.5 / self.phi[1])
+                mu = self.u[0]
+                z = np.random.normal(0, 1, self.get_shape(0))
+                x = mu + std * z
+            else:
+                D = len(self.dims[0])
+                N = np.prod(self.dims[0])
+                dims_cov = self.dims[1]
+                # Reshape precision matrix
+                plates_cov = np.shape(self.phi[1])[:-2*D]
+                V = -2 * np.reshape(self.phi[1], plates_cov + (N,N))
+                # Reshape mean vector
+                plates_mu = np.shape(self.u[0])[:-D]
+                mu = np.reshape(self.u[0], plates_mu + (N,))
+                # Compute Cholesky
+                U = utils.linalg.chol(V)
+                # Compute mu + U'*z
+                z = np.random.normal(0, 1, self.plates + (N,))
+                x = mu + utils.linalg.solve_triangular(U, z,
+                                                       trans='T', 
+                                                       lower=False)
+                x = np.reshape(x, self.plates + self.dims[0])
+            return x
 
         def show(self):
             raise NotImplementedError()
@@ -901,6 +969,7 @@ def _GaussianArrayARD(shape, shape_mu=None):
             print(mu)
             print("  Cov = ")
             print(str(Cov))
+            
 
         def rotate(self, R, inv=None, logdet=None, Q=None):
             raise NotImplementedError()
