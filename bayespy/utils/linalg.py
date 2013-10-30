@@ -144,7 +144,7 @@ def chol_inv(U):
 
 def chol_logdet(U):
     if isinstance(U, np.ndarray):
-        return 2*np.sum(np.log(np.einsum('...ii->...i',U)))
+        return 2*np.sum(np.log(np.einsum('...ii->...i',U)), axis=-1)
     elif isinstance(U, cholmod.Factor):
         return np.sum(np.log(U.D()))
     else:
@@ -181,7 +181,7 @@ def solve_triangular(U, B, **kwargs):
     jnd_b = tuple(i for i in range(-l_min,0) if sh_b[i]==sh_u[i])
 
     # Shape of the result (broadcasting rules)
-    sh = broadcasted_shape(sh_u, sh_b)
+    sh = utils.broadcasted_shape(sh_u, sh_b)
     out = np.zeros(sh + B.shape[-1:])
     for i in utils.nested_iterator(np.shape(U)[:-2]):
 
