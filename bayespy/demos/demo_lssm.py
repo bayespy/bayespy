@@ -140,21 +140,21 @@ def run(maxiter=100, debug=False, seed=42):
     #
     # Run inference with rotations.
     #
-    ## rotA = transformations.RotateGaussianARD(A, alpha)
-    ## rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
-    ## rotC = transformations.RotateGaussianARD(C, gamma)
-    ## R = transformations.RotationOptimizer(rotX, rotC, D)
+    rotA = transformations.RotateGaussianARD(A, alpha)
+    rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
+    rotC = transformations.RotateGaussianARD(C, gamma)
+    R = transformations.RotationOptimizer(rotX, rotC, D)
 
     for ind in range(maxiter):
         Q.update()
-        ## if not debug:
-        ##     R.rotate()
-        ## else:
-        ##     R.rotate(maxiter=10, 
-        ##              check_gradient=True,
-        ##              verbose=False,
-        ##              check_bound=Q.compute_lowerbound,
-        ##              check_bound_terms=Q.compute_lowerbound_terms)
+        if not debug:
+            R.rotate()
+        else:
+            R.rotate(maxiter=10, 
+                     check_gradient=True,
+                     verbose=False,
+                     check_bound=Q.compute_lowerbound,
+                     check_bound_terms=Q.compute_lowerbound_terms)
         
     # Show results
     plt.figure()

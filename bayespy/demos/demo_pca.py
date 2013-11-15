@@ -33,11 +33,11 @@ from bayespy import nodes
 from bayespy.inference.vmp.vmp import VB
 from bayespy.inference.vmp import transformations
 
-from bayespy.inference.vmp.nodes.gamma import diagonal
+#from bayespy.inference.vmp.nodes.gamma import diagonal
 
 import bayespy.plot.plotting as bpplt
 
-def pca_model(M, N, D):
+def model(M, N, D):
     # Construct the PCA model with ARD
 
     # ARD
@@ -47,30 +47,35 @@ def pca_model(M, N, D):
                         name='alpha')
 
     # Loadings
-    W = nodes.Gaussian(np.zeros(D),
-                       diagonal(alpha),
-                       name="W",
-                       plates=(M,1))
+    W = nodes.GaussianArrayARD(0,
+                               alpha,
+                               shape=(D,),
+                               plates=(M,1),
+                               name='W')
 
     # States
-    X = nodes.Gaussian(np.zeros(D),
-                       np.identity(D),
-                       name="X",
-                       plates=(1,N))
+    X = nodes.GaussianArrayARD(0,
+                               1,
+                               shape=(D,),
+                               plates=(1,N),
+                               name='X')
 
     # PCA
-    F = nodes.SumMultiply('i,i', W, X, name="F")
+    F = nodes.SumMultiply('i,i', W, X,
+                          name='F')
 
     # Noise
-    tau = nodes.Gamma(1e-2, 1e-2, name="tau", plates=())
+    tau = nodes.Gamma(1e-2, 1e-2,
+                      name='tau')
 
     # Noisy observations
-    Y = nodes.Normal(F, tau, name="Y", plates=(M,N))
+    Y = nodes.GaussianArrayARD(F, tau,
+                               name='Y')
 
     return (Y, F, W, X, tau, alpha)
 
 
-def run(M=10, N=100, D_y=3, D=5, seed=42):
+def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=True, maxiter=100):
 
     if seed is not None:
         np.random.seed(seed)
@@ -82,7 +87,7 @@ def run(M=10, N=100, D_y=3, D=5, seed=42):
     y = f + np.random.normal(0, 0.2, size=(M,N))
 
     # Construct model
-    (Y, F, W, X, tau, alpha) = pca_model(M, N, D)
+    (Y, F, W, X, tau, alpha) = model(M, N, D)
 
     # Data with missing values
     mask = utils.random.mask(M, N, p=0.5) # randomly missing
@@ -96,9 +101,19 @@ def run(M=10, N=100, D_y=3, D=5, seed=42):
     X.initialize_from_random()
     W.initialize_from_random()
 
-    # Inference loop.
-    # TODO/FIXME: Use rotations.
-    Q.update(repeat=100)
+    # Run inference algorithm
+    if rotate:
+        # Use rotations to speed up learning
+        rotW = transformations.RotateGaussianArrayARD(W, alpha)
+        rotX = transformations.RotateGaussian(X)
+        R = transformations.RotationOptimizer(rotW, rotX, D)
+        for ind in range(maxiter):
+            Q.update()
+            R.rotate()
+            
+    else:
+        # Use standard VB-EM alone
+        Q.update(repeat=maxiter)
 
     # Plot results
     plt.figure()

@@ -32,9 +32,7 @@ import matplotlib.pyplot as plt
 from bayespy.nodes import GaussianMarkovChain
 from bayespy.nodes import GaussianArrayARD
 from bayespy.nodes import Gamma
-#from bayespy.normal import Normal
 from bayespy.nodes import SumMultiply
-#from bayespy.inference.vmp.nodes.deterministic import tile
 
 from bayespy.utils import utils
 from bayespy.utils import random
@@ -79,14 +77,15 @@ def run_dlssm(y, f, mask, D, K, maxiter):
     (M, N) = np.shape(y)
 
     # Dynamics matrix with ARD
-    # alpha : (D) x ()
+    # alpha : (K) x ()
     alpha = Gamma(1e-5,
                   1e-5,
                   plates=(K,),
                   name='alpha')
     # A : (K) x (K)
-    A = GaussianArrayARD(np.zeros(K),
+    A = GaussianArrayARD(np.identity(K),
                          alpha,
+                         shape=(K,),
                          plates=(K,),
                          name='A_S',
                          initialize=False)
@@ -113,7 +112,7 @@ def run_dlssm(y, f, mask, D, K, maxiter):
     # B : (D) x (D,K)
     b = np.zeros((D,D,K))
     b[np.arange(D),np.arange(D),np.zeros(D,dtype=int)] = 1
-    B = GaussianArrayARD(np.zeros((D,K)),
+    B = GaussianArrayARD(0,
                          beta,
                          plates=(D,),
                          name='B',
@@ -123,8 +122,8 @@ def run_dlssm(y, f, mask, D, K, maxiter):
     # TODO/FIXME: Implement __getitem__ method
     BS = SumMultiply('dk,k->d',
                      B, 
-                     S.as_gaussian()[1:].add_plate_axis(-1), 
-                     iterator_axis=0,
+                     S.as_gaussian()[...,np.newaxis],
+    #                     iterator_axis=0,
                      name='BS')
 
     # Latent states with dynamics
@@ -133,10 +132,10 @@ def run_dlssm(y, f, mask, D, K, maxiter):
                             1e-3*np.identity(D), # prec of x0
                             BS,                  # dynamics
                             np.ones(D),          # innovation
-                            n=N,                 # time instances
+                            n=N+1,               # time instances
                             name='X',
                             initialize=False)
-    X.initialize_from_value(np.random.randn(N,D))
+    X.initialize_from_value(np.random.randn(N+1,D))
 
     # Mixing matrix from latent space to observation space using ARD
     # gamma : (D) x ()
@@ -145,7 +144,7 @@ def run_dlssm(y, f, mask, D, K, maxiter):
                   plates=(D,K),
                   name='gamma')
     # C : (M,1) x (D,K)
-    C = GaussianArrayARD(np.zeros((D,K)),
+    C = GaussianArrayARD(0,
                          gamma,
                          plates=(M,1),
                          name='C',
@@ -162,13 +161,13 @@ def run_dlssm(y, f, mask, D, K, maxiter):
     # Y : (M,N) x ()
     F = SumMultiply('dk,d,k',
                     C,
-                    X.as_gaussian(),
+                    X.as_gaussian()[1:],
                     S.as_gaussian(),
                     name='F')
                   
-    Y = Normal(F,
-               tau,
-               name='Y')
+    Y = GaussianArrayARD(F,
+                         tau,
+                         name='Y')
 
     #
     # RUN INFERENCE
@@ -183,26 +182,48 @@ def run_dlssm(y, f, mask, D, K, maxiter):
     # Run inference with rotations.
     #
 
-    # Rotate the D-dimensional state space (C, X)
-    rotB = transformations.RotateGaussianMatrixARD(B, beta, D, K, axis='rows')
-    rotX = transformations.RotateDriftingMarkovChain(X, B, S, rotB)
-    rotC = transformations.RotateGaussianARD(C, gamma)
-    R_X = transformations.RotationOptimizer(rotX, rotC, D)
+    rotate = False
+    if rotate:
+        # Rotate the D-dimensional state space (C, X)
+        rotB = transformations.RotateGaussianMatrixARD(B, beta, D, K, axis='rows')
+        rotX = transformations.RotateDriftingMarkovChain(X, B, S, rotB)
+        rotC = transformations.RotateGaussianARD(C, gamma)
+        R_X = transformations.RotationOptimizer(rotX, rotC, D)
 
-    # Rotate the K-dimensional latent dynamics space (B, S)
-    rotA = transformations.RotateGaussianARD(A, alpha)
-    rotS = transformations.RotateGaussianMarkovChain(S, A, rotA)
-    rotB = transformations.RotateGaussianMatrixARD(B, beta, D, K, axis='cols')
-    R_S = transformations.RotationOptimizer(rotS, rotB, K)
+        # Rotate the K-dimensional latent dynamics space (B, S)
+        rotA = transformations.RotateGaussianARD(A, alpha)
+        rotS = transformations.RotateGaussianMarkovChain(S, A, rotA)
+        rotB = transformations.RotateGaussianMatrixARD(B, beta, D, K, axis='cols')
+        R_S = transformations.RotationOptimizer(rotS, rotB, K)
 
     # Iterate
     for ind in range(maxiter):
-        Q.update()
-        if ind >= 0:
-            R_X.rotate()
-        if ind >= 0:
-            R_S.rotate()
+        print("X update")
+        Q.update(X)
+        print("S update")
+        Q.update(S)
+        print("A update")
+        Q.update(A)
+        print("alpha update")
+        Q.update(alpha)
+        print("B update")
+        Q.update(B)
+        print("beta update")
+        Q.update(beta)
+        print("C update")
+        Q.update(C)
+        print("gamma update")
+        Q.update(gamma)
+        print("tau update")
+        Q.update(tau)
+        if rotate:
+            if ind >= 0:
+                R_X.rotate()
+            if ind >= 0:
+                R_S.rotate()
 
+    Q.plot_iteration_by_nodes()
+    
     #
     # SHOW RESULTS
     #
@@ -313,7 +334,7 @@ def run_lssm(y, f, mask, D, maxiter):
     bpplt.timeseries(y, 'r.')
     
 
-def run(drift=True, seed=42, maxiter=100):
+def run(drift=True, seed=42, maxiter=50):
 
     # Seed for random number generator
     if seed is not None:

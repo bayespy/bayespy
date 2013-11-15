@@ -573,7 +573,7 @@ def add_trailing_axes(x, n):
 def add_axes(X, axis=0, num=1):
     shape = np.shape(X)[:axis] + num*(1,) + np.shape(X)[axis:]
     return np.reshape(X, shape)
-    
+
     
 ## def add_axes(x, lead, trail):
 ##     shape = (1,)*lead + np.shape(x) + (1,)*trail
@@ -626,6 +626,32 @@ def axes_to_collapse(shape_x, shape_to):
                 raise Exception('Incompatible shape to squeeze')
     return tuple(s)
 
+def sum_to_shape(X, s):
+    """
+    Sum axes of the array such that the resulting shape is as given.
+
+    Thus, the shape of the result will be s or an error is raised.
+    """
+    # First, sum and remove axes that are not in s
+    if np.ndim(X) > len(s):
+        axes = tuple(range(-np.ndim(X), -len(s)))
+    else:
+        axes = ()
+    Y = np.sum(X, axis=axes)
+
+    # Second, sum axes that are 1 in s but keep the axes
+    axes = ()
+    for i in range(-np.ndim(Y), 0):
+        if s[i] == 1:
+            if np.shape(Y)[i] > 1:
+                axes = axes + (i,)
+        else:
+            if np.shape(Y)[i] != s[i]:
+                raise ValueError("Shape %s can't be summed to shape %s" %
+                                 (np.shape(X), s))
+    Y = np.sum(Y, axis=axes, keepdims=True)
+    
+    return Y
 
 def repeat_to_shape(A, s):
     # Current shape

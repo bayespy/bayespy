@@ -33,6 +33,7 @@ import scipy
 
 from numpy import testing
 
+from .. import gaussian
 from ..gaussian import Gaussian, GaussianArrayARD
 from ..gamma import Gamma
 #from ..normal import Normal
@@ -45,6 +46,99 @@ from bayespy.utils import random
 
 from bayespy.utils.utils import TestCase
 
+class TestGaussianFunctions(TestCase):
+
+    def test_rotate_covariance(self):
+        """
+        Test the Gaussian array covariance rotation.
+        """
+        # Check matrix
+        R = np.random.randn(2,2)
+        Cov = np.random.randn(2,2)
+        self.assertAllClose(gaussian.rotate_covariance(Cov, R),
+                            np.einsum('ik,kl,lj', R, Cov, R.T))
+
+        # Check matrix with plates
+        R = np.random.randn(2,2)
+        Cov = np.random.randn(4,3,2,2)
+        self.assertAllClose(gaussian.rotate_covariance(Cov, R),
+                            np.einsum('...ik,...kl,...lj', R, Cov, R.T))
+        
+        # Check array, first axis
+        R = np.random.randn(2,2)
+        Cov = np.random.randn(2,3,3,2,3,3)
+        self.assertAllClose(gaussian.rotate_covariance(Cov, R,
+                                                       ndim=3,
+                                                       axis=-3),
+                            np.einsum('...ik,...kablcd,...lj->...iabjcd', 
+                                      R, 
+                                      Cov,
+                                      R.T))
+        self.assertAllClose(gaussian.rotate_covariance(Cov, R,
+                                                       ndim=3,
+                                                       axis=0),
+                            np.einsum('...ik,...kablcd,...lj->...iabjcd', 
+                                      R, 
+                                      Cov,
+                                      R.T))
+        
+        # Check array, middle axis
+        R = np.random.randn(2,2)
+        Cov = np.random.randn(3,2,3,3,2,3)
+        self.assertAllClose(gaussian.rotate_covariance(Cov, R,
+                                                       ndim=3,
+                                                       axis=-2),
+                            np.einsum('...ik,...akbcld,...lj->...aibcjd', 
+                                      R, 
+                                      Cov,
+                                      R.T))
+        self.assertAllClose(gaussian.rotate_covariance(Cov, R,
+                                                       ndim=3,
+                                                       axis=1),
+                            np.einsum('...ik,...akbcld,...lj->...aibcjd', 
+                                      R, 
+                                      Cov,
+                                      R.T))
+
+        # Check array, last axis
+        R = np.random.randn(2,2)
+        Cov = np.random.randn(3,3,2,3,3,2)
+        self.assertAllClose(gaussian.rotate_covariance(Cov, R,
+                                                       ndim=3,
+                                                       axis=-1),
+                            np.einsum('...ik,...abkcdl,...lj->...abicdj', 
+                                      R, 
+                                      Cov,
+                                      R.T))
+        self.assertAllClose(gaussian.rotate_covariance(Cov, R,
+                                                       ndim=3,
+                                                       axis=2),
+                            np.einsum('...ik,...abkcdl,...lj->...abicdj', 
+                                      R, 
+                                      Cov,
+                                      R.T))
+
+        # Check array, middle axis with plates
+        R = np.random.randn(2,2)
+        Cov = np.random.randn(4,4,3,2,3,3,2,3)
+        self.assertAllClose(gaussian.rotate_covariance(Cov, R,
+                                                       ndim=3,
+                                                       axis=-2),
+                            np.einsum('...ik,...akbcld,...lj->...aibcjd', 
+                                      R, 
+                                      Cov,
+                                      R.T))
+        self.assertAllClose(gaussian.rotate_covariance(Cov, R,
+                                                       ndim=3,
+                                                       axis=1),
+                            np.einsum('...ik,...akbcld,...lj->...aibcjd', 
+                                      R, 
+                                      Cov,
+                                      R.T))
+
+        pass
+
+    
 class TestGaussianArrayARD(TestCase):
 
     def test_init(self):

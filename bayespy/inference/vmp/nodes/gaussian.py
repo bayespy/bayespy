@@ -362,7 +362,6 @@ class Gaussian(ExponentialFamily):
 
         if Q is not None:
             # Rotate moments using Q
-            #print("Debug in rotate matrix", np.shape(self.u[0]), self.get_shape(0))
             self.u[0] = np.einsum('ik,kj->ij', Q, self.u[0])
             sumQ = np.sum(Q, axis=0)
             # Rotate natural parameters using Q
@@ -407,11 +406,6 @@ class Gaussian(ExponentialFamily):
 
         #dg = g1 - g0
 
-        #print("debug rotate", np.sum(self.u[1],axis=0), self.name)
-
-        ## XX = np.sum(np.reshape(self.u[1], (-1,D1,D2,D1,D2)),
-        ##             axis=(0,1,3))
-        ## print("DEBUG", XX)
 
 
 
@@ -506,7 +500,151 @@ def GaussianArrayARD(mu, alpha, ndim=None, shape=None, **kwargs):
     return _GaussianArrayARD(shape, shape_mu=shape_mu)(mu, alpha, **kwargs)
 
 
+def reshape_gaussian_array(dims_from, dims_to, x0, x1):
+    """
+    Reshape the moments Gaussian array variable.
 
+    The plates remain unaffected.
+    """
+    num_dims_from = len(dims_from)
+    num_dims_to = len(dims_to)
+
+    # Reshape the first moment / mean
+    num_plates_from = np.ndim(x0) - num_dims_from
+    plates_from = np.shape(x0)[:num_plates_from]
+    shape = (
+        plates_from 
+        + (1,)*(num_dims_to-num_dims_from) + dims_from
+        )
+    x0 = np.ones(dims_to) * np.reshape(x0, shape)
+
+    # Reshape the second moment / covariance / precision
+    num_plates_from = np.ndim(x1) - 2*num_dims_from
+    plates_from = np.shape(x1)[:num_plates_from]
+    shape = (
+        plates_from 
+        + (1,)*(num_dims_to-num_dims_from) + dims_from
+        + (1,)*(num_dims_to-num_dims_from) + dims_from
+        )
+    x1 = np.ones(dims_to+dims_to) * np.reshape(x1, shape)
+
+    return (x0, x1)
+
+def transpose_covariance(Cov, ndim=1):
+    """
+    Transpose the covariance array of Gaussian array variable.
+
+    That is, swap the last ndim axes with the ndim axes before them. This makes
+    transposing easy for array variables when the covariance is not a matrix but
+    a multidimensional array.
+    """
+    axes_in = [Ellipsis] + list(range(2*ndim,0,-1))
+    axes_out = [Ellipsis] + list(range(ndim,0,-1)) + list(range(2*ndim,ndim,-1))
+    return np.einsum(Cov, axes_in, axes_out)
+
+def left_rotate_covariance(Cov, R, axis=-1, ndim=1):
+    """
+    Rotate the covariance array of Gaussian array variable.
+
+    ndim is the number of axes for the Gaussian variable.
+
+    For vector variable, ndim=1 and covariance is a matrix.
+    """
+    if not isinstance(axis, int):
+        raise ValueError("Axis must be an integer")
+    if axis < -ndim or axis >= ndim:
+        raise ValueError("Axis out of range")
+
+    # Force negative axis
+    if axis >= 0:
+        axis -= ndim
+
+    # Rotation from left
+    axes_R = [Ellipsis, ndim+abs(axis)+1, ndim+abs(axis)]
+    axes_Cov = [Ellipsis] + list(range(ndim+abs(axis),
+                                       0,
+                                       -1))
+    axes_out = [Ellipsis, ndim+abs(axis)+1] + list(range(ndim+abs(axis)-1,
+                                                         0,
+                                                         -1))
+    Cov = np.einsum(R, axes_R, Cov, axes_Cov, axes_out)
+
+    return Cov
+    
+def right_rotate_covariance(Cov, R, axis=-1, ndim=1):
+    """
+    Rotate the covariance array of Gaussian array variable.
+
+    ndim is the number of axes for the Gaussian variable.
+
+    For vector variable, ndim=1 and covariance is a matrix.
+    """
+    if not isinstance(axis, int):
+        raise ValueError("Axis must be an integer")
+    if axis < -ndim or axis >= ndim:
+        raise ValueError("Axis out of range")
+
+    # Force negative axis
+    if axis >= 0:
+        axis -= ndim
+
+    # Rotation from right
+    axes_R = [Ellipsis, abs(axis)+1, abs(axis)]
+    axes_Cov = [Ellipsis] + list(range(abs(axis),
+                                       0,
+                                       -1))
+    axes_out = [Ellipsis, abs(axis)+1] + list(range(abs(axis)-1,
+                                                    0,
+                                                    -1))
+    Cov = np.einsum(R, axes_R, Cov, axes_Cov, axes_out)
+
+    return Cov
+    
+def rotate_covariance(Cov, R, axis=-1, ndim=1):
+    """
+    Rotate the covariance array of Gaussian array variable.
+
+    ndim is the number of axes for the Gaussian variable.
+
+    For vector variable, ndim=1 and covariance is a matrix.
+    """
+
+    # Rotate from left and right
+    Cov = left_rotate_covariance(Cov, R, ndim=ndim, axis=axis)
+    Cov = right_rotate_covariance(Cov, R, ndim=ndim, axis=axis)
+
+    return Cov
+
+def rotate_mean(mu, R, axis=-1, ndim=1):
+    """
+    Rotate the mean array of Gaussian array variable.
+
+    ndim is the number of axes for the Gaussian variable.
+
+    For vector variable, ndim=1 and mu is a vector.
+    """
+    if not isinstance(axis, int):
+        raise ValueError("Axis must be an integer")
+    if axis < -ndim or axis >= ndim:
+        raise ValueError("Axis out of range")
+
+    # Force negative axis
+    if axis >= 0:
+        axis -= ndim
+
+    # Rotation from right
+    axes_R = [Ellipsis, abs(axis)+1, abs(axis)]
+    axes_mu = [Ellipsis] + list(range(abs(axis),
+                                      0,
+                                      -1))
+    axes_out = [Ellipsis, abs(axis)+1] + list(range(abs(axis)-1,
+                                                    0,
+                                                    -1))
+    mu = np.einsum(R, axes_R, mu, axes_mu, axes_out)
+
+    return mu
+    
+                           
 def _GaussianArrayARD(shape, shape_mu=None):
 
     ndim = len(shape)
@@ -757,7 +895,6 @@ def _GaussianArrayARD(shape, shape_mu=None):
             # Compute cumulant generating function
             cgf = -0.5*z + 0.5*logdet_alpha
                  
-            #print("Gaussian: G.par", -0.5*z, 0.5*logdet_alpha)
             return cgf
 
         @staticmethod
@@ -971,8 +1108,7 @@ def _GaussianArrayARD(shape, shape_mu=None):
             print(str(Cov))
             
 
-        def rotate(self, R, inv=None, logdet=None, Q=None):
-            raise NotImplementedError()
+        def rotate(self, R, inv=None, logdet=None, axis=-1, Q=None):
 
             if inv is not None:
                 invR = inv
@@ -983,6 +1119,22 @@ def _GaussianArrayARD(shape, shape_mu=None):
                 logdetR = logdet
             else:
                 logdetR = np.linalg.slogdet(R)[1]
+
+            self.phi[0] = rotate_mean(self.phi[0], invR.T,
+                                      axis=axis,
+                                      ndim=ndim)
+            self.phi[1] = rotate_covariance(self.phi[1], invR.T,
+                                            axis=axis,
+                                            ndim=ndim)
+            self.u[0] = rotate_mean(self.u[0], R,
+                                    axis=axis,
+                                    ndim=ndim)
+            self.u[1] = rotate_covariance(self.u[1], R, 
+                                          axis=axis,
+                                          ndim=ndim)
+            self.g -= logdetR
+
+            return
 
             # It would be more efficient and simpler, if you just rotated the
             # moments and didn't touch phi. However, then you would need to call
@@ -1012,76 +1164,6 @@ def _GaussianArrayARD(shape, shape_mu=None):
                 self.u[1] = dot(R, self.u[1], R.T)
                 self.g -= logdetR
 
-        def rotate_matrix(self, R1, R2, inv1=None, logdet1=None, inv2=None, logdet2=None, Q=None):
-            """
-            The vector is reshaped into a matrix by stacking the row vectors.
-
-            Computes R1*X*R2', which is identical to kron(R1,R2)*x (??)
-
-            Note that this is slightly different from the standard Kronecker product
-            definition because Numpy stacks row vectors instead of column vectors.
-
-            Parameters
-            ----------
-            R1 : ndarray
-                A matrix from the left
-            R2 : ndarray
-                A matrix from the right        
-            """
-
-            raise NotImplementedError()
-            if Q is not None:
-                # Rotate moments using Q
-                #print("Debug in rotate matrix", np.shape(self.u[0]), self.get_shape(0))
-                self.u[0] = np.einsum('ik,kj->ij', Q, self.u[0])
-                sumQ = np.sum(Q, axis=0)
-                # Rotate natural parameters using Q
-                self.phi[1] = np.einsum('d,dij->dij', sumQ**(-2), self.phi[1]) 
-                self.phi[0] = np.einsum('dij,dj->di', -2*self.phi[1], self.u[0])
-
-            if inv1 is None:
-                inv1 = np.linalg.inv(R1)
-            if logdet1 is None:
-                logdet1 = np.linalg.slogdet(R1)[1]
-            if inv2 is None:
-                inv2 = np.linalg.inv(R2)
-            if logdet2 is None:
-                logdet2 = np.linalg.slogdet(R2)[1]
-
-            D1 = np.shape(R1)[0]
-            D2 = np.shape(R2)[0]
-
-            # Reshape into matrices
-            sh0 = np.shape(self.phi[0])[:-1] + (D1,D2)
-            sh1 = np.shape(self.phi[1])[:-2] + (D1,D2,D1,D2)
-            phi0 = np.reshape(self.phi[0], sh0)
-            phi1 = np.reshape(self.phi[1], sh1)
-
-            # Apply rotations to phi
-            #phi0 = dot(inv1, phi0, inv2.T)
-            phi0 = dot(inv1.T, phi0, inv2)
-            phi1 = np.einsum('...ia,...abcd->...ibcd', inv1.T, phi1)
-            phi1 = np.einsum('...ic,...abcd->...abid', inv1.T, phi1)
-            phi1 = np.einsum('...ib,...abcd->...aicd', inv2.T, phi1)
-            phi1 = np.einsum('...id,...abcd->...abci', inv2.T, phi1)
-
-            # Reshape back into vectors
-            self.phi[0] = np.reshape(phi0, self.phi[0].shape)
-            self.phi[1] = np.reshape(phi1, self.phi[1].shape)
-
-            # It'd be better to rotate the moments too..
-
-            #g0 = np.sum(np.ones(self.plates)*self.g)
-            self._update_moments_and_cgf()
-            #g1 = np.sum(np.ones(self.plates)*self.g)
-
-            #dg = g1 - g0
-
-            #print("debug rotate", np.sum(self.u[1],axis=0), self.name)
-
-            ## XX = np.sum(np.reshape(self.u[1], (-1,D1,D2,D1,D2)),
-            ##             axis=(0,1,3))
-            ## print("DEBUG", XX)
 
     return __GaussianArrayARD
 
