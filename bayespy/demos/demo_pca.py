@@ -105,11 +105,13 @@ def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=True, maxiter=100):
     if rotate:
         # Use rotations to speed up learning
         rotW = transformations.RotateGaussianArrayARD(W, alpha)
-        rotX = transformations.RotateGaussian(X)
+        rotX = transformations.RotateGaussianArrayARD(X)
         R = transformations.RotationOptimizer(rotW, rotX, D)
         for ind in range(maxiter):
             Q.update()
-            R.rotate()
+            R.rotate(check_bound_terms=False,
+                     check_bound=False,
+                     check_gradient=False)
             
     else:
         # Use standard VB-EM alone
