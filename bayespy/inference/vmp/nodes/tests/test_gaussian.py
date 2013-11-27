@@ -682,3 +682,44 @@ class TestGaussianArrayARD(TestCase):
                           plates=(4,))
 
         pass
+
+    def test_rotate_plates(self):
+
+        # Basic test for Gaussian vectors
+        X = GaussianArrayARD(np.random.randn(3,2),
+                             np.random.rand(3,2),
+                             shape=(2,),
+                             plates=(3,))
+        (u0, u1) = X.get_moments()
+        Cov = u1 - linalg.outer(u0, u0, ndim=1)
+        Q = np.random.randn(3,3)
+        Qu0 = np.einsum('ik,kj->ij', Q, u0)
+        QCov = np.einsum('k,kij->kij', np.sum(Q, axis=0)**2, Cov)
+        Qu1 = QCov + linalg.outer(Qu0, Qu0, ndim=1)
+        X.rotate_plates(Q, plate_axis=-1)
+        (u0, u1) = X.get_moments()
+        self.assertAllClose(u0, Qu0)
+        self.assertAllClose(u1, Qu1)
+
+        # Test full covariance, that is, with observations
+        X = GaussianArrayARD(np.random.randn(3,2),
+                             np.random.rand(3,2),
+                             shape=(2,),
+                             plates=(3,))
+        Y = Gaussian(X, [[2.0, 1.5], [1.5, 3.0]],
+                     plates=(3,))
+        Y.observe(np.random.randn(3,2))
+        X.update()
+        (u0, u1) = X.get_moments()
+        Cov = u1 - linalg.outer(u0, u0, ndim=1)
+        Q = np.random.randn(3,3)
+        Qu0 = np.einsum('ik,kj->ij', Q, u0)
+        QCov = np.einsum('k,kij->kij', np.sum(Q, axis=0)**2, Cov)
+        Qu1 = QCov + linalg.outer(Qu0, Qu0, ndim=1)
+        X.rotate_plates(Q, plate_axis=-1)
+        (u0, u1) = X.get_moments()
+        self.assertAllClose(u0, Qu0)
+        self.assertAllClose(u1, Qu1)
+
+        pass
+        
