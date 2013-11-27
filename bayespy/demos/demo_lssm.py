@@ -51,6 +51,10 @@ def linear_state_space_model(D=3, N=100, M=10):
                   1e-5,
                   plates=(D,),
                   name='alpha')
+    ## A = Gaussian(np.zeros(D),
+    ##              diagonal(alpha),
+    ##              plates=(D,),
+    ##              name='A')
     A = GaussianArrayARD(0,
                          alpha,
                          shape=(D,),
@@ -140,21 +144,20 @@ def run(maxiter=100, debug=False, seed=42):
     #
     # Run inference with rotations.
     #
-    rotA = transformations.RotateGaussianARD(A, alpha)
+    #rotA = transformations.RotateGaussianARD(A, alpha)
+    rotA = transformations.RotateGaussianArrayARD(A, alpha)
     rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
-    rotC = transformations.RotateGaussianARD(C, gamma)
+    rotC = transformations.RotateGaussianArrayARD(C, gamma)
     R = transformations.RotationOptimizer(rotX, rotC, D)
 
     for ind in range(maxiter):
         Q.update()
-        if not debug:
+        if not True: #debug:
             R.rotate()
         else:
             R.rotate(maxiter=10, 
-                     check_gradient=True,
-                     verbose=False,
-                     check_bound=Q.compute_lowerbound,
-                     check_bound_terms=Q.compute_lowerbound_terms)
+                     check_gradient=False,
+                     check_bound=True)
         
     # Show results
     plt.figure()

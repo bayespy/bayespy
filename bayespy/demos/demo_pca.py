@@ -109,9 +109,8 @@ def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=True, maxiter=100):
         R = transformations.RotationOptimizer(rotW, rotX, D)
         for ind in range(maxiter):
             Q.update()
-            R.rotate(check_bound_terms=False,
-                     check_bound=False,
-                     check_gradient=False)
+            R.rotate(check_bound=True,
+                     check_gradient=True)
             
     else:
         # Use standard VB-EM alone
