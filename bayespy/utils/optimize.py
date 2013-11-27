@@ -52,4 +52,4 @@ def check_gradient(f, x0, verbose=True):
     if verbose:
         print("Gradient relative error = %g" % err)
     return err
-    
+

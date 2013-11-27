@@ -643,8 +643,44 @@ def rotate_mean(mu, R, axis=-1, ndim=1):
     mu = np.einsum(R, axes_R, mu, axes_mu, axes_out)
 
     return mu
+
+def array_to_vector(x, ndim=1):
+    if ndim == 0:
+        return x
     
-                           
+    shape_x = np.shape(x)
+    D = np.prod(shape_x[-ndim:])
+    
+    return np.reshape(x, shape_x[:-ndim] + (D,))
+
+def array_to_matrix(A, ndim=1):
+    if ndim == 0:
+        return A
+
+    shape_A = np.shape(A)
+    D = np.prod(shape_A[-ndim:])
+    return np.reshape(A, shape_A[:-2*ndim] + (D,D))
+
+def vector_to_array(x, shape):
+    shape_x = np.shape(x)
+    return np.reshape(x, np.shape(x)[:-1] + tuple(shape))
+    
+def matrix_dot_vector(A, x, ndim=1):
+    if ndim < 0:
+        raise ValueError("ndim must be non-negative integer")
+    if ndim == 0:
+        return A*x
+
+    dims_x = np.shape(x)[-ndim:]
+    
+    A = array_to_matrix(A, ndim=ndim)
+    x = array_to_vector(x, ndim=ndim)
+    
+    y = np.einsum('...ik,...k->...i', A, x)
+
+    return vector_to_array(y, dims_x)
+
+            
 def _GaussianArrayARD(shape, shape_mu=None):
 
     ndim = len(shape)
@@ -1136,21 +1172,42 @@ def _GaussianArrayARD(shape, shape_mu=None):
 
             return
 
-            # It would be more efficient and simpler, if you just rotated the
-            # moments and didn't touch phi. However, then you would need to call
-            # update() before lower_bound_contribution. This is more error-safe.
+        def rotate_plates(self, Q, plate_axis=-1):
+            """
+            Approximate rotation of a plate axis.
 
-            # Rotate plates, if plate rotation matrix is given. Assume that there's
-            # only one plate-axis
+            Mean is rotated exactly but covariance/precision matrix is rotated
+            approximately.
+            """
 
-            #logdet_old = np.sum(utils.linalg.logdet_cov(-2*self.phi[1]))
-            if Q is not None:
-                # Rotate moments using Q
-                self.u[0] = np.einsum('ik,kj->ij', Q, self.u[0])
-                sumQ = np.sum(Q, axis=0)
-                # Rotate natural parameters using Q
-                self.phi[1] = np.einsum('d,dij->dij', sumQ**(-2), self.phi[1]) 
-                self.phi[0] = np.einsum('dij,dj->di', -2*self.phi[1], self.u[0])
+            # Rotate moments using Q
+            if not isinstance(plate_axis, int):
+                raise ValueError("Plate axis must be integer")
+            if plate_axis >= 0:
+                plate_axis -= len(self.plates)
+            if plate_axis < -len(self.plates) or plate_axis >= 0:
+                raise ValueError("Axis out of bounds")
+
+            u0 = rotate_mean(self.u[0], Q, 
+                             ndim=ndim-plate_axis,
+                             axis=0)
+            sumQ = utils.utils.add_trailing_axes(np.sum(Q, axis=0),
+                                                 2*ndim-plate_axis-1)
+            phi1 = sumQ**(-2) * self.phi[1]
+            phi0 = -2 * matrix_dot_vector(phi1, u0, ndim=ndim)
+
+            self.phi[0] = phi0
+            self.phi[1] = phi1
+            
+            self._update_moments_and_cgf()
+
+            return
+        
+            self.u[0] = np.einsum('ik,kj->ij', Q, self.u[0])
+            sumQ = np.sum(Q, axis=0)
+            # Rotate natural parameters using Q
+            self.phi[1] = np.einsum('d,dij->dij', sumQ**(-2), self.phi[1]) 
+            self.phi[0] = np.einsum('dij,dj->di', -2*self.phi[1], self.u[0])
 
             # Transform parameters using R
             self.phi[0] = mvdot(invR.T, self.phi[0])

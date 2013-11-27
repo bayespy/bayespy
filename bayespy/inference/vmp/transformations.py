@@ -41,8 +41,7 @@ class RotationOptimizer():
                maxiter=10, 
                check_gradient=False,
                verbose=False,
-               check_bound=False,
-               check_bound_terms=False):
+               check_bound=False):
         """
         Optimize the rotation of two separate model blocks jointly.
 
@@ -86,10 +85,14 @@ class RotationOptimizer():
 
             return (c, np.ravel(dc))
 
-        def get_bound_terms(r):
+        def get_bound_terms(r, gradient=False):
             """
             Returns a dictionary of bound terms for the nodes.
             """
+            # Gradient not yet implemented..
+            if gradient:
+                raise NotImplementedError()
+            
             # Make vector-r into matrix-R
             R = np.reshape(r, (self.D,self.D))
 
@@ -98,34 +101,31 @@ class RotationOptimizer():
             logdetR = np.linalg.slogdet(R)[1]
 
             # Compute lower bound terms
-            dict1 = self.block1.get_bound_terms(R, logdet=logdetR, inv=invR)
-            dict2 = self.block2.get_bound_terms(invR.T, logdet=-logdetR, inv=R.T)
+            dict1 = self.block1.get_bound_terms(R, 
+                                                logdet=logdetR, 
+                                                inv=invR)
+            dict2 = self.block2.get_bound_terms(invR.T, 
+                                                logdet=-logdetR, 
+                                                inv=R.T)
 
-            dict1.update(dict2)
-            
-            return dict1
+            if not gradient:
+                dict1.update(dict2)
+                return dict1
+            else:
+                terms = dict1[0].copy()
+                terms = terms.update(dict2[0])
+                grad = dict1[1].copy()
+                grad = grad.update(dict2[1])
+                return (terms, grad)
 
         def get_true_bound_terms():
+            nodes = set(self.block1.nodes()) | set(self.block2.nodes())
             D = {}
-            for node in self.block1.nodes():
-                L = node.lower_bound_contribution()
-                D[node] = L
-            for node in self.block2.nodes():
+            for node in nodes:
                 L = node.lower_bound_contribution()
                 D[node] = L
             return D
 
-        def get_true_bound():
-            nodes = set()
-            for node in self.block1.nodes():
-                nodes.add(node)
-            for node in self.block2.nodes():
-                nodes.add(node)
-            L = 0
-            for node in nodes:
-                L += node.lower_bound_contribution()
-            return L
-                
 
         self.block1.setup()
         self.block2.setup()
@@ -141,21 +141,15 @@ class RotationOptimizer():
         r0 = np.ravel(np.identity(self.D))
 
         (cost_begin, _) = cost(r0)
-        ## if check_bound is not None and check_bound is not False:
-        ##     bound_begin = check_bound()
         if check_bound:
-            bound_begin = get_true_bound()
-        if check_bound_terms:
             bound_terms_begin = get_bound_terms(r0)
             true_bound_terms_begin = get_true_bound_terms()
-            #true_bound_terms_begin = check_bound_terms()
 
         # Run optimization
         r = utils.optimize.minimize(cost, r0, maxiter=maxiter, verbose=verbose)
 
-        #if check_bound is not None and check_bound is not False:
         (cost_end, _) = cost(r)
-        if check_bound_terms:
+        if check_bound:
             bound_terms_end = get_bound_terms(r)
 
         # Apply the optimal rotation
@@ -167,21 +161,7 @@ class RotationOptimizer():
 
         # Check that the cost function and the true lower bound changed equally
         cost_change = cost_end - cost_begin
-        ## if check_bound is not None and check_bound is not False:
-        ##     bound_end = check_bound()
-        if check_bound:
-            bound_end = get_true_bound()
-            bound_change = bound_end - bound_begin
-            if not np.allclose(bound_change, -cost_change):
-                warnings.warn("Rotation cost function is not consistent with "
-                              "the true lower bound. Bound changed %g but "
-                              "optimized function changed %g."  
-                              % (bound_change, -cost_change))
-            # Check that we really have improved the bound.
-            if bound_change < 0:
-                warnings.warn("Rotation made the true lower bound worse by %g. "
-                              "Probably a bug in the rotation functions."
-                              % (bound_change,))
+        
         # Check that we really have improved the bound.
         if cost_change > 0:
             warnings.warn("Rotation optimization made the cost function worse "
@@ -189,31 +169,36 @@ class RotationOptimizer():
                           "rotation functions."
                           % (cost_change,))
                 
-        if check_bound_terms:
+        if check_bound:
             true_bound_terms_end = get_true_bound_terms()
-            #true_bound_terms_end = check_bound_terms()
-            for rot in bound_terms_begin.keys():
-                opt_bound_change = (bound_terms_end[rot] 
-                                    - bound_terms_begin[rot])
-                true_bound_change = 0
-                for node in rot.nodes():
-                    try:
-                        true_bound_change += (true_bound_terms_end[node] 
-                                              - true_bound_terms_begin[node])
-                    except KeyError:
-                        raise Exception("The node %s is part of the "
-                                        "transformation but not part of the "
-                                        "model. Check your VB construction." 
-                                        % node.name)
-                if not np.allclose(opt_bound_change, true_bound_change):
+            bound_change = 0
+            for node in bound_terms_begin.keys():
+                node_bound_change = (bound_terms_end[node] 
+                                    - bound_terms_begin[node])
+                bound_change += node_bound_change
+                true_node_bound_change = 0
+                try:
+                    true_node_bound_change += (true_bound_terms_end[node] 
+                                               - true_bound_terms_begin[node])
+                except KeyError:
+                    raise Exception("The node %s is part of the "
+                                    "transformation but not part of the "
+                                    "model. Check your VB construction." 
+                                    % node.name)
+                if not np.allclose(node_bound_change, true_node_bound_change):
                     warnings.warn("Rotation cost function is not consistent "
                                   "with the true lower bound for node %s. "
                                   "Bound changed %g but optimized function "
                                   "changed %g."  
-                                  % (rot.nodes()[0].name,
-                                     true_bound_change,
-                                     opt_bound_change))
-                    pass
+                                  % (node.name,
+                                     true_node_bound_change,
+                                     node_bound_change))
+
+            # Check that we really have improved the bound.
+            if bound_change < 0:
+                warnings.warn("Rotation made the true lower bound worse by %g. "
+                              "Probably a bug in the rotation functions."
+                              % (bound_change,))
                 
 
 class RotateGaussian():
@@ -278,28 +263,33 @@ class RotateGaussian():
                                               0)
 
         # Compute the bound
-        bound = logp_X + logH_X
+        if terms:
+            bound = {self.X: bound}
+        else:
+            bound = logp_X + logH_X
 
-        if gradient:
+        if not gradient:
+            return bound
 
-            # Compute dH(X)
-            dlogH_X = utils.random.gaussian_entropy(-2*self.N*inv_R.T,
-                                                    0)
+        # Compute dH(X)
+        dlogH_X = utils.random.gaussian_entropy(-2*self.N*inv_R.T,
+                                                0)
 
-            # Compute d<log p(X)>
-            dXX = 2*dot(self.Lambda, R, self.XX)
-            dlogp_X = utils.random.gaussian_logpdf(dXX,
-                                                   0,
-                                                   0,
-                                                   0,
-                                                   0)
+        # Compute d<log p(X)>
+        dXX = 2*dot(self.Lambda, R, self.XX)
+        dlogp_X = utils.random.gaussian_logpdf(dXX,
+                                               0,
+                                               0,
+                                               0,
+                                               0)
 
+        if terms:
+            d_bound = {self.X: dlogp_X + dlogH_X}
+        else:
             d_bound = dlogp_X + dlogH_X
 
-            return (bound, d_bound)
+        return (bound, d_bound)
 
-        else:
-            return bound
 
     def bound(self, R, logdet=None, inv=None):
         return self._compute_bound(R, 
@@ -308,13 +298,12 @@ class RotateGaussian():
                                    gradient=True)
 
     def get_bound_terms(self, R, logdet=None, inv=None):
-        bound = self._compute_bound(R, 
-                                    logdet=logdet,
-                                    inv=inv,
-                                    gradient=False)
+        return self._compute_bound(R, 
+                                   logdet=logdet,
+                                   inv=inv,
+                                   gradient=False,
+                                   terms=True)
         
-        return {self: bound}
-
     def nodes(self):
         return [self.X]
 
@@ -341,6 +330,24 @@ def covariance_to_variance(C, ndim=1, covariance_axis=None):
     out_keys = sorted(list(set(keys)))
 
     return np.einsum(C, [Ellipsis]+keys, [Ellipsis]+out_keys)
+
+def sum_to_plates(V, plates_to, plates_from=None, ndim=0):
+    if ndim == 0:
+        if plates_from is not None:
+            r = gaussian.Gaussian._plate_multiplier(plates_from,
+                                                    np.shape(V))
+        else:
+            r = 1
+        return r * utils.utils.sum_to_shape(V, plates_to)
+    else:
+        dims_V = np.shape(V)[-ndim:]
+        plates_V = np.shape(V)[:-ndim]
+        shape_to = tuple(plates_to) + dims_V
+        if plates_from is not None:
+            r = gaussian.Gaussian._plate_multiplier(plates_from, plates_V)
+        else:
+            r = 1
+        return r * utils.utils.sum_to_shape(V, shape_to)
 
 class RotateGaussianArrayARD():
     """
@@ -381,6 +388,7 @@ class RotateGaussianArrayARD():
             raise ValueError("Axis out of bounds")
         self.axis = axis
 
+
     def nodes(self):
         if self.update_alpha:
             return [self.node_X, self.node_alpha]
@@ -388,11 +396,19 @@ class RotateGaussianArrayARD():
             return [self.node_X]
 
     def rotate(self, R, inv=None, logdet=None, Q=None):
-        self.node_X.rotate(R, inv=inv, logdet=logdet, Q=Q)
+
+        self.node_X.rotate(R, 
+                           inv=inv, 
+                           logdet=logdet, 
+                           axis=self.axis)
+
+        if self.plate_axis is not None:
+            self.node_X.rotate_plates(Q, plate_axis=self.plate_axis)
+
         if self.update_alpha:
             self.node_alpha.update()
 
-    def setup(self, rotate_plates=False):
+    def setup(self, plate_axis=None):
         """
         This method should be called just before optimization.
 
@@ -401,6 +417,16 @@ class RotateGaussianArrayARD():
         If using Q, set rotate_plates to True.
         """
         
+        if plate_axis is not None:
+            if not isinstance(plate_axis, int):
+                raise ValueError("Plate axis must be integer")
+            if plate_axis >= 0:
+                plate_axis -= len(self.node_X.plates)
+            if plate_axis < -len(self.node_X.plates) or plate_axis >= 0:
+                raise ValueError("Axis out of bounds")
+            plate_axis -= self.ndim - 1 # Why -1? Because one axis is preserved!
+        self.plate_axis = plate_axis
+                
         # Get the mean parameter. It will not be rotated.
         (mu, mumu) = self.node_mu.get_moments()
         # For simplicity, force mu to have the same shape as X
@@ -440,7 +466,7 @@ class RotateGaussianArrayARD():
             alpha = safe_move_axis(self.node_alpha.get_moments()[0])
             logalpha = safe_move_axis(self.node_alpha.get_moments()[1])
 
-        # Move plates of alpha
+        # Move plates of alpha for R
         plates_alpha = list(self.node_alpha.plates)
         if len(plates_alpha) >= -self.axis:
             plate = plates_alpha.pop(self.axis)
@@ -451,19 +477,65 @@ class RotateGaussianArrayARD():
         plates_X = list(self.node_X.get_shape(0))
         plates_X.pop(self.axis)
 
-        # Sum axes that are not in the plates of alpha
         def sum_to_alpha(V):
-            plates_to = plates_alpha[:-1] + [D,D]
-            Y = (utils.utils.sum_to_shape(V, plates_to) *
-                 self.node_X._plate_multiplier(plates_X, np.shape(V)[:-2]))
-            return Y
-        XX = sum_to_alpha(XX)
-        mumu = sum_to_alpha(mumu)
-        Xmu = sum_to_alpha(Xmu)
+            return sum_to_plates(V, plates_alpha[:-1],
+                                 ndim=2,
+                                 plates_from=plates_X)
+        
+        if self.plate_axis is not None:
+            # Move plate axis just before the rotated dimensions (which are
+            # last)
+            def safe_move_plate_axis(x, ndim):
+                if np.ndim(x)-ndim >= -self.plate_axis:
+                    return utils.utils.moveaxis(x, 
+                                                self.plate_axis-ndim,
+                                                -ndim-1)
+                else:
+                    inds = (Ellipsis,None) + ndim*(slice(None),)
+                    return x[inds]
+            X = safe_move_plate_axis(X, 1)
+            mu = safe_move_plate_axis(mu, 1)
+            XX = safe_move_plate_axis(XX, 2)
+            mumu = safe_move_plate_axis(mumu, 2)
+            if self.update_alpha:
+                a = safe_move_plate_axis(a, 1)
+                a0 = safe_move_plate_axis(a0, 1)
+                b0 = safe_move_plate_axis(b0, 1)
+            else:
+                alpha = safe_move_plate_axis(alpha, 1)
+                logalpha = safe_move_plate_axis(logalpha, 1)
+            # Move plates of X and alpha
+            plate = plates_X.pop(self.plate_axis)
+            plates_X.append(plate)
+            if len(plates_alpha) >= -self.plate_axis+1:
+                plate = plates_alpha.pop(self.plate_axis-1)
+            else:
+                plate = 1
+            plates_alpha = plates_alpha[:-1] + [plate] + plates_alpha[-1:]
+            # Sum axes
+            def sum_to_alpha_and_plate_axis(V, ndim):
+                ## plates_a = plates_alpha[:-1] + [D]*ndim
+                ## plates_b = plates_X[-1:] + [D]*ndim
+                ## plates_to = utils.utils.broadcasted_shape(plates_a, plates_b)
+                plates_to = plates_alpha[:-2] + plates_X[-1:]# + [D]*ndim
+                return sum_to_plates(V, plates_to, 
+                                     ndim=ndim,
+                                     plates_from=plates_X)
 
-        self.XX = XX
-        self.mumu = mumu
-        self.Xmu = Xmu
+            self.X = X
+            self.mu = mu
+            CovX = XX - utils.linalg.outer(X, X)
+            self.CovX = sum_to_alpha_and_plate_axis(CovX, 2)
+            # Broadcast mumu to ensure shape
+            mumu = np.ones(np.shape(XX)[-3:]) * mumu
+            self.mumu = sum_to_alpha(mumu)
+        else:
+            # Sum axes that are not in the plates of alpha
+            self.XX = sum_to_alpha(XX)
+            self.mumu = sum_to_alpha(mumu)
+            self.Xmu = sum_to_alpha(Xmu)
+            
+        
         if self.update_alpha:
             self.a = a
             self.a0 = a0
@@ -476,7 +548,7 @@ class RotateGaussianArrayARD():
         self.plates_alpha = plates_alpha
     
 
-    def _compute_bound(self, R, logdet=None, inv=None, Q=None, gradient=False):
+    def _compute_bound(self, R, logdet=None, inv=None, Q=None, gradient=False, terms=False):
         """
         Rotate q(X) and q(alpha).
 
@@ -490,22 +562,53 @@ class RotateGaussianArrayARD():
         #
 
         # Compute rotated second moment
-        if Q is not None:
-            raise NotImplementedError()
+        if self.plate_axis is not None:
+            # The plate axis has been moved to be the last plate axis
+
+            if Q is None:
+                raise ValueError("Plates should be rotated but no Q give")
+
             # Rotate plates
-            sumQ = np.sum(Q, axis=0)
-            QX = np.einsum('ik,kj->ij', Q, self.X)
-            XX = (np.einsum('ki,kj->ij', QX, QX)
-                  + np.einsum('d,dij->ij', sumQ**2, self.CovX))
-            logdet_Q = np.sum(np.log(np.abs(sumQ)))
-            X = QX
-            X_mu = utils.utils.sum_multiply(X[...,:,np.newaxis],
-                                            self.mu[...,np.newaxis,:],
-                                            axis=(-1,-2),
-                                            sumaxis=False,
-                                            keepdims=False)
+            X = self.X
+            QX = np.einsum('...ik,...kj->...ij', Q, X)
+            sumQ = np.sum(Q, axis=0)[:,None,None]
+            CovX = sumQ**2 * self.CovX
+            CovX = sum_to_plates(CovX,
+                                 self.plates_alpha[:-1],
+                                 ndim=2)
+            ## CovX = utils.utils.sum_multiply(sumQ**2,
+            ##                                 self.CovX,
+            ##                                 axis=(-2,-1),
+            ##                                 sumaxis=False,
+            ##                                 keepdims=False)
+            # Compute expectations
+            XX = CovX + sum_to_plates(utils.linalg.outer(QX, QX),
+                                      self.plates_alpha[:-1],
+                                      ndim=2,
+                                      plates_from=self.plates_X)
+            Xmu = sum_to_plates(utils.linalg.outer(QX, self.mu),
+                                self.plates_alpha[:-1],
+                                ndim=2,
+                                plates_from=self.plates_X)
+
+            mu = self.mu
+            
+            # Sum plate axis if necessary
+            ## XX = sum_to_plates(XX, self.plates_alpha[:-1], 
+            ##                    ndim=2,
+            ##                    plates_from=self.plates_X)
+            ## Xmu = sum_to_plates(Xmu, self.plates_alpha[:-1], 
+            ##                     ndim=2,
+            ##                     plates_from=self.plates_X)
+            ## mumu = sum_to_plates(self.mumu, self.plates_alpha[:-1], 
+            ##                      ndim=2,
+            ##                      plates_from=self.plates_X)
+            mumu = self.mumu
+            D = np.shape(X)[-1]
+            logdet_Q = D * np.log(np.abs(sumQ))[:,0,0]
+            sumQ = sumQ[:,0,0]
+            
         else:
-            #X = self.X
             XX = self.XX
             mumu = self.mumu
             Xmu = self.Xmu
@@ -557,8 +660,7 @@ class RotateGaussianArrayARD():
         D = np.shape(R)[0]
 
         # Compute entropy H(X)
-        # logH_X = utils.random.gaussian_entropy(-2*N*logdet_R - 2*D*logdet_Q, 
-        logH_X = utils.random.gaussian_entropy(-2*sum_plates(logdet_R,
+        logH_X = utils.random.gaussian_entropy(-2*sum_plates(logdet_R + logdet_Q,
                                                              plates_X),
                                                0)
 
@@ -595,12 +697,17 @@ class RotateGaussianArrayARD():
             logp_alpha = 0
 
         # Compute the bound
-        bound = (0
-        + logp_X
-        + logp_alpha
-        + logH_X
-        + logH_alpha
-            )
+        if terms:
+            bound = {self.node_X: logp_X + logH_X}
+            if self.update_alpha:
+                bound.update({self.node_alpha: logp_alpha + logH_alpha})
+        else:
+            bound = (0
+                     + logp_X
+                     + logp_alpha
+                     + logH_X
+                     + logH_alpha
+                     )
 
         if not gradient:
             return bound
@@ -683,14 +790,19 @@ class RotateGaussianArrayARD():
             dlogH_alpha = 0
             dlogp_alpha = 0
 
-        dR_bound = (0*dlogp_X
-        + dlogp_X
-        + dlogp_alpha
-        + dlogH_X
-        + dlogH_alpha
-            )
+        if terms:
+            dR_bound = {self.node_X: dlogp_X + dlogH_X}
+            if self.update_alpha:
+                dR_bound.update({self.node_alpha: dlogp_alpha + dlogH_alpha})
+        else:
+            dR_bound = (0*dlogp_X
+                        + dlogp_X
+                        + dlogp_alpha
+                        + dlogH_X
+                        + dlogH_alpha
+                        )
 
-        if Q is None:
+        if self.plate_axis is None:
             return (bound, dR_bound)
 
         #
@@ -698,6 +810,40 @@ class RotateGaussianArrayARD():
         #
 
         def d_helper(v):
+            """
+            Compute: d/dQ 1/2*trace(diag(v)*<XX>)
+
+            = Q*<X>'*R'*diag(v)*R*<X> + ones * Q diag( tr(R'*diag(v)*R*Cov) )
+            """
+
+            R_v_R = np.einsum('...ki,...k,...kj->...ij', R, v, R)
+            #QX_R_v_R_X = dot(QX, R_v_R, self.X.T)
+
+            tr_R_v_R_Cov = np.einsum('...ij,...ji->...', R_v_R, self.CovX)
+            tr_R_v_R_Cov = utils.utils.sum_multiply(tr_R_v_R_Cov,
+                                                    axis=(-1,),
+                                                    sumaxis=False,
+                                                    keepdims=False)
+
+            R_v_R_X = np.einsum('...ik,...k->...i', R_v_R, X)
+            QX_R_v_R_X = np.einsum('...ik,...kj->...ij', QX, R_v_R_X)
+            QX_R_v_R_X = utils.utils.sum_multiply(QX_R_v_R_X,
+                                                  axis=(-2,-1),
+                                                  sumaxis=False,
+                                                  keepdims=False)
+
+            mu_v_R = np.einsum('...k,...k,...kj->...j', self.mu, v, R)
+
+            return (QX_R_v_R_X
+                    + sumQ * tr_R_v_R_Cov
+                    - dot(mu_v_R, self.X.T))
+            
+        def d_helper_BACKUP(v):
+            """
+            Compute: d/dQ 1/2*trace(diag(v)*<XX>)
+
+            = Q*<X>'*R'*diag(v)*R*<X> + ones * Q diag( tr(R'*diag(v)*R*Cov) )
+            """
             R_v_R = np.einsum('ki,k,kj->ij', R, v, R)
             tr_R_v_R_Cov = np.einsum('ij,dji->d', R_v_R, self.CovX)
             mu_v_R = np.einsum('ik,k,kj', self.mu, v, R)
@@ -706,43 +852,59 @@ class RotateGaussianArrayARD():
                     - dot(mu_v_R, self.X.T))
             
 
-        # Compute dH(X)
-        dQ_logHX = utils.random.gaussian_entropy(-2*D/sumQ,
-                                                 0)
+        D_logb = d_helper(1/b)
+        DXX_alpha = 2*d_helper(alpha)
+        XX_Dalpha = -d_helper(np.diag(XmuXmu)*alpha/b)
+        D_XX_alpha = DXX_alpha + XX_Dalpha
+        D_logalpha = -D_logb
+        D_logdetQ = -2*D/sumQ
 
-        # Compute dH(alpha)
-        d_log_b = d_helper(1/b_alpha)
-        dQ_logHalpha = utils.random.gamma_entropy(0,
-                                                  d_log_b,
-                                                  0,
-                                                  0,
-                                                  0)
+        # Compute dH(X)
+        dQ_logHX = utils.random.gaussian_entropy(D_logdetQ,
+                                                 0)
 
         # Compute d<log p(X|alpha)>
-        dXX_alpha = 2*d_helper(alpha_R)
-        XX_dalpha = -d_helper(np.diag(XmuXmu_R)*alpha_R/b_alpha)
-        d_log_alpha = -d_log_b
-        dQ_logpX = utils.random.gaussian_logpdf(dXX_alpha + XX_dalpha,
+        dQ_logpX = utils.random.gaussian_logpdf(D_XX_alpha,
                                                 0,
                                                 0,
-                                                N*d_log_alpha,
+                                                D_logalpha,
                                                 0)
 
+        if self.update_alpha:
 
-        # Compute d<log p(alpha)>
-        d_alpha = -d_helper(alpha_R/b_alpha)
-        dQ_logpalpha = utils.random.gamma_logpdf(self.b0*d_alpha,
-                                                 d_log_alpha,
-                                                 self.a0*d_log_alpha,
-                                                 0,
-                                                 0)
+            D_alpha = -d_helper(alpha/b)
+            D_b0_alpha = b0 * D_alpha
+            D_a0_logalpha = 0 # TODO/FIXME
 
-        dQ_bound = (0*dQ_logpX
-        + dQ_logpX
-        + dQ_logpalpha
-        + dQ_logHX
-        + dQ_logHalpha
-            )
+            # Compute dH(alpha)
+            dQ_logHalpha = utils.random.gamma_entropy(0,
+                                                      D_logb,
+                                                      0,
+                                                      0,
+                                                      0)
+
+            # Compute d<log p(alpha)>
+            dQ_logpalpha = utils.random.gamma_logpdf(D_b0_alpha,
+                                                     D_logalpha,
+                                                     D_a0_logalpha,
+                                                     0,
+                                                     0)
+        else:
+
+            dQ_logHalpha = 0
+            dQ_logpalpha = 0
+
+        if terms:
+            dQ_bound = {self.node_X: dQ_logpX + dQ_logHX}
+            if self.update_alpha:
+                dQ_bound.update({self.node_alpha: dQ_logpalpha + dQ_logHalpha})
+        else:
+            dQ_bound = (0*dQ_logpX
+                        + dQ_logpX
+                        + dQ_logpalpha
+                        + dQ_logHX
+                        + dQ_logHalpha
+                        )
 
         return (bound, dR_bound, dQ_bound)
 
@@ -756,14 +918,12 @@ class RotateGaussianArrayARD():
                                    gradient=True)
             
     def get_bound_terms(self, R, logdet=None, inv=None, Q=None):
-        bound = self._compute_bound(R, 
-                                    logdet=logdet, 
-                                    inv=inv, 
-                                    Q=Q,
-                                    gradient=False)
-        
-        return {self: bound}
-    
+        return self._compute_bound(R, 
+                                   logdet=logdet, 
+                                   inv=inv, 
+                                   Q=Q,
+                                   gradient=False,
+                                   terms=True)
 
 
     
@@ -788,8 +948,7 @@ class RotateGaussianMarkovChain():
         self.N = X.dims[0][0]
 
     def nodes(self):
-        # A node is in the A rotator.
-        return [self.X_node]
+        return [self.X_node] + self.A_rotator.nodes()
 
     def rotate(self, R, inv=None, logdet=None):
         self.X_node.rotate(R, inv=inv, logdet=logdet)
@@ -840,12 +999,12 @@ class RotateGaussianMarkovChain():
         self.Lambda = self.X_node.parents[1].get_moments()[0]
         self.Lambda_mu_X0 = np.outer(np.dot(self.Lambda,mu), self.X0)
 
-        self.A_rotator.setup(rotate_plates=True)
+        self.A_rotator.setup(plate_axis=-1)
 
         # Innovation noise is assumed to be I
         #self.v = self.X_node.parents[3].get_moments()[0]
 
-    def _compute_bound(self, R, logdet=None, inv=None, gradient=False):
+    def _compute_bound(self, R, logdet=None, inv=None, gradient=False, terms=False):
         """
         Rotate q(X) as X->RX: q(X)=N(R*mu, R*Cov*R')
 
@@ -866,16 +1025,12 @@ class RotateGaussianMarkovChain():
         invR = inv
         logdetR = logdet
 
-        # Transform moments of X:
-        # Transform moments of A:
+        # Transform moments of X and A:
         Lambda_R_X0X0 = dot(self.Lambda, R, self.X0X0)
         R_XnXn = dot(R, self.XnXn)
         RA_XpXp_A = dot(R, self.A_XpXp_A)
         sumr = np.sum(R, axis=0)
         R_CovA_XpXp = sumr * self.CovA_XpXp
-
-        ## if not gradient:
-        ##     print("DEBUG TOO", dot(R_XnXn,R.T))
 
         # Compute entropy H(X)
         logH_X = utils.random.gaussian_entropy(-2*self.N*logdetR, 
@@ -896,10 +1051,13 @@ class RotateGaussianMarkovChain():
                                                 0)
 
         # Compute the bound
-        bound = (0
-                 + logp_X 
-                 + logH_X
-                 )
+        if terms:
+            bound = {self.X_node: logp_X + logH_X}
+        else:
+            bound = (0
+                     + logp_X 
+                     + logH_X
+                     )
 
         # TODO/FIXME: There might be a very small error in the gradient?
         
@@ -914,10 +1072,13 @@ class RotateGaussianMarkovChain():
                                                    0,
                                                    0)
 
-            d_bound = (0*dlogp_X
-                       + dlogp_X 
-                       + dlogH_X
-                       )
+            if terms:
+                d_bound = {self.X_node: dlogp_X + dlogH_X}
+            else:
+                d_bound = (0*dlogp_X
+                           + dlogp_X 
+                           + dlogH_X
+                           )
 
             return (bound, d_bound)
 
@@ -945,19 +1106,21 @@ class RotateGaussianMarkovChain():
         return (bound, d_bound)
 
     def get_bound_terms(self, R, logdet=None, inv=None):
-        bound_dict = self.A_rotator.get_bound_terms(inv.T, 
-                                                    inv=R.T,
-                                                    logdet=-logdet,
-                                                    Q=R)
+        terms_A = self.A_rotator.get_bound_terms(inv.T, 
+                                                 inv=R.T,
+                                                 logdet=-logdet,
+                                                 Q=R)
         
-        bound_X = self._compute_bound(R,
+        terms_X = self._compute_bound(R,
                                       logdet=logdet,
                                       inv=inv,
-                                      gradient=False)
+                                      gradient=False,
+                                      terms=True)
+
+        # TODO/FIXME: USE DICTIONARY AS A FUNCTION OF NODES!!!!!
+        terms_X.update(terms_A)
         
-        bound_dict.update({self: bound_X})
-        
-        return bound_dict
+        return terms_X
 
     
 class RotateDriftingMarkovChain():
@@ -1241,12 +1404,15 @@ class RotateGaussianARD():
         self.node_X.rotate(R, inv=inv, logdet=logdet, Q=Q)
         self.node_alpha.update()
 
-    def setup(self, rotate_plates=False):
+    def setup(self, rotate_plates=False, plate_axis=None):
         """
         This method should be called just before optimization.
 
         If using Q, set rotate_plates to True.
         """
+
+        if plate_axis is not None:
+            rotate_plates = True
         
         # Get the mean parameter. It is not rotated.
         node_mu = self.node_X.parents[0]
@@ -1291,7 +1457,7 @@ class RotateGaussianARD():
             self.mumu = np.diag(utils.utils.sum_to_dim(self.mumu, 2))
             #print("yes plates", node_mu.plates, np.shape(self.mumu))
 
-    def _compute_bound(self, R, logdet=None, inv=None, Q=None, gradient=False):
+    def _compute_bound(self, R, logdet=None, inv=None, Q=None, gradient=False, terms=False):
         """
         Rotate q(X) and q(alpha).
 
@@ -1374,12 +1540,18 @@ class RotateGaussianARD():
                                                0)
 
         # Compute the bound
-        bound = (0
-        + logp_X
-        + logp_alpha
-        + logH_X
-        + logH_alpha
-            )
+        if terms:
+            bound = {
+                self.node_X: logp_X + logH_X,
+                self.node_alpha: logp_alpha + logH_alpha
+                }
+        else:
+            bound = (0
+                     + logp_X
+                     + logp_alpha
+                     + logH_X
+                     + logH_alpha
+                     )
 
         if not gradient:
             return bound
@@ -1420,12 +1592,18 @@ class RotateGaussianARD():
                                                 0,
                                                 0)
 
-        dR_bound = (0*dlogp_X
-        + dlogp_X
-        + dlogp_alpha
-        + dlogH_X
-        + dlogH_alpha
-            )
+        if terms:
+            dR_bound = {
+                self.node_X: dlogp_X + dlogH_X,
+                self.node_alpha: dlogp_alpha + dlogH_alpha
+                }
+        else:
+            dR_bound = (0*dlogp_X
+                        + dlogp_X
+                        + dlogp_alpha
+                        + dlogH_X
+                        + dlogH_alpha
+                        )
 
         if Q is None:
             return (bound, dR_bound)
@@ -1474,12 +1652,18 @@ class RotateGaussianARD():
                                                  0,
                                                  0)
 
-        dQ_bound = (0*dQ_logpX
-        + dQ_logpX
-        + dQ_logpalpha
-        + dQ_logHX
-        + dQ_logHalpha
-            )
+        if terms:
+            dQ_bound = {
+                self.node_X: dQ_logpX + dQ_logHX,
+                self.node_alpha: dQ_logpalpha + dQ_logHalpha
+                }
+        else:
+            dQ_bound = (0*dQ_logpX
+                        + dQ_logpX
+                        + dQ_logpalpha
+                        + dQ_logHX
+                        + dQ_logHalpha
+                        )
 
         return (bound, dR_bound, dQ_bound)
 
@@ -1493,13 +1677,12 @@ class RotateGaussianARD():
                                    gradient=True)
             
     def get_bound_terms(self, R, logdet=None, inv=None, Q=None):
-        bound = self._compute_bound(R, 
-                                    logdet=logdet, 
-                                    inv=inv, 
-                                    Q=Q,
-                                    gradient=False)
-        
-        return {self: bound}
+        return self._compute_bound(R, 
+                                   logdet=logdet, 
+                                   inv=inv, 
+                                   Q=Q,
+                                   gradient=False,
+                                   terms=True)
         
 
 
