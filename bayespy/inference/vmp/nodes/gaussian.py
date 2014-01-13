@@ -1107,14 +1107,22 @@ def _GaussianArrayARD(shape, shape_mu=None):
             """
             # TODO/FIXME: You shouldn't draw random values for
             # observed/fixed elements!
+            D = len(self.dims[0])
             if np.prod(self.dims[1]) == 1.0:
                 # Scalar Gaussian
-                std = np.sqrt(-0.5 / self.phi[1])
+                phi1 = self.phi[1]
+                if D > 0:
+                    # Because the covariance matrix has shape (1,1,...,1,1),
+                    # that is 2*D number of ones, remove the extra half of the
+                    # shape
+                    phi1 = np.reshape(phi1, np.shape(phi1)[:-2*D] + D*(1,))                  
+                    
+                std = np.sqrt(-0.5 / phi1)
                 mu = self.u[0]
                 z = np.random.normal(0, 1, self.get_shape(0))
                 x = mu + std * z
+                print("DEBUG IN GAUSSIAN", np.shape(mu), np.shape(std), np.shape(z), np.shape(phi1))
             else:
-                D = len(self.dims[0])
                 N = np.prod(self.dims[0])
                 dims_cov = self.dims[1]
                 # Reshape precision matrix
