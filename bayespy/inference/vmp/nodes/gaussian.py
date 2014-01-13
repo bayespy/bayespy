@@ -1121,7 +1121,6 @@ def _GaussianArrayARD(shape, shape_mu=None):
                 mu = self.u[0]
                 z = np.random.normal(0, 1, self.get_shape(0))
                 x = mu + std * z
-                print("DEBUG IN GAUSSIAN", np.shape(mu), np.shape(std), np.shape(z), np.shape(phi1))
             else:
                 N = np.prod(self.dims[0])
                 dims_cov = self.dims[1]
