@@ -100,7 +100,11 @@ class ExponentialFamily(Stochastic):
     def initialize_from_value(self, x):
         # Update moments from value
         if np.shape(x) != self.plates + self.get_shape_of_value():
-            raise ValueError("Invalid shape of the value for initialization.")
+            raise ValueError("The initial value for node %s has invalid shape "
+                             "%s. The shape should be %s." %
+                             (self.name,
+                              np.shape(x),
+                              self.plates + self.get_shape_of_value()))
         mask = np.logical_not(self.observed)
         (u, f) = self._compute_fixed_moments_and_f(x, mask=mask)
         self._set_moments_and_cgf(u, np.inf, mask=mask)
