@@ -48,8 +48,13 @@ def check_gradient(f, x0, verbose=True):
     df_num = optimize.approx_fprime(x0, 
                                     lambda x: f(x)[0], 
                                     optimize.optimize._epsilon)
-    err = np.linalg.norm(df-df_num) / np.linalg.norm(df_num)
+    abserr = np.linalg.norm(df-df_num)
+    err = abserr / np.linalg.norm(df_num)
     if verbose:
-        print("Gradient relative error = %g" % err)
+        print("Norm of numerical gradient: %g" % np.linalg.norm(df_num))
+        print("Norm of function gradient:  %g" % np.linalg.norm(df))
+        print("Gradient relative error = %g and absolute error = %g" % 
+              (err,
+               abserr))
     return err
 
