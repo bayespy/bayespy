@@ -1115,7 +1115,7 @@ def _GaussianArrayARD(shape, shape_mu=None):
                     # Because the covariance matrix has shape (1,1,...,1,1),
                     # that is 2*D number of ones, remove the extra half of the
                     # shape
-                    phi1 = np.reshape(phi1, np.shape(phi1)[:-2*D] + D*(1,))                  
+                    phi1 = np.reshape(phi1, np.shape(phi1)[:-2*D] + D*(1,))
                     
                 std = np.sqrt(-0.5 / phi1)
                 mu = self.u[0]
@@ -1175,7 +1175,9 @@ def _GaussianArrayARD(shape, shape_mu=None):
             self.u[1] = rotate_covariance(self.u[1], R, 
                                           axis=axis,
                                           ndim=ndim)
-            self.g -= logdetR
+            s = list(self.dims[0])
+            s.pop(axis)
+            self.g -= logdetR * np.prod(s)
 
             return
 
