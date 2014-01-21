@@ -683,6 +683,65 @@ class TestGaussianArrayARD(TestCase):
 
         pass
 
+    def test_rotate(self):
+        """
+        Test the rotation of Gaussian ARD arrays.
+        """
+
+        def check(shape, plates, einsum_x, einsum_xx, axis=-1):
+            # TODO/FIXME: Improve by having non-diagonal precision/covariance
+            # parameter for the Gaussian X
+            D = shape[axis]
+            X = GaussianArrayARD(np.random.randn(*(plates+shape)),
+                             np.random.rand(*(plates+shape)),
+                             shape=shape,
+                             plates=plates)
+            (x, xx) = X.get_moments()
+            R = np.random.randn(D,D)
+            X.rotate(R, axis=axis)
+            (rx, rxxr) = X.get_moments()
+            self.assertAllClose(rx,
+                                np.einsum(einsum_x, R, x))
+            self.assertAllClose(rxxr,
+                                np.einsum(einsum_xx, R, xx, R))
+            pass
+
+        # Rotate vector
+        check((3,), (),    
+              '...jk,...k->...j', 
+              '...mk,...kl,...nl->...mn')
+        check((3,), (2,4), 
+              '...jk,...k->...j', 
+              '...mk,...kl,...nl->...mn')
+
+        # Rotate array
+        check((2,3,4), (), 
+              '...jc,...abc->...abj', 
+              '...mc,...abcdef,...nf->...abmden',
+              axis=-1)
+        check((2,3,4), (5,6), 
+              '...jc,...abc->...abj', 
+              '...mc,...abcdef,...nf->...abmden',
+              axis=-1)
+        check((2,3,4), (), 
+              '...jb,...abc->...ajc', 
+              '...mb,...abcdef,...ne->...amcdnf',
+              axis=-2)
+        check((2,3,4), (5,6), 
+              '...jb,...abc->...ajc', 
+              '...mb,...abcdef,...ne->...amcdnf',
+              axis=-2)
+        check((2,3,4), (), 
+              '...ja,...abc->...jbc', 
+              '...ma,...abcdef,...nd->...mbcnef',
+              axis=-3)
+        check((2,3,4), (5,6), 
+              '...ja,...abc->...jbc', 
+              '...ma,...abcdef,...nd->...mbcnef',
+              axis=-3)
+        
+        pass
+
     def test_rotate_plates(self):
 
         # Basic test for Gaussian vectors
