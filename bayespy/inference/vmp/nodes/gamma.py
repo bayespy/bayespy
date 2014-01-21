@@ -148,6 +148,14 @@ class Gamma(ExponentialFamily):
     def get_shape_of_value(self):
         # Dimensionality of a realization
         return ()
+
+    def random(self):
+        """
+        Draw a random sample from the distribution.
+        """
+        return np.random.gamma(self.phi[1],
+                               -1/self.phi[0],
+                               size=self.plates)
     
     def show(self):
         a = self.phi[1]
