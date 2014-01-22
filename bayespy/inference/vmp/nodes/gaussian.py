@@ -1198,7 +1198,7 @@ def _GaussianArrayARD(shape, shape_mu=None):
                 raise ValueError("Axis out of bounds")
 
             u0 = rotate_mean(self.u[0], Q, 
-                             ndim=ndim-plate_axis,
+                             ndim=ndim+(-plate_axis),
                              axis=0)
             sumQ = utils.utils.add_trailing_axes(np.sum(Q, axis=0),
                                                  2*ndim-plate_axis-1)
@@ -1211,24 +1211,6 @@ def _GaussianArrayARD(shape, shape_mu=None):
             self._update_moments_and_cgf()
 
             return
-        
-            self.u[0] = np.einsum('ik,kj->ij', Q, self.u[0])
-            sumQ = np.sum(Q, axis=0)
-            # Rotate natural parameters using Q
-            self.phi[1] = np.einsum('d,dij->dij', sumQ**(-2), self.phi[1]) 
-            self.phi[0] = np.einsum('dij,dj->di', -2*self.phi[1], self.u[0])
-
-            # Transform parameters using R
-            self.phi[0] = mvdot(invR.T, self.phi[0])
-            self.phi[1] = dot(invR.T, self.phi[1], invR)
-
-            if Q is not None:
-                self._update_moments_and_cgf()
-            else:
-                # Transform moments and g using R
-                self.u[0] = mvdot(R, self.u[0])
-                self.u[1] = dot(R, self.u[1], R.T)
-                self.g -= logdetR
 
 
     return __GaussianArrayARD
