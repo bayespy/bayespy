@@ -49,7 +49,11 @@ def check_gradient(f, x0, verbose=True):
                                     lambda x: f(x)[0], 
                                     optimize.optimize._epsilon)
     abserr = np.linalg.norm(df-df_num)
-    err = abserr / np.linalg.norm(df_num)
+    norm_num = np.linalg.norm(df_num)
+    if abserr == 0 and norm_num == 0:
+        err = 0
+    else:
+        err = abserr / norm_num
     if verbose:
         print("Norm of numerical gradient: %g" % np.linalg.norm(df_num))
         print("Norm of function gradient:  %g" % np.linalg.norm(df))
