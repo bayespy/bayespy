@@ -73,10 +73,13 @@ class TestCase(unittest.TestCase):
     Adds NumPy's features to Python's unittest.
     """
 
-    def assertAllClose(self, A, B, msg="Arrays not almost equal"):
+    def assertAllClose(self, A, B, 
+                       msg="Arrays not almost equal", 
+                       rtol=1e-7, 
+                       atol=0):
 
         self.assertEqual(np.shape(A), np.shape(B), msg=msg)
-        testing.assert_allclose(A, B, err_msg=msg)
+        testing.assert_allclose(A, B, err_msg=msg, rtol=rtol, atol=atol)
         pass
 
     def assertMessage(self, M1, M2):
