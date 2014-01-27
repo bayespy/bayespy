@@ -121,6 +121,8 @@ class RotationOptimizer():
         def get_true_bound_terms():
             nodes = set(self.block1.nodes()) | set(self.block2.nodes())
             D = {}
+            # TODO/FIXME: Also compute bound for child nodes as they could be
+            # affected in practice although they shouldn't. Just checking that.
             for node in nodes:
                 L = node.lower_bound_contribution()
                 D[node] = L
@@ -134,7 +136,7 @@ class RotationOptimizer():
             R = np.random.randn(self.D, self.D)
             err = utils.optimize.check_gradient(cost, np.ravel(R), 
                                                 verbose=False)
-            if err > 1e-3:
+            if err > 1e-5:
                 warnings.warn("Rotation gradient has relative error %g" % err)
 
         # Initial rotation is identity matrix
@@ -195,6 +197,8 @@ class RotationOptimizer():
                                      node_bound_change))
 
             # Check that we really have improved the bound.
+            # TODO/FIXME: Also compute bound for child nodes as they could be
+            # affected in practice although they shouldn't. Just checking that.
             if bound_change < 0:
                 warnings.warn("Rotation made the true lower bound worse by %g. "
                               "Probably a bug in the rotation functions."
@@ -416,7 +420,11 @@ class RotateGaussianArrayARD():
 
         If using Q, set rotate_plates to True.
         """
-        
+
+        # Store the original plate_axis parameter for later use in other methods
+        self.plate_axis = plate_axis
+
+        # Manipulate the plate_axis parameter to suit the needs of this method
         if plate_axis is not None:
             if not isinstance(plate_axis, int):
                 raise ValueError("Plate axis must be integer")
@@ -425,7 +433,6 @@ class RotateGaussianArrayARD():
             if plate_axis < -len(self.node_X.plates) or plate_axis >= 0:
                 raise ValueError("Axis out of bounds")
             plate_axis -= self.ndim - 1 # Why -1? Because one axis is preserved!
-        self.plate_axis = plate_axis
                 
         # Get the mean parameter. It will not be rotated.
         (mu, mumu) = self.node_mu.get_moments()
@@ -464,7 +471,6 @@ class RotateGaussianArrayARD():
             b0 = safe_move_axis(self.node_alpha.parents[1].get_moments()[0])
         else:
             alpha = safe_move_axis(self.node_alpha.get_moments()[0])
-            logalpha = safe_move_axis(self.node_alpha.get_moments()[1])
 
         # Move plates of alpha for R
         plates_alpha = list(self.node_alpha.plates)
@@ -478,17 +484,21 @@ class RotateGaussianArrayARD():
         plates_X.pop(self.axis)
 
         def sum_to_alpha(V):
-            return sum_to_plates(V, plates_alpha[:-1],
+            # TODO/FIXME: This could be improved so that it is not required to
+            # explicitly repeat to alpha plates. Multiplying by ones was just a
+            # simple bug fix.
+            return sum_to_plates(V * np.ones(plates_alpha[:-1]+[1,1]),
+                                 plates_alpha[:-1],
                                  ndim=2,
                                  plates_from=plates_X)
         
-        if self.plate_axis is not None:
+        if plate_axis is not None:
             # Move plate axis just before the rotated dimensions (which are
             # last)
             def safe_move_plate_axis(x, ndim):
-                if np.ndim(x)-ndim >= -self.plate_axis:
+                if np.ndim(x)-ndim >= -plate_axis:
                     return utils.utils.moveaxis(x, 
-                                                self.plate_axis-ndim,
+                                                plate_axis-ndim,
                                                 -ndim-1)
                 else:
                     inds = (Ellipsis,None) + ndim*(slice(None),)
@@ -503,29 +513,18 @@ class RotateGaussianArrayARD():
                 b0 = safe_move_plate_axis(b0, 1)
             else:
                 alpha = safe_move_plate_axis(alpha, 1)
-                logalpha = safe_move_plate_axis(logalpha, 1)
             # Move plates of X and alpha
-            plate = plates_X.pop(self.plate_axis)
+            plate = plates_X.pop(plate_axis)
             plates_X.append(plate)
-            if len(plates_alpha) >= -self.plate_axis+1:
-                plate = plates_alpha.pop(self.plate_axis-1)
+            if len(plates_alpha) >= -plate_axis+1:
+                plate = plates_alpha.pop(plate_axis-1)
             else:
                 plate = 1
             plates_alpha = plates_alpha[:-1] + [plate] + plates_alpha[-1:]
-            # Sum axes
-            def sum_to_alpha_and_plate_axis(V, ndim):
-                ## plates_a = plates_alpha[:-1] + [D]*ndim
-                ## plates_b = plates_X[-1:] + [D]*ndim
-                ## plates_to = utils.utils.broadcasted_shape(plates_a, plates_b)
-                plates_to = plates_alpha[:-2] + plates_X[-1:]# + [D]*ndim
-                return sum_to_plates(V, plates_to, 
-                                     ndim=ndim,
-                                     plates_from=plates_X)
 
             self.X = X
             self.mu = mu
-            CovX = XX - utils.linalg.outer(X, X)
-            self.CovX = sum_to_alpha_and_plate_axis(CovX, 2)
+            self.CovX = XX - utils.linalg.outer(X, X)
             # Broadcast mumu to ensure shape
             mumu = np.ones(np.shape(XX)[-3:]) * mumu
             self.mumu = sum_to_alpha(mumu)
@@ -542,11 +541,10 @@ class RotateGaussianArrayARD():
             self.b0 = b0
         else:
             self.alpha = alpha
-            self.logalpha =  logalpha
 
         self.plates_X = plates_X
         self.plates_alpha = plates_alpha
-    
+
 
     def _compute_bound(self, R, logdet=None, inv=None, Q=None, gradient=False, terms=False):
         """
@@ -572,37 +570,20 @@ class RotateGaussianArrayARD():
             X = self.X
             QX = np.einsum('...ik,...kj->...ij', Q, X)
             sumQ = np.sum(Q, axis=0)[:,None,None]
-            CovX = sumQ**2 * self.CovX
-            CovX = sum_to_plates(CovX,
-                                 self.plates_alpha[:-1],
-                                 ndim=2)
-            ## CovX = utils.utils.sum_multiply(sumQ**2,
-            ##                                 self.CovX,
-            ##                                 axis=(-2,-1),
-            ##                                 sumaxis=False,
-            ##                                 keepdims=False)
+            QCovX = sumQ**2 * self.CovX
             # Compute expectations
-            XX = CovX + sum_to_plates(utils.linalg.outer(QX, QX),
-                                      self.plates_alpha[:-1],
-                                      ndim=2,
-                                      plates_from=self.plates_X)
+            XX = sum_to_plates(utils.linalg.outer(QX, QX) + QCovX,
+                               self.plates_alpha[:-1],
+                               ndim=2,
+                               plates_from=self.plates_X)
             Xmu = sum_to_plates(utils.linalg.outer(QX, self.mu),
                                 self.plates_alpha[:-1],
                                 ndim=2,
                                 plates_from=self.plates_X)
 
             mu = self.mu
+            CovX = self.CovX
             
-            # Sum plate axis if necessary
-            ## XX = sum_to_plates(XX, self.plates_alpha[:-1], 
-            ##                    ndim=2,
-            ##                    plates_from=self.plates_X)
-            ## Xmu = sum_to_plates(Xmu, self.plates_alpha[:-1], 
-            ##                     ndim=2,
-            ##                     plates_from=self.plates_X)
-            ## mumu = sum_to_plates(self.mumu, self.plates_alpha[:-1], 
-            ##                      ndim=2,
-            ##                      plates_from=self.plates_X)
             mumu = self.mumu
             D = np.shape(X)[-1]
             logdet_Q = D * np.log(np.abs(sumQ))[:,0,0]
@@ -626,13 +607,18 @@ class RotateGaussianArrayARD():
         # <(X-mu) * (X-mu)'>_R
         XmuXmu = (RXXR - 2*RXmu + mumu)
 
+        D = np.shape(R)[0]
+
         # Compute q(alpha)
         if self.update_alpha:
             # Parameters
             a0 = self.a0
             b0 = self.b0
             a = self.a
-            b = self.b0 + 0.5*XmuXmu
+            b = b0 + 0.5*sum_to_plates(XmuXmu,
+                                       plates_alpha,
+                                       plates_from=None,
+                                       ndim=0)
             # Some expectations
             alpha = a / b
             logb = np.log(b)
@@ -641,7 +627,7 @@ class RotateGaussianArrayARD():
             a0_logalpha = a0 * logalpha
         else:
             alpha = self.alpha
-            logalpha = self.logalpha
+            logalpha = 0
         
         #
         # Compute the cost
@@ -649,15 +635,18 @@ class RotateGaussianArrayARD():
 
         def sum_plates(V, *plates):
             full_plates = utils.utils.broadcasted_shape(*plates)
-            return (np.sum(V) * self.node_X._plate_multiplier(full_plates,
-                                                              np.shape(V)))
+            
+            r = self.node_X._plate_multiplier(full_plates, np.shape(V))
+            return r * np.sum(V)
 
         XmuXmu_alpha = XmuXmu * alpha
 
-        logdet_R = logdet
-        inv_R = inv
-
-        D = np.shape(R)[0]
+        if logdet is None:
+            logdet_R = np.linalg.slogdet(R)[1]
+            inv_R = np.linalg.inv(R)
+        else:
+            logdet_R = logdet
+            inv_R = inv
 
         # Compute entropy H(X)
         logH_X = utils.random.gaussian_entropy(-2*sum_plates(logdet_R + logdet_Q,
@@ -666,8 +655,7 @@ class RotateGaussianArrayARD():
 
         # Compute <log p(X|alpha)>
         logp_X = utils.random.gaussian_logpdf(sum_plates(XmuXmu_alpha,
-                                                         plates_alpha,
-                                                         (D,)),
+                                                         plates_alpha[:-1] + [D]),
                                               0,
                                               0,
                                               sum_plates(logalpha,
@@ -675,19 +663,15 @@ class RotateGaussianArrayARD():
                                               0)
 
         if self.update_alpha:
+
             # Compute entropy H(alpha)
-            logH_alpha = utils.random.gamma_entropy(0,
-                                                    sum_plates(logb,
-                                                               plates_alpha),
-                                                    0,
-                                                    0,
-                                                    0)
+            # This cancels out with the log(alpha) term in log(p(alpha))
+            logH_alpha = 0
 
             # Compute <log p(alpha)>
             logp_alpha = utils.random.gamma_logpdf(sum_plates(b0_alpha,
                                                               plates_alpha),
-                                                   sum_plates(logalpha,
-                                                              plates_alpha),
+                                                   0,
                                                    sum_plates(a0_logalpha,
                                                               plates_alpha),
                                                    0,
@@ -703,10 +687,10 @@ class RotateGaussianArrayARD():
                 bound.update({self.node_alpha: logp_alpha + logH_alpha})
         else:
             bound = (0
-                     + logp_X
-                     + logp_alpha
-                     + logH_X
-                     + logH_alpha
+            + logp_X
+            + logp_alpha
+            + logH_X
+            + logH_alpha
                      )
 
         if not gradient:
@@ -716,40 +700,44 @@ class RotateGaussianArrayARD():
         # Compute the gradient with respect R
         #
 
+        plate_multiplier = self.node_X._plate_multiplier
         def sum_plates(V, plates):
             ones = np.ones(np.shape(R))
-            return (utils.utils.sum_multiply(V, ones,
+            r = plate_multiplier(plates, np.shape(V)[:-2])
+            return r * utils.utils.sum_multiply(V, ones,
                                              axis=(-1,-2),
                                              sumaxis=False,
-                                             keepdims=False) *
-                    self.node_X._plate_multiplier(plates,
-                                                  np.shape(V)[:-2]))
+                                             keepdims=False)
 
-        D_XmuXmu      = 2*RXX - 2*gaussian.transpose_covariance(Xmu)
+        D_XmuXmu = 2*RXX - 2*gaussian.transpose_covariance(Xmu)
 
         DXmuXmu_alpha = np.einsum('...i,...ij->...ij', 
                                   alpha,
                                   D_XmuXmu)
         if self.update_alpha:
-            XmuXmu_Dalpha = -np.einsum('...i,...i,...i,...ij->...ij', 
+            D_b            = 0.5 * D_XmuXmu
+            XmuXmu_Dalpha  = np.einsum('...i,...i,...i,...ij->...ij', 
+                                       sum_to_plates(XmuXmu,
+                                                     plates_alpha,
+                                                     plates_from=None,
+                                                     ndim=0), 
                                        alpha, 
-                                       1/b, 
-                                       XmuXmu, 
-                                       D_XmuXmu)
-            D_b0_alpha     = -np.einsum('...i,...i,...i,...ij->...ij', 
-                                        b0,
-                                        alpha,
-                                        1/b,
-                                        D_XmuXmu)
+                                       -1/b, 
+                                       D_b)
+            D_b0_alpha     = np.einsum('...i,...i,...i,...ij->...ij', 
+                                       b0,
+                                       alpha,
+                                       -1/b,
+                                       D_b)
             D_logb         = np.einsum('...i,...ij->...ij', 
                                        1/b,
-                                       D_XmuXmu)
+                                       D_b)
             D_logalpha     = -D_logb
             D_a0_logalpha  = a0 * D_logalpha
         else:
             XmuXmu_Dalpha = 0
             D_logalpha = 0
-            
+
         D_XmuXmu_alpha = DXmuXmu_alpha + XmuXmu_Dalpha
         D_logR         = inv_R.T
         
@@ -764,24 +752,22 @@ class RotateGaussianArrayARD():
                                                           plates_alpha[:-1]),
                                                0,
                                                0,
-                                               sum_plates(D_logalpha,
-                                                          plates_X),
+                                               (sum_plates(D_logalpha,
+                                                           plates_X)
+                                                * plate_multiplier((D,),
+                                                                   plates_alpha[-1:])),
                                                0)
 
         if self.update_alpha:
+
             # Compute dH(alpha)
-            dlogH_alpha = utils.random.gamma_entropy(0,
-                                                     sum_plates(D_logb,
-                                                                plates_alpha[:-1]),
-                                                     0,
-                                                     0,
-                                                     0)
+            # This cancels out with the log(alpha) term in log(p(alpha))
+            dlogH_alpha = 0
 
             # Compute d<log p(alpha)>
             dlogp_alpha = utils.random.gamma_logpdf(sum_plates(D_b0_alpha,
                                                                plates_alpha[:-1]),
-                                                    sum_plates(D_logalpha,
-                                                               plates_alpha[:-1]),
+                                                    0,
                                                     sum_plates(D_a0_logalpha,
                                                                plates_alpha[:-1]),
                                                     0,
@@ -791,15 +777,16 @@ class RotateGaussianArrayARD():
             dlogp_alpha = 0
 
         if terms:
+            raise NotImplementedError()
             dR_bound = {self.node_X: dlogp_X + dlogH_X}
             if self.update_alpha:
                 dR_bound.update({self.node_alpha: dlogp_alpha + dlogH_alpha})
         else:
             dR_bound = (0*dlogp_X
-                        + dlogp_X
-                        + dlogp_alpha
-                        + dlogH_X
-                        + dlogH_alpha
+            + dlogp_X
+            + dlogp_alpha
+            + dlogH_X
+            + dlogH_alpha
                         )
 
         if self.plate_axis is None:
@@ -809,84 +796,88 @@ class RotateGaussianArrayARD():
         # Compute the gradient with respect to Q (if Q given)
         #
 
-        def d_helper(v):
+        def psi(v):
             """
-            Compute: d/dQ 1/2*trace(diag(v)*<XX>)
+            Compute: d/dQ 1/2*trace(diag(v)*<(X-mu)*(X-mu)>)
 
-            = Q*<X>'*R'*diag(v)*R*<X> + ones * Q diag( tr(R'*diag(v)*R*Cov) )
+            = Q*<X>'*R'*diag(v)*R*<X> + ones * Q diag( tr(R'*diag(v)*R*Cov) ) 
+              + mu*diag(v)*R*<X>
             """
 
+
+            # Gradient of 0.5*v*<x>*<x>
+            RX = np.einsum('...ik,...k->...i', R, X)
+            QXR = np.einsum('...ik,...kj->...ij', Q, RX)
+            v_QXrrX = np.einsum('...ik,...jk,...ik->...ij', QXR, RX, v)
+
+            # Gradient of 0.5*v*Cov
             R_v_R = np.einsum('...ki,...k,...kj->...ij', R, v, R)
-            #QX_R_v_R_X = dot(QX, R_v_R, self.X.T)
+            tr_R_v_R_Cov = np.einsum('...ij,...ji->...', R_v_R, CovX)
+            Q_tr_R_v_R_Cov = tr_R_v_R_Cov[...,None,:] * sumQ
 
-            tr_R_v_R_Cov = np.einsum('...ij,...ji->...', R_v_R, self.CovX)
-            tr_R_v_R_Cov = utils.utils.sum_multiply(tr_R_v_R_Cov,
-                                                    axis=(-1,),
-                                                    sumaxis=False,
-                                                    keepdims=False)
+            # Gradient of mu*v*x
+            mu_v_R = np.einsum('...k,...k,...kj->...j', mu, v, R)
+            mu_v_R_X = np.einsum('...ik,...jk->...ij', mu_v_R, X)
 
-            R_v_R_X = np.einsum('...ik,...k->...i', R_v_R, X)
-            QX_R_v_R_X = np.einsum('...ik,...kj->...ij', QX, R_v_R_X)
-            QX_R_v_R_X = utils.utils.sum_multiply(QX_R_v_R_X,
-                                                  axis=(-2,-1),
-                                                  sumaxis=False,
-                                                  keepdims=False)
+            return sum_to_plates(v_QXrrX + Q_tr_R_v_R_Cov - mu_v_R_X,
+                                 plates_alpha[:-2],
+                                 ndim=2,
+                                 plates_from=self.plates_X[:-1])
 
-            mu_v_R = np.einsum('...k,...k,...kj->...j', self.mu, v, R)
+        def sum_plates(V, plates):
+            ones = np.ones(np.shape(Q))
+            r = self.node_X._plate_multiplier(plates,
+                                              np.shape(V)[:-2])
 
-            return (QX_R_v_R_X
-                    + sumQ * tr_R_v_R_Cov
-                    - dot(mu_v_R, self.X.T))
-            
-        def d_helper_BACKUP(v):
-            """
-            Compute: d/dQ 1/2*trace(diag(v)*<XX>)
+            return r * utils.utils.sum_multiply(V, ones,
+                                                axis=(-1,-2),
+                                                sumaxis=False,
+                                                keepdims=False)
 
-            = Q*<X>'*R'*diag(v)*R*<X> + ones * Q diag( tr(R'*diag(v)*R*Cov) )
-            """
-            R_v_R = np.einsum('ki,k,kj->ij', R, v, R)
-            tr_R_v_R_Cov = np.einsum('ij,dji->d', R_v_R, self.CovX)
-            mu_v_R = np.einsum('ik,k,kj', self.mu, v, R)
-            return (dot(QX, R_v_R, self.X.T)
-                    + sumQ * tr_R_v_R_Cov
-                    - dot(mu_v_R, self.X.T))
-            
-
-        D_logb = d_helper(1/b)
-        DXX_alpha = 2*d_helper(alpha)
-        XX_Dalpha = -d_helper(np.diag(XmuXmu)*alpha/b)
+        if self.update_alpha:
+            D_logb = psi(1/b)
+            XX_Dalpha = -psi(alpha/b * sum_to_plates(XmuXmu, plates_alpha))
+            D_logalpha = -D_logb
+        else:
+            XX_Dalpha = 0
+            D_logalpha = 0
+        DXX_alpha = 2*psi(alpha)
         D_XX_alpha = DXX_alpha + XX_Dalpha
-        D_logalpha = -D_logb
-        D_logdetQ = -2*D/sumQ
+        D_logdetQ = D / sumQ
+        N = np.shape(Q)[-1]
 
         # Compute dH(X)
-        dQ_logHX = utils.random.gaussian_entropy(D_logdetQ,
+        dQ_logHX = utils.random.gaussian_entropy(-2*sum_plates(D_logdetQ,
+                                                               plates_X[:-1]),
                                                  0)
 
         # Compute d<log p(X|alpha)>
-        dQ_logpX = utils.random.gaussian_logpdf(D_XX_alpha,
+        dQ_logpX = utils.random.gaussian_logpdf(sum_plates(D_XX_alpha,
+                                                           plates_alpha[:-2]),
                                                 0,
                                                 0,
-                                                D_logalpha,
+                                                (sum_plates(D_logalpha,
+                                                            plates_X[:-1])
+                                                 * plate_multiplier((N,D),
+                                                                    plates_alpha[-2:])),
                                                 0)
 
         if self.update_alpha:
 
-            D_alpha = -d_helper(alpha/b)
+            D_alpha = -psi(alpha/b)
             D_b0_alpha = b0 * D_alpha
-            D_a0_logalpha = 0 # TODO/FIXME
+            D_a0_logalpha = a0 * D_logalpha
 
             # Compute dH(alpha)
-            dQ_logHalpha = utils.random.gamma_entropy(0,
-                                                      D_logb,
-                                                      0,
-                                                      0,
-                                                      0)
+            # This cancels out with the log(alpha) term in log(p(alpha))
+            dQ_logHalpha = 0
 
             # Compute d<log p(alpha)>
-            dQ_logpalpha = utils.random.gamma_logpdf(D_b0_alpha,
-                                                     D_logalpha,
-                                                     D_a0_logalpha,
+            dQ_logpalpha = utils.random.gamma_logpdf(sum_plates(D_b0_alpha,
+                                                                plates_alpha[:-2]),
+                                                     0,
+                                                     sum_plates(D_a0_logalpha,
+                                                                plates_alpha[:-2]),
                                                      0,
                                                      0)
         else:
@@ -895,17 +886,17 @@ class RotateGaussianArrayARD():
             dQ_logpalpha = 0
 
         if terms:
+            raise NotImplementedError()
             dQ_bound = {self.node_X: dQ_logpX + dQ_logHX}
             if self.update_alpha:
                 dQ_bound.update({self.node_alpha: dQ_logpalpha + dQ_logHalpha})
         else:
             dQ_bound = (0*dQ_logpX
-                        + dQ_logpX
-                        + dQ_logpalpha
-                        + dQ_logHX
-                        + dQ_logHalpha
+            + dQ_logpX
+            + dQ_logpalpha
+            + dQ_logHX
+            + dQ_logHalpha
                         )
-
         return (bound, dR_bound, dQ_bound)
 
 
