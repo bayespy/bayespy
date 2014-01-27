@@ -75,7 +75,7 @@ def model(M, N, D):
     return (Y, F, W, X, tau, alpha)
 
 
-def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=True, maxiter=100):
+def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=False, maxiter=100, debug=False):
 
     if seed is not None:
         np.random.seed(seed)
@@ -109,8 +109,11 @@ def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=True, maxiter=100):
         R = transformations.RotationOptimizer(rotW, rotX, D)
         for ind in range(maxiter):
             Q.update()
-            R.rotate(check_bound=True,
-                     check_gradient=True)
+            if debug:
+                R.rotate(check_bound=True,
+                         check_gradient=True)
+            else:
+                R.rotate()
             
     else:
         # Use standard VB-EM alone
@@ -118,11 +121,54 @@ def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=True, maxiter=100):
 
     # Plot results
     plt.figure()
-    bpplt.timeseries_normal(F)
+    bpplt.timeseries_normal(F, scale=2)
     bpplt.timeseries(f, 'g-')
     bpplt.timeseries(y, 'r+')
     plt.show()
 
 if __name__ == '__main__':
-    run()
+    import sys, getopt, os
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],
+                                   "",
+                                   ["m=",
+                                    "n=",
+                                    "d=",
+                                    "k=",
+                                    "seed=",
+                                    "maxiter=",
+                                    "debug",
+                                    "rotate"])
+    except getopt.GetoptError:
+        print('python demo_pca.py <options>')
+        print('--m=<INT>        Dimensionality of data vectors')
+        print('--n=<INT>        Number of data vectors')
+        print('--d=<INT>        Dimensionality of the latent vectors in the model')
+        print('--k=<INT>        Dimensionality of the true latent vectors')
+        print('--rotate         Apply speed-up rotations')
+        print('--maxiter=<INT>  Maximum number of VB iterations')
+        print('--seed=<INT>     Seed (integer) for the random number generator')
+        print('--debug          Check that the rotations are implemented correctly')
+        sys.exit(2)
+
+    kwargs = {}
+    for opt, arg in opts:
+        if opt == "--rotate":
+            kwargs["rotate"] = True
+        elif opt == "--maxiter":
+            kwargs["maxiter"] = int(arg)
+        elif opt == "--debug":
+            kwargs["debug"] = True
+        elif opt == "--seed":
+            kwargs["seed"] = int(arg)
+        elif opt in ("--m",):
+            kwargs["M"] = int(arg)
+        elif opt in ("--n",):
+            kwargs["N"] = int(arg)
+        elif opt in ("--d",):
+            kwargs["D"] = int(arg)
+        elif opt in ("--k",):
+            kwargs["D_y"] = int(arg)
+
+    run(**kwargs)
 
