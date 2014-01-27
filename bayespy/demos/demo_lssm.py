@@ -51,10 +51,6 @@ def linear_state_space_model(D=3, N=100, M=10):
                   1e-5,
                   plates=(D,),
                   name='alpha')
-    ## A = Gaussian(np.zeros(D),
-    ##              diagonal(alpha),
-    ##              plates=(D,),
-    ##              name='A')
     A = GaussianArrayARD(0,
                          alpha,
                          shape=(D,),
@@ -97,34 +93,34 @@ def linear_state_space_model(D=3, N=100, M=10):
 
     return (Y, F, X, tau, C, gamma, A, alpha)
 
-def run(maxiter=100, debug=False, seed=42):
+def run(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=False):
 
     # Use deterministic random numbers
     if seed is not None:
         np.random.seed(seed)
 
     # Simulate some data
-    D = 3
-    M = 6
-    N = 200
-    c = np.random.randn(M,D)
+    K = 3
+    c = np.random.randn(M,K)
     w = 0.3
     a = np.array([[np.cos(w), -np.sin(w), 0], 
                   [np.sin(w), np.cos(w),  0], 
                   [0,         0,          1]])
-    x = np.empty((N,D))
+    x = np.empty((N,K))
     f = np.empty((M,N))
     y = np.empty((M,N))
-    x[0] = 10*np.random.randn(D)
+    x[0] = 10*np.random.randn(K)
     f[:,0] = np.dot(c,x[0])
     y[:,0] = f[:,0] + 3*np.random.randn(M)
     for n in range(N-1):
-        x[n+1] = np.dot(a,x[n]) + np.random.randn(D)
+        x[n+1] = np.dot(a,x[n]) + np.random.randn(K)
         f[:,n+1] = np.dot(c,x[n+1])
         y[:,n+1] = f[:,n+1] + 3*np.random.randn(M)
 
     # Create the model
-    (Y, CX, X, tau, C, gamma, A, alpha) = linear_state_space_model(D, N, M)
+    (Y, CX, X, tau, C, gamma, A, alpha) = linear_state_space_model(D=D, 
+                                                                   N=N,
+                                                                   M=M)
     
     # Add missing values randomly
     mask = random.mask(M, N, p=0.3)
@@ -133,7 +129,6 @@ def run(maxiter=100, debug=False, seed=42):
     y[~mask] = np.nan # BayesPy doesn't require this. Just for plotting.
     # Observe the data
     Y.observe(y, mask=mask)
-    
 
     # Initialize nodes (must use some randomness for C)
     C.initialize_from_random()
@@ -144,29 +139,70 @@ def run(maxiter=100, debug=False, seed=42):
     #
     # Run inference with rotations.
     #
-    #rotA = transformations.RotateGaussianARD(A, alpha)
-    rotA = transformations.RotateGaussianArrayARD(A, alpha)
-    rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
-    rotC = transformations.RotateGaussianArrayARD(C, gamma)
-    R = transformations.RotationOptimizer(rotX, rotC, D)
+    if rotate:
+        rotA = transformations.RotateGaussianArrayARD(A, alpha)
+        rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
+        rotC = transformations.RotateGaussianArrayARD(C, gamma)
+        R = transformations.RotationOptimizer(rotX, rotC, D)
 
-    for ind in range(maxiter):
-        Q.update()
-        if not True: #debug:
-            R.rotate()
-        else:
-            R.rotate(maxiter=10, 
-                     check_gradient=False,
-                     check_bound=True)
+        for ind in range(maxiter):
+            Q.update()
+            if debug:
+                R.rotate(maxiter=10, 
+                         check_gradient=True,
+                         check_bound=True)
+            else:
+                R.rotate()
+
+    else:
+        Q.update(repeat=maxiter)
         
     # Show results
     plt.figure()
-    bpplt.timeseries_normal(CX)
+    bpplt.timeseries_normal(CX, scale=2)
     bpplt.timeseries(f, 'b-')
     bpplt.timeseries(y, 'r.')
-
+    plt.show()
     
 
 if __name__ == '__main__':
-    run()
-    plt.show()
+    import sys, getopt, os
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],
+                                   "",
+                                   ["m=",
+                                    "n=",
+                                    "d=",
+                                    "seed=",
+                                    "maxiter=",
+                                    "debug",
+                                    "rotate"])
+    except getopt.GetoptError:
+        print('python demo_lssm.py <options>')
+        print('--m=<INT>        Dimensionality of data vectors')
+        print('--n=<INT>        Number of data vectors')
+        print('--d=<INT>        Dimensionality of the latent vectors in the model')
+        print('--rotate         Apply speed-up rotations')
+        print('--maxiter=<INT>  Maximum number of VB iterations')
+        print('--seed=<INT>     Seed (integer) for the random number generator')
+        print('--debug          Check that the rotations are implemented correctly')
+        sys.exit(2)
+
+    kwargs = {}
+    for opt, arg in opts:
+        if opt == "--rotate":
+            kwargs["rotate"] = True
+        elif opt == "--maxiter":
+            kwargs["maxiter"] = int(arg)
+        elif opt == "--debug":
+            kwargs["debug"] = True
+        elif opt == "--seed":
+            kwargs["seed"] = int(arg)
+        elif opt in ("--m",):
+            kwargs["M"] = int(arg)
+        elif opt in ("--n",):
+            kwargs["N"] = int(arg)
+        elif opt in ("--d",):
+            kwargs["D"] = int(arg)
+
+    run(**kwargs)
