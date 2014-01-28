@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011-2013 Jaakko Luttinen
+# Copyright (C) 2011-2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -32,8 +32,6 @@ from bayespy import nodes
 
 from bayespy.inference.vmp.vmp import VB
 from bayespy.inference.vmp import transformations
-
-#from bayespy.inference.vmp.nodes.gamma import diagonal
 
 import bayespy.plot.plotting as bpplt
 

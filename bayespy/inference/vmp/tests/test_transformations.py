@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2013 Jaakko Luttinen
+# Copyright (C) 2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -25,18 +25,10 @@
 Unit tests for `transformations` module.
 """
 
-#import unittest
-
 import numpy as np
-#import scipy
 
-#from numpy import testing
-
-#from .. import gaussian
 from bayespy.inference.vmp.nodes.gaussian import GaussianArrayARD
 from bayespy.inference.vmp.nodes.gamma import Gamma
-
-#from ...vmp import VB
 
 from bayespy.utils import utils
 from bayespy.utils import linalg

@@ -18,7 +18,7 @@ welcome.
 Project information
 -------------------
 
-Copyright (C) 2011-2013 Jaakko Luttinen, Aalto University
+Copyright (C) 2011-2014 Jaakko Luttinen, Aalto University
 
 BayesPy including the documentation is licensed under Version 3.0 of
 the GNU General Public License. See LICENSE file for a text of the
