@@ -93,7 +93,7 @@ def linear_state_space_model(D=3, N=100, M=10):
 
     return (Y, F, X, tau, C, gamma, A, alpha)
 
-def run(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=False):
+def run(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=False, precompute=False):
 
     # Use deterministic random numbers
     if seed is not None:
@@ -140,7 +140,7 @@ def run(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=False):
     # Run inference with rotations.
     #
     if rotate:
-        rotA = transformations.RotateGaussianArrayARD(A, alpha)
+        rotA = transformations.RotateGaussianArrayARD(A, alpha, precompute=precompute)
         rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
         rotC = transformations.RotateGaussianArrayARD(C, gamma)
         R = transformations.RotationOptimizer(rotX, rotC, D)
@@ -176,6 +176,7 @@ if __name__ == '__main__':
                                     "seed=",
                                     "maxiter=",
                                     "debug",
+                                    "precompute",
                                     "rotate"])
     except getopt.GetoptError:
         print('python demo_lssm.py <options>')
@@ -186,6 +187,8 @@ if __name__ == '__main__':
         print('--maxiter=<INT>  Maximum number of VB iterations')
         print('--seed=<INT>     Seed (integer) for the random number generator')
         print('--debug          Check that the rotations are implemented correctly')
+        print('--precompute     Precompute some moments when rotating. May '
+              'speed up or slow down.')
         sys.exit(2)
 
     kwargs = {}
@@ -196,6 +199,8 @@ if __name__ == '__main__':
             kwargs["maxiter"] = int(arg)
         elif opt == "--debug":
             kwargs["debug"] = True
+        elif opt == "--precompute":
+            kwargs["precompute"] = True
         elif opt == "--seed":
             kwargs["seed"] = int(arg)
         elif opt in ("--m",):

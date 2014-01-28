@@ -59,65 +59,75 @@ class TestRotateGaussianArrayARD(TestCase):
                  alpha_plates=None, 
                  plate_axis=None,
                  mu=3):
-            
-            # Construct the model
-            D = shape[axis]
-            if alpha_plates is not None:
-                alpha = Gamma(2, 2,
-                              plates=alpha_plates)
-                alpha.initialize_from_random()
-            else:
-                alpha = 2
-            X = GaussianArrayARD(mu, alpha,
-                                 shape=shape,
-                                 plates=plates)
 
-            # Some initial learning and rotator constructing
-            X.initialize_from_random()
-            Y = GaussianArrayARD(X, 1)
-            Y.observe(np.random.randn(*(Y.get_shape(0))))
-            X.update()
-            if alpha_plates is not None:
-                alpha.update()
-                true_cost0_alpha = alpha.lower_bound_contribution()
-                rotX = RotateGaussianArrayARD(X, alpha, axis=axis)
-            else:
-                rotX = RotateGaussianArrayARD(X, axis=axis)
-            true_cost0_X = X.lower_bound_contribution()
-
-            # Rotation matrices
-            I = np.identity(D)
-            R = np.random.randn(D, D)
             if plate_axis is not None:
-                C = plates[plate_axis]
-                Q = np.random.randn(C, C)
-                Ic = np.identity(C)
+                precomputes = [False, True]
             else:
-                Q = None
-                Ic = None
+                precomputes = [False]
+                
+            for precompute in precomputes:
+                # Construct the model
+                D = shape[axis]
+                if alpha_plates is not None:
+                    alpha = Gamma(2, 2,
+                                  plates=alpha_plates)
+                    alpha.initialize_from_random()
+                else:
+                    alpha = 2
+                X = GaussianArrayARD(mu, alpha,
+                                     shape=shape,
+                                     plates=plates)
 
-            # Compute bound terms
-            rotX.setup(plate_axis=plate_axis)
-            rot_cost0 = rotX.get_bound_terms(I, Q=Ic)
-            rot_cost1 = rotX.get_bound_terms(R, Q=Q)
-            self.assertAllClose(sum(rot_cost0.values()),
-                                rotX.bound(I, Q=Ic)[0],
-                                msg="Bound terms and total bound differ")
-            self.assertAllClose(sum(rot_cost1.values()),
-                                rotX.bound(R, Q=Q)[0],
-                                msg="Bound terms and total bound differ")
-            # Perform rotation
-            rotX.rotate(R, Q=Q)
-            # Check bound terms
-            true_cost1_X = X.lower_bound_contribution()
-            self.assertAllClose(true_cost1_X - true_cost0_X,
-                                rot_cost1[X] - rot_cost0[X],
-                                msg="Incorrect rotation cost for X")
-            if alpha_plates is not None:
-                true_cost1_alpha = alpha.lower_bound_contribution()
-                self.assertAllClose(true_cost1_alpha - true_cost0_alpha,
-                                    rot_cost1[alpha] - rot_cost0[alpha],
-                                    msg="Incorrect rotation cost for alpha")
+                # Some initial learning and rotator constructing
+                X.initialize_from_random()
+                Y = GaussianArrayARD(X, 1)
+                Y.observe(np.random.randn(*(Y.get_shape(0))))
+                X.update()
+                if alpha_plates is not None:
+                    alpha.update()
+                    true_cost0_alpha = alpha.lower_bound_contribution()
+                    rotX = RotateGaussianArrayARD(X, alpha, 
+                                                  axis=axis,
+                                                  precompute=precompute)
+                else:
+                    rotX = RotateGaussianArrayARD(X, 
+                                                  axis=axis,
+                                                  precompute=precompute)
+                true_cost0_X = X.lower_bound_contribution()
+
+                # Rotation matrices
+                I = np.identity(D)
+                R = np.random.randn(D, D)
+                if plate_axis is not None:
+                    C = plates[plate_axis]
+                    Q = np.random.randn(C, C)
+                    Ic = np.identity(C)
+                else:
+                    Q = None
+                    Ic = None
+
+                # Compute bound terms
+                rotX.setup(plate_axis=plate_axis)
+                rot_cost0 = rotX.get_bound_terms(I, Q=Ic)
+                rot_cost1 = rotX.get_bound_terms(R, Q=Q)
+                self.assertAllClose(sum(rot_cost0.values()),
+                                    rotX.bound(I, Q=Ic)[0],
+                                    msg="Bound terms and total bound differ")
+                self.assertAllClose(sum(rot_cost1.values()),
+                                    rotX.bound(R, Q=Q)[0],
+                                    msg="Bound terms and total bound differ")
+                # Perform rotation
+                rotX.rotate(R, Q=Q)
+                # Check bound terms
+                true_cost1_X = X.lower_bound_contribution()
+                self.assertAllClose(true_cost1_X - true_cost0_X,
+                                    rot_cost1[X] - rot_cost0[X],
+                                    msg="Incorrect rotation cost for X")
+                if alpha_plates is not None:
+                    true_cost1_alpha = alpha.lower_bound_contribution()
+                    self.assertAllClose(true_cost1_alpha - true_cost0_alpha,
+                                        rot_cost1[alpha] - rot_cost0[alpha],
+                                        msg="Incorrect rotation cost for alpha")
             return
 
         # Rotating a vector (zero mu)
@@ -306,71 +316,85 @@ class TestRotateGaussianArrayARD(TestCase):
                  plate_axis=None,
                  mu=3):
             
-            # Construct the model
-            D = shape[axis]
-            if alpha_plates is not None:
-                alpha = Gamma(3, 5,
-                              plates=alpha_plates)
-                alpha.initialize_from_random()
-            else:
-                alpha = 2
-            X = GaussianArrayARD(mu, alpha,
-                                 shape=shape,
-                                 plates=plates)
-
-            # Some initial learning and rotator constructing
-            X.initialize_from_random()
-            Y = GaussianArrayARD(X, 1)
-            Y.observe(np.random.randn(*(Y.get_shape(0))))
-            X.update()
-            if alpha_plates is not None:
-                alpha.update()
-                rotX = RotateGaussianArrayARD(X, alpha, axis=axis)
-            else:
-                rotX = RotateGaussianArrayARD(X, axis=axis)
-
-            # Rotation matrices
-            R = np.random.randn(D, D)
             if plate_axis is not None:
-                C = plates[plate_axis]
-                Q = np.random.randn(C, C)
+                precomputes = [False, True]
             else:
-                Q = None
+                precomputes = [False]
+                
+            for precompute in precomputes:
+                # Construct the model
+                D = shape[axis]
+                if alpha_plates is not None:
+                    alpha = Gamma(3, 5,
+                                  plates=alpha_plates)
+                    alpha.initialize_from_random()
+                else:
+                    alpha = 2
+                X = GaussianArrayARD(mu, alpha,
+                                     shape=shape,
+                                     plates=plates)
 
-            # Compute bound terms
-            rotX.setup(plate_axis=plate_axis)
+                # Some initial learning and rotator constructing
+                X.initialize_from_random()
+                Y = GaussianArrayARD(X, 1)
+                Y.observe(np.random.randn(*(Y.get_shape(0))))
+                X.update()
+                if alpha_plates is not None:
+                    alpha.update()
+                    rotX = RotateGaussianArrayARD(X, alpha, 
+                                                  axis=axis,
+                                                  precompute=precompute)
+                else:
+                    rotX = RotateGaussianArrayARD(X, 
+                                                  axis=axis,
+                                                  precompute=precompute)
+                try:
+                    mu.update()
+                except:
+                    pass
 
-            if plate_axis is None:
-                def f_r(r):
-                    (b, dr) = rotX.bound(np.reshape(r, np.shape(R)))
-                    return (b, np.ravel(dr))
-            else:
-                def f_r(r):
-                    (b, dr, dq) = rotX.bound(np.reshape(r, np.shape(R)),
-                                         Q=Q)
-                    return (b, np.ravel(dr))
-                            
-                def f_q(q):
-                    (b, dr, dq) = rotX.bound(R,
-                                         Q=np.reshape(q, np.shape(Q)))
-                    return (b, np.ravel(dq))
+                # Rotation matrices
+                R = np.random.randn(D, D)
+                if plate_axis is not None:
+                    C = plates[plate_axis]
+                    Q = np.random.randn(C, C)
+                else:
+                    Q = None
 
-            # Check gradient with respect to R
-            err = optimize.check_gradient(f_r, 
-                                          np.ravel(R), 
-                                          verbose=False)
-            self.assertAllClose(err, 0, 
-                                atol=1e-4,
-                                msg="Gradient incorrect for R")
+                # Compute bound terms
+                rotX.setup(plate_axis=plate_axis)
 
-            # Check gradient with respect to Q
-            if plate_axis is not None:
-                err = optimize.check_gradient(f_q, 
-                                              np.ravel(Q), 
+                if plate_axis is None:
+                    def f_r(r):
+                        (b, dr) = rotX.bound(np.reshape(r, np.shape(R)))
+                        return (b, np.ravel(dr))
+                else:
+                    def f_r(r):
+                        (b, dr, dq) = rotX.bound(np.reshape(r, np.shape(R)),
+                                             Q=Q)
+                        return (b, np.ravel(dr))
+
+                    def f_q(q):
+                        (b, dr, dq) = rotX.bound(R,
+                                             Q=np.reshape(q, np.shape(Q)))
+                        return (b, np.ravel(dq))
+
+                # Check gradient with respect to R
+                err = optimize.check_gradient(f_r, 
+                                              np.ravel(R), 
                                               verbose=False)
-                self.assertAllClose(err, 0,
+                self.assertAllClose(err, 0, 
                                     atol=1e-4,
-                                    msg="Gradient incorrect for Q")
+                                    msg="Gradient incorrect for R")
+
+                # Check gradient with respect to Q
+                if plate_axis is not None:
+                    err = optimize.check_gradient(f_q, 
+                                                  np.ravel(Q), 
+                                                  verbose=False)
+                    self.assertAllClose(err, 0,
+                                        atol=1e-4,
+                                        msg="Gradient incorrect for Q")
 
             return
 

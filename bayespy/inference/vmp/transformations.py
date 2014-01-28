@@ -369,7 +369,18 @@ class RotateGaussianArrayARD():
     Requirements:
     * X and alpha do not contain any observed values
     """
-    def __init__(self, X, *alpha, axis=-1):
+    def __init__(self, X, *alpha, axis=-1, precompute=False):
+        """
+        Precompute tells whether to compute some moments once in the setup
+        function instead of every time in the bound function.  However, they are
+        computed a bit differently in the bound function so it can be useful
+        too. Precomputation is probably beneficial only when there are large
+        axes that are not rotated (by R nor Q) and they are not contained in the
+        plates of alpha, and the dimensions for R and Q are quite small.
+        """
+        
+        self.precompute = precompute
+        
         if len(alpha) == 0:
             alpha = X.parents[1]
             self.update_alpha = False
@@ -522,12 +533,34 @@ class RotateGaussianArrayARD():
                 plate = 1
             plates_alpha = plates_alpha[:-1] + [plate] + plates_alpha[-1:]
 
-            self.X = X
-            self.mu = mu
-            self.CovX = XX - utils.linalg.outer(X, X)
+            CovX = XX - utils.linalg.outer(X, X)
+            self.CovX = sum_to_plates(CovX,
+                                      plates_alpha[:-2],
+                                      ndim=3,
+                                      plates_from=plates_X[:-1])
             # Broadcast mumu to ensure shape
             mumu = np.ones(np.shape(XX)[-3:]) * mumu
             self.mumu = sum_to_alpha(mumu)
+
+            if self.precompute:
+                # Precompute some stuff for the gradient of plate rotation
+                #
+                # NOTE: These terms may require a lot of memory if alpha has the
+                # same or almost the same plates as X.
+                self.X_X = sum_to_plates(X[...,:,:,None,None] *
+                                         X[...,None,None,:,:],
+                                         plates_alpha[:-2],
+                                         ndim=4,
+                                         plates_from=plates_X[:-1])
+                self.X_mu = sum_to_plates(X[...,:,:,None,None] *
+                                          mu[...,None,None,:,:],
+                                          plates_alpha[:-2],
+                                          ndim=4,
+                                          plates_from=plates_X[:-1])
+            else:
+                self.X = X
+                self.mu = mu
+                    
         else:
             # Sum axes that are not in the plates of alpha
             self.XX = sum_to_alpha(XX)
@@ -559,6 +592,9 @@ class RotateGaussianArrayARD():
         # Transform the distributions and moments
         #
 
+        plates_alpha = self.plates_alpha
+        plates_X = self.plates_X
+        
         # Compute rotated second moment
         if self.plate_axis is not None:
             # The plate axis has been moved to be the last plate axis
@@ -566,38 +602,47 @@ class RotateGaussianArrayARD():
             if Q is None:
                 raise ValueError("Plates should be rotated but no Q give")
 
+            # Transform covariance
+            sumQ = np.sum(Q, axis=0)
+            QCovQ = sumQ[:,None,None]**2 * self.CovX
+            
             # Rotate plates
-            X = self.X
-            QX = np.einsum('...ik,...kj->...ij', Q, X)
-            sumQ = np.sum(Q, axis=0)[:,None,None]
-            QCovX = sumQ**2 * self.CovX
-            # Compute expectations
-            XX = sum_to_plates(utils.linalg.outer(QX, QX) + QCovX,
-                               self.plates_alpha[:-1],
-                               ndim=2,
-                               plates_from=self.plates_X)
-            Xmu = sum_to_plates(utils.linalg.outer(QX, self.mu),
-                                self.plates_alpha[:-1],
-                                ndim=2,
-                                plates_from=self.plates_X)
+            if self.precompute:
+                QX_QX = np.einsum('...kalb,...ik,...il->...iab', self.X_X, Q, Q)
+                XX = QX_QX + QCovQ
+                XX = sum_to_plates(XX,
+                                   plates_alpha[:-1],
+                                   ndim=2)
+                Xmu = np.einsum('...kaib,...ik->...iab', self.X_mu, Q)
+                Xmu = sum_to_plates(Xmu,
+                                   plates_alpha[:-1],
+                                   ndim=2)
+            else:
+                X = self.X
+                mu = self.mu
+                QX = np.einsum('...ik,...kj->...ij', Q, X)
+                XX = (sum_to_plates(QCovQ,
+                                    plates_alpha[:-1],
+                                    ndim=2) +
+                      sum_to_plates(utils.linalg.outer(QX, QX),
+                                    plates_alpha[:-1],
+                                    ndim=2,
+                                    plates_from=plates_X))
+                Xmu = sum_to_plates(utils.linalg.outer(QX, self.mu),
+                                    plates_alpha[:-1],
+                                    ndim=2,
+                                    plates_from=plates_X)
 
-            mu = self.mu
-            CovX = self.CovX
-            
             mumu = self.mumu
-            D = np.shape(X)[-1]
-            logdet_Q = D * np.log(np.abs(sumQ))[:,0,0]
-            sumQ = sumQ[:,0,0]
-            
+            D = np.shape(XX)[-1]
+            logdet_Q = D * np.log(np.abs(sumQ))
+
         else:
             XX = self.XX
             mumu = self.mumu
             Xmu = self.Xmu
             logdet_Q = 0
 
-        plates_alpha = self.plates_alpha
-        plates_X = self.plates_X
-        
         # Compute transformed moments
         mumu = np.einsum('...ii->...i', mumu)
         RXmu = np.einsum('...ik,...ki->...i', R, Xmu)
@@ -796,6 +841,39 @@ class RotateGaussianArrayARD():
         # Compute the gradient with respect to Q (if Q given)
         #
 
+        # Some pre-computations
+        Q_RCovR = np.einsum('...ik,...kl,...il,...->...i', 
+                            R, 
+                            self.CovX,
+                            R, 
+                            sumQ)
+        if self.precompute:
+            Xr_rX = np.einsum('...abcd,...jb,...jd->...jac', 
+                               self.X_X, 
+                               R, 
+                               R)
+            QXr_rX = np.einsum('...akj,...ik->...aij', 
+                               Xr_rX, 
+                               Q)
+            RX_mu = np.einsum('...jk,...akbj->...jab', 
+                              R, 
+                              self.X_mu)
+
+        else:
+            RX = np.einsum('...ik,...k->...i', R, X)
+            QXR = np.einsum('...ik,...kj->...ij', Q, RX)
+            QXr_rX = np.einsum('...ik,...jk->...kij', QXR, RX)
+            RX_mu = np.einsum('...ik,...jk->...kij', RX, mu)
+
+            QXr_rX = sum_to_plates(QXr_rX,
+                                   plates_alpha[:-2],
+                                   ndim=3,
+                                   plates_from=plates_X[:-1])
+            RX_mu = sum_to_plates(RX_mu,
+                                  plates_alpha[:-2],
+                                  ndim=3,
+                                  plates_from=plates_X[:-1])
+        
         def psi(v):
             """
             Compute: d/dQ 1/2*trace(diag(v)*<(X-mu)*(X-mu)>)
@@ -804,25 +882,19 @@ class RotateGaussianArrayARD():
               + mu*diag(v)*R*<X>
             """
 
+            # Precompute all terms to plates_alpha because v has shape
+            # plates_alpha.
 
             # Gradient of 0.5*v*<x>*<x>
-            RX = np.einsum('...ik,...k->...i', R, X)
-            QXR = np.einsum('...ik,...kj->...ij', Q, RX)
-            v_QXrrX = np.einsum('...ik,...jk,...ik->...ij', QXR, RX, v)
+            v_QXrrX = np.einsum('...kij,...ik->...ij', QXr_rX, v)
 
             # Gradient of 0.5*v*Cov
-            R_v_R = np.einsum('...ki,...k,...kj->...ij', R, v, R)
-            tr_R_v_R_Cov = np.einsum('...ij,...ji->...', R_v_R, CovX)
-            Q_tr_R_v_R_Cov = tr_R_v_R_Cov[...,None,:] * sumQ
+            Q_tr_R_v_R_Cov = np.einsum('...k,...k->...', Q_RCovR, v)[...,None,:]
 
             # Gradient of mu*v*x
-            mu_v_R = np.einsum('...k,...k,...kj->...j', mu, v, R)
-            mu_v_R_X = np.einsum('...ik,...jk->...ij', mu_v_R, X)
+            mu_v_R_X = np.einsum('...ik,...kji->...ij', v, RX_mu)
 
-            return sum_to_plates(v_QXrrX + Q_tr_R_v_R_Cov - mu_v_R_X,
-                                 plates_alpha[:-2],
-                                 ndim=2,
-                                 plates_from=self.plates_X[:-1])
+            return v_QXrrX + Q_tr_R_v_R_Cov - mu_v_R_X
 
         def sum_plates(V, plates):
             ones = np.ones(np.shape(Q))
