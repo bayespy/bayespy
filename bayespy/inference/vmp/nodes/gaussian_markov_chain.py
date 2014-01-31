@@ -262,20 +262,6 @@ class GaussianMarkovChain(ExponentialFamily):
 
         (CovXnXn, CovXpXn, Xn, ldet) = utils.utils.block_banded_solve(A, B, y)
 
-        ## # DEBUGGING
-        ## if np.shape(phi[0])[-1] == 1:
-        ##     C = utils.utils.block_banded(A, B)
-        ##     L = np.linalg.cholesky(C)
-        ##     N = np.shape(C)[-1]
-        ##     print('C', C)
-        ##     print('L', L)#utils.linalg.chol(C))
-        ##     print('gmc.compmom', np.linalg.cond(C))
-        ##     print('Use inv')
-        ##     #invC = np.linalg.inv(C)
-        ##     invC = scipy.linalg.cho_solve((L,True), np.identity(N))
-        ##     CovXnXn = np.diag(invC)[...,np.newaxis,np.newaxis]
-        ##     CovXpXn = np.diag(invC, k=1)[...,np.newaxis,np.newaxis]
-
         # Compute moments
         u0 = Xn
         u1 = CovXnXn + Xn[...,:,np.newaxis] * Xn[...,np.newaxis,:]
