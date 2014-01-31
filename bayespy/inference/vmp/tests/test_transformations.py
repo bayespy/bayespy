@@ -28,7 +28,11 @@ Unit tests for `transformations` module.
 import numpy as np
 
 from bayespy.inference.vmp.nodes.gaussian import GaussianArrayARD
+from bayespy.inference.vmp.nodes.gaussian import Gaussian
 from bayespy.inference.vmp.nodes.gamma import Gamma
+from bayespy.inference.vmp.nodes.wishart import Wishart
+from bayespy.inference.vmp.nodes.dot import SumMultiply
+from bayespy.inference.vmp.nodes.gaussian_markov_chain import GaussianMarkovChain
 
 from bayespy.utils import utils
 from bayespy.utils import linalg
@@ -36,6 +40,8 @@ from bayespy.utils import random
 from bayespy.utils import optimize
 
 from ..transformations import RotateGaussianArrayARD
+from ..transformations import RotateGaussianMarkovChain
+from ..transformations import RotateDriftingMarkovChain
 
 from bayespy.utils.utils import TestCase
 
@@ -45,6 +51,9 @@ class TestRotateGaussianArrayARD(TestCase):
         """
         Test the speed-up rotation of Gaussian ARD arrays.
         """
+
+        # Use seed for deterministic testing
+        np.random.seed(42)
 
         def test(shape, plates, 
                  axis=-1, 
@@ -301,6 +310,8 @@ class TestRotateGaussianArrayARD(TestCase):
         Test gradient of the rotation cost function for Gaussian ARD arrays.
         """
 
+        # Use seed for deterministic testing
+        np.random.seed(42)
 
         def test(shape, plates, 
                  axis=-1, 
@@ -394,10 +405,10 @@ class TestRotateGaussianArrayARD(TestCase):
         # Basic rotation
         #
         test((3,), (), axis=-1)
-        test((3,4,5), (), axis=-1)
-        test((3,4,5), (), axis=-2)
-        test((3,4,5), (), axis=-3)
-        test((3,4,5), (6,7), axis=-2)
+        test((2,3,4), (), axis=-1)
+        test((2,3,4), (), axis=-2)
+        test((2,3,4), (), axis=-3)
+        test((2,3,4), (5,6), axis=-2)
 
         #
         # Rotation with mu
@@ -728,3 +739,430 @@ class TestRotateGaussianArrayARD(TestCase):
         # TODO: With missing values
         
         pass
+
+class TestRotateGaussianMarkovChain(TestCase):
+
+    def test_cost_function(self):
+        """
+        Test the speed-up rotation of Markov chain
+        """
+
+        np.random.seed(42)
+
+        def check(D, N, mu=None, Lambda=None, rho=None, A=None):
+            if mu is None:
+                mu = np.zeros(D)
+            if Lambda is None:
+                Lambda = np.identity(D)
+            if rho is None:
+                rho = np.ones(D)
+            if A is None:
+                A = GaussianArrayARD(3, 5,
+                                     shape=(D,),
+                                     plates=(D,))
+                
+            V = np.identity(D) + np.ones((D,D))
+
+            # Construct model
+            X = GaussianMarkovChain(mu,
+                                    Lambda,
+                                    A,
+                                    rho,
+                                    n=N+1,
+                                    initialize=False)
+            Y = Gaussian(X.as_gaussian(),
+                         V,
+                         initialize=False)
+
+            # Posterior estimation
+            Y.observe(np.random.randn(N+1,D))
+            X.update()
+            try:
+                A.update()
+            except:
+                pass
+            try:
+                mu.update()
+            except:
+                pass
+            try:
+                Lambda.update()
+            except:
+                pass
+            try:
+                rho.update()
+            except:
+                pass
+
+            # Construct rotator
+            rotA = RotateGaussianArrayARD(A, axis=-1)
+            rotX = RotateGaussianMarkovChain(X, rotA)
+
+            # Rotation
+            true_cost0 = X.lower_bound_contribution()
+            rotX.setup()
+            I = np.identity(D)
+            R = np.random.randn(D, D)
+            rot_cost0 = rotX.get_bound_terms(I)
+            rot_cost1 = rotX.get_bound_terms(R)
+            self.assertAllClose(sum(rot_cost0.values()),
+                                rotX.bound(I)[0],
+                                    msg="Bound terms and total bound differ")
+            self.assertAllClose(sum(rot_cost1.values()),
+                                rotX.bound(R)[0],
+                                msg="Bound terms and total bound differ")
+            rotX.rotate(R)
+            true_cost1 = X.lower_bound_contribution()
+            self.assertAllClose(true_cost1 - true_cost0,
+                                rot_cost1[X] - rot_cost0[X],
+                                msg="Incorrect rotation cost for X")
+            
+            return
+
+        self._run_checks(check)
+
+        pass
+
+    def test_cost_gradient(self):
+        """
+        Test the gradient of the speed-up rotation for Markov chain
+        """
+
+        # Use seed for deterministic testing
+        np.random.seed(42)
+
+        def check(D, N, mu=None, Lambda=None, rho=None, A=None):
+            if mu is None:
+                mu = np.zeros(D)
+            if Lambda is None:
+                Lambda = np.identity(D)
+            if rho is None:
+                rho = np.ones(D)
+            if A is None:
+                A = GaussianArrayARD(3, 5,
+                                     shape=(D,),
+                                     plates=(D,))
+                
+            V = np.identity(D) + np.ones((D,D))
+
+            # Construct model
+            X = GaussianMarkovChain(mu,
+                                    Lambda,
+                                    A,
+                                    rho,
+                                    n=N+1,
+                                    initialize=False)
+            Y = Gaussian(X.as_gaussian(),
+                         V,
+                         initialize=False)
+
+            # Posterior estimation
+            Y.observe(np.random.randn(N+1,D))
+            X.update()
+            try:
+                A.update()
+            except:
+                pass
+            try:
+                mu.update()
+            except:
+                pass
+            try:
+                Lambda.update()
+            except:
+                pass
+            try:
+                rho.update()
+            except:
+                pass
+
+            # Construct rotator
+            rotA = RotateGaussianArrayARD(A, axis=-1)
+            rotX = RotateGaussianMarkovChain(X, rotA)
+            rotX.setup()
+
+            # Check gradient with respect to R
+            R = np.random.randn(D, D)
+            def cost(r):
+                (b, dr) = rotX.bound(np.reshape(r, np.shape(R)))
+                return (b, np.ravel(dr))
+
+            err = optimize.check_gradient(cost, 
+                                          np.ravel(R), 
+                                          verbose=False)
+            self.assertAllClose(err, 0, 
+                                atol=1e-6,
+                                msg="Gradient incorrect")
+            
+            return
+
+        self._run_checks(check)
+
+        pass
+
+    def _run_checks(self, check):
+        
+        # Basic test
+        check(2, 3)
+
+        # Test mu
+        check(2, 3,
+              mu=GaussianArrayARD(2, 4,
+                                  shape=(2,),
+                                  plates=()))
+
+        # Test Lambda
+        check(2, 3,
+              Lambda=Wishart(3, random.covariance(2)))
+
+        # Test A
+        check(2, 3,
+              A=GaussianArrayARD(2, 4,
+                                 shape=(2,),
+                                 plates=(2,)))
+        check(2, 3,
+              A=GaussianArrayARD(2, 4,
+                                 shape=(2,),
+                                 plates=(3,2)))
+
+        # Test Lambda and mu
+        check(2, 3,
+              mu=GaussianArrayARD(2, 4,
+                                  shape=(2,),
+                                  plates=()),
+              Lambda=Wishart(2, random.covariance(2)))
+
+        # Test mu and A
+        check(2, 3,
+              mu=GaussianArrayARD(2, 4,
+                                  shape=(2,),
+                                  plates=()),
+              A=GaussianArrayARD(2, 4,
+                                 shape=(2,),
+                                 plates=(2,)))
+
+        # Test Lambda and A
+        check(2, 3,
+              Lambda=Wishart(2, random.covariance(2)),
+              A=GaussianArrayARD(2, 4,
+                                 shape=(2,),
+                                 plates=(2,)))
+
+        # Test mu, Lambda and A
+        check(2, 3,
+              mu=GaussianArrayARD(2, 4,
+                                  shape=(2,),
+                                  plates=()),
+              Lambda=Wishart(2, random.covariance(2)),
+              A=GaussianArrayARD(2, 4,
+                                 shape=(2,),
+                                 plates=(2,)))
+            
+        # TODO: Test plates
+
+        pass
+
+
+    
+class TestRotateDriftingMarkovChain(TestCase):
+
+    def test_cost_function(self):
+        """
+        Test the speed-up rotation of drifting Markov chain
+        """
+
+        # Use seed for deterministic testing
+        np.random.seed(42)
+
+        def check(D, N, K,
+                  mu=None,
+                  Lambda=None,
+                  rho=None):
+
+            if mu is None:
+                mu = np.zeros(D)
+            if Lambda is None:
+                Lambda = np.identity(D)
+            if rho is None:
+                rho = np.ones(D)
+
+            V = np.identity(D) + np.ones((D,D))
+
+            # Construct model
+            B = GaussianArrayARD(3, 5,
+                                 shape=(D,K),
+                                 plates=(1,D))
+            S = GaussianArrayARD(2, 4,
+                                 shape=(K,),
+                                 plates=(N,1))
+            A = SumMultiply('dk,k->d', B, S)
+            X = GaussianMarkovChain(mu,
+                                    Lambda,
+                                    A,
+                                    rho,
+                                    n=N+1,
+                                    initialize=False)
+            Y = Gaussian(X.as_gaussian(),
+                         V,
+                         initialize=False)
+
+            # Posterior estimation
+            Y.observe(np.random.randn(N+1,D))
+            X.update()
+            B.update()
+            S.update()
+            try:
+                mu.update()
+            except:
+                pass
+            try:
+                Lambda.update()
+            except:
+                pass
+            try:
+                rho.update()
+            except:
+                pass
+
+            # Construct rotator
+            rotB = RotateGaussianArrayARD(B, axis=-2)
+            rotX = RotateDriftingMarkovChain(X, B, S, rotB)
+
+            # Rotation
+            true_cost0 = X.lower_bound_contribution()
+            rotX.setup()
+            I = np.identity(D)
+            R = np.random.randn(D, D)
+            rot_cost0 = rotX.get_bound_terms(I)
+            rot_cost1 = rotX.get_bound_terms(R)
+            self.assertAllClose(sum(rot_cost0.values()),
+                                rotX.bound(I)[0],
+                                    msg="Bound terms and total bound differ")
+            self.assertAllClose(sum(rot_cost1.values()),
+                                rotX.bound(R)[0],
+                                msg="Bound terms and total bound differ")
+            rotX.rotate(R)
+            true_cost1 = X.lower_bound_contribution()
+            self.assertAllClose(true_cost1 - true_cost0,
+                                rot_cost1[X] - rot_cost0[X],
+                                msg="Incorrect rotation cost for X")
+            
+            return
+
+        self._run_checks(check)
+        
+        pass
+
+
+    def test_cost_gradient(self):
+        """
+        Test the gradient of the speed-up rotation for drifting Markov chain
+        """
+
+        # Use seed for deterministic testing
+        np.random.seed(42)
+
+        def check(D, N, K,
+                  mu=None,
+                  Lambda=None,
+                  rho=None):
+
+            if mu is None:
+                mu = np.zeros(D)
+            if Lambda is None:
+                Lambda = np.identity(D)
+            if rho is None:
+                rho = np.ones(D)
+
+            V = np.identity(D) + np.ones((D,D))
+
+            # Construct model
+            B = GaussianArrayARD(3, 5,
+                                 shape=(D,K),
+                                 plates=(1,D))
+            S = GaussianArrayARD(2, 4,
+                                 shape=(K,),
+                                 plates=(N,1))
+            A = SumMultiply('dk,k->d', B, S)
+            X = GaussianMarkovChain(mu,
+                                    Lambda,
+                                    A,
+                                    rho,
+                                    n=N+1,
+                                    initialize=False)
+            Y = Gaussian(X.as_gaussian(),
+                         V,
+                         initialize=False)
+
+            # Posterior estimation
+            Y.observe(np.random.randn(N+1,D))
+            X.update()
+            B.update()
+            S.update()
+            try:
+                mu.update()
+            except:
+                pass
+            try:
+                Lambda.update()
+            except:
+                pass
+            try:
+                rho.update()
+            except:
+                pass
+
+            # Construct rotator
+            rotB = RotateGaussianArrayARD(B, axis=-2)
+            rotX = RotateDriftingMarkovChain(X, B, S, rotB)
+            rotX.setup()
+
+            # Check gradient with respect to R
+            R = np.random.randn(D, D)
+            def cost(r):
+                (b, dr) = rotX.bound(np.reshape(r, np.shape(R)))
+                return (b, np.ravel(dr))
+
+            err = optimize.check_gradient(cost, 
+                                          np.ravel(R), 
+                                          verbose=False)
+            self.assertAllClose(err, 0, 
+                                atol=1e-6,
+                                msg="Gradient incorrect")
+            
+            return
+
+        self._run_checks(check)
+        
+        pass
+
+    def _run_checks(self, check):
+        
+        # Basic test
+        check(1, 1, 1)
+        check(2, 1, 1)
+        check(1, 2, 1)
+        check(1, 1, 2)
+        check(3, 4, 2)
+
+        # Test mu
+        check(2, 3, 4,
+              mu=GaussianArrayARD(2, 4,
+                                  shape=(2,),
+                                  plates=()))
+
+        # Test Lambda
+        check(2, 3, 4,
+              Lambda=Wishart(3, random.covariance(2)))
+
+        # Test Lambda and mu
+        check(2, 3, 4,
+              mu=GaussianArrayARD(2, 4,
+                                  shape=(2,),
+                                  plates=()),
+              Lambda=Wishart(2, random.covariance(2)))
+
+        # TODO: Test plates
+
+        pass
+

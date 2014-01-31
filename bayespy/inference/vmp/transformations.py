@@ -994,7 +994,12 @@ class RotateGaussianMarkovChain():
     """
     Assume the following model.
 
-    Constant, unit isotropic innovation noise.
+    Constant, unit isotropic innovation noise. Unit variance only?
+
+    Maybe: Assume innovation noise with unit variance? Would it help make this
+    function more general with respect to A.
+
+    TODO: Allow constant A or not rotating A.
 
     :math:`A` may vary in time.
     
@@ -1004,18 +1009,65 @@ class RotateGaussianMarkovChain():
     No plates for X.
     """
 
-    def __init__(self, X, A, A_rotator):
+    def __init__(self, X, *args):
         self.X_node = X
-        self.A_node = A
-        self.A_rotator = A_rotator
+        self.A_node = X.parents[2]
+
+        if len(args) == 0:
+            raise NotImplementedError()
+        elif len(args) == 1:
+            self.A_rotator = args[0]
+        else:
+            raise ValueError("Wrong number of arguments")
+        
         self.N = X.dims[0][0]
 
     def nodes(self):
         return [self.X_node] + self.A_rotator.nodes()
 
     def rotate(self, R, inv=None, logdet=None):
+        if inv is None:
+            inv = np.linalg.inv(R)
+        if logdet is None:
+            logdet = np.linalg.slogdet(R)[1]
+            
         self.X_node.rotate(R, inv=inv, logdet=logdet)
         self.A_rotator.rotate(inv.T, inv=R.T, logdet=-logdet, Q=R)
+
+    def _computations_for_A_and_X(self, XpXn, XpXp):
+        # Get moments of A (and make sure they include time axis)
+        (A, AA) = self.A_node.get_moments()
+        A = utils.utils.atleast_nd(A, 3)
+        AA = utils.utils.atleast_nd(AA, 4)
+        CovA = AA - A[...,:,np.newaxis]*A[...,np.newaxis,:]
+
+        #
+        # Expectations with respect to A and X
+        #
+
+        # Compute: \sum_n <A_n> <x_{n-1} x_n^T>
+        # TODO/FIXME: Plate multiplier to fix possible broadcasting!!
+        A_XpXn = utils.utils.sum_multiply(A[...,:,:,None],
+                                          XpXn[...,None,:,:],
+                                          axis=(-3,-1),
+                                          sumaxis=False)
+
+        # Compute: \sum_n <A_n> <x_{n-1} x_{n-1}^T> <A_n>^T
+        # TODO/FIXME: Plate multiplier to fix possible broadcasting!!
+        A_XpXp = np.einsum('...ik,...kj->...ij', A, XpXp)
+        A_XpXp_A = utils.utils.sum_multiply(A_XpXp[...,:,None,:],
+                                            A[...,None,:,:],
+                                            axis=(-3,-2),
+                                            sumaxis=False)
+
+        # Compute: \sum_n tr(CovA_n <x_{n-1} x_{n-1}^T>)
+        # TODO/FIXME: Plate multiplier to fix possible broadcasting!!
+        CovA_XpXp = utils.utils.sum_multiply(CovA,
+                                             XpXp[...,None,:,:],
+                                             axis=(-3,),
+                                             sumaxis=False)
+        
+        return (A_XpXn, A_XpXp_A, CovA_XpXp)
 
     def setup(self):
         """
@@ -1024,13 +1076,9 @@ class RotateGaussianMarkovChain():
         
         # Get moments of X
         (X, XnXn, XpXn) = self.X_node.get_moments()
-        XpXp = XnXn[:-1,:,:]
 
-        # Get moments of A (and make sure they include time axis)
-        (A, AA) = self.X_node.parents[2].get_moments()
-        A = utils.utils.atleast_nd(A, 3)
-        AA = utils.utils.atleast_nd(AA, 4)
-        CovA = AA - A[...,:,np.newaxis]*A[...,np.newaxis,:]
+        # TODO/FIXME: Sum to plates of A/CovA
+        XpXp = XnXn[:-1,:,:]
 
         #
         # Expectations with respect to X
@@ -1038,30 +1086,22 @@ class RotateGaussianMarkovChain():
         
         self.X0 = X[0,:]
         self.X0X0 = XnXn[0,:,:]
-        #self.XpXp = np.sum(XpXp, axis=0)
         self.XnXn = np.sum(XnXn[1:,:,:], axis=0)
-        #self.XpXn = np.sum(XpXn, axis=0)
 
-        #
-        # Expectations with respect to A and X
-        #
-
-        # Compute: \sum_n <A_n> <x_{n-1} x_n^T>
-        self.A_XpXn = np.sum(dot(A, XpXn),
-                             axis=0)
-
-        # Compute: \sum_n <A_n> <x_{n-1} x_{n-1}^T> <A_n>^T
-        self.A_XpXp_A = np.sum(dot(A, XpXp, utils.utils.T(A)),
-                               axis=0)
-
-        # Compute: \sum_n tr(CovA_n <x_{n-1} x_{n-1}^T>)
-        self.CovA_XpXp = np.einsum('ndij,nij->d', CovA, XpXp)
-        
         # Get moments of the fixed parameter nodes
         mu = self.X_node.parents[0].get_moments()[0]
         self.Lambda = self.X_node.parents[1].get_moments()[0]
         self.Lambda_mu_X0 = np.outer(np.dot(self.Lambda,mu), self.X0)
 
+        #
+        # Prepare the rotation for A
+        #
+
+        (self.A_XpXn, 
+         self.A_XpXp_A, 
+         self.CovA_XpXp) = self._computations_for_A_and_X(XpXn, XpXp)
+
+        
         self.A_rotator.setup(plate_axis=-1)
 
         # Innovation noise is assumed to be I
@@ -1081,12 +1121,17 @@ class RotateGaussianMarkovChain():
         # TODO/FIXME: X and alpha should NOT contain observed values!! Check
         # that.
 
-        # TODO/FIXME: Allow non-zero prior mean!
-
         # Assume constant mean and precision matrix over plates..
 
-        invR = inv
-        logdetR = logdet
+        if inv is None:
+            invR = np.linalg.inv(R)
+        else:
+            invR = inv
+
+        if logdet is None:
+            logdetR = np.linalg.slogdet(R)[1]
+        else:
+            logdetR = logdet
 
         # Transform moments of X and A:
         Lambda_R_X0X0 = dot(self.Lambda, R, self.X0X0)
@@ -1122,33 +1167,37 @@ class RotateGaussianMarkovChain():
                      + logH_X
                      )
 
-        # TODO/FIXME: There might be a very small error in the gradient?
-        
-        if gradient:
-            # Compute d<log p(X)>
-            dyy = 2 * (R_XnXn + Lambda_R_X0X0)
-            dyz = dot(R, self.A_XpXn + self.A_XpXn.T) + self.Lambda_mu_X0
-            dzz = 2 * (RA_XpXp_A + R_CovA_XpXp)
-            dlogp_X = utils.random.gaussian_logpdf(dyy,
-                                                   dyz,
-                                                   dzz,
-                                                   0,
-                                                   0)
-
-            if terms:
-                d_bound = {self.X_node: dlogp_X + dlogH_X}
-            else:
-                d_bound = (0*dlogp_X
-                           + dlogp_X 
-                           + dlogH_X
-                           )
-
-            return (bound, d_bound)
-
-        else:
+        if not gradient:
             return bound
+        
+        # Compute d<log p(X)>
+        dyy = 2 * (R_XnXn + Lambda_R_X0X0)
+        dyz = dot(R, self.A_XpXn + self.A_XpXn.T) + self.Lambda_mu_X0
+        dzz = 2 * (RA_XpXp_A + R_CovA_XpXp)
+        dlogp_X = utils.random.gaussian_logpdf(dyy,
+                                               dyz,
+                                               dzz,
+                                               0,
+                                               0)
 
+        if terms:
+            d_bound = {self.X_node: dlogp_X + dlogH_X}
+        else:
+            d_bound = (0*dlogp_X
+                       + dlogp_X
+                       + dlogH_X
+                       )
+
+        return (bound, d_bound)
+
+    
     def bound(self, R, logdet=None, inv=None):
+
+        if inv is None:
+            inv = np.linalg.inv(R)
+        if logdet is None:
+            logdet = np.linalg.slogdet(R)[1]
+            
         (bound_X, d_bound_X) = self._compute_bound(R,
                                                    logdet=logdet,
                                                    inv=inv,
@@ -1159,7 +1208,6 @@ class RotateGaussianMarkovChain():
                                                                  inv=R.T,
                                                                  logdet=-logdet,
                                                                  Q=R)
-        # TODO/FIXME: Also apply the gradient of invR.T to the result
         dR_bound_A = -dot(inv.T, dR_bound_A.T, inv.T)
 
         # Compute the bound
@@ -1169,6 +1217,12 @@ class RotateGaussianMarkovChain():
         return (bound, d_bound)
 
     def get_bound_terms(self, R, logdet=None, inv=None):
+
+        if inv is None:
+            inv = np.linalg.inv(R)
+        if logdet is None:
+            logdet = np.linalg.slogdet(R)[1]
+            
         terms_A = self.A_rotator.get_bound_terms(inv.T, 
                                                  inv=R.T,
                                                  logdet=-logdet,
@@ -1180,13 +1234,12 @@ class RotateGaussianMarkovChain():
                                       gradient=False,
                                       terms=True)
 
-        # TODO/FIXME: USE DICTIONARY AS A FUNCTION OF NODES!!!!!
         terms_X.update(terms_A)
-        
+
         return terms_X
 
     
-class RotateDriftingMarkovChain():
+class RotateDriftingMarkovChain(RotateGaussianMarkovChain):
     """
     Assume the following model.
 
@@ -1194,10 +1247,9 @@ class RotateDriftingMarkovChain():
 
     :math:`A_n = \sum_k B_k s_{kn}`
     
-    Shape of B: (D,D*K)
-    Shape of BB: (D,D*K,D*K)
-    Shape of S: (N,K)
-    Shape of SS: (N,K,K)
+    Gaussian B: (1,D) x (D,K)
+    Gaussian S: (N,1) x (K)
+    MC X:          () x (N+1,D)
 
     No plates for X.
     """
@@ -1207,209 +1259,72 @@ class RotateDriftingMarkovChain():
         self.B_node = B
         self.S_node = S
         self.B_rotator = B_rotator
-        self.N = X.dims[0][0]
-        self.D = X.dims[0][-1]
-        self.K = S.dims[0][-1]
 
-    def nodes(self):
-        # B node is in the B rotator.
-        # S is not rotated.
-        return [self.X_node]
+        if len(S.plates) > 0 and S.plates[-1] > 1:
+            raise ValueError("The length of the last plate of S must be 1.")
+        if len(B.plates) > 1 and B.plates[-2] > 1:
+            raise ValueError("The length of the last plate of B must be 1.")
 
-    def rotate(self, R, inv=None, logdet=None):
-        self.X_node.rotate(R, inv=inv, logdet=logdet)
-        self.B_rotator.rotate(inv.T, inv=R.T, logdet=-logdet, Q=R)
+        if len(S.dims[0]) != 1:
+            raise ValueError("S should have exactly one variable axis")
+        if len(B.dims[0]) != 2:
+            raise ValueError("B should have exactly two variable axes")
 
-    def setup(self):
-        """
-        This method should be called just before optimization.
-        """
-        
-        # Get moments of X
-        (X, XnXn, XpXn) = self.X_node.get_moments()
-        XpXp = XnXn[:-1,:,:]
+        super().__init__(X, B_rotator)
+
+    def _computations_for_A_and_X(self, XpXn, XpXp):
 
         # Get moments of B and S
         (B, BB) = self.B_node.get_moments()
+        CovB = BB - B[...,:,:,None,None]*B[...,None,None,:,:]
+        
         u_S = self.S_node.get_moments()
         S = u_S[0]
         SS = u_S[1]
-
-        CovB = BB - B[...,:,np.newaxis]*B[...,np.newaxis,:]
-        B = np.reshape(B, (self.D,self.D,self.K))
-        CovB = np.reshape(CovB, (self.D,self.D,self.K,self.D,self.K))
-
-        #
-        # Expectations with respect to X
-        #
-        
-        self.X0 = X[0,:]
-        self.X0X0 = XnXn[0,:,:]
-        #self.XpXp = np.sum(XpXp, axis=0)
-        self.XnXn = np.sum(XnXn[1:,:,:], axis=0)
-        #self.XpXn = np.sum(XpXn, axis=0)
 
         #
         # Expectations with respect to A and X
         #
 
+        # TODO/FIXME: If S and B have overlapping plates, then these will give
+        # wrong results, because those plates of S are summed before multiplying
+        # by the plates of B. There should be some "smart einsum" function which
+        # would compute sum-multiplys intelligently given a number of inputs.
+        
         # Compute: \sum_n <A_n> <x_{n-1} x_n^T>
-        S_XpXn = np.einsum('nk,nij->kij', S, XpXn)
-        self.A_XpXn = np.einsum('dik,kij->dj', B, S_XpXn)
+        # Axes: (N, D, D, D, K)
+        S_XpXn = utils.utils.sum_multiply(S[...,None,None,:],
+                                          XpXn[...,:,None,:,:,None],
+                                          axis=(-3,-2,-1),
+                                          sumaxis=False)
+        A_XpXn = utils.utils.sum_multiply(B[...,:,:,None,:],
+                                          S_XpXn[...,:,:,:],
+                                          axis=(-4,-2),
+                                          sumaxis=False)
 
         # Compute: \sum_n <A_n> <x_{n-1} x_{n-1}^T> <A_n>^T
-        SS_XpXp = np.einsum('nkl,nij->ikjl', SS, XpXp)
-        B_SS_XpXp = np.einsum('dik,ikjl->djl', B, SS_XpXp)
-        self.A_XpXp_A = np.einsum('djl,ejl->de', B_SS_XpXp, B)
-        #np.sum(dot(A, XpXp, utils.utils.T(A)),
-        #                       axis=0)
+        # Axes: (N, D, D, D, K, D, K)
+        SS_XpXp = utils.utils.sum_multiply(SS[...,None,:,None,:],
+                                           XpXp[...,None,:,None,:,None],
+                                           axis=(-4,-3,-2,-1),
+                                           sumaxis=False)
+        B_SS_XpXp = utils.utils.sum_multiply(B[...,:,:,:,None,None],
+                                             SS_XpXp[...,:,:,:,:],
+                                             axis=(-4,-3),
+                                             sumaxis=True)
+        A_XpXp_A = utils.utils.sum_multiply(B_SS_XpXp[...,:,None,:,:],
+                                            B[...,None,:,:,:],
+                                            axis=(-4,-3),
+                                            sumaxis=False)
 
         # Compute: \sum_n tr(CovA_n <x_{n-1} x_{n-1}^T>)
-        self.CovA_XpXp = np.einsum('dikjl,ikjl->d', CovB, SS_XpXp)
-        #self.CovA_XpXp = np.einsum('ndij,nij->d', CovA, XpXp)
-        
-        # Get moments of the fixed parameter nodes
-        mu = self.X_node.parents[0].get_moments()[0]
-        self.Lambda = self.X_node.parents[1].get_moments()[0]
-        self.Lambda_mu_X0 = np.outer(np.dot(self.Lambda,mu), self.X0)
+        # Axes: (D,D,K,D,K)
+        CovA_XpXp = utils.utils.sum_multiply(CovB,
+                                             SS_XpXp,
+                                             axis=(-5,),
+                                             sumaxis=False)
 
-        self.B_rotator.setup(rotate_plates=True)
-
-        # Innovation noise is assumed to be I
-        #self.v = self.X_node.parents[3].get_moments()[0]
-
-    def _compute_bound(self, R, logdet=None, inv=None, gradient=False):
-        """
-        Rotate q(X) as X->RX: q(X)=N(R*mu, R*Cov*R')
-
-        Assume:
-        :math:`p(\mathbf{X}) = \prod^M_{m=1} 
-               N(\mathbf{x}_m|0, \mathbf{\Lambda})`
-
-        Assume unit innovation noise covariance.
-        """
-
-        # TODO/FIXME: X and alpha should NOT contain observed values!! Check
-        # that.
-
-        # TODO/FIXME: Allow non-zero prior mean!
-
-        # Assume constant mean and precision matrix over plates..
-
-        invR = inv
-        logdetR = logdet
-
-        # Transform moments of X:
-        # Transform moments of A:
-        Lambda_R_X0X0 = dot(self.Lambda, R, self.X0X0)
-        R_XnXn = dot(R, self.XnXn)
-        RA_XpXp_A = dot(R, self.A_XpXp_A)
-        sumr = np.sum(R, axis=0)
-        R_CovA_XpXp = sumr * self.CovA_XpXp
-
-        ## if not gradient:
-        ##     print("DEBUG TOO", dot(R_XnXn,R.T))
-
-        # Compute entropy H(X)
-        logH_X = utils.random.gaussian_entropy(-2*self.N*logdetR, 
-                                               0)
-
-        # Compute <log p(X)>
-        yy = tracedot(R_XnXn, R.T) + tracedot(Lambda_R_X0X0, R.T)
-        yz = tracedot(dot(R,self.A_XpXn),R.T) + tracedot(self.Lambda_mu_X0, R.T)
-        zz = tracedot(RA_XpXp_A, R.T) + np.dot(R_CovA_XpXp, sumr) #RR_CovA_XpXp
-        logp_X = utils.random.gaussian_logpdf(yy,
-                                              yz,
-                                              zz,
-                                              0,
-                                              0)
-
-        # Compute dH(X)
-        dlogH_X = utils.random.gaussian_entropy(-2*self.N*invR.T,
-                                                0)
-
-        # Compute the bound
-        bound = (0
-                 + logp_X 
-                 + logH_X
-                 )
-
-        #if not gradient:
-        #    print("Debug in transformations", bound)
-        
-        if gradient:
-            # Compute d<log p(X)>
-            dyy = 2 * (R_XnXn + Lambda_R_X0X0)
-            dyz = dot(R, self.A_XpXn + self.A_XpXn.T) + self.Lambda_mu_X0
-            dzz = 2 * (RA_XpXp_A + R_CovA_XpXp)
-            dlogp_X = utils.random.gaussian_logpdf(dyy,
-                                                   dyz,
-                                                   dzz,
-                                                   0,
-                                                   0)
-
-            d_bound = (0*dlogp_X
-                       + dlogp_X 
-                       + dlogH_X
-                       )
-
-            return (bound, d_bound)
-
-        else:
-            return bound
-
-    def bound(self, R, logdet=None, inv=None):
-        (bound_X, d_bound_X) = self._compute_bound(R,
-                                                   logdet=logdet,
-                                                   inv=inv,
-                                                   gradient=True)
-        
-        # Compute cost and gradient from A
-        (bound_B, dR_bound_B, dQ_bound_B) = self.B_rotator.bound(inv.T, 
-                                                                 inv=R.T,
-                                                                 logdet=-logdet,
-                                                                 Q=R)
-        # TODO/FIXME: Also apply the gradient of invR.T to the result
-        dR_bound_B = -dot(inv.T, dR_bound_B.T, inv.T)
-
-        # Compute the bound
-        bound = bound_X + bound_B
-        d_bound = d_bound_X + dR_bound_B + dQ_bound_B
-
-        return (bound, d_bound)
-
-    def get_bound_terms(self, R, logdet=None, inv=None):
-        bound_dict = self.B_rotator.get_bound_terms(inv.T, 
-                                                    inv=R.T,
-                                                    logdet=-logdet,
-                                                    Q=R)
-        
-        bound_X = self._compute_bound(R,
-                                      logdet=logdet,
-                                      inv=inv,
-                                      gradient=False)
-        
-        bound_dict.update({self: bound_X})
-        
-        return bound_dict
-
-    ## def get_gradient_terms(self, R, logdet=None, inv=None):
-    ##     grad_dict = self.B_rotator.get_gradient_terms(inv.T, 
-    ##                                                   inv=R.T,
-    ##                                                   logdet=-logdet,
-    ##                                                   Q=R)
-        
-    ##     (_, grad_X) = self._compute_bound(R,
-    ##                                       logdet=logdet,
-    ##                                       inv=inv,
-    ##                                       gradient=True)
-        
-    ##     grad_dict.update({self: grad_X})
-        
-    ##     return grad_dict
-
-
-
+        return (A_XpXn, A_XpXp_A, CovA_XpXp)
 
 
 
