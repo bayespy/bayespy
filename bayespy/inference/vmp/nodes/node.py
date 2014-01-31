@@ -257,11 +257,41 @@ class Node():
     #return self._compute_mask_to_parent(index, self.get_mask())
 
     def _message_to_child(self):
-        return self.get_moments()
-    
-    #def _get_message_and_mask_to_parent(self, index):
-    #    raise NotImplementedError()
 
+        u = self.get_moments()
+        
+        # Debug: Check that the message has appropriate shape
+        for (ui, dim) in zip(u, self.dims):
+            ndim = len(dim)
+            if ndim > 0:
+                if np.shape(ui)[-ndim:] != dim:
+                    raise RuntimeError(
+                        "A bug found by _message_to_child: "
+                        "The variable axes of the moments %s are not equal to "
+                        "the axes %s defined by the node %s."
+                        % (np.shape(ui)[-ndim:],
+                           dim,
+                           self.name))
+                if not utils.is_shape_subset(np.shape(ui)[:-ndim],
+                                             self.plates):
+                    raise RuntimeError(
+                        "A bug found by _message_to_child: "
+                        "The plate axes of the moments %s are not a subset of "
+                        "the plate axes %s defined by the node %s."
+                        % (np.shape(ui)[:-ndim],
+                           self.plates,
+                           self.name))
+            else:
+                if not utils.is_shape_subset(np.shape(ui), self.plates):
+                    raise RuntimeError(
+                        "A bug found by _message_to_child: "
+                        "The plate axes of the moments %s are not a subset of "
+                        "the plate axes %s defined by the node %s."
+                        % (np.shape(ui),
+                           self.plates,
+                           self.name))
+        return u
+                
     def _message_to_parent(self, index):
 
         # Compute the message, check plates, apply mask and sum over some plates
