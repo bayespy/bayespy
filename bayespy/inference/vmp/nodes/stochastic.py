@@ -72,7 +72,9 @@ class Stochastic(Node):
     # TODO: Write the initialization method.
 
     def get_moments(self):
-        return self.u
+        # Just for safety, do not return a reference to the moment list of this
+        # node but instead create a copy of the list. 
+        return [ui for ui in self.u]
 
     ## @staticmethod
     ## def _compute_message_to_parent(index, u_self, *u_parents):
@@ -129,11 +131,20 @@ class Stochastic(Node):
             if ndim > ndim_u:
                 self.u[ind] = utils.add_leading_axes(u[ind], ndim - ndim_u)
             elif ndim < ndim_u:
-                raise Exception("The size of the variable's moments array "
-                                "is larger than it should be based on the "
-                                "plates and dimension information. Check "
-                                "that you have provided plates properly.")
+                raise RuntimeError(
+                    "The size of the variable %s's %s-th moment "
+                    "array is %s which is larger than it should "
+                    "be, that is, %s, based on the plates %s and "
+                    "dimension %s. Check that you have provided "
+                    "plates properly."
+                    % (self.name,
+                       ind,
+                       np.shape(self.u[ind]), 
+                       shape,
+                       self.plates,
+                       self.dims[ind]))
 
+                
     def update(self):
         if not np.all(self.observed):
             u_parents = self._message_from_parents()

@@ -400,6 +400,16 @@ class TestSlice(utils.TestCase):
             def _message_to_child(self):
                 return self.u
 
+        # Message not a reference to X.u but a copy of it
+        X = DummyNode([np.random.randn(3)],
+                      plates=(3,), 
+                      dims=((),))
+        Y = X[2]
+        self.assertTrue(Y._message_to_child() is not X.u,
+                        msg="Slice node operator sends a reference to the "
+                            "node's moment list as a message instead of a copy "
+                            "of the list.")
+            
         # Integer indices
         X = DummyNode([np.random.randn(3,4)],
                       plates=(3,4), 

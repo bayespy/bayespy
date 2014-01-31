@@ -232,7 +232,6 @@ class Node():
         # Check the shape of the mask
         plates_to_parent = self._plates_to_parent(index)
         if not utils.is_shape_subset(np.shape(mask), plates_to_parent):
-            print(self._plates_to_parent(index))
             raise ValueError("In node %s, the mask being sent to "
                              "parent[%d] (%s) has invalid shape: The shape of "
                              "the mask %s is not a sub-shape of the plates of "
@@ -392,7 +391,7 @@ class Node():
         return msg
 
     def _message_from_parents(self, exclude=None):
-        return [parent._message_to_child() 
+        return [list(parent._message_to_child())
                 if ind != exclude else
                 None
                 for (ind,parent) in enumerate(self.parents)]

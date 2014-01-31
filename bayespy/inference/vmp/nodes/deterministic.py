@@ -56,7 +56,7 @@ class Deterministic(Node):
         super().__init__(*args, plates=None, **kwargs)
 
     def get_moments(self):
-        u_parents = [parent._message_to_child() for parent in self.parents]
+        u_parents = self._message_from_parents()
         return self._compute_moments(*u_parents)
 
     def _compute_message_and_mask_to_parent(self, index, m_children, *u_parents):
