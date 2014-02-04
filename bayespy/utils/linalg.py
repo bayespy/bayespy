@@ -61,10 +61,17 @@ def chol(C):
                 raise Exception("Matrix not positive definite")
         return U
 
-def chol_solve(U, b, out=None):
+def chol_solve(U, b, out=None, matrix=False):
     if isinstance(U, np.ndarray):
         if sparse.issparse(b):
             b = b.toarray()
+
+        if matrix:
+            if np.ndim(b) < 2:
+                raise ValueError("b is not a matrix")
+            b = np.swapaxes(b, -1, -2)
+            U = U[...,None,:,:]
+            
             
         # Allocate memory
         U = np.atleast_2d(U)
@@ -115,9 +122,14 @@ def chol_solve(U, b, out=None):
                                             b.T).T.reshape(orig_shape)
 
 
+        if matrix:
+            out = np.swapaxes(out, -1, -2)
+            
         return out
 
     elif isinstance(U, cholmod.Factor):
+        if matrix:
+            raise NotImplementedError()
         if sparse.issparse(b):
             b = b.toarray()
         return U.solve_A(b)
@@ -297,6 +309,14 @@ def mvdot(A, b):
     # Use einsum instead:
     return np.einsum('...ik,...k->...i', A, b)
 
+def mmdot(A, B):
+    """
+    Compute matrix-matrix product.
+
+    Applies broadcasting.
+    """
+    return np.einsum('...ik,...kj->...ij', A, B)
+
 def m_dot(A,b):
     raise DeprecationWarning()
     # Compute matrix-vector product over the last two axes of A and
@@ -309,3 +329,115 @@ def m_dot(A,b):
     return np.einsum('...ik,...k->...i', A, b)
     # TODO: Use einsum!!
     #return np.sum(A*b[...,np.newaxis,:], axis=(-1,))
+
+def block_banded_solve(A, B, y):
+    """
+    Invert symmetric, banded, positive-definite matrix.
+
+    A contains the diagonal blocks.
+
+    B contains the superdiagonal blocks (their transposes are the
+    subdiagonal blocks).
+
+    Shapes:
+    A: (...,   N, D, D)
+    B: (..., N-1, D, D)
+    y: (...,   N,    D)
+
+    The algorithm is basically LU decomposition.
+
+    Computes only the diagonal and super-diagonal blocks of the
+    inverse. The true inverse is dense, in general.
+
+    Assume each block has the same size.
+
+    Return:
+    * inverse blocks
+    * solution to the system
+    * log-determinant
+    """
+    
+    # Number of time instance and dimensionality
+    N = np.shape(y)[-2]
+    D = np.shape(y)[-1]
+
+    # Check the shape of the diagonal blocks
+    if np.shape(A)[-3] != N:
+        raise ValueError("The number of diagonal blocks is incorrect")
+    if np.shape(A)[-2:] != (D,D):
+        raise ValueError("The diagonal blocks have wrong shape")
+
+    # Check the shape of the super-diagonal blocks
+    if np.shape(B)[-3] != N-1:
+        raise ValueError("The number of super-diagonal blocks is incorrect")
+    if np.shape(B)[-2:] != (D,D):
+        raise ValueError("The diagonal blocks have wrong shape")
+
+    plates = utils.broadcasted_shape(np.shape(A)[:-3],
+                                     np.shape(B)[:-3],
+                                     np.shape(y)[:-2])
+                      
+    V = np.empty(plates+(N,D,D))
+    C = np.empty(plates+(N-1,D,D))
+    x = np.empty(plates+(N,D))
+
+    #
+    # Forward recursion
+    #
+    
+    # In the forward recursion, store the Cholesky factor in V. So you
+    # don't need to recompute them in the backward recursion.
+
+    # TODO/FIXME: You could store chol_solve(V[n], B[n]) in forward recursion to
+    # C, because it is used in backward recursion too!
+
+    # TODO: This whole algorithm could be implemented as in-place operation.
+    # Might be a nice feature (optional?)
+
+    x[...,0,:] = y[...,0,:]
+    V[...,0,:,:] = chol(A[...,0,:,:])
+    ldet = chol_logdet(V[...,0,:,:])
+    for n in range(N-1):
+        # Compute the solution of the system
+        x[...,n+1,:] = (y[...,n+1,:] 
+                        - mvdot(utils.T(B[...,n,:,:]), 
+                                chol_solve(V[...,n,:,:], 
+                                           x[...,n,:])))
+        # Compute the diagonal block
+        V[...,n+1,:,:] = (A[...,n+1,:,:] 
+                        - mmdot(utils.T(B[...,n,:,:]),
+                                chol_solve(V[...,n,:,:], 
+                                           B[...,n,:,:],
+                                           matrix=True)))
+        # Ensure symmetry by 0.5*(V+V.T)
+        V[...,n+1,:,:] = 0.5 * (V[...,n+1,:,:] + utils.T(V[...,n+1,:,:]))
+        # Compute and store the Cholesky factor of the diagonal block
+        V[...,n+1,:,:] = chol(V[...,n+1,:,:])
+        # Compute the log-det term here, too
+        ldet += chol_logdet(V[...,n+1,:,:])
+
+    #
+    # Backward recursion
+    #
+    x[...,-1,:] = chol_solve(V[...,-1,:,:], x[...,-1,:])
+    V[...,-1,:,:] = chol_inv(V[...,-1,:,:])
+    for n in reversed(range(N-1)):
+        # Compute the solution of the system
+        x[...,n,:] = chol_solve(V[...,n,:,:], 
+                                x[...,n,:] - mvdot(B[...,n,:,:], 
+                                                   x[...,n+1,:]))
+        # Compute the superdiagonal block of the inverse
+        Z = chol_solve(V[...,n,:,:], 
+                       B[...,n,:,:],
+                       matrix=True)
+        C[...,n,:,:] = - mmdot(Z, V[...,n+1,:,:])
+        # Compute the diagonal block of the inverse
+        V[...,n,:,:] = (chol_inv(V[...,n,:,:]) 
+                        + mmdot(Z, 
+                                mmdot(V[...,n+1,:,:], 
+                                utils.T(Z))))
+        # Ensure symmetry by 0.5*(V+V.T)
+        V[...,n,:,:] = 0.5 * (V[...,n,:,:] + utils.T(V[...,n,:,:]))
+
+    return (V, C, x, ldet)
+    
