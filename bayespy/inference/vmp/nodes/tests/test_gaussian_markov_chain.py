@@ -32,11 +32,17 @@ import numpy as np
 from numpy import testing
 
 from ..gaussian_markov_chain import GaussianMarkovChain
+from ..gaussian_markov_chain import DriftingGaussianMarkovChain
 from ..gaussian import Gaussian
+from ..gaussian import GaussianArrayARD
 from ..wishart import Wishart
 from ..gamma import Gamma
 
-from bayespy import utils
+from bayespy.utils import random
+from bayespy.utils import linalg
+from bayespy.utils import utils
+
+from bayespy.utils.utils import TestCase
 
 class TestGaussianMarkovChain(unittest.TestCase):
 
@@ -46,7 +52,7 @@ class TestGaussianMarkovChain(unittest.TestCase):
         Mu = Gaussian(np.random.randn(D),
                       np.identity(D))
         Lambda = Wishart(D,
-                         utils.random.covariance(D))
+                         random.covariance(D))
         A = Gaussian(np.random.randn(D,D),
                      np.identity(D))
         V = Gamma(D,
@@ -108,7 +114,7 @@ class TestGaussianMarkovChain(unittest.TestCase):
         Z = np.einsum('...kij,...kk->...ij', aa, icov_x)
         U_diag = [icov0+Z] + (N-2)*[icov_x+Z] + [icov_x]
         U_super = (N-1) * [-np.dot(a.T, icov_x)]
-        U = utils.utils.block_banded(U_diag, U_super)
+        U = utils.block_banded(U_diag, U_super)
         # Prior mean
         mu_prior = np.zeros(D*N)
         mu_prior[:D] = np.dot(icov0,mu0)
@@ -132,13 +138,13 @@ class TestGaussianMarkovChain(unittest.TestCase):
 
 
         # Compute the entropy H(X)
-        ldet = utils.linalg.logdet_cov(Cov)
-        H = utils.random.gaussian_entropy(-ldet, N*D)
+        ldet = linalg.logdet_cov(Cov)
+        H = random.gaussian_entropy(-ldet, N*D)
         # Compute <log p(X|...)>
         xx = np.reshape(xx, (N*D, N*D))
         mu = np.reshape(mu, (N*D,))
         ldet = -logdet0 - np.sum(np.ones((N-1,D))*logdetx)
-        P = utils.random.gaussian_logpdf(np.einsum('...ij,...ij', 
+        P = random.gaussian_logpdf(np.einsum('...ij,...ij', 
                                                    xx, 
                                                    U),
                                          np.einsum('...i,...i', 
@@ -225,8 +231,8 @@ class TestGaussianMarkovChain(unittest.TestCase):
         V = N*(V,)
         UY = Y
         U = N*(C,)
-        (Xh, CovXh) = utils.utils.kalman_filter(UY, U, A, V, np.zeros(D), np.identity(D))
-        (Xh, CovXh) = utils.utils.rts_smoother(Xh, CovXh, A, V)
+        (Xh, CovXh) = utils.kalman_filter(UY, U, A, V, np.zeros(D), np.identity(D))
+        (Xh, CovXh) = utils.rts_smoother(Xh, CovXh, A, V)
 
         #
         # Check results
@@ -234,5 +240,78 @@ class TestGaussianMarkovChain(unittest.TestCase):
         self.assertTrue(np.allclose(Xh_vb, Xh))
         self.assertTrue(np.allclose(CovXh_vb, CovXh))
         
-## if __name__ == '__main__':
-##     unittest.main()
+
+class TestDriftingGaussianMarkovChain(TestCase):
+
+    def test_plates_from_parents(self):
+        """
+        Test that DriftingGaussianMarkovChain deduces plates correctly
+        """
+        def check(plates_X,
+                  plates_mu=(),
+                  plates_Lambda=(),
+                  plates_B=(),
+                  plates_S=(),
+                  plates_v=()):
+            
+            D = 3
+            K = 2
+            N = 4
+
+            np.random.seed(42)
+            mu = Gaussian(np.random.randn(*(plates_mu+(D,))),
+                          random.covariance(D))
+            Lambda = Wishart(D+np.ones(plates_Lambda),
+                             random.covariance(D))
+            B = GaussianArrayARD(np.random.randn(*(plates_B+(D,D,K))),
+                                 1+np.random.rand(*(plates_B+(D,D,K))),
+                                 shape=(D,K),
+                                 plates=plates_B+(D,))
+            S = GaussianArrayARD(np.random.randn(*(plates_S+(N,K))),
+                                 1+np.random.rand(*(plates_S+(N,K))),
+                                 shape=(K,),
+                                 plates=plates_S+(N,))
+            v = Gamma(1+np.random.rand(*(plates_v+(1,D))),
+                      1+np.random.rand(*(plates_v+(1,D))))
+            X = DriftingGaussianMarkovChain(mu,
+                                            Lambda,
+                                            B,
+                                            S,
+                                            v,
+                name="X")
+            self.assertEqual(plates_X, X.plates,
+                             msg="Incorrect plates deduced")
+            pass
+
+        check(())
+        check((2,3),
+              plates_mu=(2,3))
+        check((2,3),
+              plates_Lambda=(2,3))
+        check((2,3),
+              plates_B=(2,3))
+        check((2,3),
+              plates_S=(2,3))
+        check((2,3),
+              plates_v=(2,3))
+        pass
+
+    def test_moments(self):
+        pass
+
+    def test_message_to_mu(self):
+        pass
+
+    def test_message_to_Lambda(self):
+        pass
+
+    def test_message_to_B(self):
+        pass
+
+    def test_message_to_S(self):
+        pass
+
+    def test_message_to_v(self):
+        pass
+
+

@@ -141,7 +141,7 @@ def run(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=False, precom
     #
     if rotate:
         rotA = transformations.RotateGaussianArrayARD(A, alpha, precompute=precompute)
-        rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
+        rotX = transformations.RotateGaussianMarkovChain(X, rotA)
         rotC = transformations.RotateGaussianArrayARD(C, gamma)
         R = transformations.RotationOptimizer(rotX, rotC, D)
 

@@ -343,7 +343,7 @@ def run_lssm(y, f, mask, D, maxiter,
         # Rotate the D-dimensional latent space
         rotA = transformations.RotateGaussianArrayARD(A, alpha,
                                                       precompute=precompute)
-        rotX = transformations.RotateGaussianMarkovChain(X, A, rotA)
+        rotX = transformations.RotateGaussianMarkovChain(X, rotA)
         rotC = transformations.RotateGaussianArrayARD(C, gamma)
         R = transformations.RotationOptimizer(rotX, rotC, D)
 
