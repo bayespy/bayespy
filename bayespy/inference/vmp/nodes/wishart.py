@@ -156,7 +156,7 @@ class Wishart(ExponentialFamily):
 
     # Wishart(n, inv(V))
 
-    def __init__(self, n, V, plates=(), **kwargs):
+    def __init__(self, n, V, **kwargs):
 
         # Check for constant V
         if np.isscalar(V) or isinstance(V, np.ndarray):
@@ -170,7 +170,7 @@ class Wishart(ExponentialFamily):
 
         self.parameter_distributions = (WishartPrior(k), Wishart)
 
-        super().__init__(n, V, plates=plates, **kwargs)
+        super().__init__(n, V, **kwargs)
         
     def show(self):
         print("%s ~ Wishart(n, A)" % self.name)
