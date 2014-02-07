@@ -373,13 +373,14 @@ def block_banded_solve(A, B, y):
     if np.shape(B)[-2:] != (D,D):
         raise ValueError("The diagonal blocks have wrong shape")
 
-    plates = utils.broadcasted_shape(np.shape(A)[:-3],
-                                     np.shape(B)[:-3],
-                                     np.shape(y)[:-2])
+    plates_VC = utils.broadcasted_shape(np.shape(A)[:-3],
+                                        np.shape(B)[:-3])
+    plates_y = utils.broadcasted_shape(plates_VC,
+                                       np.shape(y)[:-2])
                       
-    V = np.empty(plates+(N,D,D))
-    C = np.empty(plates+(N-1,D,D))
-    x = np.empty(plates+(N,D))
+    V = np.empty(plates_VC+(N,D,D))
+    C = np.empty(plates_VC+(N-1,D,D))
+    x = np.empty(plates_y+(N,D))
 
     #
     # Forward recursion
@@ -387,9 +388,6 @@ def block_banded_solve(A, B, y):
     
     # In the forward recursion, store the Cholesky factor in V. So you
     # don't need to recompute them in the backward recursion.
-
-    # TODO/FIXME: You could store chol_solve(V[n], B[n]) in forward recursion to
-    # C, because it is used in backward recursion too!
 
     # TODO: This whole algorithm could be implemented as in-place operation.
     # Might be a nice feature (optional?)
@@ -403,12 +401,13 @@ def block_banded_solve(A, B, y):
                         - mvdot(utils.T(B[...,n,:,:]), 
                                 chol_solve(V[...,n,:,:], 
                                            x[...,n,:])))
+        # Compute the superdiagonal block of the inverse
+        C[...,n,:,:] = chol_solve(V[...,n,:,:], 
+                                  B[...,n,:,:],
+                                  matrix=True)
         # Compute the diagonal block
         V[...,n+1,:,:] = (A[...,n+1,:,:] 
-                        - mmdot(utils.T(B[...,n,:,:]),
-                                chol_solve(V[...,n,:,:], 
-                                           B[...,n,:,:],
-                                           matrix=True)))
+                        - mmdot(utils.T(B[...,n,:,:]), C[...,n,:,:]))
         # Ensure symmetry by 0.5*(V+V.T)
         V[...,n+1,:,:] = 0.5 * (V[...,n+1,:,:] + utils.T(V[...,n+1,:,:]))
         # Compute and store the Cholesky factor of the diagonal block
@@ -426,16 +425,12 @@ def block_banded_solve(A, B, y):
         x[...,n,:] = chol_solve(V[...,n,:,:], 
                                 x[...,n,:] - mvdot(B[...,n,:,:], 
                                                    x[...,n+1,:]))
-        # Compute the superdiagonal block of the inverse
-        Z = chol_solve(V[...,n,:,:], 
-                       B[...,n,:,:],
-                       matrix=True)
-        C[...,n,:,:] = - mmdot(Z, V[...,n+1,:,:])
         # Compute the diagonal block of the inverse
         V[...,n,:,:] = (chol_inv(V[...,n,:,:]) 
-                        + mmdot(Z, 
+                        + mmdot(C[...,n,:,:], 
                                 mmdot(V[...,n+1,:,:], 
-                                utils.T(Z))))
+                                utils.T(C[...,n,:,:]))))
+        C[...,n,:,:] = - mmdot(C[...,n,:,:], V[...,n+1,:,:])
         # Ensure symmetry by 0.5*(V+V.T)
         V[...,n,:,:] = 0.5 * (V[...,n,:,:] + utils.T(V[...,n,:,:]))
 
