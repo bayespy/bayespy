@@ -93,7 +93,7 @@ def linear_state_space_model(D=3, N=100, M=10):
 
     return (Y, F, X, tau, C, gamma, A, alpha)
 
-def run(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=False, precompute=False):
+def run(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=False, precompute=False, plot=True):
 
     # Use deterministic random numbers
     if seed is not None:
@@ -156,13 +156,14 @@ def run(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=False, precom
 
     else:
         Q.update(repeat=maxiter)
-        
-    # Show results
-    plt.figure()
-    bpplt.timeseries_normal(CX, scale=2)
-    bpplt.timeseries(f, 'b-')
-    bpplt.timeseries(y, 'r.')
-    plt.show()
+
+    if plot:
+        # Show results
+        plt.figure()
+        bpplt.timeseries_normal(CX, scale=2)
+        bpplt.timeseries(f, 'b-')
+        bpplt.timeseries(y, 'r.')
+        plt.show()
     
 
 if __name__ == '__main__':
@@ -177,6 +178,7 @@ if __name__ == '__main__':
                                     "maxiter=",
                                     "debug",
                                     "precompute",
+                                    "no-plot",
                                     "rotate"])
     except getopt.GetoptError:
         print('python demo_lssm.py <options>')
@@ -187,6 +189,7 @@ if __name__ == '__main__':
         print('--maxiter=<INT>  Maximum number of VB iterations')
         print('--seed=<INT>     Seed (integer) for the random number generator')
         print('--debug          Check that the rotations are implemented correctly')
+        print('--no-plot        Do not plot the results')
         print('--precompute     Precompute some moments when rotating. May '
               'speed up or slow down.')
         sys.exit(2)
@@ -209,5 +212,9 @@ if __name__ == '__main__':
             kwargs["N"] = int(arg)
         elif opt in ("--d",):
             kwargs["D"] = int(arg)
+        elif opt in ("--no-plot"):
+            kwargs["plot"] = False
+        else:
+            raise ValueError("Unhandled option given")
 
     run(**kwargs)
