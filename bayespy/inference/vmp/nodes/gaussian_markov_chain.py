@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2012-2013 Jaakko Luttinen
+# Copyright (C) 2012-2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -40,6 +40,7 @@ from .expfamily import ExponentialFamily
 from .constant import Constant, ConstantNumeric
 from .gaussian import Gaussian
 from .gaussian import GaussianArrayARD
+from .gaussian import _GaussianArrayARD
 from .wishart import Wishart
 from .gamma import Gamma
 
@@ -674,6 +675,8 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     An additional dummy parent is created:
     'N' is the number of time instances
 
+    Not efficient if `v` is time dependent.
+
     Output is Gaussian Markov chain variables.
 
     .. bayesnet::
@@ -719,12 +722,15 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         if utils.is_numeric(Lambda):
             Lambda = Constant(Wishart)(np.atleast_2d(Lambda))
 
-        # Check for constant A
-        if utils.is_numeric(B):
-            B = Constant(GaussianArrayARD)(np.atleast_3d(B))
-
+        # Check for constant S
         if utils.is_numeric(S):
-            S = Constant(Gaussian)(np.at_least_2d(S))
+            S = Constant(Gaussian)(np.atleast_2d(S))
+
+        # Check for constant B
+        if utils.is_numeric(B):
+            D = Lambda.dims[0][-1]
+            K = S.dims[0][-1]
+            B = Constant(_GaussianArrayARD((D,K)))(np.atleast_3d(B))
 
         # Check for constant V
         if utils.is_numeric(v):
@@ -842,11 +848,6 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                                        v)
         #phi2[..., :, :, :] = np.einsum('...ji,...j->...ij', A, v)
 
-        print("DEBUG IN DGMC", 
-              np.shape(phi0),
-              np.shape(phi1),
-              np.shape(phi2))
-
         return (phi0, phi1, phi2)
 
     @staticmethod
@@ -922,23 +923,19 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                            XpXn,
                            np.atleast_2d(S),
                            np.atleast_2d(v))
-            #m0 = v[...,np.newaxis] * XpXn.swapaxes(-1,-2)
             
             # m1: (...,D,D,K,D,K)
-            m1 = -0.5 * np.einsum('...nij,...nkl,...nd->...dikjl',
-                                  XnXn[...,:-1,:,:],
-                                  np.atleast_3d(SS),
-                                  np.atleast_2d(v))
-            ## #
-            ## # The following message matrix could be huge, so let's use a help
-            ## # function which computes sum(v*XnXn) without computing the huge
-            ## # v*XnXn explicitly.
-            ## m1 = -0.5 * message_sum_multiply(parent.plates,
-            ##                                  parent.dims[1],
-            ##                                  v[...,np.newaxis,np.newaxis],
-            ##                                  XnXn[..., :-1, np.newaxis, :, :])
-                                      
-            #m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
+
+            if np.ndim(v) >= 2 and np.shape(v)[-2] > 1:
+                raise ValueError("Innovation noise is time dependent")
+
+            m1 = np.einsum('...nij,...nkl->...ikjl',
+                           XnXn[...,:-1,:,:],
+                           np.atleast_3d(SS))
+            m1 = -0.5 * np.einsum('...ikjl,...d->...dikjl',
+                                  m1,
+                                  np.atleast_2d(v)[...,0,:])
+
         elif index == 3: # S, (...,N-1)x(K)
             XnXn = u[1] # (...,N,D,D)
             XpXn = u[2] # (...,N,D,D)
@@ -953,10 +950,15 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                            np.atleast_2d(v))
             
             # m1: (...,N,K,K)
-            m1 = -0.5 * np.einsum('...nij,...dikjl,...nd->...nkl',
+
+            if np.ndim(v) >= 2 and np.shape(v)[-2] > 1:
+                raise ValueError("Innovation noise is time dependent")
+            m1 = np.einsum('...dikjl,...d->...ikjl',
+                           BB,
+                           np.atleast_2d(v)[...,0,:])
+            m1 = -0.5 * np.einsum('...nij,...ikjl->...nkl',
                                   XnXn[...,:-1,:,:],
-                                  BB,
-                                  np.atleast_2d(v))
+                                  m1)
 
         elif index == 4: # v
             raise NotImplementedError()
@@ -998,7 +1000,9 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                              "equal to the dimensionality of the "
                              "system.")
         if S.dims != ( (K,), (K,K) ):
-            raise ValueError("Fourth parent has wrong dimensionality")
+            raise ValueError("Fourth parent has wrong dimensionality %s, "
+                             "should be %s"
+                             % (S.dims, ( (K,), (K,K) )))
         if (len(S.plates) >= 1
             and S.plates[-1] != 1
             and S.plates[-1] != M-1):
