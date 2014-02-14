@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2013 Jaakko Luttinen
+# Copyright (C) 2013-2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -296,22 +296,330 @@ class TestDriftingGaussianMarkovChain(TestCase):
               plates_v=(2,3))
         pass
 
-    def test_moments(self):
+    def test_message_to_child(self):
+
+        # A very simple check before the more complex ones:
+        # 1-D process, k=1, fixed constant parameters
+        m = 1.0
+        l = 4.0
+        b = 2.0
+        s = [3.0, 8.0]
+        v = 5.0
+        X = DriftingGaussianMarkovChain([m],
+                                        [[l]],
+                                        [[[b]]],
+                                        [[s[0]],[s[1]]],
+                                        [v])
+        (u0, u1, u2) = X._message_to_child()
+        C = np.array([[l+b**2*s[0]**2*v,        -b*s[0]*v,         0],
+                      [       -b*s[0]*v, v+b**2*s[1]**2*v, -b*s[1]*v],
+                      [               0,        -b*s[1]*v,         v]])
+        Cov = np.linalg.inv(C)
+        m0 = np.dot(Cov, [[l*m], [0], [0]])
+        m1 = np.diag(Cov)[:,None,None] + m0[:,:,None]**2
+        m2 = np.diag(Cov, k=1)[:,None,None] + m0[1:,:,None]*m0[:-1,:,None]
+        self.assertAllClose(m0, u0)
+        self.assertAllClose(m1, u1)
+        self.assertAllClose(m2, u2)
+
+        def check(N, D, K, plates=None, mu=None, Lambda=None, B=None, S=None, V=None):
+            if mu is None:
+                mu = np.random.randn(D)
+            if Lambda is None:
+                Lambda = random.covariance(D)
+            if B is None:
+                B = np.random.randn(D,D,K)
+            if S is None:
+                S = np.random.randn(N-1,K)
+            if V is None:
+                V = np.random.rand(D)
+            X = DriftingGaussianMarkovChain(mu,
+                                            Lambda,
+                                            B,
+                                            S,
+                                            V,
+                                            plates=plates,
+                                            n=N)
+            (u0, u1, u2) = X._message_to_child()
+            (mu, mumu) = X.parents[0].get_moments()
+            (Lambda, _) = X.parents[1].get_moments()
+            (b, bb) = X.parents[2].get_moments()
+            (s, ss) = X.parents[3].get_moments()
+            (v, _) = X.parents[4].get_moments()
+            v = v * np.ones((N-1,D))
+            #V = np.atleast_3d(v)[...,-1,:,None]*np.identity(D)
+            plates_C = X.plates
+            plates_mu = X.plates
+            C = np.zeros(plates_C + (N,D,N,D))
+            plates_mu = np.shape(mu)[:-1]
+            m = np.zeros(plates_mu + (N,D))
+            m[...,0,:] = np.einsum('...ij,...j->...i', Lambda, mu)
+            #m = np.reshape(m, plates_mu + (N*D,))
+            A = np.einsum('...dik,...nk->...ndi', b, s)
+            AA = np.einsum('...dikjl,...nkl->...ndij', bb, ss)
+            C[...,0,:,0,:] = Lambda + np.einsum('...dij,...d->...ij',
+                                                AA[...,0,:,:,:],
+                                                v[...,0,:])
+            for n in range(1,N-1):
+                C[...,n,:,n,:] = (np.einsum('...dij,...d->...ij',
+                                            AA[...,n,:,:,:],
+                                            v[...,n,:])
+                                  + v[...,n,:,None] * np.identity(D))
+            for n in range(N-1):
+                C[...,n,:,n+1,:] = -np.einsum('...di,...d->...id',
+                                              A[...,n,:,:],
+                                              v[...,n,:])
+                C[...,n+1,:,n,:] = -np.einsum('...di,...d->...di',
+                                              A[...,n,:,:],
+                                              v[...,n,:])
+            C[...,-1,:,-1,:] = v[...,-1,:,None]*np.identity(D)
+            C = np.reshape(C, plates_C+(N*D,N*D))
+            Cov = np.linalg.inv(C)
+            Cov = np.reshape(Cov, plates_C+(N,D,N,D))
+            m0 = np.einsum('...minj,...nj->...mi', Cov, m)
+            m1 = np.zeros(plates_C+(N,D,D))
+            m2 = np.zeros(plates_C+(N-1,D,D))
+            for n in range(N):
+                m1[...,n,:,:] = Cov[...,n,:,n,:] + np.einsum('...i,...j->...ij',
+                                                             m0[...,n,:],
+                                                             m0[...,n,:])
+            for n in range(N-1):
+                m2[...,n,:,:] = Cov[...,n,:,n+1,:] + np.einsum('...i,...j->...ij',
+                                                               m0[...,n,:],
+                                                               m0[...,n+1,:])
+            self.assertAllClose(m0, u0*np.ones(np.shape(m0)))
+            self.assertAllClose(m1, u1*np.ones(np.shape(m1)))
+            self.assertAllClose(m2, u2*np.ones(np.shape(m2)))
+
+            pass
+
+        check(2,1,1)
+        check(2,3,1)
+        check(2,1,3)
+        check(4,3,2)
+
+        #
+        # Test mu
+        #
+
+        # Simple
+        check(4,3,2,
+              mu=Gaussian(np.random.randn(3),
+                          random.covariance(3)))
+        # Plates
+        check(4,3,2,
+              mu=Gaussian(np.random.randn(5,6,3),
+                          random.covariance(3),
+                          plates=(5,6)))
+        # Plates with moments broadcasted over plates
+        check(4,3,2,
+              mu=Gaussian(np.random.randn(3),
+                          random.covariance(3),
+                          plates=(5,)))
+        check(4,3,2,
+              mu=Gaussian(np.random.randn(1,3),
+                          random.covariance(3),
+                          plates=(5,)))
+        # Plates broadcasting
+        check(4,3,2,
+              plates=(5,),
+              mu=Gaussian(np.random.randn(3),
+                          random.covariance(3),
+                          plates=()))
+        check(4,3,2,
+              plates=(5,),
+              mu=Gaussian(np.random.randn(1,3),
+                          random.covariance(3),
+                          plates=(1,)))
+
+        #
+        # Test Lambda
+        #
+            
+        # Simple
+        check(4,3,2,
+              Lambda=Wishart(10+np.random.rand(),
+                             random.covariance(3)))
+        # Plates
+        check(4,3,2,
+              Lambda=Wishart(10+np.random.rand(),
+                             random.covariance(3),
+                             plates=(5,6)))
+        # Plates with moments broadcasted over plates
+        check(4,3,2,
+              Lambda=Wishart(10+np.random.rand(),
+                             random.covariance(3),
+                             plates=(5,)))
+        check(4,3,2,
+              Lambda=Wishart(10+np.random.rand(1),
+                             random.covariance(3),
+                             plates=(5,)))
+        # Plates broadcasting
+        check(4,3,2,
+              plates=(5,),
+              Lambda=Wishart(10+np.random.rand(),
+                             random.covariance(3),
+                             plates=()))
+        check(4,3,2,
+              plates=(5,),
+              Lambda=Wishart(10+np.random.rand(),
+                             random.covariance(3),
+                             plates=(1,)))
+
+        #
+        # Test B
+        #
+
+        # Simple
+        check(4,3,2,
+              B=GaussianArrayARD(np.random.randn(3,3,2),
+                                 np.random.rand(3,3,2),
+                                 shape=(3,2),
+                                 plates=(3,)))
+        # Plates
+        check(4,3,2,
+              B=GaussianArrayARD(np.random.randn(5,6,3,3,2),
+                                 np.random.rand(5,6,3,3,2),
+                                 shape=(3,2),
+                                 plates=(5,6,3)))
+        # Plates with moments broadcasted over plates
+        check(4,3,2,
+              B=GaussianArrayARD(np.random.randn(3,3,2),
+                                 np.random.rand(3,3,2),
+                                 shape=(3,2),
+                                 plates=(5,3)))
+        check(4,3,2,
+              B=GaussianArrayARD(np.random.randn(1,3,3,2),
+                                 np.random.rand(1,3,3,2),
+                                 shape=(3,2),
+                                 plates=(5,3)))
+        # Plates broadcasting
+        check(4,3,2,
+              plates=(5,),
+              B=GaussianArrayARD(np.random.randn(3,3,2),
+                                 np.random.rand(3,3,2),
+                                 shape=(3,2),
+                                 plates=(3,)))
+        check(4,3,2,
+              plates=(5,),
+              B=GaussianArrayARD(np.random.randn(3,3,2),
+                                 np.random.rand(3,3,2),
+                                 shape=(3,2),
+                                 plates=(1,3)))
+
+        #
+        # Test S
+        #
+            
+        # Simple
+        check(4,3,2,
+              S=GaussianArrayARD(np.random.randn(4-1,2),
+                                 np.random.rand(4-1,2),
+                                 shape=(2,),
+                                 plates=(4-1,)))
+        # Plates
+        check(4,3,2,
+              S=GaussianArrayARD(np.random.randn(5,6,4-1,2),
+                                 np.random.rand(5,6,4-1,2),
+                                 shape=(2,),
+                                 plates=(5,6,4-1,)))
+        # Plates with moments broadcasted over plates
+        check(4,3,2,
+              S=GaussianArrayARD(np.random.randn(4-1,2),
+                                 np.random.rand(4-1,2),
+                                 shape=(2,),
+                                 plates=(5,4-1,)))
+        check(4,3,2,
+              S=GaussianArrayARD(np.random.randn(1,4-1,2),
+                                 np.random.rand(1,4-1,2),
+                                 shape=(2,),
+                                 plates=(5,4-1,)))
+        # Plates broadcasting
+        check(4,3,2,
+              plates=(5,),
+              S=GaussianArrayARD(np.random.randn(4-1,2),
+                                 np.random.rand(4-1,2),
+                                 shape=(2,),
+                                 plates=(4-1,)))
+        check(4,3,2,
+              plates=(5,),
+              S=GaussianArrayARD(np.random.randn(4-1,2),
+                                 np.random.rand(4-1,2),
+                                 shape=(2,),
+                                 plates=(1,4-1,)))
+
+        #
+        # Test v
+        #
+        
+        # Simple
+        check(4,3,2,
+              V=Gamma(np.random.rand(1,3),
+                      np.random.rand(1,3),
+                      plates=(1,3)))
+        check(4,3,2,
+              V=Gamma(np.random.rand(3),
+                      np.random.rand(3),
+                      plates=(3,)))
+        # Plates
+        check(4,3,2,
+              V=Gamma(np.random.rand(5,6,1,3),
+                      np.random.rand(5,6,1,3),
+                      plates=(5,6,1,3)))
+        # Plates with moments broadcasted over plates
+        check(4,3,2,
+              V=Gamma(np.random.rand(1,3),
+                      np.random.rand(1,3),
+                      plates=(5,1,3)))
+        check(4,3,2,
+              V=Gamma(np.random.rand(1,1,3),
+                      np.random.rand(1,1,3),
+                      plates=(5,1,3)))
+        # Plates broadcasting
+        check(4,3,2,
+              plates=(5,),
+              V=Gamma(np.random.rand(1,3),
+                      np.random.rand(1,3),
+                      plates=(1,3)))
+        check(4,3,2,
+              plates=(5,),
+              V=Gamma(np.random.rand(1,1,3),
+                      np.random.rand(1,1,3),
+                      plates=(1,1,3)))
+
+        #
+        # Uncertainty in both B and S
+        #
+        check(4,3,2,
+              B=GaussianArrayARD(np.random.randn(3,3,2),
+                                 np.random.rand(3,3,2),
+                                 shape=(3,2),
+                                 plates=(3,)),
+              S=GaussianArrayARD(np.random.randn(4-1,2),
+                                 np.random.rand(4-1,2),
+                                 shape=(2,),
+                                 plates=(4-1,)))
+                            
         pass
 
     def test_message_to_mu(self):
+        # TODO
         pass
 
     def test_message_to_Lambda(self):
+        # TODO
         pass
 
     def test_message_to_B(self):
+        # TODO
         pass
 
     def test_message_to_S(self):
+        # TODO
         pass
 
     def test_message_to_v(self):
+        # TODO
         pass
 
 
