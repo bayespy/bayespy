@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011-2013 Jaakko Luttinen
+# Copyright (C) 2011-2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
