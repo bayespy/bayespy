@@ -118,10 +118,10 @@ def run_dlssm(y, f, mask, D, K, maxiter,
                             1e-6*np.identity(K),
                             A,
                             np.ones(K),
-                            n=N,
+                            n=N-1,
                             name='S',
                             initialize=False)
-    S.initialize_from_value(np.ones((N,K))+0.01*np.random.randn(N,K))
+    S.initialize_from_value(np.ones((N-1,K))+0.01*np.random.randn(N-1,K))
 
     # Projection matrix of the dynamics matrix
     # Initialize S and B such that BS is identity matrix
@@ -153,10 +153,10 @@ def run_dlssm(y, f, mask, D, K, maxiter,
                                     B,                   # dynamics matrices
                                     S.as_gaussian(),     # temporal weights
                                     np.ones(D),          # innovation
-                                    n=N+1,               # time instances
+                                    n=N,                 # time instances
                                     name='X',
                                     initialize=False)
-    X.initialize_from_value(np.random.randn(N+1,D))
+    X.initialize_from_value(np.random.randn(N,D))
 
     # Observation noise
     # tau : () x ()
@@ -207,7 +207,7 @@ def run_dlssm(y, f, mask, D, K, maxiter,
         # Y : (M,N) x ()
         F = SumMultiply('d,d',
                         C,
-                        X.as_gaussian()[1:],
+                        X.as_gaussian(),
                         name='F')
                   
     Y = GaussianArrayARD(F,
@@ -297,7 +297,9 @@ def run_dlssm(y, f, mask, D, K, maxiter,
     if plot_S:
         plt.figure()
         bpplt.timeseries_gaussian_mc(S, scale=2)
-    
+
+    # Compute RMSE
+    print("RMSE: %f" % (utils.rmse(F.get_moments()[0], f)))
 
 def run_lssm(y, f, mask, D, maxiter, 
              rotate=False, debug=False, precompute=False, plot_X=False, plot_Y=True):
@@ -407,6 +409,9 @@ def run_lssm(y, f, mask, D, maxiter,
         plt.figure()
         bpplt.timeseries_gaussian_mc(X, scale=2)
     
+    # Compute RMSE
+    print("RMSE: %f" % (utils.rmse(F.get_moments()[0], f)))
+
 
 def run(M=1, N=1000, D=4, K=5, seed=42, maxiter=50, 
         rotate=False, debug=False, precompute=False,

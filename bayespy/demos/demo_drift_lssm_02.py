@@ -29,6 +29,21 @@ process. The velocity field changes in time so standard linear state-space model
 is not able to learn the process accurately. Drifting linear state-space model
 may use drift for either loadings or dynamics or both, but the learning is good
 only when using fully drifting model, that is, drifting dynamics and loadings.
+
+Some observations about the performance of the drifting LSSM (more like
+hypotheses than proved facts):
+
+    * The number of stations and the latent space dimensionality must be quite
+      large so that the dynamics can be learnt (applies for both LSSM versions).
+
+    * If latent space dimensionality D and/or(?) drifting space dimensionality
+      are large, the drifting weights might be regularized too much by VB. That
+      is, the drifting weights time series S might perform badly over periods of
+      missing values. If this is true, it is a bit disappointing, because it
+      would be nice that the method would not start performing worse if the
+      model complexity is increased but rather the unnecessary components are
+      just pruned out. Or the number of time instances must be large enough to
+      learn the dynamics of the dynamics.
 """
 
 # Nicely working experiments:
@@ -41,6 +56,7 @@ only when using fully drifting model, that is, drifting dynamics and loadings.
 #     velocity=1e-1
 #     innovation_noise=1e-4
 #     noise_ratio=1e-1
+#     lengthscale=0.6
 # Data: 
 #     no-dynamic
 #     M=100
@@ -50,6 +66,7 @@ only when using fully drifting model, that is, drifting dynamics and loadings.
 #     velocity=1e-1
 #     innovation_noise=1e-3
 #     noise_ratio=5e-1
+#     lengthscale=0.6
 # Data, quite ok results: 
 #     no-dynamic
 #     M=70
@@ -59,6 +76,19 @@ only when using fully drifting model, that is, drifting dynamics and loadings.
 #     velocity=1e-1
 #     innovation_noise=1e-3
 #     noise_ratio=5e-1
+#     lengthscale=0.6
+
+# Data:
+## resolution=resolution,
+## burnin=1000,
+## thin=20,
+## velocity=4e-2,
+## diffusion=1e-4,
+## decay= 1.0 - 5e-3,
+## innovation_noise=1e-4,
+## innovation_lengthscale=1.0,
+## noise_ratio=5e-1)
+
 
 import numpy as np
 import scipy
@@ -82,7 +112,8 @@ from bayespy.utils.covfunc.covariance import covfunc_se as covfunc
 
 from bayespy.demos import demo_drift_lssm_01
 
-def simulate_process(M=100, N=100, T=100, velocity=1e-3, diffusion=1e-5, 
+def simulate_process(M=100, N=100, T=100, velocity=1e-3, diffusion=1e-5,
+                     lengthscale=0.6,
                      noise=1e0, decay=0.9995):
     """
     Simulate advection-diffusion PDE on a unit square.
@@ -100,13 +131,13 @@ def simulate_process(M=100, N=100, T=100, velocity=1e-3, diffusion=1e-5,
     yh = np.arange(N) / N
     # The covariance of the spatial innovation noise
     Kx = covfunc(1.0,
-                 0.6, 
+                 lengthscale, 
                  np.array([np.sin(2*np.pi*xh),
                            np.cos(2*np.pi*xh)]).T,
                  np.array([np.sin(2*np.pi*xh),
                            np.cos(2*np.pi*xh)]).T)
     Ky = covfunc(1.0,
-                 0.6,
+                 lengthscale,
                  np.array([np.sin(2*np.pi*yh),
                            np.cos(2*np.pi*yh)]).T,
                  np.array([np.sin(2*np.pi*yh),
@@ -147,8 +178,8 @@ def simulate_process(M=100, N=100, T=100, velocity=1e-3, diffusion=1e-5,
     D = np.exp(logD)
     v = np.zeros(2)
 
-    v = np.ones(2)
-    v = velocity*np.random.randn(2)
+    v = 2*velocity*np.ones(2)
+    #v = velocity*np.random.randn(2)
 
     
     j[:MN] = np.mod(np.arange(MN), MN)
@@ -170,7 +201,8 @@ def simulate_process(M=100, N=100, T=100, velocity=1e-3, diffusion=1e-5,
     
     for t in range(T):
 
-        v = np.sqrt(decay)*v + np.sqrt(1-decay)*velocity*np.random.randn(2)
+        #v = np.sqrt(decay)*v + np.sqrt(1-decay)*velocity*np.random.randn(2)
+        v = decay*v + np.sqrt(1-decay**2)*velocity*np.random.randn(2)
         D = np.exp(logD)
 
         R = draw_R()
@@ -202,8 +234,9 @@ def simulate_data(filename=None,
                   diffusion=1e-6,
                   velocity=4e-3,
                   innovation_noise=1e-3,
+                  innovation_lengthscale=0.6,
                   noise_ratio=1e-1,
-                  decay=0.9995,
+                  decay=0.9997,
                   burnin=1000,
                   thin=20):
 
@@ -214,8 +247,9 @@ def simulate_data(filename=None,
     # of a long time :)
     #
     # Thin-parameter affects the temporal resolution.
-    diffusion *= N
-    velocity *= N
+    diffusion *= (N + burnin/thin)
+    velocity *= (N + burnin/thin)
+    decay = decay ** (1/thin)
     innovation_noise *= np.sqrt(N)
     U = simulate_process(resolution,
                          resolution,
@@ -223,11 +257,15 @@ def simulate_data(filename=None,
                          diffusion=diffusion,
                          velocity=velocity,
                          noise=innovation_noise,
+                         lengthscale=innovation_lengthscale,
                          decay=decay)
 
     # Put some stations randomly
-    x1 = np.random.randint(0, resolution, M)
-    x2 = np.random.randint(0, resolution, M)
+    x1x2 = np.random.permutation(resolution*resolution)[:M]
+    x1 = np.arange(resolution)[np.mod(x1x2, resolution)]
+    x2 = np.arange(resolution)[(x1x2/resolution).astype(int)]
+    #x1 = np.random.randint(0, resolution, M)
+    #x2 = np.random.randint(0, resolution, M)
 
     # Get noisy observations
     U = U[burnin::thin]
@@ -254,7 +292,7 @@ def simulate_data(filename=None,
 
     return (U, Y, F, X)
 
-def run(M=100, N=1000, D=50, K=10, rotate=False, maxiter=100, seed=42,
+def run(M=100, N=2000, D=20, K=4, rotate=False, maxiter=200, seed=42,
         debug=False, precompute=False, resolution=30, dynamic=True):
     
     # Seed for random number generator
@@ -263,26 +301,30 @@ def run(M=100, N=1000, D=50, K=10, rotate=False, maxiter=100, seed=42,
 
     # Create data
     if dynamic:
-        decay = 1.0 - 5e-5
+        decay = 1.0 - 5e-3
     else:
         decay = 1.0
 
     (U, y, f, X) = simulate_data(M=M, 
                                  N=N,
                                  resolution=resolution,
-                                 burnin=100,
+                                 burnin=1000,
                                  thin=20,
-                                 velocity=1e-1,
+                                 velocity=4e-2,
+                                 diffusion=1e-4,
                                  decay=decay,
-                                 innovation_noise=1e-3,
+                                 innovation_noise=1e-4,
+                                 innovation_lengthscale=1.0,
                                  noise_ratio=5e-1)
 
-    ## plt.ion()
-    ## bpplt.matrix_animation(U)
-    ## return
-    #plt.ioff()
-    bpplt.timeseries(f, 'b-')
-    bpplt.timeseries(y, 'r.')
+    plt.ion()
+    plt.plot(X[:,0], X[:,1], 'kx')
+    bpplt.matrix_animation(U)
+    plt.show()
+    plt.ioff()
+
+    ## bpplt.timeseries(f, 'b-')
+    ## bpplt.timeseries(y, 'r.')
 
     # Missing values
     mask = random.mask(M, N, p=0.8)
@@ -294,7 +336,7 @@ def run(M=100, N=1000, D=50, K=10, rotate=False, maxiter=100, seed=42,
         end = min(m+gap, N-1)
         mask[:,start:end] = False
 
-    mask[:] = True # DEBUG
+    #mask[:] = True # DEBUG
     # Remove the observations
     y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
 
