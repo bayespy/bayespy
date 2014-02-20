@@ -110,7 +110,7 @@ import bayespy.plot.plotting as bpplt
 
 from bayespy.utils.covfunc.covariance import covfunc_se as covfunc
 
-from bayespy.demos import demo_drift_lssm_01
+from bayespy.demos import model_lssm
 
 def simulate_process(M=100, N=100, T=100, velocity=1e-3, diffusion=1e-5,
                      lengthscale=0.6,
@@ -293,7 +293,9 @@ def simulate_data(filename=None,
     return (U, Y, F, X)
 
 def run(M=100, N=2000, D=20, K=4, rotate=False, maxiter=200, seed=42,
-        debug=False, precompute=False, resolution=30, dynamic=True):
+        debug=False, precompute=False, resolution=30, dynamic=True,
+        drift_A=False, drift_C=False,
+        plot_Y=True, plot_X=True, plot_S=True):
     
     # Seed for random number generator
     if seed is not None:
@@ -323,9 +325,6 @@ def run(M=100, N=2000, D=20, K=4, rotate=False, maxiter=200, seed=42,
     plt.show()
     plt.ioff()
 
-    ## bpplt.timeseries(f, 'b-')
-    ## bpplt.timeseries(y, 'r.')
-
     # Missing values
     mask = random.mask(M, N, p=0.8)
     # Create some gaps
@@ -335,31 +334,38 @@ def run(M=100, N=2000, D=20, K=4, rotate=False, maxiter=200, seed=42,
         start = m
         end = min(m+gap, N-1)
         mask[:,start:end] = False
-
-    #mask[:] = True # DEBUG
     # Remove the observations
     y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
 
     # Run the method
-    if K is not None:
-        demo_drift_lssm_01.run_dlssm(y, f, mask, D, K, maxiter,
-                                     rotate=rotate,
-                                     debug=debug,
-                                     precompute=precompute,
-                                     plot_X=True,
-                                     plot_Y=True,
-                                     plot_S=True)
-                                     ## plot_X=plot_X,
-                                     ## plot_Y=plot_Y,
-                                     ## plot_S=plot_S)
-    else:
-        demo_drift_lssm_01.run_lssm(y, f, mask, D, maxiter, 
-                                    rotate=rotate, 
-                                    debug=debug,
-                                    precompute=precompute,
-                                    plot_X=True,
-                                    plot_Y=True)
+    Q = model_lssm.run_lssm(y, D, 
+                            mask=mask, 
+                            K=K, 
+                            maxiter=maxiter,
+                            rotate=rotate,
+                            debug=debug,
+                            precompute=precompute,
+                            drift_A=drift_A,
+                            drift_C=drift_C)
         
+    if plot_Y:
+        plt.figure()
+        bpplt.timeseries_normal(Q['F'], scale=2)
+        bpplt.timeseries(f, 'b-')
+        bpplt.timeseries(y, 'r.')
+    
+    # Plot latent space
+    if plot_X:
+        plt.figure()
+        bpplt.timeseries_gaussian_mc(Q['X'], scale=2)
+    
+    # Plot drift space
+    if plot_S and K is not None:
+        plt.figure()
+        bpplt.timeseries_gaussian_mc(Q['S'], scale=2)
+
+    # Compute RMSE
+    print("RMSE: %f" % (utils.rmse(Q['F'].get_moments()[0], f)))
 
     plt.show()
 
@@ -375,6 +381,8 @@ if __name__ == '__main__':
                                        "n=",
                                        "d=",
                                        "k=",
+                                       "drift-c",
+                                       "drift-a",
                                        "resolution=",
                                        "seed=",
                                        "maxiter=",
@@ -392,6 +400,8 @@ if __name__ == '__main__':
         print('--n=<INT>           Number of data vectors')
         print('--d=<INT>           Dimensionality of the latent vectors in the model')
         print('--k=<INT>           Dimensionality of the latent drift space')
+        print('--drift-a           Use drift for dynamics (A)')
+        print('--drift-c           Use drift for loadings (C)')
         print('--resolution=<INT>  Grid resolution for the SPDE simulation')
         print('--no-dynamic        Velocity field of the SPDE does not change')
         print('--rotate            Apply speed-up rotations')
@@ -430,6 +440,10 @@ if __name__ == '__main__':
                 kwargs["K"] = None
             else:
                 kwargs["K"] = int(arg)
+        elif opt == "--drift-a":
+            kwargs["drift_A"] = True
+        elif opt == "--drift-c":
+            kwargs["drift_C"] = True
         elif opt == "--resolution":
             kwargs["resolution"] = int(arg)
         elif opt == "--plot-x":
