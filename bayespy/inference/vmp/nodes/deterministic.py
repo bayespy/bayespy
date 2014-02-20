@@ -77,6 +77,11 @@ class Deterministic(Node):
         # Sub-classes should implement this
         raise NotImplementedError()
 
+    def lower_bound_contribution(self, gradient=False):
+        # Deterministic functions are delta distributions so the lower bound
+        # contribuion is zero.
+        return 0
+
 def tile(X, tiles):
     """
     Tile the plates of the input node.
