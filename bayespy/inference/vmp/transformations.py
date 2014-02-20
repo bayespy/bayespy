@@ -1326,3 +1326,39 @@ class RotateDriftingMarkovChain(RotateGaussianMarkovChain):
 
         return (A_XpXn, A_XpXp_A, CovA_XpXp)
 
+class RotateMultiple():
+    """
+    Performs the same rotation for multiple nodes and combines the cost effect.
+    """
+
+    def __init__(self, *rotators):
+        self.rotators = rotators
+
+    def nodes(self):
+        return [node
+                for node in rotator.nodes()
+                for rotator in self.rotators]
+
+    def rotate(self, R, inv=None, logdet=None):
+        for rotator in self.rotators:
+            rotator.rotate(R, inv=inv, logdet=logdet)
+
+    def setup(self):
+        for rotator in self.rotators:
+            rotator.setup()
+    
+    def bound(self, R, logdet=None, inv=None):
+        bound = 0
+        dbound = 0
+        
+        for rotator in self.rotators:
+            (b, db) = rotator.bound(R, logdet=logdet, inv=inv)
+            bound = bound + b
+            dbound = dbound + db
+
+        return (bound, dbound)
+
+    def get_bound_terms(self, R, logdet=None, inv=None):
+        return {node: terms 
+                for (node, terms) in rotator.items()
+                for rotator in self.rotators}
