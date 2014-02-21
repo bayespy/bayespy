@@ -63,333 +63,10 @@ def simulate_drifting_lssm(M, N):
 
     return (y, f)
 
-## def run_dlssm(y, f, mask, D, K, maxiter,
-##              rotate=False, debug=False, precompute=False,
-##              drift_c=False, plot_X=False, plot_Y=True, plot_S=False):
-##     """
-##     Run VB inference for linear state space model with drifting dynamics.
-##     """
-        
-##     (M, N) = np.shape(y)
 
-##     # Dynamics matrix with ARD
-##     # alpha : (K) x ()
-##     alpha = Gamma(1e-5,
-##                   1e-5,
-##                   plates=(K,),
-##                   name='alpha')
-##     # A : (K) x (K)
-##     A = GaussianArrayARD(np.identity(K),
-##                          alpha,
-##                          shape=(K,),
-##                          plates=(K,),
-##                          name='A',
-##                          initialize=False)
-##     A.initialize_from_value(np.identity(K))
-
-##     # State of the drift
-##     # S : () x (N,K)
-##     S = GaussianMarkovChain(np.ones(K),
-##                             1e-6*np.identity(K),
-##                             A,
-##                             np.ones(K),
-##                             n=N-1,
-##                             name='S',
-##                             initialize=False)
-##     S.initialize_from_value(np.ones((N-1,K))+0.01*np.random.randn(N-1,K))
-
-##     # Projection matrix of the dynamics matrix
-##     # Initialize S and B such that BS is identity matrix
-##     # beta : (K) x ()
-##     beta = Gamma(1e-5,
-##                  1e-5,
-##                  plates=(D,K),
-##                  name='beta')
-##     # B : (D) x (D,K)
-##     b = np.zeros((D,D,K))
-##     b[np.arange(D),np.arange(D),np.zeros(D,dtype=int)] = 1
-##     B = GaussianArrayARD(0,
-##                          beta,
-##                          shape=(D,K),
-##                          plates=(D,),
-##                          name='B',
-##                          initialize=False)
-##     B.initialize_from_value(np.reshape(1*b, (D,D,K)))
-##     # BS : (N-1,D) x (D)
-##     ## BS = SumMultiply('dk,k->d',
-##     ##                  B, 
-##     ##                  S.as_gaussian()[...,None],
-##     ##                  name='BS')
-
-##     # Latent states with dynamics
-##     # X : () x (N,D)
-##     X = DriftingGaussianMarkovChain(np.zeros(D),         # mean of x0
-##                                     1e-3*np.identity(D), # prec of x0
-##                                     B,                   # dynamics matrices
-##                                     S.as_gaussian(),     # temporal weights
-##                                     np.ones(D),          # innovation
-##                                     n=N,                 # time instances
-##                                     name='X',
-##                                     initialize=False)
-##     X.initialize_from_value(np.random.randn(N,D))
-
-##     # Observation noise
-##     # tau : () x ()
-##     tau = Gamma(1e-5,
-##                 1e-5,
-##                 name='tau')
-
-##     if drift_c:
-##         # Mixing matrix from latent space to observation space using ARD
-##         # gamma : (D,K) x ()
-##         gamma = Gamma(1e-5,
-##                       1e-5,
-##                       plates=(D,K),
-##                       name='gamma')
-##         # C : (M,1) x (D,K)
-##         C = GaussianArrayARD(0,
-##                              gamma,
-##                              shape=(D,K),
-##                              plates=(M,1),
-##                              name='C',
-##                              initialize=False)
-##         C.initialize_from_random()
-
-##         # Observations
-##         # Y : (M,N) x ()
-##         F = SumMultiply('dk,d,k',
-##                         C,
-##                         X.as_gaussian()[1:],
-##                         S.as_gaussian(),
-##                         name='F')
-##     else:
-##         # Mixing matrix from latent space to observation space using ARD
-##         # gamma : (D) x ()
-##         gamma = Gamma(1e-5,
-##                       1e-5,
-##                       plates=(D,),
-##                       name='gamma')
-##         # C : (M,1) x (D)
-##         C = GaussianArrayARD(0,
-##                              gamma,
-##                              shape=(D,),
-##                              plates=(M,1),
-##                              name='C',
-##                              initialize=False)
-##         C.initialize_from_random()
-
-##         # Observations
-##         # Y : (M,N) x ()
-##         F = SumMultiply('d,d',
-##                         C,
-##                         X.as_gaussian(),
-##                         name='F')
-                  
-##     Y = GaussianArrayARD(F,
-##                          tau,
-##                          name='Y')
-
-##     #
-##     # RUN INFERENCE
-##     #
-
-##     # Observe data
-##     Y.observe(y, mask=mask)
-##     # Construct inference machine
-##     Q = VB(Y, X, S, A, alpha, B, beta, C, gamma, tau)
-
-##     #
-##     # Run inference with rotations.
-##     #
-
-##     if rotate:
-##         # Rotate the D-dimensional state space (C, X)
-##         rotB = transformations.RotateGaussianArrayARD(B, beta, axis=-2,
-##                                                       precompute=precompute)
-##         rotX = transformations.RotateDriftingMarkovChain(X, 
-##                                                          B, 
-##                                                          S.as_gaussian()[...,None], 
-##                                                          rotB)
-##         if drift_c:
-##             rotC = transformations.RotateGaussianArrayARD(C, gamma, axis=-2)
-##         else:
-##             rotC = transformations.RotateGaussianArrayARD(C, gamma, axis=-1)
-##         R_X = transformations.RotationOptimizer(rotX, rotC, D)
-
-##         # Rotate the K-dimensional latent dynamics space (B, S)
-##         rotA = transformations.RotateGaussianArrayARD(A, alpha, 
-##                                                       precompute=precompute)
-##         rotS = transformations.RotateGaussianMarkovChain(S, rotA)
-##         rotB = transformations.RotateGaussianArrayARD(B, beta, axis=-1,
-##                                                       precompute=precompute)
-##         if drift_c:
-##             # TODO: ALSO ROTATE C!!! That is, C+B and S
-##             raise NotImplementedError()
-##             rotC = None
-##             rotBC = None
-##             R_S = transformations.RotationOptimizer(rotS, rotBC, K)
-##         else:
-##             R_S = transformations.RotationOptimizer(rotS, rotB, K)
-            
-##         if debug:
-##             rotate_kwargs = {'check_bound': True,
-##                              'check_gradient': True}
-##         else:
-##             rotate_kwargs = {}
-
-##     # Iterate
-##     ## for ind in range(10):
-##     ##     print("Initial iteration..")
-##     ##     Q.update(X, B, beta, C, gamma, tau)
-##     ##     if rotate:
-##     ##         R_X.rotate(**rotate_kwargs)
-        
-##     for ind in range(maxiter):
-##         Q.update()
-##         #print("alpha:", Q['alpha'].u[0].ravel())
-##         if rotate:
-##             R_X.rotate(**rotate_kwargs)
-##             #if ind > 10:
-##             R_S.rotate(**rotate_kwargs)
-
-##     #
-##     # SHOW RESULTS
-##     #
-
-##     # Plot observations space
-##     if plot_Y:
-##         plt.figure()
-##         bpplt.timeseries_normal(F, scale=2)
-##         bpplt.timeseries(f, 'b-')
-##         bpplt.timeseries(y, 'r.')
-    
-##     # Plot latent space
-##     if plot_X:
-##         plt.figure()
-##         bpplt.timeseries_gaussian_mc(X, scale=2)
-    
-##     # Plot drift space
-##     if plot_S:
-##         plt.figure()
-##         bpplt.timeseries_gaussian_mc(S, scale=2)
-
-##     # Compute RMSE
-##     print("RMSE: %f" % (utils.rmse(F.get_moments()[0], f)))
-
-## def run_lssm(y, f, mask, D, maxiter, 
-##              rotate=False, debug=False, precompute=False, plot_X=False, plot_Y=True):
-##     """
-##     Run VB inference for linear state space model.
-##     """
-
-##     (M, N) = np.shape(y)
-
-##     #
-##     # CONSTRUCT THE MODEL
-##     #
-
-##     # Dynamic matrix
-##     # alpha: (D) x ()
-##     alpha = Gamma(1e-5,
-##                   1e-5,
-##                   plates=(D,),
-##                   name='alpha')
-##     # A : (D) x (D)
-##     A = GaussianArrayARD(0,
-##                          alpha,
-##                          shape=(D,),
-##                          plates=(D,),
-##                          name='A')
-##     A.initialize_from_value(np.identity(D))
-
-##     # Latent states with dynamics
-##     # X : () x (N,D)
-##     X = GaussianMarkovChain(np.zeros(D),         # mean of x0
-##                             1e-3*np.identity(D), # prec of x0
-##                             A,                   # dynamics
-##                             np.ones(D),          # innovation
-##                             n=N,                 # time instances
-##                             name='X',
-##                             initialize=False)
-##     X.initialize_from_value(np.random.randn(N,D))
-
-##     # Mixing matrix from latent space to observation space using ARD
-##     # gamma : (D) x ()
-##     gamma = Gamma(1e-5,
-##                   1e-5,
-##                   plates=(D,),
-##                   name='gamma')
-##     # C : (M,1) x (D)
-##     C = GaussianArrayARD(0,
-##                          gamma,
-##                          shape=(D,),
-##                          plates=(M,1),
-##                          name='C')
-##     C.initialize_from_value(np.random.randn(M,1,D))
-
-##     # Observation noise
-##     # tau : () x ()
-##     tau = Gamma(1e-5,
-##                 1e-5,
-##                 name='tau')
-
-##     # Observations
-##     # Y : (M,N) x ()
-##     F = SumMultiply('i,i',
-##                     C,
-##                     X.as_gaussian())
-##     Y = GaussianArrayARD(F,
-##                          tau,
-##                          name='Y')
-
-##     if rotate:
-##         # Rotate the D-dimensional latent space
-##         rotA = transformations.RotateGaussianArrayARD(A, alpha,
-##                                                       precompute=precompute)
-##         rotX = transformations.RotateGaussianMarkovChain(X, rotA)
-##         rotC = transformations.RotateGaussianArrayARD(C, gamma)
-##         R = transformations.RotationOptimizer(rotX, rotC, D)
-
-##     #
-##     # RUN INFERENCE
-##     #
-
-##     # Observe data
-##     Y.observe(y, mask=mask)
-##     # Construct inference machine
-##     Q = VB(Y, X, A, alpha, C, gamma, tau)
-
-##     # Iterate
-##     for ind in range(maxiter):
-##         Q.update(X, A, alpha, C, gamma, tau)
-##         if rotate:
-##             if debug:
-##                 R.rotate(check_bound=True,
-##                          check_gradient=True)
-##             else:
-##                 R.rotate()
-
-##     #
-##     # SHOW RESULTS
-##     #
-
-##     if plot_Y:
-##         plt.figure()
-##         bpplt.timeseries_normal(F, scale=2)
-##         bpplt.timeseries(f, 'b-')
-##         bpplt.timeseries(y, 'r.')
-    
-##     # Plot latent space
-##     if plot_X:
-##         plt.figure()
-##         bpplt.timeseries_gaussian_mc(X, scale=2)
-    
-##     # Compute RMSE
-##     print("RMSE: %f" % (utils.rmse(F.get_moments()[0], f)))
-
-
-def run(M=1, N=1000, D=4, K=5, seed=42, maxiter=100, 
-        rotate=False, debug=False, precompute=False,
+def run(M=1, N=1000, D=5, K=4, seed=42, maxiter=200, 
+        rotate=True, debug=False, precompute=False,
+        drift=False,
         plot_X=False, plot_Y=True, plot_S=False):
 
     # Seed for random number generator
@@ -410,28 +87,26 @@ def run(M=1, N=1000, D=4, K=5, seed=42, maxiter=100,
     y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
 
     # Run the method
-    if K is not None:
-        Q = model_lssm.run_lssm(y, D, 
-                                mask=mask, 
-                                K=K, 
-                                maxiter=maxiter,
-                                rotate=rotate,
-                                debug=debug,
-                                precompute=precompute,
-                                drift_A=True)
-    else:
-        Q = model_lssm.run_lssm(y, D, 
-                                mask=mask,
-                                maxiter=maxiter, 
-                                rotate=rotate, 
-                                debug=debug,
-                                precompute=precompute)
-        
+    Q = model_lssm.run_lssm(y, D, 
+                            mask=mask, 
+                            K=K, 
+                            maxiter=maxiter,
+                            rotate=rotate,
+                            debug=debug,
+                            precompute=precompute,
+                            drift_A=drift)
+
+    plt.figure()
+    bpplt.timeseries(f, 'b-')
+    plt.ylim([-2, 2])
+    
+    # Plot observations
     if plot_Y:
         plt.figure()
         bpplt.timeseries_normal(Q['F'], scale=2)
         bpplt.timeseries(f, 'b-')
         bpplt.timeseries(y, 'r.')
+        plt.ylim([-2, 2])
     
     # Plot latent space
     if plot_X:
@@ -454,10 +129,10 @@ if __name__ == '__main__':
         opts, args = getopt.getopt(sys.argv[1:],
                                    "",
                                    [
-        #"m=",
                                     "n=",
                                     "d=",
                                     "k=",
+                                    "drift",
                                     "seed=",
                                     "maxiter=",
                                     "debug",
@@ -465,14 +140,14 @@ if __name__ == '__main__':
                                     "plot-y",
                                     "plot-x",
                                     "plot-s",
-                                    "rotate"])
+                                    "no-rotation"])
     except getopt.GetoptError:
         print('python demo_lssm_drift.py <options>')
-        #print('--m=<INT>        Dimensionality of data vectors')
         print('--n=<INT>        Number of data vectors')
         print('--d=<INT>        Dimensionality of the latent vectors in the model')
         print('--k=<INT>        Dimensionality of the latent drift space')
-        print('--rotate         Apply speed-up rotations')
+        print('--drift          Use drift for dynamics')
+        print('--no-rotation    Do not apply speed-up rotations')
         print('--maxiter=<INT>  Maximum number of VB iterations')
         print('--seed=<INT>     Seed (integer) for the random number generator')
         print('--debug          Check that the rotations are implemented correctly')
@@ -483,10 +158,15 @@ if __name__ == '__main__':
               'speed up or slow down.')
         sys.exit(2)
 
+    print("By default, this function runs the static LSSM with speed-up "
+          "rotations")
+    print("If you want to use the drifting version, use --drift")
+    print("See --help for more help")
+
     kwargs = {}
     for opt, arg in opts:
-        if opt == "--rotate":
-            kwargs["rotate"] = True
+        if opt == "--no-rotation":
+            kwargs["rotate"] = False
         elif opt == "--maxiter":
             kwargs["maxiter"] = int(arg)
         elif opt == "--debug":
@@ -495,8 +175,6 @@ if __name__ == '__main__':
             kwargs["precompute"] = True
         elif opt == "--seed":
             kwargs["seed"] = int(arg)
-        ## elif opt == "--m":
-        ##     kwargs["M"] = int(arg)
         elif opt == "--n":
             kwargs["N"] = int(arg)
         elif opt == "--d":
@@ -506,6 +184,8 @@ if __name__ == '__main__':
                 kwargs["K"] = None
             else:
                 kwargs["K"] = int(arg)
+        elif opt == "--drift":
+            kwargs["drift"] = True
         elif opt == "--plot-x":
             kwargs["plot_X"] = True
         elif opt == "--plot-s":

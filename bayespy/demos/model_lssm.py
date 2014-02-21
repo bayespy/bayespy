@@ -198,7 +198,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
 
     # Construct inference machine
     if drift_C or drift_A:
-        Q = VB(Y, F, X, S, A, alpha, B, beta, C, gamma, tau)
+        Q = VB(Y, F, X, S, B, beta, A, alpha, C, gamma, tau)
     else:
         Q = VB(Y, F, X, A, alpha, C, gamma, tau)
 
