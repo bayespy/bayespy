@@ -44,6 +44,8 @@ class VB():
 
         # Remove duplicate nodes
         self.model = utils.utils.unique(nodes)
+
+        self._figures = {}
         
         self.iter = 0
         self.L = np.array(())
@@ -75,7 +77,7 @@ class VB():
         if iterations is not None:
             self.autosave_iterations = iterations
 
-    def update(self, *nodes, repeat=1):
+    def update(self, *nodes, repeat=1, plot=False):
 
         # TODO/FIXME:
         #
@@ -99,6 +101,8 @@ class VB():
                 X = self[node]
                 if hasattr(X, 'update') and callable(X.update):
                     X.update()
+                    if plot:
+                        self.plot(X)
 
             # Call the custom function provided by the user
             if callable(self.callback):
@@ -283,3 +287,31 @@ class VB():
             dictionary = {node.name: node for node in self.model}
             return dictionary[name]        
 
+    def plot(self, *nodes):
+        """
+        Plot the distribution of the given nodes (or all nodes)
+        """
+        if len(nodes) == 0:
+            nodes = self.model
+
+        if not plt.isinteractive():
+            plt.ion()
+            redisable = True
+        else:
+            redisable = False
+
+        for node in nodes:
+            node = self[node]
+            if node.has_plotter():
+                try:
+                    plt.figure(self._figures[node])
+                except:
+                    f = plt.figure()
+                    self._figures[node] = f.number
+                plt.clf()
+                node.plot()
+                plt.suptitle('q(%s)' % node.name)
+                plt.draw()
+
+        if redisable:
+            plt.ioff()
