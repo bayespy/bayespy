@@ -117,9 +117,6 @@ class Normal(ExponentialFamily):
         #print(tau)
         #print("Normal(" + str(mu) + ", " + str(s2) + ")")
 
-    def plot(self):
-        pass
-
     def predict(self):
         """
         Compute posterior predictive distribution.

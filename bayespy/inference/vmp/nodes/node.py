@@ -86,7 +86,7 @@ class Node():
        _plates_from_parent(self, index)
     """
     
-    def __init__(self, *parents, dims=None, plates=None, name=""):
+    def __init__(self, *parents, dims=None, plates=None, name="", plotter=None):
 
         if dims is None:
             raise Exception("You need to specify the dimensionality of the "
@@ -95,6 +95,7 @@ class Node():
 
         self.dims = dims
         self.name = name
+        self._plotter = plotter
 
         # Parents
         self.parents = parents
@@ -455,6 +456,26 @@ class Node():
     def __getitem__(self, index):
         return Slice(self, index,
                      name=(self.name+".__getitem__"))
+
+    def has_plotter(self):
+        """
+        Return True if the node has a plotter
+        """
+        return callable(self._plotter)
+    
+    def plot(self, **kwargs):
+        """
+        Plot the node distribution using the plotter of the node
+
+        Because the distributions are in general very difficult to plot, the
+        user must specify some functions which performs the plotting as
+        wanted. See, for instance, bayespy.plot.plotting for available plotters,
+        that is, functions that perform plotting for a node.
+        """
+        if callable(self._plotter):
+            self._plotter(self, **kwargs)
+        else:
+            raise Exception("No plotter defined, can not plot")
 
 
 from .deterministic import Deterministic

@@ -247,18 +247,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
         return _MarkovChainToGaussian(self,
                                       name=self.name+" as Gaussian")
 
-    def plot(self):
-        x = self.u[0]
-        xx = self.u[1]
-        var = np.einsum('...ii->...i', xx) - x**2
-        plt.figure()
-        D = np.shape(x)[-1]
-        for d in range(D):
-            plt.subplot(D,1,d+1)
-            bpplt.errorplot(y=x[...,d],
-                            error=2*np.sqrt(var[...,d]))
-
-
     def rotate(self, R, inv=None, logdet=None):
 
         if inv is not None:
