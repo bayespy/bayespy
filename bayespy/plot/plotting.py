@@ -22,13 +22,16 @@
 ######################################################################
 
 
+import os, sys
+import tempfile
+
 import numpy as np
 import scipy.sparse as sp
 import matplotlib.pyplot as plt
 from matplotlib import animation
 #from matplotlib.pyplot import *
 
-from bayespy import utils
+from bayespy.utils import utils
 
 def timeseries_gaussian_mc(X, scale=2):
     """
@@ -93,7 +96,7 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, **kwargs):
     shape = [s for s in shape if s > 1]
 
     # Calculate number of rows and columns
-    shape = utils.utils.multiply_shapes(shape, (1,1))
+    shape = utils.multiply_shapes(shape, (1,1))
     if len(shape) > 2:
         raise Exception("Can plot only in 2 dimensions (rows and columns)")
     (M, N) = shape
@@ -104,14 +107,101 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, **kwargs):
         N = 1
 
     # Plot each timeseries
+    ax = [plt.subplot(M, N, i+1) for i in range(M*N)]
     for i in range(M*N):
-        plt.subplot(M,N,i+1)
+        if i > 0:
+            plt.subplot(M, N, i+1, sharex=ax[0])
+        else:
+            plt.subplot(M, N, i+1)
+        #plt.subplot(M, N, i+1, sharey=ax[0], sharex=ax[0])
+        #plt.subplot(M,N,i+1)
         if std is None:
             plt.plot(y[:,i], *args, **kwargs)
         else:
             if len(args) > 0:
                 raise Exception("Can't handle extra arguments")
             errorplot(y=y[:,i], error=std[:,i], **kwargs)
+
+def _blob(x, y, area, colour):
+    """
+    Draws a square-shaped blob with the given area (< 1) at
+    the given coordinates.
+    """
+    hs = np.sqrt(area) / 2
+    xcorners = np.array([x - hs, x + hs, x + hs, x - hs])
+    ycorners = np.array([y - hs, y - hs, y + hs, y + hs])
+    plt.fill(xcorners, ycorners, colour, edgecolor=colour)
+
+def _rectangle(x, y, width, height, **kwargs):
+    _x = x - width/2
+    _y = y - height/2
+    rectangle = plt.Rectangle((_x, _y), 
+                              width,
+                              height,
+                              **kwargs)
+    plt.gca().add_patch(rectangle)
+    return
+    
+    
+def hinton(W, error=None, vmax=None):
+    """
+    Draws a Hinton diagram for visualizing a weight matrix. 
+
+    Temporarily disables matplotlib interactive mode if it is on, 
+    otherwise this takes forever.
+
+    Originally copied from
+    http://wiki.scipy.org/Cookbook/Matplotlib/HintonDiagrams
+    """
+    reenable = False
+    if plt.isinteractive():
+        plt.ioff()
+        reenable = True
+        
+    #P.clf()
+    (height, width) = W.shape
+    if not vmax:
+        #vmax = 2**np.ceil(np.log(np.max(np.abs(W)))/np.log(2))
+        if error is not None:
+            vmax = np.max(np.abs(W) + error)
+        else:
+            vmax = np.max(np.abs(W))
+
+    plt.fill(0.5+np.array([0,width,width,0]),
+             0.5+np.array([0,0,height,height]),
+             'gray')
+    plt.axis('off')
+    plt.axis('equal')
+    plt.gca().invert_yaxis()
+    for x in range(width):
+        for y in range(height):
+            _x = x+1
+            _y = y+1
+            w = W[y,x]
+            _w = np.abs(w)
+            if w > 0:
+                _c = 'white'
+            else:
+                _c = 'black'
+            if error is not None:
+                e = error[y,x]
+                if e < 0:
+                    print(e, _w, vmax)
+                    raise Exception()
+                if _w + e > vmax:
+                    print(e, _w, vmax)
+                    raise Exception()
+                _rectangle(_x,
+                           _y, 
+                           min(1, np.sqrt((_w+e)/vmax)),
+                           min(1, np.sqrt((_w+e)/vmax)),
+                           edgecolor=_c,
+                           fill=False)
+            _blob(_x, _y, min(1, _w/vmax), _c)
+                
+    if reenable:
+        plt.ion()
+        #P.show()
 
 def matrix(A):
     A = np.atleast_2d(A)
@@ -122,52 +212,206 @@ def matrix(A):
                        vmin=-vmax,
                        vmax=vmax)
 
-def matrix_animation(A, **kwargs):
+def new_matrix(A, vmax=None):
+    A = np.atleast_2d(A)
+    if vmax is None:
+        vmax = np.max(np.abs(A))
 
-    A = np.atleast_3d(A)
-    vmax = np.max(np.abs(A))
-    x = plt.imshow(A[0],
-                   interpolation='nearest',
-                   cmap='RdBu_r',
-                   vmin=-vmax,
-                   vmax=vmax,
-                   **kwargs)
-    s = plt.title('t = %d' % 0)
+    (M, N) = np.shape(A)
 
-    for (t, a) in enumerate(A):
-        x.set_array(a)
-        s.set_text('t = %d' % t)
-        plt.draw()
-
-def matrix_movie(A, filename, 
-                 fps=25,
-                 title='Matrix Movie',
-                 artist='BayesPy',
-                 dpi=100,
-                 **kwargs):
-
-    FFMpegWriter = animation.writers['ffmpeg']
-    metadata = dict(title=title,
-                    artist=artist)
-    writer = FFMpegWriter(fps=fps, metadata=metadata)        
-        
-    A = np.atleast_3d(A)
-    vmax = np.max(np.abs(A))
-    x = plt.imshow(A[0],
-                   interpolation='nearest',
-                   cmap='RdBu_r',
-                   vmin=-vmax,
-                   vmax=vmax,
-                   **kwargs)
-    s = plt.title('t = %d' % 0)
-    fig = plt.gcf()
+    for i in range(M):
+        for j in range(N):
+            pass
     
-    with writer.saving(fig, filename, dpi):
-        for (t, a) in enumerate(A):
-            x.set_array(a)
-            s.set_text('t = %d' % t)
-            plt.draw()
-            writer.grab_frame()
+def gaussian_array(X, rows=-2, cols=-1):
+
+    # Get mean and second moment
+    (x, xx) = X.get_moments()
+    ndim = len(X.dims[0])
+    shape = X.get_shape(0)
+    size = len(X.get_shape(0))
+
+    # Compute standard deviation
+    xx = utils.get_diag(xx, ndim=ndim)
+    std = np.sqrt(xx - x**2)
+
+    # Force explicit elements when broadcasting
+    x = x * np.ones(shape)
+    std = std * np.ones(shape)
+
+    # Preprocess the axes to 0,...,ndim
+    if rows < 0:
+        rows += size
+    if cols < 0:
+        cols += size
+    if rows < 0 or rows >= size:
+        raise ValueError("Row axis invalid")
+    if cols < 0 or cols >= size:
+        raise ValueError("Column axis invalid")
+
+    # Put the row and column axes to the end
+    axes = [i for i in range(size) if i not in (rows, cols)] + [rows, cols]
+    x = np.transpose(x, axes=axes)
+    std = np.transpose(std, axes=axes)
+
+    # Make explicit four axes
+    x = utils.atleast_nd(x, 4)
+    std = utils.atleast_nd(std, 4)
+
+    if np.ndim(x) != 4:
+        raise ValueError("Can not plot arrays with over 4 axes")
+
+    M = np.shape(x)[0]
+    N = np.shape(x)[1]
+    vmax = np.max(np.abs(x) + 2*std)
+    #plt.subplots(M, N, sharey=True, sharex=True, fig_kw)
+    ax = [plt.subplot(M, N, i*N+j+1) for i in range(M) for j in range(N)]
+    for i in range(M):
+        for j in range(N):
+            plt.subplot(M, N, i*N+j+1)
+            #plt.subplot(M, N, i*N+j+1, sharey=ax[0], sharex=ax[0])
+            hinton(x[i,j], vmax=vmax, error=2*std[i,j])
+            #matrix(x[i,j])
+
+class Plotter():
+    def __init__(self, plotter, **kwargs):
+        self._kwargs = kwargs
+        self._plotter = plotter
+    def __call__(self, X):
+        self._plotter(X, **self._kwargs)
+        
+class GaussianMarkovChainPlotter(Plotter):
+    def __init__(self, **kwargs):
+        super().__init__(timeseries_gaussian_mc, **kwargs)
+
+class GaussianTimeseriesPlotter(Plotter):
+    def __init__(self, **kwargs):
+        super().__init__(timeseries_gaussian, **kwargs)
+
+class GaussianHintonPlotter(Plotter):
+    def __init__(self, **kwargs):
+        super().__init__(gaussian_array, **kwargs)
+
+## def matrix_animation_BACKUP(A, filename=None, fps=25, **kwargs):
+
+##     fig = plt.gcf()
+
+##     A = np.atleast_3d(A)
+##     vmax = np.max(np.abs(A))
+##     x = plt.imshow(A[0],
+##                    interpolation='nearest',
+##                    cmap='RdBu_r',
+##                    vmin=-vmax,
+##                    vmax=vmax,
+##                    **kwargs)
+##     s = plt.title('t = %d' % 0)
+
+##     if filename is not None:
+##         (_, base_fname) = tempfile.mkstemp(suffix='', prefix='')
+
+##     def animate(nframe):
+##         s.set_text('t = %d' % nframe)
+##         x.set_array(A[nframe])
+##         if filename is not None:
+##             fname = '%s_%05d.png' % (base_fname, nframe)
+##             plt.savefig(fname)
+##             if nframe == np.shape(A)[0] - 1:
+##                 os.system("ffmpeg -r %d -i %s_%%05d.png -r 25 -y %s"
+##                           % (fps, base_fname, filename))
+##                 os.system("rm %s_*.png" % base_fname)
+    
+##         return (x, s)
+
+##     anim = animation.FuncAnimation(fig, animate,
+##                                    frames=np.shape(A)[0],
+##                                    interval=1000/fps,
+##                                    blit=False,
+##                                    repeat=False)
+
+##     return anim
+
+def matrix_animation(A, filename=None, fps=25, **kwargs):
+
+    fig = plt.gcf()
+
+    A = np.atleast_3d(A)
+    vmax = np.max(np.abs(A))
+    x = plt.imshow(A[0],
+                   interpolation='nearest',
+                   cmap='RdBu_r',
+                   vmin=-vmax,
+                   vmax=vmax,
+                   **kwargs)
+    s = plt.title('t = %d' % 0)
+
+    def animate(nframe):
+        s.set_text('t = %d' % nframe)
+        x.set_array(A[nframe])
+        return (x, s)
+
+    anim = animation.FuncAnimation(fig, animate,
+                                   frames=np.shape(A)[0],
+                                   interval=1000/fps,
+                                   blit=False,
+                                   repeat=False)
+        
+    return anim
+
+def save_animation(anim, filename, fps=25, bitrate=5000, fig=None):
+
+    # A bug in numpy/matplotlib causes this not to work in python3.3:
+    # https://github.com/matplotlib/matplotlib/issues/1891
+    #
+    # So the following command does not work currently..
+    #
+    # anim.save(filename, fps=fps)
+
+    if fig is None:
+        fig = plt.gcf()
+        
+    writer = animation.FFMpegFileWriter(fps=fps, bitrate=bitrate)
+    writer.setup(fig, filename, 100)
+    anim.save(filename, 
+              fps=fps,
+              writer=writer,
+              bitrate=bitrate)
+    return
+
+ 
+## def matrix_movie(A, filename, 
+##                  fps=25,
+##                  title='Matrix Movie',
+##                  artist='BayesPy',
+##                  dpi=100,
+##                  **kwargs):
+
+##     # A bug in numpy/matplotlib causes this not to work in python3.3:
+##     # https://github.com/matplotlib/matplotlib/issues/1891
+
+##     FFMpegWriter = animation.FFMpegFileWriter()
+##     #FFMpegWriter = animation.writers['ffmpeg']
+##     metadata = dict(title=title,
+##                     artist=artist)
+##     writer = FFMpegWriter(fps=fps, metadata=metadata)        
+##     #writer = FFMpegWriter(fps=fps, metadata=metadata)        
+        
+##     A = np.atleast_3d(A)
+##     vmax = np.max(np.abs(A))
+##     x = plt.imshow(A[0],
+##                    interpolation='nearest',
+##                    cmap='RdBu_r',
+##                    vmin=-vmax,
+##                    vmax=vmax,
+##                    **kwargs)
+##     s = plt.title('t = %d' % 0)
+##     fig = plt.gcf()
+    
+##     with writer.saving(fig, filename, dpi):
+##         for (t, a) in enumerate(A):
+##             x.set_array(a)
+##             s.set_text('t = %d' % t)
+##             plt.draw()
+##             #writer.grab_frame()
 
 def binary_matrix(A):
     A = np.atleast_2d(A)
