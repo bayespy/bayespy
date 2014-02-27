@@ -43,6 +43,15 @@ from .gaussian import GaussianArrayARD
 from .gaussian import _GaussianArrayARD
 from .wishart import Wishart
 from .gamma import Gamma
+from .node import Statistics
+
+class GaussianMarkovChainStatistics(Statistics):
+    def mean(self):
+        return self.get()[0]
+    def covariance(self):
+        (x, xx) = self.get()[:2]
+        Cov = xx - linalg.outer(x, x, ndim=1)
+        return Cov
 
 # TODO/FIXME: The plates of masks are not handled properly! Try having
 # a plate of GMCs and then the message mask to A or v..
@@ -74,6 +83,8 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
     bayespy.inference.vmp.nodes.wishart.Wishart
 
     """
+
+    _statistics_class = GaussianMarkovChainStatistics
 
     # phi[0] is (N,D), phi[1] is (N,D,D), phi[2] is (N-1,D,D)
     ndims = (2, 3, 3)

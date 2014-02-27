@@ -62,6 +62,38 @@ def message_sum_multiply(plates_parent, dims_parent, *arrays):
     m = utils.squeeze_to_dim(m, len(shape_parent))
     return m
 
+class Statistics():
+    """
+    Base class for defining sufficient statistic for nodes.
+
+    The benefits:
+
+      * Write statistic-specific features in one place only. For instance,
+        covariance from Gaussian message.
+    
+      * Different nodes may have identically defined statistic so you need to
+        implement related features only once. For instance, Gaussian and
+        GaussianARD differ on the prior but the moments are the same.
+
+      * General processing nodes which do not change the type of the moments may
+        "inherit" the features from the parent node. For instance, slicing
+        operator.
+
+      * Conversions can be done easily in both of the above cases if the message
+        conversion is defined in the moments class. For instance,
+        GaussianMarkovChain to Gaussian and GaussianDriftingMarkovChain to
+        Gaussian.
+    """
+    def __init__(self, X):
+        self.X = X
+    def get(self):
+        return self.X._message_to_child()
+    def as_statistics(self, statistic_class):
+        if isinstance(self, statistic_class):
+            return self
+        else:
+            raise Exception("No conversion defined")
+    
 class Node():
     """
     Base class for all nodes.
@@ -85,8 +117,13 @@ class Node():
        _plates_to_parent(self, index)
        _plates_from_parent(self, index)
     """
+
+    # Child classes should consider overwriting this
+    _statistics_class = Statistics
     
     def __init__(self, *parents, dims=None, plates=None, name="", plotter=None):
+
+        self.statistics = self._statistics_class(self)
 
         if dims is None:
             raise Exception("You need to specify the dimensionality of the "

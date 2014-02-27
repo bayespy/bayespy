@@ -33,6 +33,17 @@ from .wishart import Wishart
 from .gamma import Gamma
 from .deterministic import Deterministic
 
+from .node import Statistics
+
+class GaussianStatistics(Statistics):
+    def mean(self):
+        return self.get()[0]
+    def covariance(self):
+        (x, xx) = self.get()
+        ndim = len(self.X.dims[0])
+        Cov = xx - utils.linalg.outer(x, x, ndim=ndim)
+        return Cov
+
 class Gaussian(ExponentialFamily):
     r"""
     VMP node for Gaussian variable.
@@ -154,10 +165,13 @@ class Gaussian(ExponentialFamily):
 
     """
 
+    _statistics_class = GaussianStatistics
+    
     ndims = (1, 2)
     ndims_parents = [(1, 2), (2, 0)]
     # Observations are vectors (1-D):
     ndim_observations = 1
+
 
     
     def __init__(self, mu, Lambda, **kwargs):
@@ -809,6 +823,8 @@ def _GaussianArrayARD(shape, shape_mu=None):
 
         """
 
+        _statistics_class = GaussianStatistics
+        
         # Number of axes for the mean and covariance
         ndims = (ndim, 2*ndim)
         # Number of axes for the parameters of the parents
