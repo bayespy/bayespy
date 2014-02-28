@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011-2013 Jaakko Luttinen
+# Copyright (C) 2011-2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -842,7 +842,7 @@ def _GaussianArrayARD(shape, shape_mu=None):
             if utils.utils.is_numeric(alpha):
                 alpha = Constant(Gamma)(alpha)
 
-            self.parameter_distributions = (_GaussianArrayARD(shape), Gamma)
+            self.parameter_distributions = (_GaussianArrayARD(shape_mu), Gamma)
 
             # Construct
             super().__init__(mu, alpha,
@@ -859,6 +859,14 @@ def _GaussianArrayARD(shape, shape_mu=None):
                 return self.parents[index].plates[:-ndim]
             else:
                 return super()._plates_from_parent(index)
+
+        def initialize_from_mean_and_covariance(self, mu, Cov):
+            u = [mu, Cov + utils.linalg.outer(mu, mu, ndim=ndim)]
+            mask = np.logical_not(self.observed)
+            # TODO: You could compute the CGF but it requires Cholesky of
+            # Cov. Do it later.
+            self._set_moments_and_cgf(u, np.nan, mask=mask)
+            return
             
         @staticmethod
         def compute_fixed_moments(x):
