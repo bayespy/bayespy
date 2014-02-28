@@ -76,13 +76,17 @@ def run(M=1, N=1000, D=5, K=4, seed=42, maxiter=200,
     # Create data
     (y, f) = simulate_drifting_lssm(M, N)
 
-    # Add some missing values randomly
-    mask = random.mask(M, N, p=0.8)
     # Create some gaps
+    mask_gaps = utils.trues((M,N))
     for m in range(100, N, 140):
         start = m
         end = min(m+15, N-1)
-        mask[:,start:end] = False
+        mask_gaps[:,start:end] = False
+    # Missing values
+    mask_random = np.logical_or(random.mask(M, N, p=0.8),
+                                np.logical_not(mask_gaps))
+    # Remove the observations
+    mask = np.logical_and(mask_gaps, mask_random)
     # Remove the observations
     y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
 
@@ -114,12 +118,17 @@ def run(M=1, N=1000, D=5, K=4, seed=42, maxiter=200,
         bpplt.timeseries_gaussian_mc(Q['X'], scale=2)
     
     # Plot drift space
-    if plot_S and K > 0:
+    if plot_S and drift:
         plt.figure()
         bpplt.timeseries_gaussian_mc(Q['S'], scale=2)
 
     # Compute RMSE
-    print("RMSE: %f" % (utils.rmse(Q['F'].get_moments()[0], f)))
+    rmse_random = utils.rmse(Q['F'].get_moments()[0][~mask_random], 
+                             f[~mask_random])
+    rmse_gaps = utils.rmse(Q['F'].get_moments()[0][~mask_gaps],
+                           f[~mask_gaps])
+    print("RMSE for randomly missing values: %f" % rmse_random)
+    print("RMSE for gap values: %f" % rmse_gaps)
 
     plt.show()
 

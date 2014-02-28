@@ -312,6 +312,7 @@ class VB():
                 node.plot()
                 plt.suptitle('q(%s)' % node.name)
                 plt.draw()
+                plt.show()
 
         if redisable:
             plt.ioff()

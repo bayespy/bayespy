@@ -178,8 +178,8 @@ def simulate_process(M=100, N=100, T=100, velocity=1e-3, diffusion=1e-5,
     D = np.exp(logD)
     v = np.zeros(2)
 
-    v = 2*velocity*np.ones(2)
-    #v = velocity*np.random.randn(2)
+    #v = 2*velocity*np.ones(2)
+    v = velocity*np.random.randn(2)
 
     
     j[:MN] = np.mod(np.arange(MN), MN)
@@ -310,7 +310,7 @@ def run(M=100, N=2000, D=20, K=4, rotate=False, maxiter=200, seed=42,
     (U, y, f, X) = simulate_data(M=M, 
                                  N=N,
                                  resolution=resolution,
-                                 burnin=1000,
+                                 burnin=2000,
                                  thin=20,
                                  velocity=4e-2,
                                  diffusion=1e-4,
@@ -321,20 +321,24 @@ def run(M=100, N=2000, D=20, K=4, rotate=False, maxiter=200, seed=42,
 
     plt.ion()
     plt.plot(X[:,0], X[:,1], 'kx')
-    bpplt.matrix_animation(U)
+    animation = bpplt.matrix_animation(U)
+    #bpplt.save_animation(animation, 'demo_drift_lssm_02_spde.mp4')
     plt.show()
     plt.ioff()
 
-    # Missing values
-    mask = random.mask(M, N, p=0.8)
     # Create some gaps
+    mask_gaps = utils.trues((M,N))
     gap = 15
     interval = 100
     for m in range(100, N, interval):
         start = m
         end = min(m+gap, N-1)
-        mask[:,start:end] = False
+        mask_gaps[:,start:end] = False
+    # Missing values
+    mask_random = np.logical_or(random.mask(M, N, p=0.8),
+                                np.logical_not(mask_gaps))
     # Remove the observations
+    mask = np.logical_and(mask_gaps, mask_random)
     y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
 
     # Run the method
@@ -360,12 +364,17 @@ def run(M=100, N=2000, D=20, K=4, rotate=False, maxiter=200, seed=42,
         bpplt.timeseries_gaussian_mc(Q['X'], scale=2)
     
     # Plot drift space
-    if plot_S and K is not None:
+    if plot_S and (drift_A or drift_C):
         plt.figure()
         bpplt.timeseries_gaussian_mc(Q['S'], scale=2)
 
     # Compute RMSE
-    print("RMSE: %f" % (utils.rmse(Q['F'].get_moments()[0], f)))
+    rmse_random = utils.rmse(Q['F'].get_moments()[0][~mask_random], 
+                             f[~mask_random])
+    rmse_gaps = utils.rmse(Q['F'].get_moments()[0][~mask_gaps],
+                           f[~mask_gaps])
+    print("RMSE for randomly missing values: %f" % rmse_random)
+    print("RMSE for gap values: %f" % rmse_gaps)
 
     plt.show()
 
