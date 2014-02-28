@@ -135,6 +135,10 @@ class ExponentialFamily(Stochastic):
                 first = -(len(self.plates)+self.ndims[i])
                 sh = np.shape(self.phi[i])[first:]
                 self.phi[i] = np.reshape(self.phi[i], sh)
+            # Check that the shape is correct
+            if not utils.is_shape_subset(np.shape(self.phi[i]),
+                                         self.get_shape(i)):
+                raise ValueError("Incorrect shape in phi")
 
     def _set_moments_and_cgf(self, u, g, mask=True):
         self._set_moments(u, mask=mask)
