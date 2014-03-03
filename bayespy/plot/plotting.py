@@ -107,14 +107,10 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, **kwargs):
         N = 1
 
     # Plot each timeseries
-    ax = [plt.subplot(M, N, i+1) for i in range(M*N)]
+    ax = plt.subplot(M, N, 1)
     for i in range(M*N):
         if i > 0:
-            plt.subplot(M, N, i+1, sharex=ax[0])
-        else:
-            plt.subplot(M, N, i+1)
-        #plt.subplot(M, N, i+1, sharey=ax[0], sharex=ax[0])
-        #plt.subplot(M,N,i+1)
+            plt.subplot(M, N, i+1, sharex=ax)
         if std is None:
             plt.plot(y[:,i], *args, **kwargs)
         else:
