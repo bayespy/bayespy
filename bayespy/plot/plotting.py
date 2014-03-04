@@ -183,10 +183,10 @@ def hinton(W, error=None, vmax=None):
                 e = error[y,x]
                 if e < 0:
                     print(e, _w, vmax)
-                    raise Exception()
+                    raise Exception("BUG? Negative error")
                 if _w + e > vmax:
                     print(e, _w, vmax)
-                    raise Exception()
+                    raise Exception("BUG? Value+error greater than max")
                 _rectangle(_x,
                            _y, 
                            min(1, np.sqrt((_w+e)/vmax)),
@@ -219,7 +219,7 @@ def new_matrix(A, vmax=None):
         for j in range(N):
             pass
     
-def gaussian_array(X, rows=-2, cols=-1):
+def gaussian_array(X, rows=-2, cols=-1, scale=1):
 
     # Get mean and second moment
     (x, xx) = X.get_moments()
@@ -259,14 +259,17 @@ def gaussian_array(X, rows=-2, cols=-1):
 
     M = np.shape(x)[0]
     N = np.shape(x)[1]
-    vmax = np.max(np.abs(x) + 2*std)
+    vmax = np.max(np.abs(x) + scale*std)
     #plt.subplots(M, N, sharey=True, sharex=True, fig_kw)
     ax = [plt.subplot(M, N, i*N+j+1) for i in range(M) for j in range(N)]
     for i in range(M):
         for j in range(N):
             plt.subplot(M, N, i*N+j+1)
             #plt.subplot(M, N, i*N+j+1, sharey=ax[0], sharex=ax[0])
-            hinton(x[i,j], vmax=vmax, error=2*std[i,j])
+            if scale == 0:
+                hinton(x[i,j], vmax=vmax)
+            else:
+                hinton(x[i,j], vmax=vmax, error=scale*std[i,j])
             #matrix(x[i,j])
 
 class Plotter():
