@@ -292,7 +292,7 @@ def simulate_data(filename=None,
 
     return (U, Y, F, X)
 
-def run(M=100, N=2000, D=20, K=4, rotate=False, maxiter=200, seed=42,
+def run(M=100, N=2000, D=30, K=5, rotate=False, maxiter=200, seed=42,
         debug=False, precompute=False, resolution=30, dynamic=True,
         drift_A=False, drift_C=False,
         plot_Y=True, plot_X=True, plot_S=True):
@@ -312,11 +312,11 @@ def run(M=100, N=2000, D=20, K=4, rotate=False, maxiter=200, seed=42,
                                  resolution=resolution,
                                  burnin=2000,
                                  thin=20,
-                                 velocity=4e-2,
+                                 velocity=6e-2,
                                  diffusion=1e-4,
                                  decay=decay,
                                  innovation_noise=1e-4,
-                                 innovation_lengthscale=1.0,
+                                 innovation_lengthscale=2.0,
                                  noise_ratio=5e-1)
 
     plt.ion()
@@ -360,13 +360,11 @@ def run(M=100, N=2000, D=20, K=4, rotate=False, maxiter=200, seed=42,
     
     # Plot latent space
     if plot_X:
-        plt.figure()
-        bpplt.timeseries_gaussian_mc(Q['X'], scale=2)
+        Q.plot('X')
     
     # Plot drift space
     if plot_S and (drift_A or drift_C):
-        plt.figure()
-        bpplt.timeseries_gaussian_mc(Q['S'], scale=2)
+        Q.plot('S')
 
     # Compute RMSE
     rmse_random = utils.rmse(Q['F'].get_moments()[0][~mask_random], 

@@ -62,9 +62,13 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                              shape=(K,),
                              plates=(K,),
                              name='B',
-                             plotter=bpplt.GaussianHintonPlotter(rows=0, cols=1),
+                             plotter=bpplt.GaussianHintonPlotter(rows=0, 
+                                                                 cols=1,
+                                                                 scale=0),
                              initialize=False)
         B.initialize_from_value(np.identity(K))
+        #B.initialize_from_mean_and_covariance(np.identity(K),
+        #                                      0.1*np.identity(K))
 
         # State of the drift, that is, temporal weights for dynamics matrices
         # S : () x (N,K)
@@ -74,10 +78,10 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                                 np.ones(K),
                                 n=N,
                                 name='S',
-                                plotter=bpplt.GaussianMarkovChainPlotter(),
+                                plotter=bpplt.GaussianMarkovChainPlotter(scale=2),
                                 initialize=False)
         #s = np.cumsum(np.random.randn(N,K), axis=0)
-        s = np.random.randn(N,K)
+        s = 10 + np.random.randn(N,K)
         s[:,0] = 10
         S.initialize_from_value(s)
         #S.initialize_from_value(np.ones((N,K))+0.01*np.random.randn(N,K))
@@ -96,7 +100,9 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                              shape=(D,),
                              plates=(D,),
                              name='A',
-                             plotter=bpplt.GaussianHintonPlotter(rows=0, cols=1),
+                             plotter=bpplt.GaussianHintonPlotter(rows=0, 
+                                                                 cols=1,
+                                                                 scale=0),
                              initialize=False)
         A.initialize_from_value(np.identity(D))
 
@@ -126,16 +132,19 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                              shape=(D,K),
                              plates=(D,),
                              name='A',
-                             plotter=bpplt.GaussianHintonPlotter(rows=0, cols=1),
+                             plotter=bpplt.GaussianHintonPlotter(rows=0, 
+                                                                 cols=1,
+                                                                 scale=0),
                              initialize=False)
 
         # Initialize S and A such that A*S is almost an identity matrix
         a = np.zeros((D,D,K))
         a[np.arange(D),np.arange(D),np.zeros(D,dtype=int)] = 1
         a[:,:,0] = np.identity(D) / s[0,0]
-        a[:,:,1:] = 0.1*np.random.randn(D,D,K-1)
+        a[:,:,1:] = 0.1/s[0,0]*np.random.randn(D,D,K-1)
         A.initialize_from_value(a)
-        #A.initialize_from_mean_and_covariance(a, 0.1*np.identity(D)[:,None,:,None])
+        #A.initialize_from_mean_and_covariance(a,
+        #                                      0.1/s[0,0]**2*utils.identity(D,K))
         #A.initialize_from_value(a + 0.01*np.random.randn(D,D,K))
 
         # Latent states with dynamics
@@ -147,7 +156,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                                         np.ones(D),          # innovation
                                         n=N,                 # time instances
                                         name='X',
-                                        plotter=bpplt.GaussianMarkovChainPlotter(),
+                                        plotter=bpplt.GaussianMarkovChainPlotter(scale=2),
                                         initialize=False)
         X.initialize_from_value(np.random.randn(N,D))
 
@@ -164,10 +173,13 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                              shape=(D,),
                              plates=(M,1),
                              name='C',
-                             plotter=bpplt.GaussianHintonPlotter(rows=0, cols=2))
-        C.initialize_from_random()
+                             plotter=bpplt.GaussianHintonPlotter(rows=0,
+                                                                 cols=2,
+                                                                 scale=0))
+        C.initialize_from_value(0.01*np.random.randn(M,1,D))
+        #C.initialize_from_random()
         #C.initialize_from_mean_and_covariance(C.random(),
-        #                                      utils.identity(D))
+        #                                      0.1*utils.identity(D))
 
         # Noiseless process
         # F : (M,N) x ()
@@ -188,10 +200,12 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                              shape=(D,K),
                              plates=(M,1),
                              name='C',
-                             plotter=bpplt.GaussianHintonPlotter(rows=0, cols=2))
+                             plotter=bpplt.GaussianHintonPlotter(rows=0,
+                                                                 cols=2,
+                                                                 scale=0))
         C.initialize_from_random()
         #C.initialize_from_mean_and_covariance(C.random(),
-        #                                      utils.identity(D, K))
+        #                                      0.1*utils.identity(D, K))
 
         # Noiseless process
         # F : (M,N) x ()
@@ -207,6 +221,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
     tau = Gamma(1e-5,
                 1e-5,
                 name='tau')
+    tau.initialize_from_value(1e3)
 
     # Observations
     # Y: (M,N) x ()
@@ -216,12 +231,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
 
     # Construct inference machine
     if drift_C or drift_A:
-        # Weird: If S,B,beta are learnt at the end, the method performs badly at
-        # least for a simple 1-D demo
-
-        Q = VB(Y, F, X, A, alpha, C, gamma, tau, S, B, beta) # not working?
-        #Q = VB(Y, F, X, S, B, beta, A, alpha, C, gamma, tau) # working?
-        
+        Q = VB(Y, F, X, A, alpha, C, gamma, tau, S, B, beta)
     else:
         Q = VB(Y, F, X, A, alpha, C, gamma, tau)
 
@@ -303,10 +313,11 @@ def run_lssm(y, D,
             R_S = transformations.RotationOptimizer(rotS, rotAC, K)
             
         if debug:
-            rotate_kwargs = {'check_bound': True,
+            rotate_kwargs = {'maxiter': 30,
+                             'check_bound': True,
                              'check_gradient': True}
         else:
-            rotate_kwargs = {}
+            rotate_kwargs = {'maxiter': 30}
 
     # Plot initial distributions
     Q.plot() 
@@ -314,15 +325,18 @@ def run_lssm(y, D,
     # Run inference using rotations
     for ind in range(maxiter):
 
-        #Q.update('X', plot=True)
         if ind < 20:
+            # It might be a good idea to learn the lower level nodes a bit
+            # before starting to learn the higher level nodes.
             Q.update('X', 'C', 'gamma', 'A', 'alpha', 'tau', plot=True)
+            if rotate:
+                R_X.rotate(**rotate_kwargs)
         else:
             Q.update(plot=True)
-            #Q.update('X')
-            #Q.plot('X')
-
-            if rotate:
+            if rotate and ind > 30:
+                # It might be a good idea to not rotate immediately because it
+                # might lead to pruning out components too efficiently before
+                # even estimating them roughly
                 R_X.rotate(**rotate_kwargs)
                 if drift_A or drift_C:
                     R_S.rotate(**rotate_kwargs)

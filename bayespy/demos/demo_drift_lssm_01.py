@@ -100,9 +100,9 @@ def run(M=1, N=1000, D=5, K=4, seed=42, maxiter=200,
                             precompute=precompute,
                             drift_A=drift)
 
-    plt.figure()
-    bpplt.timeseries(f, 'b-')
-    plt.ylim([-2, 2])
+    ## plt.figure()
+    ## bpplt.timeseries(f, 'b-')
+    ## plt.ylim([-2, 2])
     
     # Plot observations
     if plot_Y:
@@ -114,13 +114,11 @@ def run(M=1, N=1000, D=5, K=4, seed=42, maxiter=200,
     
     # Plot latent space
     if plot_X:
-        plt.figure()
-        bpplt.timeseries_gaussian_mc(Q['X'], scale=2)
+        Q.plot('X')
     
     # Plot drift space
     if plot_S and drift:
-        plt.figure()
-        bpplt.timeseries_gaussian_mc(Q['S'], scale=2)
+        Q.plot('S')
 
     # Compute RMSE
     rmse_random = utils.rmse(Q['F'].get_moments()[0][~mask_random], 
