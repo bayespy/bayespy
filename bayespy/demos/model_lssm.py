@@ -176,7 +176,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                              plotter=bpplt.GaussianHintonPlotter(rows=0,
                                                                  cols=2,
                                                                  scale=0))
-        C.initialize_from_value(0.01*np.random.randn(M,1,D))
+        C.initialize_from_value(np.random.randn(M,1,D))
         #C.initialize_from_random()
         #C.initialize_from_mean_and_covariance(C.random(),
         #                                      0.1*utils.identity(D))
@@ -221,7 +221,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
     tau = Gamma(1e-5,
                 1e-5,
                 name='tau')
-    tau.initialize_from_value(1e3)
+    tau.initialize_from_value(1e2)
 
     # Observations
     # Y: (M,N) x ()
@@ -231,9 +231,9 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
 
     # Construct inference machine
     if drift_C or drift_A:
-        Q = VB(Y, F, X, A, alpha, C, gamma, tau, S, B, beta)
+        Q = VB(Y, F, C, gamma, X, A, alpha, tau, S, B, beta)
     else:
-        Q = VB(Y, F, X, A, alpha, C, gamma, tau)
+        Q = VB(Y, F, C, gamma, X, A, alpha, tau)
 
     return Q
     
@@ -245,6 +245,9 @@ def run_lssm(y, D,
              rotate=False, 
              debug=False, 
              precompute=False,
+             update_S=0,
+             start_rotating=0,
+             start_rotating_drift=0,
              drift_C=False,
              drift_A=False,
              autosave=None):
@@ -313,11 +316,11 @@ def run_lssm(y, D,
             R_S = transformations.RotationOptimizer(rotS, rotAC, K)
             
         if debug:
-            rotate_kwargs = {'maxiter': 30,
+            rotate_kwargs = {'maxiter': 10,
                              'check_bound': True,
                              'check_gradient': True}
         else:
-            rotate_kwargs = {'maxiter': 30}
+            rotate_kwargs = {'maxiter': 10}
 
     # Plot initial distributions
     Q.plot() 
@@ -325,20 +328,20 @@ def run_lssm(y, D,
     # Run inference using rotations
     for ind in range(maxiter):
 
-        if ind < 20:
+        if ind < update_S:
             # It might be a good idea to learn the lower level nodes a bit
             # before starting to learn the higher level nodes.
             Q.update('X', 'C', 'gamma', 'A', 'alpha', 'tau', plot=True)
-            if rotate:
+            if rotate and ind >= start_rotating:
                 R_X.rotate(**rotate_kwargs)
         else:
             Q.update(plot=True)
-            if rotate and ind > 30:
+            if rotate and ind >= start_rotating:
                 # It might be a good idea to not rotate immediately because it
                 # might lead to pruning out components too efficiently before
                 # even estimating them roughly
                 R_X.rotate(**rotate_kwargs)
-                if drift_A or drift_C:
+                if (drift_A or drift_C) and ind >= start_rotating_drift:
                     R_S.rotate(**rotate_kwargs)
 
 

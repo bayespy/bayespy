@@ -89,6 +89,21 @@ hypotheses than proved facts):
 ## innovation_lengthscale=1.0,
 ## noise_ratio=5e-1)
 
+# Store some results:
+#
+# LSSM, seed=42, D=40:
+# RMSE for randomly missing values: 0.032106
+# RMSE for gap values: 0.098820
+# LSSM, seed=42, D=20:
+# RMSE for randomly missing values: 0.032001
+# RMSE for gap values: 0.097610
+#
+# DLSSM, seed=42, D=20, K=5:
+# RMSE for randomly missing values: 0.029336
+# RMSE for gap values: 0.081186
+
+
+
 
 import numpy as np
 import scipy
@@ -292,7 +307,7 @@ def simulate_data(filename=None,
 
     return (U, Y, F, X)
 
-def run(M=100, N=2000, D=30, K=5, rotate=False, maxiter=200, seed=42,
+def run(M=100, N=2000, D=20, K=5, rotate=True, maxiter=200, seed=42,
         debug=False, precompute=False, resolution=30, dynamic=True,
         drift_A=False, drift_C=False,
         plot_Y=True, plot_X=True, plot_S=True):
@@ -350,7 +365,9 @@ def run(M=100, N=2000, D=30, K=5, rotate=False, maxiter=200, seed=42,
                             debug=debug,
                             precompute=precompute,
                             drift_A=drift_A,
-                            drift_C=drift_C)
+                            drift_C=drift_C,
+                            update_S=20,
+                            start_rotating_drift=30)
         
     if plot_Y:
         plt.figure()
@@ -399,7 +416,7 @@ if __name__ == '__main__':
                                        "plot-y",
                                        "plot-x",
                                        "plot-s",
-                                       "rotate"
+                                       "no-rotation",
                                    ])
     except getopt.GetoptError:
         print('python demo_lssm_drift.py <options>')
@@ -411,7 +428,7 @@ if __name__ == '__main__':
         print('--drift-c           Use drift for loadings (C)')
         print('--resolution=<INT>  Grid resolution for the SPDE simulation')
         print('--no-dynamic        Velocity field of the SPDE does not change')
-        print('--rotate            Apply speed-up rotations')
+        print('--no-rotation       Apply speed-up rotations')
         print('--maxiter=<INT>     Maximum number of VB iterations')
         print('--seed=<INT>        Seed (integer) for the random number generator')
         print('--debug             Check that the rotations are implemented correctly')
@@ -424,8 +441,8 @@ if __name__ == '__main__':
 
     kwargs = {}
     for opt, arg in opts:
-        if opt == "--rotate":
-            kwargs["rotate"] = True
+        if opt == "--no-rotation":
+            kwargs["rotate"] = False
         elif opt == "--maxiter":
             kwargs["maxiter"] = int(arg)
         elif opt == "--debug":
