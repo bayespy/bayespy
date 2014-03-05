@@ -74,7 +74,7 @@ def timeseries_normal(X, axis=-1, scale=2):
 def timeseries(x, *args, axis=-1, **kwargs):
     return _timeseries_mean_and_error(x, None, *args, axis=axis, **kwargs)
 
-def _timeseries_mean_and_error(y, std, *args, axis=-1, **kwargs):
+def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, **kwargs):
     # TODO/FIXME: You must multiply by ones(plates) in order to plot
     # broadcasted plates properly
     
@@ -107,16 +107,37 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, **kwargs):
         N = 1
 
     # Plot each timeseries
-    ax = plt.subplot(M, N, 1)
+    ax0 = plt.subplot(M, N, 1)
     for i in range(M*N):
         if i > 0:
-            plt.subplot(M, N, i+1, sharex=ax)
+            # Share x axis between all subplots
+            ax = plt.subplot(M, N, i+1, sharex=ax0)
+        else:
+            ax = ax0
+
+        # Autoscale the axes to data and use tight y and x axes
+        ax.autoscale(enable=True, tight=True)
+        ax.set_ylim(auto=True)
+
+        if i < (M-1)*N - 1:
+            # Remove x tick labels from other than the last row
+            ax.set_xticklabels([])
+
         if std is None:
             plt.plot(y[:,i], *args, **kwargs)
         else:
             if len(args) > 0:
                 raise Exception("Can't handle extra arguments")
             errorplot(y=y[:,i], error=std[:,i], **kwargs)
+
+        if center:
+            # Center the zero level on y-axis
+            ylim = ax.get_ylim()
+            vmax = np.max(np.abs(ylim))
+            ax.set_ylim([-vmax, vmax])
+
+    # Remove height space between subplots
+    plt.subplots_adjust(hspace=0)
 
 def _blob(x, y, area, colour):
     """
