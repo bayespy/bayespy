@@ -46,65 +46,6 @@ hypotheses than proved facts):
       learn the dynamics of the dynamics.
 """
 
-# Nicely working experiments:
-# Data: 
-#     no-dynamic
-#     M=100
-#     D=50
-#     burnin=100
-#     thin=20
-#     velocity=1e-1
-#     innovation_noise=1e-4
-#     noise_ratio=1e-1
-#     lengthscale=0.6
-# Data: 
-#     no-dynamic
-#     M=100
-#     D=50
-#     burnin=100
-#     thin=20
-#     velocity=1e-1
-#     innovation_noise=1e-3
-#     noise_ratio=5e-1
-#     lengthscale=0.6
-# Data, quite ok results: 
-#     no-dynamic
-#     M=70
-#     D=50
-#     burnin=100
-#     thin=20
-#     velocity=1e-1
-#     innovation_noise=1e-3
-#     noise_ratio=5e-1
-#     lengthscale=0.6
-
-# Data:
-## resolution=resolution,
-## burnin=1000,
-## thin=20,
-## velocity=4e-2,
-## diffusion=1e-4,
-## decay= 1.0 - 5e-3,
-## innovation_noise=1e-4,
-## innovation_lengthscale=1.0,
-## noise_ratio=5e-1)
-
-# Store some results:
-#
-# LSSM, seed=42, D=40:
-# RMSE for randomly missing values: 0.032106
-# RMSE for gap values: 0.098820
-# LSSM, seed=42, D=20:
-# RMSE for randomly missing values: 0.032001
-# RMSE for gap values: 0.097610
-#
-# DLSSM, seed=42, D=20, K=5:
-# RMSE for randomly missing values: 0.029336
-# RMSE for gap values: 0.081186
-
-
-
-
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
@@ -366,7 +307,7 @@ def run(M=100, N=2000, D=20, K=5, rotate=True, maxiter=200, seed=42,
                             precompute=precompute,
                             drift_A=drift_A,
                             drift_C=drift_C,
-                            update_S=20,
+                            update_drift=20,
                             start_rotating_drift=30)
         
     if plot_Y:

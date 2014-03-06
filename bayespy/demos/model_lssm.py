@@ -81,7 +81,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                                 plotter=bpplt.GaussianMarkovChainPlotter(scale=2),
                                 initialize=False)
         #s = np.cumsum(np.random.randn(N,K), axis=0)
-        s = 10 + np.random.randn(N,K)
+        s = np.random.randn(N,K)
         s[:,0] = 10
         S.initialize_from_value(s)
         #S.initialize_from_value(np.ones((N,K))+0.01*np.random.randn(N,K))
@@ -245,7 +245,7 @@ def run_lssm(y, D,
              rotate=False, 
              debug=False, 
              precompute=False,
-             update_S=0,
+             update_drift=0,
              start_rotating=0,
              start_rotating_drift=0,
              drift_C=False,
@@ -328,7 +328,7 @@ def run_lssm(y, D,
     # Run inference using rotations
     for ind in range(maxiter):
 
-        if ind < update_S:
+        if ind < update_drift:
             # It might be a good idea to learn the lower level nodes a bit
             # before starting to learn the higher level nodes.
             Q.update('X', 'C', 'gamma', 'A', 'alpha', 'tau', plot=True)
