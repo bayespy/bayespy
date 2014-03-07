@@ -49,6 +49,7 @@ hypotheses than proved facts):
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
+import datetime
 
 from bayespy.nodes import GaussianMarkovChain
 from bayespy.nodes import DriftingGaussianMarkovChain
@@ -248,10 +249,10 @@ def simulate_data(filename=None,
 
     return (U, Y, F, X)
 
-def run(M=100, N=2000, D=20, K=5, rotate=True, maxiter=200, seed=42,
-        debug=False, precompute=False, resolution=30, dynamic=True,
-        drift_A=False, drift_C=False,
-        plot_Y=True, plot_X=True, plot_S=True):
+def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
+        debug=False, autosave=False, precompute=False, resolution=30,
+        dynamic=True, drift_A=False, drift_C=False, plot_Y=True, plot_X=True,
+        plot_S=True, lengthscale=1.0, innovation=1e-4):
     
     # Seed for random number generator
     if seed is not None:
@@ -271,8 +272,8 @@ def run(M=100, N=2000, D=20, K=5, rotate=True, maxiter=200, seed=42,
                                  velocity=6e-2,
                                  diffusion=1e-4,
                                  decay=decay,
-                                 innovation_noise=1e-4,
-                                 innovation_lengthscale=2.0,
+                                 innovation_noise=innovation,
+                                 innovation_lengthscale=lengthscale,
                                  noise_ratio=5e-1)
 
     plt.ion()
@@ -295,7 +296,25 @@ def run(M=100, N=2000, D=20, K=5, rotate=True, maxiter=200, seed=42,
                                 np.logical_not(mask_gaps))
     # Remove the observations
     mask = np.logical_and(mask_gaps, mask_random)
-    y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
+    #y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
+
+    if autosave:
+        if drift_A or drift_C:
+            filename = ('demo_dlssm02_seed=%d_drift-A=%d_drift-C=%d_D=%d_K=%d_date=%s.hdf5' 
+                        % (seed,
+                           drift_A,
+                           drift_C,
+                           D,
+                           K,
+                           datetime.datetime.today().strftime('%Y%m%d%H%M%S')))
+        else:
+            filename = ('demo_dlssm02_seed=%d_drift-A=0_drift-C=0_D=%d_date=%s.hdf5' 
+                        % (seed,
+                           D,
+                           datetime.datetime.today().strftime('%Y%m%d%H%M%S')))
+
+    else:
+        filename = None
 
     # Run the method
     Q = model_lssm.run_lssm(y, D, 
@@ -308,13 +327,16 @@ def run(M=100, N=2000, D=20, K=5, rotate=True, maxiter=200, seed=42,
                             drift_A=drift_A,
                             drift_C=drift_C,
                             update_drift=20,
-                            start_rotating_drift=30)
+                            start_rotating_drift=40,
+                            autosave=filename)
         
     if plot_Y:
+        ym = y.copy()
+        ym[~mask] = np.nan
         plt.figure()
         bpplt.timeseries_normal(Q['F'], scale=2)
         bpplt.timeseries(f, 'b-')
-        bpplt.timeseries(y, 'r.')
+        bpplt.timeseries(ym, 'r.')
     
     # Plot latent space
     if plot_X:
@@ -346,6 +368,8 @@ if __name__ == '__main__':
                                        "n=",
                                        "d=",
                                        "k=",
+                                       "lengthscale=",
+                                       "innovation=",
                                        "drift-c",
                                        "drift-a",
                                        "resolution=",
@@ -358,6 +382,7 @@ if __name__ == '__main__':
                                        "plot-x",
                                        "plot-s",
                                        "no-rotation",
+                                       "autosave",
                                    ])
     except getopt.GetoptError:
         print('python demo_lssm_drift.py <options>')
@@ -368,10 +393,13 @@ if __name__ == '__main__':
         print('--drift-a           Use drift for dynamics (A)')
         print('--drift-c           Use drift for loadings (C)')
         print('--resolution=<INT>  Grid resolution for the SPDE simulation')
+        print('--lengthscale=2.0   Spatial innovation noise lengthscale')
+        print('--innovation=...    Magnitude of the spatial innovation noise')
         print('--no-dynamic        Velocity field of the SPDE does not change')
         print('--no-rotation       Apply speed-up rotations')
         print('--maxiter=<INT>     Maximum number of VB iterations')
         print('--seed=<INT>        Seed (integer) for the random number generator')
+        print('--autosave          Save the VB results automatically')
         print('--debug             Check that the rotations are implemented correctly')
         print('--plot-y            Plot Y')
         print('--plot-x            Plot X')
@@ -386,6 +414,8 @@ if __name__ == '__main__':
             kwargs["rotate"] = False
         elif opt == "--maxiter":
             kwargs["maxiter"] = int(arg)
+        elif opt == "--autosave":
+            kwargs["autosave"] = True
         elif opt == "--debug":
             kwargs["debug"] = True
         elif opt == "--precompute":
@@ -405,6 +435,10 @@ if __name__ == '__main__':
                 kwargs["K"] = None
             else:
                 kwargs["K"] = int(arg)
+        elif opt == "--lengthscale":
+            kwargs["lengthscale"] = float(arg)
+        elif opt == "--innovation":
+            kwargs["innovation"] = float(arg)
         elif opt == "--drift-a":
             kwargs["drift_A"] = True
         elif opt == "--drift-c":

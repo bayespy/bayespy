@@ -81,7 +81,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                                 plotter=bpplt.GaussianMarkovChainPlotter(scale=2),
                                 initialize=False)
         #s = np.cumsum(np.random.randn(N,K), axis=0)
-        s = np.random.randn(N,K)
+        s = 10*np.random.randn(N,K)
         s[:,0] = 10
         S.initialize_from_value(s)
         #S.initialize_from_value(np.ones((N,K))+0.01*np.random.randn(N,K))
@@ -94,6 +94,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                       1e-5,
                       plates=(D,),
                       name='alpha')
+        alpha.initialize_from_value(1*np.ones(D))
         # A : (D) x (D)
         A = GaussianArrayARD(0,
                              alpha,
@@ -126,6 +127,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                       1e-5,
                       plates=(D,K),
                       name='alpha')
+        alpha.initialize_from_value(1*np.ones((D,K)))
         # A : (D) x (D,K)
         A = GaussianArrayARD(0,
                              alpha,
@@ -167,6 +169,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                       1e-5,
                       plates=(D,),
                       name='gamma')
+        gamma.initialize_from_value(1e-2*np.ones(D))
         # C : (M,1) x (D)
         C = GaussianArrayARD(0,
                              gamma,
@@ -331,7 +334,7 @@ def run_lssm(y, D,
         if ind < update_drift:
             # It might be a good idea to learn the lower level nodes a bit
             # before starting to learn the higher level nodes.
-            Q.update('X', 'C', 'gamma', 'A', 'alpha', 'tau', plot=True)
+            Q.update('X', 'C', 'A', 'tau', plot=True)
             if rotate and ind >= start_rotating:
                 R_X.rotate(**rotate_kwargs)
         else:
