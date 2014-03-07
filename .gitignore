@@ -17,3 +17,4 @@ MANIFEST
 *.egg-info
 doc/source/generated
 ENV
+*.hdf5
