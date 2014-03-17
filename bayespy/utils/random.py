@@ -226,3 +226,10 @@ def svd(s):
     V = orth(D)
     return np.dot(U, V.T)
     
+def sphere(N=1):
+    """
+    Draw random points uniformly on a unit sphere.
+    """
+    lon = np.random.uniform(-180, 180, N)
+    lat = (np.arccos(np.random.uniform(-1, 1, N)) * 180 / np.pi) - 90
+    return (lat, lon)
