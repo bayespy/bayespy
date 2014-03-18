@@ -499,6 +499,9 @@ class Node():
         Return True if the node has a plotter
         """
         return callable(self._plotter)
+
+    def set_plotter(self, plotter):
+        self._plotter = plotter
     
     def plot(self, **kwargs):
         """
