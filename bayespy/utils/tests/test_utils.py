@@ -348,3 +348,126 @@ class TestSumMultiply(unittest.TestCase):
                           sumaxis=False,
                           axis=(1,-1))
 
+class TestAlphaBetaRecursion(utils.TestCase):
+    
+    def test(self):
+        """
+        Test the results of alpha-beta recursion for Markov chains
+        """
+
+        np.seterr(divide='ignore')
+
+        # Deterministic oscillator
+        p0 = np.array([1.0, 0.0])
+        P = np.array(3*[[[0.0, 1.0],
+                         [1.0, 0.0]]])
+        (z0, zz, g) = utils.alpha_beta_recursion(np.log(p0),
+                                                 np.log(P))
+        self.assertAllClose(z0,
+                            [1.0, 0])
+        self.assertAllClose(zz,
+                            [ [[0.0, 1.0],
+                               [0.0, 0.0]],
+                              [[0.0, 0.0],
+                               [1.0, 0.0]],
+                              [[0.0, 1.0],
+                               [0.0, 0.0]] ])
+        self.assertAllClose(g,
+                            -np.log(np.einsum('a,ab,bc,cd->',
+                                              p0, P[0], P[1], P[2])))
+
+        # Maximum randomness
+        p0 = np.array([0.5, 0.5])
+        P = np.array(3*[[[0.5, 0.5],
+                         [0.5, 0.5]]])
+        (z0, zz, g) = utils.alpha_beta_recursion(np.log(p0),
+                                                 np.log(P))
+        self.assertAllClose(z0,
+                            [0.5, 0.5])
+        self.assertAllClose(zz,
+                            [ [[0.25, 0.25],
+                               [0.25, 0.25]],
+                              [[0.25, 0.25],
+                               [0.25, 0.25]],
+                              [[0.25, 0.25],
+                               [0.25, 0.25]] ])
+        self.assertAllClose(g,
+                            -np.log(np.einsum('a,ab,bc,cd->',
+                                              p0, P[0], P[1], P[2])))
+
+        # Unnormalized probabilities
+        p0 = np.array([2, 2])
+        P = np.array([ [[4, 4],
+                        [4, 4]],
+                       [[8, 8],
+                        [8, 8]],
+                       [[20, 20],
+                        [20, 20]] ])
+        (z0, zz, g) = utils.alpha_beta_recursion(np.log(p0),
+                                                 np.log(P))
+        self.assertAllClose(z0,
+                            [0.5, 0.5])
+        self.assertAllClose(zz,
+                            [ [[0.25, 0.25],
+                               [0.25, 0.25]],
+                              [[0.25, 0.25],
+                               [0.25, 0.25]],
+                              [[0.25, 0.25],
+                               [0.25, 0.25]] ])
+        self.assertAllClose(g,
+                            -np.log(np.einsum('a,ab,bc,cd->',
+                                              p0, P[0], P[1], P[2])))
+
+        # Test plates
+        p0 = np.array([ [1.0, 0.0],
+                        [0.5, 0.5] ])
+        P = np.array([ [ [[0.0, 1.0],
+                          [1.0, 0.0]] ],
+                       [ [[0.5, 0.5],
+                          [0.5, 0.5]] ] ])
+        (z0, zz, g) = utils.alpha_beta_recursion(np.log(p0),
+                                                 np.log(P))
+        self.assertAllClose(z0,
+                            [[1.0, 0.0],
+                             [0.5, 0.5]])
+        self.assertAllClose(zz,
+                            [ [ [[0.0, 1.0],
+                                 [0.0, 0.0]] ],
+                              [ [[0.25, 0.25],
+                                 [0.25, 0.25]] ] ])
+        self.assertAllClose(g,
+                            -np.log(np.einsum('...a,...ab->...',
+                                              p0, P[...,0,:,:])))
+
+        # Test overflow
+        logp0 = np.array([1e5, -np.inf])
+        logP = np.array([[[-np.inf, 1e5],
+                          [-np.inf, 1e5]]])
+        (z0, zz, g) = utils.alpha_beta_recursion(logp0,
+                                                 logP)
+        self.assertAllClose(z0,
+                            [1.0, 0])
+        self.assertAllClose(zz,
+                            [ [[0.0, 1.0],
+                               [0.0, 0.0]] ])
+        ## self.assertAllClose(g,
+        ##                     -np.log(np.einsum('a,ab,bc,cd->',
+        ##                                       p0, P[0], P[1], P[2])))
+
+        # Test underflow
+        logp0 = np.array([-1e5, -np.inf])
+        logP = np.array([[[-np.inf, -1e5],
+                          [-np.inf, -1e5]]])
+        (z0, zz, g) = utils.alpha_beta_recursion(logp0,
+                                                 logP)
+        self.assertAllClose(z0,
+                            [1.0, 0])
+        self.assertAllClose(zz,
+                            [ [[0.0, 1.0],
+                               [0.0, 0.0]] ])
+        ## self.assertAllClose(g,
+        ##                     -np.log(np.einsum('a,ab,bc,cd->',
+        ##                                       p0, P[0], P[1], P[2])))
+
+
+        pass
