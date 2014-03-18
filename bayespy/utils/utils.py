@@ -1151,3 +1151,80 @@ def rts_smoother(mu, Cov, A, V, removethis=None):
     ##   Covx = Covx + S*(Covx_s-Covx_p)*S';
     ## end
     pass
+
+def dist_haversine(c1, c2, radius=6372795):
+
+    # Convert coordinates to radians
+    lat1 = np.atleast_1d(c1[0])[...,:,None] * np.pi / 180
+    lon1 = np.atleast_1d(c1[1])[...,:,None] * np.pi / 180
+    lat2 = np.atleast_1d(c2[0])[...,None,:] * np.pi / 180
+    lon2 = np.atleast_1d(c2[1])[...,None,:] * np.pi / 180
+
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    A = np.sin(dlat/2)**2 + np.cos(lat1)*np.cos(lat2)*(np.sin(dlon/2)**2)
+    C = 2 * np.arctan2(np.sqrt(A), np.sqrt(1-A))
+    
+    return radius * C
+
+def alpha_beta_recursion(logp0, logP):
+    """
+    Compute alpha-beta recursion for Markov chain
+
+    Initial state log-probabilities are in `p0` and state transition
+    log-probabilities are in P. The probabilities do not need to be scaled to
+    sum to one.
+    """
+
+    logp0 = atleast_nd(logp0, 1)
+    logP = atleast_nd(logP, 3)
+    
+    D = np.shape(logp0)[-1]
+    N = np.shape(logP)[-3]
+    plates = broadcasted_shape(np.shape(logp0)[:-1], np.shape(logP)[:-3])
+
+    if np.shape(logP)[-2:] != (D,D):
+        raise ValueError("Dimension mismatch", np.shape(logP))
+
+    # TODO: Use some scaling so the log-probabilities are in better range
+    maxlogP = np.amax(logP, axis=(-1,-2), keepdims=True)
+    logP -= maxlogP
+    maxlogp0 = np.amax(logp0, axis=-1, keepdims=True)
+    logp0 -= maxlogp0
+
+    # Allocate memory
+    alpha = np.zeros(plates+(N,D,D))
+    alpha[...] = np.exp(logP)
+    beta = np.zeros(plates+(N,D))
+
+    # Backward recursion 
+    # (Compute the backward recursion first, because exp(P) is stored in
+    # alpha. Of course, the algorithm could be written a bit differently in such
+    # a way that exp(P) would be stored in beta.)
+    beta[...,N-1,:] = 1
+    for n in reversed(range(N-1)):
+        beta[...,n,:] = np.sum(alpha[...,n+1,:,:]*beta[...,n+1,None,:],
+                               axis=-1)
+    
+    # Forward recursion
+    alpha[...,0,:,:] *= np.exp(logp0)[...,:,None]
+    for n in range(1,N):
+        alpha[...,n,:,:] *= np.sum(alpha[...,n-1,:,:], axis=-2)[...,:,None]
+
+    zz = alpha * beta[...,None,:]
+    z0 = np.sum(zz[...,0,:,:], axis=-1)
+
+    # Normalization
+    v = np.sum(z0, axis=-1)
+    zz /= v[...,None,None,None]
+    z0 /= v[...,None]
+
+    # Cumulant generating function, e.g., a normalization term
+    g = -np.log(v) - (np.sum(maxlogP, axis=(-1,-2,-3)) 
+                      + np.sum(maxlogp0, axis=-1))
+
+    return (z0, zz, g)
+
+
+    

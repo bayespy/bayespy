@@ -31,6 +31,8 @@ order to use this module.
 import numpy as np
 import matplotlib.pyplot as plt
 
+from bayespy.utils import utils
+
 from mpl_toolkits.basemap import Basemap
 
 def _draw_map(m, fill=True, parallels=20, meridians=20):
@@ -129,29 +131,13 @@ def _interpolate(D, Y, Dh, method='linear'):
     else:
         raise ValueError("Unknown interpolation method %s requested" % (method))
 
-def dist_haversine(c1, c2, radius=6372795):
-
-    # Convert coordinates to radians
-    lat1 = np.atleast_1d(c1[0])[...,:,None] * np.pi / 180
-    lon1 = np.atleast_1d(c1[1])[...,:,None] * np.pi / 180
-    lat2 = np.atleast_1d(c2[0])[...,None,:] * np.pi / 180
-    lon2 = np.atleast_1d(c2[1])[...,None,:] * np.pi / 180
-
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-
-    A = np.sin(dlat/2)**2 + np.cos(lat1)*np.cos(lat2)*(np.sin(dlon/2)**2)
-    C = 2 * np.arctan2(np.sqrt(A), np.sqrt(1-A))
-    
-    return radius * C
-
 def interpolate(m, lat, lon, y, lats, lons, method='linear', **kwargs):
 
     (lons, lats) = np.meshgrid(lons,lats)
 
-    D = dist_haversine([lat, lon], [lat, lon])
-    Dh = dist_haversine([lats.flatten(), lons.flatten()],
-                        [lat, lon])
+    D = utils.dist_haversine([lat, lon], [lat, lon])
+    Dh = utils.dist_haversine([lats.flatten(), lons.flatten()],
+                              [lat, lon])
 
     yh = _interpolate(D, y, Dh, method=method)
     yh = np.reshape(yh, np.shape(lons))
