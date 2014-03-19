@@ -166,6 +166,8 @@ class Gaussian(ExponentialFamily):
     """
 
     _statistics_class = GaussianStatistics
+    _parent_statistics_class = (GaussianStatistics,
+                                Wishart._statistics_class)
     
     ndims = (1, 2)
     ndims_parents = [(1, 2), (2, 0)]
@@ -824,6 +826,8 @@ def _GaussianArrayARD(shape, shape_mu=None):
         """
 
         _statistics_class = GaussianStatistics
+        _parent_statistics_class = (GaussianStatistics, 
+                                    Gamma._statistics_class)
         
         # Number of axes for the mean and covariance
         ndims = (ndim, 2*ndim)

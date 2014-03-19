@@ -85,6 +85,7 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
     """
 
     _statistics_class = GaussianMarkovChainStatistics
+                                
 
     # phi[0] is (N,D), phi[1] is (N,D,D), phi[2] is (N-1,D,D)
     ndims = (2, 3, 3)
@@ -348,6 +349,12 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
     """
 
     ndims_parents = [(1, 2), (2, 0), (1, 2), (0, 0)]
+    
+    _parent_statistics_class = (Gaussian._statistics_class,
+                                Wishart._statistics_class,
+                                Gaussian._statistics_class,
+                                Gamma._statistics_class,
+                                Statistics)
     
     def __init__(self, mu, Lambda, A, v, n=None, **kwargs):
         """
@@ -700,6 +707,13 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     """
 
     ndims_parents = [(1, 2), (2, 0), (2, 4), (1, 2), (0, 0)]
+    
+    _parent_statistics_class = (Gaussian._statistics_class,
+                                Wishart._statistics_class,
+                                Gaussian._statistics_class,
+                                Gaussian._statistics_class,
+                                Gamma._statistics_class,
+                                Statistics)
     
     def __init__(self, mu, Lambda, B, S, v, n=None, **kwargs):
         """
@@ -1106,6 +1120,9 @@ class _MarkovChainToGaussian(Deterministic):
 
     This node is deterministic.
     """
+
+    _statistics_class = Gaussian._statistics_class
+    _parent_statistics_class = (GaussianMarkovChainStatistics,)
 
     def __init__(self, X, **kwargs):
 

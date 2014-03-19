@@ -86,13 +86,24 @@ class Statistics():
     """
     def __init__(self, X):
         self.X = X
+        
     def get(self):
         return self.X._message_to_child()
-    def as_statistics(self, statistic_class):
-        if isinstance(self, statistic_class):
-            return self
+    
+    def _convert_node(self, statistics_class):
+        if isinstance(self, statistics_class):
+            return self.X
         else:
-            raise Exception("No conversion defined")
+            raise Exception("No conversion defined from %s to %s"
+                            % (self.X.statistics.__class__.__name__,
+                               statistics_class.__name__))
+    def convert(self, statistics_class):
+        try:
+            # Just in case we were given a node class
+            statistics_class = statistics_class._statistics_class
+        except:
+            pass
+        return self._convert_node(statistics_class).statistics
     
 class Node():
     """
@@ -118,10 +129,21 @@ class Node():
        _plates_from_parent(self, index)
     """
 
-    # Child classes should consider overwriting this
+    # Child classes should consider overwriting these
     _statistics_class = Statistics
+    _parent_statistics_class = None #()
     
     def __init__(self, *parents, dims=None, plates=None, name="", plotter=None):
+
+        # Convert parents to proper nodes
+        self.parents = []
+        for (ind, parent) in enumerate(parents):
+            if utils.is_numeric(parent):
+                parent = Constant(self._parent_statistics_class[ind])(parent)
+                #parent = Constant(self._parent_statistics_class, parent)
+            else:
+                parent = parent.convert(self._parent_statistics_class[ind])
+            self.parents.append(parent)
 
         self.statistics = self._statistics_class(self)
 
@@ -135,7 +157,7 @@ class Node():
         self._plotter = plotter
 
         # Parents
-        self.parents = parents
+        #self.parents = parents
         # Inform parent nodes
         for (index,parent) in enumerate(self.parents):
             if parent:
@@ -516,6 +538,11 @@ class Node():
             self._plotter(self, **kwargs)
         else:
             raise Exception("No plotter defined, can not plot")
+        return
+
+    def convert(self, node_class):
+        return self.statistics._convert_node(node_class)
+    
 
 
 from .deterministic import Deterministic
@@ -546,7 +573,11 @@ class Slice(Deterministic):
     http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#basic-slicing
     """
 
+    _parent_statistics_class = (Statistics,)
+    
     def __init__(self, X, slices, **kwargs):
+
+        self._statistics_class = X._statistics_class
 
         # Force a list
         if not isinstance(slices, tuple):

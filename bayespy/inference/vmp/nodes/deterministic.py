@@ -107,9 +107,13 @@ def tile(X, tiles):
     # Make sure `tiles` is tuple (even if an integer is given)
     tiles = tuple(np.ravel(tiles))
 
+    
     class _Tile(Deterministic):
 
+        _parent_statistics_class = (Node._statistics_class,)
+        
         def __init__(self, X, **kwargs):
+            self._statistics_class = X._statistics_class
             super().__init__(X, dims=X.dims, **kwargs)
     
         def _plates_to_parent(self, index):

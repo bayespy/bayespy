@@ -23,10 +23,12 @@
 
 import numpy as np
 
-from .node import Node
+from .node import Node, Statistics
 
 
 class ConstantNumeric(Node):
+
+    _statistics_class = Statistics
 
     def __init__(self, x, ndim, **kwargs):
         # Compute moments
@@ -44,6 +46,8 @@ class ConstantNumeric(Node):
 def Constant(distribution):
 
     class _Constant(Node):
+
+        _statistics_class = distribution._statistics_class
 
         def __init__(self, x, **kwargs):
             x = np.asanyarray(x)

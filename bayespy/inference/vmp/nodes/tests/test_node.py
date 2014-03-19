@@ -52,6 +52,9 @@ class TestNode(unittest.TestCase):
 
         # Set up the dummy model
         class Dummy(Node):
+            def __init__(self, *args, **kwargs):
+                self._parent_statistics_class = len(args)*(Node._statistics_class,)
+                super().__init__(*args, **kwargs)
             def _get_message_and_mask_to_parent(self, index):
                 return ([msg], mask)
         parent = Dummy(dims=[dims], plates=plates_parent)
@@ -394,6 +397,7 @@ class TestSlice(utils.TestCase):
         """
 
         class DummyNode(Node):
+            _parent_statistics_class = (Node._statistics_class,)
             def __init__(self, u, **kwargs):
                 self.u = u
                 super().__init__(**kwargs)
@@ -555,6 +559,7 @@ class TestSlice(utils.TestCase):
         """
 
         class ChildNode(Node):
+            _parent_statistics_class = (Node._statistics_class,)
             def __init__(self, X, m, mask, **kwargs):
                 super().__init__(X, **kwargs)
                 self.m = m

@@ -39,6 +39,12 @@ def diagonal(alpha):
                                    name=alpha.name + " as Wishart")
 
 
+from .node import Statistics
+class GammaPriorStatistics(Statistics):
+    pass
+class GammaStatistics(Statistics):
+    pass
+
 class GammaPrior(Node):
 
     """ Conjugate prior node for the shape of the gamma
@@ -48,6 +54,8 @@ class GammaPrior(Node):
     # Number of trailing axes for variable dimensions in
     # observations. The other axes correspond to plates.
     ndim_observations = 0
+
+    _statistics_class = GammaPriorStatistics
 
     @staticmethod
     def compute_fixed_moments(a):
@@ -62,6 +70,7 @@ class GammaPrior(Node):
         return [(), ()]
 
 
+
 class Gamma(ExponentialFamily):
 
     ndims = (0, 0)
@@ -69,6 +78,9 @@ class Gamma(ExponentialFamily):
     # Observations/values are scalars (0-dimensional)
     ndim_observations = 0
 
+    _statistics_class = GammaStatistics
+    _parent_statistics_class = (GammaPriorStatistics,
+                                GammaStatistics)
     
     def __init__(self, a, b, **kwargs):
 

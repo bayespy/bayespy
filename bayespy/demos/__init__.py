@@ -32,7 +32,7 @@ from . import demo_kalman_filter
 from . import demo_lssm
 #from . import demo_lssm_drift
 from . import demo_pca
-from . import demo_rotation
+#from . import demo_rotation
 from . import demo_saving
 
 def run_all():

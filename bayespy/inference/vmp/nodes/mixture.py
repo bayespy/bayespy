@@ -33,7 +33,7 @@ from bayespy.utils import utils
 
 from .expfamily import ExponentialFamily
 from .constant import Constant
-from .categorical import Categorical
+from .categorical import Categorical, CategoricalStatistics
 
 def Mixture(distribution, cluster_plate=-1):
 
@@ -58,6 +58,9 @@ def Mixture(distribution, cluster_plate=-1):
         """
 
         ndims = distribution.ndims
+
+        _statistics_class = distribution._statistics_class
+        _parent_statistics_class = (CategoricalStatistics,) + distribution._parent_statistics_class
 
         @staticmethod
         def _compute_phi_from_parents(*u_parents):
@@ -221,7 +224,8 @@ def Mixture(distribution, cluster_plate=-1):
                     u_self.append(np.expand_dims(u[ind], axis=cluster_axis))
                     
                 # Message from the mixed distribution
-                m = distribution._compute_message_to_parent(index, 
+                m = distribution._compute_message_to_parent(parent,
+                                                            index, 
                                                             u_self, 
                                                             *(u_parents[1:]))
 

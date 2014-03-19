@@ -26,6 +26,10 @@ import numpy as np
 from .expfamily import ExponentialFamily
 from .constant import Constant
 from .dirichlet import Dirichlet
+from .node import Statistics
+
+class CategoricalStatistics(Statistics):
+    pass
 
 def Categorical(p, **kwargs):
 
@@ -39,6 +43,9 @@ def Categorical(p, **kwargs):
     class _Categorical(ExponentialFamily):
 
         ndims = (1,)
+
+        _statistics_class = CategoricalStatistics
+        _parent_statistics_class = (Dirichlet._statistics_class,)
 
         @staticmethod
         def _compute_phi_from_parents(*u_parents):

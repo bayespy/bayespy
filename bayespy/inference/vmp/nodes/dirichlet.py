@@ -27,12 +27,17 @@ import scipy.special as special
 #from .variable import Variable
 from .expfamily import ExponentialFamily
 from .constant import Constant
+from .node import Node, Statistics
 
 
+class ConjugatePriorStatistics(Statistics):
+    pass
+class DirichletStatistics(Statistics):
+    pass
 
 class Dirichlet(ExponentialFamily):
 
-    class ConjugatePrior:
+    class ConjugatePrior(Node):
 
         """ Conjugate prior for Dirichlet distribution. This isn't a
         distribution but can be used to compute the correct fixed
@@ -42,6 +47,8 @@ class Dirichlet(ExponentialFamily):
         # Number of trailing axes for variable dimensions in
         # observations. The other axes correspond to plates.
         ndim_observations = 1
+
+        _statistics_class = ConjugatePriorStatistics
         
         @staticmethod
         def compute_fixed_moments(alpha):
@@ -58,6 +65,8 @@ class Dirichlet(ExponentialFamily):
             return [(d,), ()]
 
 
+    _statistics_class = DirichletStatistics
+    _parent_statistics_class = (ConjugatePriorStatistics,)
     ndims = (1,)
 
     @staticmethod

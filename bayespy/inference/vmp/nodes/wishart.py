@@ -30,8 +30,15 @@ from bayespy.utils import utils
 from .expfamily import ExponentialFamily
 from .constant import Constant
 
+from .node import Statistics, Node
+class WishartPriorStatistics(Statistics):
+    pass
+class WishartStatistics(Statistics):
+    pass
+
+
 def WishartPrior(k):
-    class _WishartPrior:
+    class _WishartPrior(Node):
 
         """ Conjugate prior node for the degrees of freedom of the
         Wishart distribution. This isn't a distribution but can be
@@ -42,6 +49,9 @@ def WishartPrior(k):
         # Number of trailing axes for variable dimensions in
         # observations. The other axes correspond to plates.
         ndim_observations = 0
+
+        _statistics_class = WishartPriorStatistics
+        _parent_statistics_class = ()
 
         @staticmethod
         def compute_fixed_moments(n):
@@ -65,6 +75,9 @@ class Wishart(ExponentialFamily):
 
     # Observations/values are 2-D matrices
     ndim_observations = 2
+
+    _statistics_class = WishartStatistics
+    _parent_statistics_class = (WishartPriorStatistics, WishartStatistics)
 
     #parameter_distributions = (WishartPrior, Wishart)
     

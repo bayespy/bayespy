@@ -28,7 +28,7 @@ from bayespy.utils import utils
 from .node import Node
 from .deterministic import Deterministic
 from .constant import Constant
-from .gaussian import Gaussian
+from .gaussian import Gaussian, GaussianStatistics
 
 
 class SumMultiply(Deterministic):
@@ -94,6 +94,8 @@ class SumMultiply(Deterministic):
     because the third axis ('c') could be summed out already in the first
     operation. This same effect applies also to numpy.einsum in general.
     """
+
+    _statistics_class = GaussianStatistics
 
     def __init__(self, *args, iterator_axis=None, **kwargs):
         """
@@ -231,6 +233,8 @@ class SumMultiply(Deterministic):
         self.out_keys = [full_keyset.index(key) for key in keys_out]
         self.in_keys = [ [full_keyset.index(key) for key in keyset]
                          for keyset in keysets ]
+
+        self._parent_statistics_class = len(nodes) * (Gaussian._statistics_class,)
 
         super().__init__(*nodes,
                          dims=(tuple(dim0),tuple(dim1)),

@@ -27,12 +27,19 @@ from .expfamily import ExponentialFamily
 from .constant import Constant
 from .gamma import Gamma
 
+from .gaussian import GaussianStatistics
+
+
 class Normal(ExponentialFamily):
 
     ndims = (0, 0)
     ndims_parents = [(0, 0), (0, 0)]
     # Observations are scalars (0-D):
     ndim_observations = 0
+
+    _statistics_class = GaussianStatistics
+    _parent_statistics_class = (GaussianStatistics,
+                                Gamma._statistics_class)
 
     @staticmethod
     def compute_fixed_moments(x):
