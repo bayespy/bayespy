@@ -115,7 +115,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                                 np.ones(D),          # innovation
                                 n=N,                 # time instances
                                 name='X',
-                                plotter=bpplt.GaussianMarkovChainPlotter(),
+                                plotter=bpplt.GaussianMarkovChainPlotter(scale=2),
                                 initialize=False)
         X.initialize_from_value(np.random.randn(N,D))
 
@@ -251,6 +251,7 @@ def run_lssm(y, D,
              update_drift=0,
              start_rotating=0,
              start_rotating_drift=0,
+             plot_C=True,
              drift_C=False,
              drift_A=False,
              autosave=None):
@@ -263,6 +264,9 @@ def run_lssm(y, D,
 
     # Construct the model
     Q = lssm(M, N, D, K=K, drift_C=drift_C, drift_A=drift_A)
+    if not plot_C:
+        Q['C'].set_plotter(None)
+        
     if autosave is not None:
         Q.set_autosave(autosave, iterations=10)
 
