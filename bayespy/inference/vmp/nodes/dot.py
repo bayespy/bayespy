@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011-2013 Jaakko Luttinen
+# Copyright (C) 2011-2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -27,7 +27,6 @@ from bayespy.utils import utils
 
 from .node import Node
 from .deterministic import Deterministic
-from .constant import Constant
 from .gaussian import Gaussian, GaussianStatistics
 
 
@@ -51,7 +50,9 @@ class SumMultiply(Deterministic):
     elements of each node, that is, an operation like np.einsum('ii->i',X) is
     not allowed. Thus, for each node, each axis must be given unique id. The id
     identifies which axes correspond to which axes between the different
-    nodes. Also, Ellipsis ('...') is not yet supported for simplicity.
+    nodes. Also, Ellipsis ('...') is not yet supported for simplicity. It would
+    also have some problems with constant inputs (because how to determine
+    ndim), so let us just forget it for now.
 
     Each output axis must appear in the input mappings.
 
@@ -95,7 +96,7 @@ class SumMultiply(Deterministic):
     operation. This same effect applies also to numpy.einsum in general.
     """
 
-    _statistics_class = GaussianStatistics
+    #_statistics_class = GaussianStatistics
 
     def __init__(self, *args, iterator_axis=None, **kwargs):
         """
@@ -161,15 +162,18 @@ class SumMultiply(Deterministic):
             #full_keyset += list(keyset.keys())
         full_keyset = list(set(full_keyset))
 
+        # Input and output messages are Gaussian
+        self._statistics = GaussianStatistics(len(keys_out))
+        self._parent_statistics = [GaussianStatistics(len(keyset))
+                                   for keyset in keysets]
+        
         #
         # Check the validity of each node
         #
         for n in range(len(nodes)):
             # Convert constant arrays to constant nodes
-            if utils.is_numeric(nodes[n]):
-                # TODO/FIXME: Use GaussianArray and infer the dimensionality
-                # from the length of the axis mapping!
-                nodes[n] = Constant(Gaussian)(nodes[n])
+            nodes[n] = self._ensure_statistics(nodes[n], 
+                                               self._parent_statistics[n])
             # Check that the maps and the size of the variable are consistent
             if len(nodes[n].dims[0]) != len(keysets[n]):
                 raise ValueError("Wrong number of keys (%d) for the node "
@@ -234,7 +238,8 @@ class SumMultiply(Deterministic):
         self.in_keys = [ [full_keyset.index(key) for key in keyset]
                          for keyset in keysets ]
 
-        self._parent_statistics_class = len(nodes) * (Gaussian._statistics_class,)
+        #self._parent_statistics_class = len(nodes) * (Gaussian._statistics_class,)
+
 
         super().__init__(*nodes,
                          dims=(tuple(dim0),tuple(dim1)),

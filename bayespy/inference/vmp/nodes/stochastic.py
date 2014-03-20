@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2013 Jaakko Luttinen
+# Copyright (C) 2013-2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -56,7 +56,6 @@ class Stochastic(Node):
     def __init__(self, *args, initialize=True, **kwargs):
 
         super().__init__(*args,
-                         dims=self.compute_dims(*args),
                          **kwargs)
 
         # Initialize moment array

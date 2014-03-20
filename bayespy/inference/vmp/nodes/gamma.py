@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011,2012 Jaakko Luttinen
+# Copyright (C) 2011,2012,2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -40,36 +40,30 @@ def diagonal(alpha):
 
 
 from .node import Statistics
+
 class GammaPriorStatistics(Statistics):
-    pass
-class GammaStatistics(Statistics):
-    pass
-
-class GammaPrior(Node):
-
-    """ Conjugate prior node for the shape of the gamma
-    distribution. This isn't a distribution but can be used to
-    compute the correct fixed moments, e.g., for Constant node."""
-
-    # Number of trailing axes for variable dimensions in
-    # observations. The other axes correspond to plates.
     ndim_observations = 0
-
-    _statistics_class = GammaPriorStatistics
-
-    @staticmethod
-    def compute_fixed_moments(a):
+    def compute_fixed_moments(self, a):
         """ Compute moments for fixed x. """
         u0 = a
         u1 = special.gammaln(a)
         return [u0, u1]
 
-    @staticmethod
-    def compute_dims_from_values(a):
+    def compute_dims_from_values(self, a):
         """ Compute the dimensions of phi or u. """
         return [(), ()]
 
+class GammaStatistics(Statistics):
+    ndim_observations = 0
+    def compute_fixed_moments(self, x):
+        """ Compute moments for fixed x. """
+        u0 = x
+        u1 = np.log(x)
+        return [u0, u1]
 
+    def compute_dims_from_values(self, x):
+        """ Compute the dimensions of phi and u. """
+        return ( (), () )
 
 class Gamma(ExponentialFamily):
 
@@ -78,34 +72,12 @@ class Gamma(ExponentialFamily):
     # Observations/values are scalars (0-dimensional)
     ndim_observations = 0
 
-    _statistics_class = GammaStatistics
-    _parent_statistics_class = (GammaPriorStatistics,
-                                GammaStatistics)
+    _statistics = GammaStatistics()
+    _parent_statistics = (GammaPriorStatistics(),
+                          GammaStatistics())
     
     def __init__(self, a, b, **kwargs):
-
-        self.parameter_distributions = (GammaPrior, Gamma)
-        
-        # TODO: USE asarray(a)
-
-        # Check for constant a
-        if utils.is_numeric(a):
-            a = Constant(GammaPrior)(a)
-
-        # Check for constant b
-        if utils.is_numeric(b):
-            b = Constant(Gamma)(b)
-            #b = NodeConstant([b, np.log(b)], plates=np.shape(b), dims=[(),()])
-
-        # Construct
         super().__init__(a, b, **kwargs)
-
-    @staticmethod
-    def compute_fixed_moments(x):
-        """ Compute moments for fixed x. """
-        u0 = x
-        u1 = np.log(x)
-        return [u0, u1]
 
     @staticmethod
     def _compute_phi_from_parents(*u_parents):
@@ -150,11 +122,6 @@ class Gamma(ExponentialFamily):
     @staticmethod
     def compute_dims(*parents):
         """ Compute the dimensions of phi/u. """
-        return ( (), () )
-
-    @staticmethod
-    def compute_dims_from_values(x):
-        """ Compute the dimensions of phi and u. """
         return ( (), () )
 
     def get_shape_of_value(self):

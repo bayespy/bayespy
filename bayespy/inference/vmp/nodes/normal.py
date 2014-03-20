@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011,2012 Jaakko Luttinen
+# Copyright (C) 2011,2012,2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -24,8 +24,7 @@
 import numpy as np
 
 from .expfamily import ExponentialFamily
-from .constant import Constant
-from .gamma import Gamma
+from .gamma import Gamma, GammaStatistics
 
 from .gaussian import GaussianStatistics
 
@@ -37,14 +36,15 @@ class Normal(ExponentialFamily):
     # Observations are scalars (0-D):
     ndim_observations = 0
 
-    _statistics_class = GaussianStatistics
-    _parent_statistics_class = (GaussianStatistics,
-                                Gamma._statistics_class)
+    _statistics = GaussianStatistics(0)
+    _parent_statistics = (GaussianStatistics(0),
+                          GammaStatistics())
 
-    @staticmethod
-    def compute_fixed_moments(x):
-        """ Compute moments u(x) for given x. """
-        return [x, x**2]
+    # Normal(mu, 1/tau)
+
+    def __init__(self, mu, tau, **kwargs):
+        super().__init__(mu, tau, **kwargs)
+
 
     @staticmethod
     def _compute_phi_from_parents(*u_parents):
@@ -91,27 +91,6 @@ class Normal(ExponentialFamily):
         """ Compute the dimensions of phi/u. """
         # Both moments are scalars, thus, shapes are ()
         return ( (), () )
-
-    @staticmethod
-    def compute_dims_from_values(x):
-        """ Compute the dimensions of phi and u. """
-        return ( (), () )
-
-    # Normal(mu, 1/tau)
-
-    def __init__(self, mu, tau, **kwargs):
-
-        # Check for constant mu
-        if np.isscalar(mu) or isinstance(mu, np.ndarray):
-            mu = Constant(Normal)(mu)
-
-        # Check for constant tau
-        if np.isscalar(tau) or isinstance(tau, np.ndarray):
-            tau = Constant(Gamma)(tau)
-
-        # Construct
-        super().__init__(mu, tau, **kwargs)
-
 
     def show(self, parameters=True, mean=True, mode=True, median=True):
         mu = self.u[0]

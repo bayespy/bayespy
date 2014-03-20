@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011,2012 Jaakko Luttinen
+# Copyright (C) 2011,2012,2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -59,8 +59,35 @@ def Mixture(distribution, cluster_plate=-1):
 
         ndims = distribution.ndims
 
-        _statistics_class = distribution._statistics_class
-        _parent_statistics_class = (CategoricalStatistics,) + distribution._parent_statistics_class
+        _statistics = distribution._statistics
+
+        def __init__(self, z, *args, **kwargs):
+
+            # TODO/FIXME: Constant (non-node, numeric) z is a bit
+            # non-trivial. Constant z is an array of cluster assignments, e.g.,
+            # [2,0,2,3,1,2]. However, it is not possible to know the number of
+            # clusters from this. It could be 4 but it could be 10 as well.
+            # Thus, we can't create a constant node from z because the number of
+            # clusters is required by constant categorical. It might be possible
+            # to infer the number of clusters from the cluster_plate axis of the
+            # other parameters but that is not trivial. A simple solution is to
+            # require the user to provide the number of clusters when it can't
+            # be inferred otherwise. Anyway, this is left for future work.
+
+            try:
+                z = z._convert(CategoricalStatistics)
+            except:
+                # z is constant
+                raise NotImplementedError("Constant cluster assignments are "
+                                          "not yet implemented")
+
+            n_clusters = z.dims[0][0]
+            self._parent_statistics = ((CategoricalStatistics(n_clusters),) 
+                                       + distribution._parent_statistics)
+            
+            # Construct
+            super().__init__(z, *args,
+                             **kwargs)
 
         @staticmethod
         def _compute_phi_from_parents(*u_parents):
@@ -281,17 +308,6 @@ def Mixture(distribution, cluster_plate=-1):
             """ Compute the dimensions of phi and u. """
             return distribution.compute_dims(*parents[1:])
 
-        def __init__(self, z, *args, **kwargs):
-            # Check for constant mu
-            if np.isscalar(z) or isinstance(z, np.ndarray):
-                z = ConstantCategorical(z)
-            # Construct
-            super().__init__(z, *args,
-                             **kwargs)
-
-            #_compute_mask_to_parent(index, mask)
-            #_plates_to_parent(self, index)
-            #_plates_from_parent(self, index)
         def _plates_to_parent(self, index):
             if index == 0:
                 return self.plates
@@ -383,27 +399,3 @@ def Mixture(distribution, cluster_plate=-1):
             raise NotImplementedError()
         
     return _Mixture
-
-    ## def show(self):
-    ##     p = self.u[0] #np.exp(self.phi[0])
-    ##     #p /= np.sum(p, axis=-1, keepdims=True)
-    ##     print("Categorical(p)")
-    ##     print("  p = ")
-    ##     print(p)
-
-    ## def observe(self, x):
-    ##     # TODO: You could check that x has proper dimensions
-    ##     x = np.array(x, dtype=np.int)
-        
-    ##     # Initial array of zeros
-    ##     d = self.dims[0][0]
-    ##     self.u[0] = np.zeros(np.shape(x)+(d,))
-        
-    ##     # Compute indices
-    ##     x += d*np.arange(np.size(x),dtype=int).reshape(np.shape(x))
-    ##     x = x[...,np.newaxis]
-    ##     # Set 1 to elements corresponding to the observations
-    ##     np.put(self.u[0], x, 1)
-    ##     self.show()
-        
-    ##     self.fix_u_and_f(self.u, 0)

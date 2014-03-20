@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011,2012 Jaakko Luttinen
+# Copyright (C) 2011,2012,2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -32,40 +32,42 @@ from .constant import Constant
 
 from .node import Statistics, Node
 class WishartPriorStatistics(Statistics):
-    pass
+    ndim_observations = 0
+    def __init__(self, k):
+        self.k = k
+        return
+    
+    def compute_fixed_moments(self, n):
+        """ Compute moments for fixed x. """
+        u0 = np.asanyarray(n)
+        u1 = special.multigammaln(0.5*u0, self.k)
+        return [u0, u1]
+
+    def compute_dims_from_values(self, n):
+        """ Compute the dimensions of phi or u. """
+        return ( (), () )
+
 class WishartStatistics(Statistics):
-    pass
+    ndim_observations = 2
+    def compute_fixed_moments(self, Lambda):
+        """ Compute moments for fixed x. """
+        ldet = utils.m_chol_logdet(utils.m_chol(Lambda))
+        u = [Lambda,
+             ldet]
+        return u
 
+    def compute_dims_from_values(self, x):
+        """ Compute the dimensions of phi and u. """
+        if np.ndim(x) < 2:
+            raise ValueError("Values for Wishart distribution must be at least "
+                             "2-D arrays.")
+        if np.shape(x)[-1] != np.shape(x)[-2]:
+            raise ValueError("Values for Wishart distribution must be square "
+                             "matrices, thus the two last axes must have equal "
+                             "length.")
+        d = np.shape(x)[-1]
+        return ( (d,d), () )
 
-def WishartPrior(k):
-    class _WishartPrior(Node):
-
-        """ Conjugate prior node for the degrees of freedom of the
-        Wishart distribution. This isn't a distribution but can be
-        used to compute the correct fixed moments, e.g., for Constant
-        node."""
-
-
-        # Number of trailing axes for variable dimensions in
-        # observations. The other axes correspond to plates.
-        ndim_observations = 0
-
-        _statistics_class = WishartPriorStatistics
-        _parent_statistics_class = ()
-
-        @staticmethod
-        def compute_fixed_moments(n):
-            """ Compute moments for fixed x. """
-            u0 = np.asanyarray(n)
-            u1 = special.multigammaln(0.5*u0, k)
-            return [u0, u1]
-
-        @staticmethod
-        def compute_dims_from_values(n):
-            """ Compute the dimensions of phi or u. """
-            return ( (), () )
-        
-    return _WishartPrior
 
 class Wishart(ExponentialFamily):
 
@@ -76,30 +78,17 @@ class Wishart(ExponentialFamily):
     # Observations/values are 2-D matrices
     ndim_observations = 2
 
-    _statistics_class = WishartStatistics
-    _parent_statistics_class = (WishartPriorStatistics, WishartStatistics)
+    _statistics = WishartStatistics()
+    def __init__(self, n, V, **kwargs):
 
-    #parameter_distributions = (WishartPrior, Wishart)
-    
-    ## @staticmethod
-    ## def compute_fixed_parameter_moments(*args):
-    ##     """ Compute the moments of the distribution parameters for
-    ##     fixed values."""
-    ##     n = args[0]
-    ##     V = args[1]
-    ##     k = np.shape(V)[-1]
-    ##     u_n = WishartPrior(k).compute_fixed_moments(n)
-    ##     u_V = Wishart.compute_fixed_moments(V)
-    ##     return (u_n, u_V)
+        V = self._ensure_statistics(V, WishartStatistics())
 
-    @staticmethod
-    def compute_fixed_moments(Lambda):
-        """ Compute moments for fixed x. """
-        ldet = utils.m_chol_logdet(utils.m_chol(Lambda))
-        u = [Lambda,
-             ldet]
-        return u
-
+        k = V.dims[0][-1]
+        self._parent_statistics = (WishartPriorStatistics(k), 
+                                   WishartStatistics())
+        
+        super().__init__(n, V, **kwargs)
+        
     @staticmethod
     def _compute_cgf_from_parents(*u_parents):
         n = u_parents[0][0]
@@ -154,37 +143,6 @@ class Wishart(ExponentialFamily):
         # Has the same dimensionality as the second parent.
         return parents[1].dims
 
-    @staticmethod
-    def compute_dims_from_values(x):
-        """ Compute the dimensions of phi and u. """
-        if np.ndim(x) < 2:
-            raise ValueError("Values for Wishart distribution must be at least "
-                             "2-D arrays.")
-        if np.shape(x)[-1] != np.shape(x)[-2]:
-            raise ValueError("Values for Wishart distribution must be square "
-                             "matrices, thus the two last axes must have equal "
-                             "length.")
-        d = np.shape(x)[-1]
-        return ( (d,d), () )
-
-    # Wishart(n, inv(V))
-
-    def __init__(self, n, V, **kwargs):
-
-        # Check for constant V
-        if np.isscalar(V) or isinstance(V, np.ndarray):
-            V = Constant(Wishart)(V)
-
-        k = V.dims[0][-1]
-        
-        # Check for constant n
-        if np.isscalar(n) or isinstance(n, np.ndarray):
-            n = Constant(WishartPrior(k))(n)
-
-        self.parameter_distributions = (WishartPrior(k), Wishart)
-
-        super().__init__(n, V, **kwargs)
-        
     def show(self):
         print("%s ~ Wishart(n, A)" % self.name)
         print("  n =")

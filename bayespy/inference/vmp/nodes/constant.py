@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011,2012 Jaakko Luttinen
+# Copyright (C) 2011,2012,2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -43,38 +43,25 @@ class ConstantNumeric(Node):
     def get_moments(self):
         return self.u
 
-def Constant(distribution):
+class Constant(Node):
 
-    class _Constant(Node):
+    def __init__(self, statistics, x, **kwargs):
+        self._statistics = statistics
+        x = np.asanyarray(x)
+        # Compute moments
+        self.u = self._statistics.compute_fixed_moments(x)
+        # Dimensions of the moments
+        dims = self._statistics.compute_dims_from_values(x)
+        # Number of plate axes
+        plates_ndim = np.ndim(x) - self._statistics.ndim_observations
+        plates = np.shape(x)[:plates_ndim]
+        # Parent constructor
+        super().__init__(dims=dims, plates=plates, **kwargs)
 
-        _statistics_class = distribution._statistics_class
+    @staticmethod
+    def compute_fixed_moments(x):
+        """ Compute u(x) for given x. """
+        return self._statistics.compute_fixed_moments(x)
 
-        def __init__(self, x, **kwargs):
-            x = np.asanyarray(x)
-            # Compute moments
-            self.u = distribution.compute_fixed_moments(x)
-            # Dimensions of the moments
-            dims = distribution.compute_dims_from_values(x)
-            # Number of plate axes
-            plates_ndim = np.ndim(x) - distribution.ndim_observations
-            plates = np.shape(x)[:plates_ndim]
-            # Parent constructor
-            super().__init__(dims=dims, plates=plates, **kwargs)
-
-        @staticmethod
-        def compute_fixed_moments(x):
-            """ Compute u(x) for given x. """
-            return distribution.compute_fixed_moments(x)
-
-        @staticmethod
-        def compute_fixed_u_and_f(x):
-            """ Compute u(x) and f(x) for given x. """
-            raise Exception("I think constants should NOT need this function?")
-            return distribution.compute_fixed_u_and_f(x)
-
-        def get_moments(self):
-            return self.u
-        
-    return _Constant
-    
-
+    def get_moments(self):
+        return self.u

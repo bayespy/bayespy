@@ -37,21 +37,30 @@ from bayespy.utils import linalg
 from .node import Node, message_sum_multiply
 from .deterministic import Deterministic
 from .expfamily import ExponentialFamily
-from .constant import Constant, ConstantNumeric
-from .gaussian import Gaussian
+from .constant import ConstantNumeric
+from .gaussian import Gaussian, GaussianStatistics
 from .gaussian import GaussianArrayARD
 from .gaussian import _GaussianArrayARD
-from .wishart import Wishart
-from .gamma import Gamma
+from .wishart import Wishart, WishartStatistics
+from .gamma import Gamma, GammaStatistics
 from .node import Statistics
 
 class GaussianMarkovChainStatistics(Statistics):
-    def mean(self):
-        return self.get()[0]
-    def covariance(self):
-        (x, xx) = self.get()[:2]
-        Cov = xx - linalg.outer(x, x, ndim=1)
-        return Cov
+
+    def compute_fixed_moments(self, x):
+        raise NotImplementedError()
+        
+    def converter(self, statistics_class):
+        if statistics_class is GaussianStatistics:
+            raise NotImplementedError()
+        return super().converter(statistics_class)
+    
+    ## def mean(self):
+    ##     return self.get()[0]
+    ## def covariance(self):
+    ##     (x, xx) = self.get()[:2]
+    ##     Cov = xx - linalg.outer(x, x, ndim=1)
+    ##     return Cov
 
 # TODO/FIXME: The plates of masks are not handled properly! Try having
 # a plate of GMCs and then the message mask to A or v..
@@ -84,7 +93,8 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
 
     """
 
-    _statistics_class = GaussianMarkovChainStatistics
+    #_statistics_class = GaussianMarkovChainStatistics
+    _statistics = GaussianMarkovChainStatistics()
                                 
 
     # phi[0] is (N,D), phi[1] is (N,D,D), phi[2] is (N-1,D,D)
@@ -211,11 +221,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
         """
         Compute the dimensions of phi and u based on parent nodes.
         """
-        raise NotImplementedError()
-
-    @staticmethod
-    def compute_dims_from_values(x):
-        """ Compute the dimensions of phi and u. """
         raise NotImplementedError()
 
 
@@ -350,11 +355,16 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     ndims_parents = [(1, 2), (2, 0), (1, 2), (0, 0)]
     
-    _parent_statistics_class = (Gaussian._statistics_class,
-                                Wishart._statistics_class,
-                                Gaussian._statistics_class,
-                                Gamma._statistics_class,
-                                Statistics)
+    _parent_statistics = (GaussianStatistics(1),
+                          WishartStatistics(),
+                          GaussianStatistics(1),
+                          GammaStatistics(),
+                          Statistics())
+    ## _parent_statistics_class = (Gaussian._statistics_class,
+    ##                             Wishart._statistics_class,
+    ##                             Gaussian._statistics_class,
+    ##                             Gamma._statistics_class,
+    ##                             Statistics)
     
     def __init__(self, mu, Lambda, A, v, n=None, **kwargs):
         """
@@ -363,23 +373,9 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         `A` is the dynamic matrix
         `v` is the diagonal precision of the innovation
         """
-        self.parameter_distributions = (Gaussian, Wishart, Gaussian, Gamma)
         
-        # Check for constant mu
-        if utils.is_numeric(mu):
-            mu = Constant(Gaussian)(np.atleast_1d(mu))
-
-        # Check for constant Lambda
-        if utils.is_numeric(Lambda):
-            Lambda = Constant(Wishart)(np.atleast_2d(Lambda))
-
-        # Check for constant A
-        if utils.is_numeric(A):
-            A = Constant(Gaussian)(np.atleast_2d(A))
-
-        # Check for constant V
-        if utils.is_numeric(v):
-            v = Constant(Gamma)(np.atleast_1d(v))
+        A = self._ensure_statistics(A, self._parent_statistics[2])
+        v = self._ensure_statistics(v, self._parent_statistics[3])
 
         # A dummy wrapper for the number of time instances.
         n_A = 1
@@ -708,12 +704,12 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     ndims_parents = [(1, 2), (2, 0), (2, 4), (1, 2), (0, 0)]
     
-    _parent_statistics_class = (Gaussian._statistics_class,
-                                Wishart._statistics_class,
-                                Gaussian._statistics_class,
-                                Gaussian._statistics_class,
-                                Gamma._statistics_class,
-                                Statistics)
+    _parent_statistics = (GaussianStatistics(1),
+                          WishartStatistics(),
+                          GaussianStatistics(2),
+                          GaussianStatistics(1),
+                          GammaStatistics(),
+                          Statistics())
     
     def __init__(self, mu, Lambda, B, S, v, n=None, **kwargs):
         """
@@ -724,30 +720,9 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         `v` is the diagonal precision of the innovation, (...,D)x()
         """
 
-        # TODO/FIXME: Check these
-        self.parameter_distributions = (Gaussian, Wishart, GaussianArrayARD, Gaussian, Gamma)
-        
-        # Check for constant mu
-        if utils.is_numeric(mu):
-            mu = Constant(Gaussian)(np.atleast_1d(mu))
-
-        # Check for constant Lambda
-        if utils.is_numeric(Lambda):
-            Lambda = Constant(Wishart)(np.atleast_2d(Lambda))
-
-        # Check for constant S
-        if utils.is_numeric(S):
-            S = Constant(Gaussian)(np.atleast_2d(S))
-
-        # Check for constant B
-        if utils.is_numeric(B):
-            D = Lambda.dims[0][-1]
-            K = S.dims[0][-1]
-            B = Constant(_GaussianArrayARD((D,K)))(np.atleast_3d(B))
-
-        # Check for constant V
-        if utils.is_numeric(v):
-            v = Constant(Gamma)(np.atleast_1d(v))
+        # Make sure the parents are nodes and of correct type
+        S = self._ensure_statistics(S, self._parent_statistics[3])
+        v = self._ensure_statistics(v, self._parent_statistics[4])
 
         # A dummy wrapper for the number of time instances.
         n_S = 1
@@ -1121,8 +1096,10 @@ class _MarkovChainToGaussian(Deterministic):
     This node is deterministic.
     """
 
-    _statistics_class = Gaussian._statistics_class
-    _parent_statistics_class = (GaussianMarkovChainStatistics,)
+    _statistics = GaussianStatistics(1)
+    _parent_statistics = (GaussianMarkovChainStatistics(),)
+    ## _statistics_class = Gaussian._statistics_class
+    ## _parent_statistics_class = (GaussianMarkovChainStatistics,)
 
     def __init__(self, X, **kwargs):
 

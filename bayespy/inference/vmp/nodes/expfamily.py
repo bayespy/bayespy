@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2013 Jaakko Luttinen
+# Copyright (C) 2013-2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -86,7 +86,7 @@ class ExponentialFamily(Stochastic):
         #u_parents = self.compute_fixed_parameter_moments(*args)
         u_parents = list()
         for (ind, x) in enumerate(args):
-            distribution = self.parameter_distributions[ind]
+            distribution = self._parent_statistics[ind]
             u = distribution.compute_fixed_moments(np.asanyarray(x))
             u_parents.append(u)
         # Update natural parameters

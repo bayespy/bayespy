@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2013 Jaakko Luttinen
+# Copyright (C) 2013,2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -27,7 +27,7 @@ import numpy as np
 
 from bayespy.utils import utils
 
-from .node import Node
+from .node import Node, Statistics
 
 class Deterministic(Node):
     """
@@ -110,10 +110,10 @@ def tile(X, tiles):
     
     class _Tile(Deterministic):
 
-        _parent_statistics_class = (Node._statistics_class,)
+        _parent_statistics = (Statistics(),)
         
         def __init__(self, X, **kwargs):
-            self._statistics_class = X._statistics_class
+            self._statistics = X._statistics
             super().__init__(X, dims=X.dims, **kwargs)
     
         def _plates_to_parent(self, index):

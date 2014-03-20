@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2013 Jaakko Luttinen
+# Copyright (C) 2013-2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -24,6 +24,8 @@
 import numpy as np
 
 from bayespy.utils import utils
+
+#import bayespy.inference.vmp.nodes.constant as constant
 
 
 """
@@ -84,26 +86,59 @@ class Statistics():
         GaussianMarkovChain to Gaussian and GaussianDriftingMarkovChain to
         Gaussian.
     """
-    def __init__(self, X):
-        self.X = X
-        
-    def get(self):
-        return self.X._message_to_child()
+
+    # Overwrite this
+    ndim_observations = None
     
-    def _convert_node(self, statistics_class):
+    def converter(self, statistics_class):
+        """
+        Returns a node class which converts the node's statistics to another
+        """
+        # This method must take statistics object instead of class because, for
+        # instance, one could want to convert gamma to wishart with specific
+        # ndim? Or maybe that is in any case too complex so it would have to be
+        # handled manually.
         if isinstance(self, statistics_class):
-            return self.X
-        else:
-            raise Exception("No conversion defined from %s to %s"
-                            % (self.X.statistics.__class__.__name__,
-                               statistics_class.__name__))
-    def convert(self, statistics_class):
-        try:
-            # Just in case we were given a node class
-            statistics_class = statistics_class._statistics_class
-        except:
-            pass
-        return self._convert_node(statistics_class).statistics
+            return lambda X: X
+
+        raise Exception("No conversion defined from %s to %s"
+                        % (self.__class__.__name__,
+                           statistics_class.__name__))
+
+    def compute_fixed_moments(self, x):
+        # This method can't be static because the computation of the moments may
+        # depend on, for instance, ndim in Gaussian arrays.
+        raise NotImplementedError("compute_fixed_moments not implemented for "
+                                  "%s" 
+                                  % (self.__class__.__name__))
+    
+    def compute_dims_from_values(self, x):
+        # This method can't be static because the computation of the moments may
+        # depend on, for instance, ndim in Gaussian arrays.
+        raise NotImplementedError("compute_dims_from_values not implemented "
+                                  "for %s"
+                                  % (self.__class__.__name__))
+    
+    ## def __init__(self, X):
+    ##     self.X = X
+        
+    ## def get(self):
+    ##     return self.X._message_to_child()
+    
+    ## def _convert_node(self, statistics_class):
+    ##     if isinstance(self, statistics_class):
+    ##         return self.X
+    ##     else:
+    ##         raise Exception("No conversion defined from %s to %s"
+    ##                         % (self.X.statistics.__class__.__name__,
+    ##                            statistics_class.__name__))
+    ## def convert(self, statistics_class):
+    ##     try:
+    ##         # Just in case we were given a node class
+    ##         statistics_class = statistics_class._statistics_class
+    ##     except:
+    ##         pass
+    ##     return self._convert_node(statistics_class).statistics
     
 class Node():
     """
@@ -130,27 +165,43 @@ class Node():
     """
 
     # Child classes should consider overwriting these
-    _statistics_class = Statistics
-    _parent_statistics_class = None #()
+    #_statistics_class = Statistics # needed for: NodeObject.convert(NodeClass)
+    # Well, one can use NodeObject._convert(StatisticsClass)
+    # Conversions aren't meant for users, they are not in "public API".
+    
+    #_parent_statistics_class = None
+    # These are objects of the _parent_statistics_class. If the default way of
+    # creating them is not correct, write your own creation code.
+    _statistics = Statistics()
+    _parent_statistics = None
+
+    ## @staticmethod
+    ## def _get_parent_statistics(*parents, **kwargs):
+    ##     # This is default implementation
+    ##     return [_parent_statistics_class[ind]() for ind in range(len(parents))]
+        
     
     def __init__(self, *parents, dims=None, plates=None, name="", plotter=None):
+
+        ## # Default creation of _parent_statistics objects
+        ## if self._parent_statistics is None:
+        ##     self._parent_statistics = [self._parent_statistics_class[ind]()
+        ##                                for ind in range(len(parents))]
+        ## #self.statistics = self._statistics_class(self)
+        ## self._statistics = self._statistics_class()
 
         # Convert parents to proper nodes
         self.parents = []
         for (ind, parent) in enumerate(parents):
-            if utils.is_numeric(parent):
-                parent = Constant(self._parent_statistics_class[ind])(parent)
-                #parent = Constant(self._parent_statistics_class, parent)
-            else:
-                parent = parent.convert(self._parent_statistics_class[ind])
+            parent = self._ensure_statistics(parent, 
+                                             self._parent_statistics[ind])
             self.parents.append(parent)
 
-        self.statistics = self._statistics_class(self)
-
         if dims is None:
-            raise Exception("You need to specify the dimensionality of the "
-                            "distribution for class %s"
-                            % str(self.__class__))
+            dims = self.compute_dims(*self.parents)
+            ## raise Exception("You need to specify the dimensionality of the "
+            ##                 "distribution for class %s"
+            ##                 % str(self.__class__))
 
         self.dims = dims
         self.name = name
@@ -192,15 +243,15 @@ class Node():
         # Children
         self.children = list()
 
-    ## @staticmethod
-    ## def _compute_dims_from_parents(*parents):
-    ##     """ Compute the dimensions of phi and u. """
-    ##     raise NotImplementedError("Not implemented for %s" % self.__class__)
+    @staticmethod
+    def _ensure_statistics(node, statistics):
+        if isinstance(node, Node):
+            # Convert to correct type
+            return node._convert(statistics.__class__)
 
-    ## @staticmethod
-    ## def _compute_dims_from_values(x):
-    ##     """ Compute the dimensions of phi and u. """
-    ##     raise NotImplementedError()
+        # Convert to constant node
+        from .constant import Constant
+        return Constant(statistics, node)
 
     def _plates_to_parent(self, index):
         # Sub-classes may want to overwrite this if they manipulate plates
@@ -540,8 +591,13 @@ class Node():
             raise Exception("No plotter defined, can not plot")
         return
 
-    def convert(self, node_class):
-        return self.statistics._convert_node(node_class)
+    #def _convert(self, node_class):
+    #    return self._statistics._convert_node(node_class)
+    def _convert(self, statistics_class):
+        converter = self._statistics.converter(statistics_class)
+        return converter(self)
+    ## def convert(self, node_class):
+    ##     return self._convert(node_class._statistics_class)
     
 
 
@@ -573,11 +629,13 @@ class Slice(Deterministic):
     http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#basic-slicing
     """
 
-    _parent_statistics_class = (Statistics,)
+    _parent_statistics = (Statistics(),)
+    #_parent_statistics_class = (Statistics,)
     
     def __init__(self, X, slices, **kwargs):
 
-        self._statistics_class = X._statistics_class
+        self._statistics = X._statistics
+        #self._statistics_class = X._statistics_class
 
         # Force a list
         if not isinstance(slices, tuple):
@@ -971,101 +1029,18 @@ def AddPlateAxis(to_plate):
     return _AddPlateAxis
         
 
-## class _MovePlate(Node):
-##     """
-##     Move a plate to a given position.
-
-##     NOTE: This has NOT been tested yet..
-##     """
-
-##     def __init__(self, X, from_plate, to_plate, plates=None, **kwargs):
-
-##         if plates is not None:
-##             raise ValueError("Do not specify plates.")
-
-##         plates = X.plates
-
-##         # Check the parameters
-##         if from_plate >= len(plates) or from_plate < -len(plates):
-##             raise ValueError("Invalid plate to move from.")
-##         if to_plate >= len(plates) or to_plate < -len(plates):
-##             raise ValueError("Invalid plate to move to.")
-
-##         # Use positive indexing only
-##         if from_plate < 0:
-##             from_plate = len(plates) + from_plate
-##         if to_plate < 0:
-##             to_plate = len(plates) + to_plate + 1
-
-##         # Move the plate
-##         plates = list(plates)
-##         plates.insert(to_plate, plates.pop(from_plate))
-
-##         super().__init__(X, 
-##                          plates=tuple(plates),
-##                          dims=X.dims,
-##                          **kwargs)
-
-##     def get_moments(self):
-##         """
-##         Get the moments with moved plates.
-##         """
-
-##         # Get parents' moments
-##         u = self.parents[0].message_to_child()
-
-##         # Move a plate axis
-##         u = list(u)
-##         for i in range(len(u)):
-##             u[i] = utils.moveaxis(u[i], self.from_plate, self.to_plate)
-
-##         return tuple(u)
-
-##     def get_message(self, index, u_parents):
-##         """
-##         Compute the message to a parent node.
-##         """
-
-##         # Get the message from children
-##         (m, mask) = self.message_from_children()
-
-##         # Move message plates
-##         for i in range(len(m)):
-##             diff = len(self.plates) + len(self.dims[i]) - self.np.ndim(m[i])
-##             m[i] = utils.add_leading_axes(m[i], diff)
-##             m[i] = utils.moveaxis(m[i], self.to_plate, self.from_plate)
-
-##         # Move mask plates
-##         mask = utils.add_leading_axes(mask, len(self.plates) - np.ndim(mask))
-##         mask = utils.moveaxis(mask, self.to_plate, self.from_plate)
-
-##         return (m, mask)
-
-    
-class NodeConstant(Node):
-    def __init__(self, u, **kwargs):
-        self.u = u
-        Node.__init__(self, **kwargs)
-
-    def message_to_child(self, gradient=False):
-        if gradient:
-            return (self.u, [])
-        else:
-            return self.u
-
-
-class NodeConstantScalar(NodeConstant):
+class NodeConstantScalar(Node):
     @staticmethod
     def compute_fixed_u_and_f(x):
         """ Compute u(x) and f(x) for given x. """
         return ([x], 0)
 
     def __init__(self, a, **kwargs):
-        NodeConstant.__init__(self,
-                              [a],
-                              plates=np.shape(a),
-                              dims=[()],
-                              **kwargs)
+        self.u = [a]
+        super().__init__(self,
+                         plates=np.shape(a),
+                         dims=[()],
+                         **kwargs)
 
     def start_optimization(self):
         # FIXME: Set the plate sizes appropriately!!

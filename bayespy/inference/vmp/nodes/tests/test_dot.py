@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2013 Jaakko Luttinen
+# Copyright (C) 2013,2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -153,6 +153,13 @@ class TestSumMultiply(TestCase):
             u_Y = Y.get_moments()
             self.assertAllClose(u_Y[0], u0)
             self.assertAllClose(u_Y[1], u1)
+
+        # Test constant parent
+        y = np.random.randn(2,3,4)
+        compare_moments(y,
+                        linalg.outer(y, y, ndim=2),
+                        'ij->ij',
+                        y)
 
         # Do nothing for 2-D array
         Y = GaussianArrayARD(np.random.randn(5,2,3),

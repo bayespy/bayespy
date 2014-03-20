@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011,2012 Jaakko Luttinen
+# Copyright (C) 2011,2012,2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -30,44 +30,34 @@ from .constant import Constant
 from .node import Node, Statistics
 
 
-class ConjugatePriorStatistics(Statistics):
-    pass
+class DirichletPriorStatistics(Statistics):
+    # Number of trailing axes for variable dimensions in
+    # observations. The other axes correspond to plates.
+    ndim_observations = 1
+
+    def compute_fixed_moments(self, alpha):
+        """ Compute moments for fixed x. """
+        gammaln_sum = special.gammaln(np.sum(alpha, axis=-1))
+        sum_gammaln = np.sum(special.gammaln(alpha), axis=-1)
+        z = gammaln_sum - sum_gammaln
+        return [alpha, z]
+
+    def compute_dims_from_values(self, alpha):
+        """ Compute the dimensions of phi and u. """
+        d = np.shape(alpha)[-1]
+        return [(d,), ()]
+
 class DirichletStatistics(Statistics):
     pass
 
 class Dirichlet(ExponentialFamily):
 
-    class ConjugatePrior(Node):
-
-        """ Conjugate prior for Dirichlet distribution. This isn't a
-        distribution but can be used to compute the correct fixed
-        moments, e.g., for Constant node."""
-        
-
-        # Number of trailing axes for variable dimensions in
-        # observations. The other axes correspond to plates.
-        ndim_observations = 1
-
-        _statistics_class = ConjugatePriorStatistics
-        
-        @staticmethod
-        def compute_fixed_moments(alpha):
-            """ Compute moments for fixed x. """
-            gammaln_sum = special.gammaln(np.sum(alpha, axis=-1))
-            sum_gammaln = np.sum(special.gammaln(alpha), axis=-1)
-            z = gammaln_sum - sum_gammaln
-            return [alpha, z]
-
-        @staticmethod
-        def compute_dims_from_values(alpha):
-            """ Compute the dimensions of phi and u. """
-            d = np.shape(alpha)[-1]
-            return [(d,), ()]
-
-
-    _statistics_class = DirichletStatistics
-    _parent_statistics_class = (ConjugatePriorStatistics,)
+    _statistics = DirichletStatistics()
+    _parent_statistics = (DirichletPriorStatistics(),)
     ndims = (1,)
+
+    def __init__(self, alpha, **kwargs):
+        super().__init__(alpha, **kwargs)
 
     @staticmethod
     def _compute_phi_from_parents(*u_parents):
@@ -104,24 +94,6 @@ class Dirichlet(ExponentialFamily):
         # Has the same dimensionality as the parent for its first
         # moment.
         return parents[0].dims[:1]
-
-    def __init__(self, alpha, plates=(), **kwargs):
-
-        # Check for constant alpha
-        if np.isscalar(alpha) or isinstance(alpha, np.ndarray):
-            alpha = Constant(self.ConjugatePrior)(alpha)
-            ## gammaln_sum = special.gammaln(np.sum(alpha, axis=-1))
-            ## sum_gammaln = np.sum(special.gammaln(alpha), axis=-1)
-            ## z = gammaln_sum - sum_gammaln
-            ## d = np.shape(alpha)[-1]
-            ## alpha = NodeConstant([alpha, z],
-            ##                      plates=np.shape(alpha)[:-1],
-            ##                      dims=((d,), ()))
-
-        # Construct
-        super().__init__(alpha,
-                         plates=plates,
-                         **kwargs)
 
     def random(self):
         raise NotImplementedError()

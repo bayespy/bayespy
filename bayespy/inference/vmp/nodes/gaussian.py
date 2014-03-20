@@ -28,21 +28,37 @@ from bayespy import utils
 from bayespy.utils.linalg import dot, mvdot
 
 from .expfamily import ExponentialFamily
-from .constant import Constant
-from .wishart import Wishart
-from .gamma import Gamma
+from .wishart import Wishart, WishartStatistics
+from .gamma import Gamma, GammaStatistics
 from .deterministic import Deterministic
 
 from .node import Statistics
 
 class GaussianStatistics(Statistics):
-    def mean(self):
-        return self.get()[0]
-    def covariance(self):
-        (x, xx) = self.get()
-        ndim = len(self.X.dims[0])
-        Cov = xx - utils.linalg.outer(x, x, ndim=ndim)
-        return Cov
+    def __init__(self, ndim):
+        self.ndim = ndim
+        self.ndim_observations = ndim
+
+    def compute_fixed_moments(self, x):
+        """ Compute Gaussian statistics for fixed x. """
+        x = utils.utils.atleast_nd(x, self.ndim)
+        return [x, utils.linalg.outer(x, x, ndim=self.ndim)]
+
+    def compute_dims_from_values(self, x):
+        x = utils.utils.atleast_nd(x, self.ndim)
+        if self.ndim == 0:
+            dims = ()
+        else:
+            dims = np.shape(x)[-self.ndim:]
+        return (dims, dims+dims)
+        
+    ## def mean(self):
+    ##     return self.get()[0]
+    ## def covariance(self):
+    ##     (x, xx) = self.get()
+    ##     ndim = len(self.X.dims[0])
+    ##     Cov = xx - utils.linalg.outer(x, x, ndim=ndim)
+    ##     return Cov
 
 class Gaussian(ExponentialFamily):
     r"""
@@ -165,9 +181,12 @@ class Gaussian(ExponentialFamily):
 
     """
 
-    _statistics_class = GaussianStatistics
-    _parent_statistics_class = (GaussianStatistics,
-                                Wishart._statistics_class)
+    ## _statistics_class = GaussianStatistics
+    ## _parent_statistics_class = (GaussianStatistics,
+    ##                             Wishart._statistics_class)
+    _statistics = GaussianStatistics(1)
+    _parent_statistics = (GaussianStatistics(1),
+                          WishartStatistics())
     
     ndims = (1, 2)
     ndims_parents = [(1, 2), (2, 0)]
@@ -177,30 +196,7 @@ class Gaussian(ExponentialFamily):
 
     
     def __init__(self, mu, Lambda, **kwargs):
-
-        self.parameter_distributions = (Gaussian, Wishart)
-        
-        # Check for constant mu
-        if utils.utils.is_numeric(mu):
-            mu = Constant(Gaussian)(np.atleast_1d(mu))
-
-        # Check for constant Lambda
-        if utils.utils.is_numeric(Lambda):
-            Lambda = Constant(Wishart)(np.atleast_2d(Lambda))
-
-        ## # You could check whether the dimensions of mu and Lambda
-        ## # match (and Lambda is square)
-        ## if Lambda.dims[0][-1] != mu.dims[0][-1]:
-        ##     raise Exception("Dimensionalities of mu and Lambda do not match.")
-
-        # Construct
-        super().__init__(mu, Lambda,
-                         **kwargs)
-
-    @staticmethod
-    def compute_fixed_moments(x):
-        """ Compute moments for fixed x. """
-        return [x, utils.utils.m_outer(x,x)]
+        super().__init__(mu, Lambda, **kwargs)
 
     @staticmethod
     def _compute_phi_from_parents(*u_parents):
@@ -274,23 +270,6 @@ class Gaussian(ExponentialFamily):
         if Lambda.dims != ( (D,D), () ):
             raise Exception("Second parent has wrong dimensionality")
         
-        return ( (D,), (D,D) )
-
-    @staticmethod
-    def compute_dims_from_values(x):
-        """
-        Compute the dimensions of phi and u from a value.
-
-        The last axis tells the dimensionality, the other axes are
-        plates.
-
-        Parameters
-        ----------
-        x : ndarray
-        """
-        if np.ndim(x) == 0:
-            raise ValueError("The value must be at least 1-D array.")
-        D = np.shape(x)[-1]
         return ( (D,), (D,D) )
 
     def get_shape_of_value(self):
@@ -696,7 +675,26 @@ def matrix_dot_vector(A, x, ndim=1):
 
     return vector_to_array(y, dims_x)
 
-            
+## Mixture(z, GaussianARD, mu, alpha, kwargs_par=dict(ndim=2))
+## in mixture:
+##     statistics = GaussianARD.statistics
+##     distribution = GaussianARD.get_distribution(**kwargs_par)
+## Constant(GaussianARD, x, ndim)
+## in constant:
+##     u = GaussianARD.compute_fixed_moments(x, ndim)
+## How about constant parent in Mixture?
+##     distribution = GaussianARD.get_distribution(mu, alpha, **kwargs_par)
+## class GaussianARD(ExponentialFamily):
+##     def __init__(self, mu, alpha, ndim=None, shape=None, **kwargs):
+##         try:
+##             shape_mu = mu.dims[0]
+##         except:
+##             blaablaa
+##         self._parent_statistics = (GaussianStatistics(len(shape_mu)),
+##                                    GammaStatistics())
+##         super().__init__(mu, alpha, **kwargs)
+##         self._statistics = GaussianStatistics(ndim)
+        
 def _GaussianArrayARD(shape, shape_mu=None):
 
     ndim = len(shape)
@@ -825,9 +823,12 @@ def _GaussianArrayARD(shape, shape_mu=None):
 
         """
 
-        _statistics_class = GaussianStatistics
-        _parent_statistics_class = (GaussianStatistics, 
-                                    Gamma._statistics_class)
+        ## _statistics_class = GaussianStatistics
+        ## _parent_statistics_class = (GaussianStatistics, 
+        ##                             Gamma._statistics_class)
+        _statistics = GaussianStatistics(ndim)
+        _parent_statistics = (GaussianStatistics(ndim_mu),
+                              GammaStatistics())
         
         # Number of axes for the mean and covariance
         ndims = (ndim, 2*ndim)
@@ -837,20 +838,7 @@ def _GaussianArrayARD(shape, shape_mu=None):
         ndim_observations = ndim
 
         def __init__(self, mu, alpha, **kwargs):
-
-            # Check for constant mu
-            if utils.utils.is_numeric(mu):
-                mu = Constant(_GaussianArrayARD(shape_mu))(mu)
-
-            # Check for constant Lambda
-            if utils.utils.is_numeric(alpha):
-                alpha = Constant(Gamma)(alpha)
-
-            self.parameter_distributions = (_GaussianArrayARD(shape_mu), Gamma)
-
-            # Construct
-            super().__init__(mu, alpha,
-                             **kwargs)
+            super().__init__(mu, alpha, **kwargs)
 
         def _plates_to_parent(self, index):
             if index == 1:
@@ -872,11 +860,6 @@ def _GaussianArrayARD(shape, shape_mu=None):
             self._set_moments_and_cgf(u, np.nan, mask=mask)
             return
             
-        @staticmethod
-        def compute_fixed_moments(x):
-            """ Compute moments for fixed x. """
-            return [x, utils.linalg.outer(x,x,ndim=ndim)]
-
         @staticmethod
         def _compute_phi_from_parents(u_mu, u_alpha):
             mu = u_mu[0]
@@ -1107,22 +1090,6 @@ def _GaussianArrayARD(shape, shape_mu=None):
             if alpha.dims != ( (), () ):
                 raise Exception("Second parent has wrong dimensionality")
 
-            return (shape, shape+shape)
-
-        @staticmethod
-        def compute_dims_from_values(x):
-            """
-            Compute the dimensions of phi and u from a value.
-
-            The last axis tells the dimensionality, the other axes are
-            plates.
-
-            Parameters
-            ----------
-            x : ndarray
-            """
-            if not utils.utils.is_shape_subset(shape, np.shape(x)):
-                raise ValueError("Value has wrong dimensionality")
             return (shape, shape+shape)
 
         def get_shape_of_value(self):

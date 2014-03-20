@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2013 Jaakko Luttinen
+# Copyright (C) 2013,2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -33,7 +33,7 @@ import scipy
 
 from numpy import testing
 
-from ..node import Node
+from ..node import Node, Statistics
 
 from ...vmp import VB
 
@@ -53,7 +53,7 @@ class TestNode(unittest.TestCase):
         # Set up the dummy model
         class Dummy(Node):
             def __init__(self, *args, **kwargs):
-                self._parent_statistics_class = len(args)*(Node._statistics_class,)
+                self._parent_statistics = len(args)*(Statistics(),)
                 super().__init__(*args, **kwargs)
             def _get_message_and_mask_to_parent(self, index):
                 return ([msg], mask)
@@ -397,7 +397,7 @@ class TestSlice(utils.TestCase):
         """
 
         class DummyNode(Node):
-            _parent_statistics_class = (Node._statistics_class,)
+            _parent_statistics = (Statistics(),)
             def __init__(self, u, **kwargs):
                 self.u = u
                 super().__init__(**kwargs)
@@ -559,7 +559,7 @@ class TestSlice(utils.TestCase):
         """
 
         class ChildNode(Node):
-            _parent_statistics_class = (Node._statistics_class,)
+            _parent_statistics = (Statistics(),)
             def __init__(self, X, m, mask, **kwargs):
                 super().__init__(X, **kwargs)
                 self.m = m

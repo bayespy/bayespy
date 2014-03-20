@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011,2012 Jaakko Luttinen
+# Copyright (C) 2011,2012,2014 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -25,11 +25,32 @@ import numpy as np
 
 from .expfamily import ExponentialFamily
 from .constant import Constant
-from .dirichlet import Dirichlet
+from .dirichlet import Dirichlet, DirichletStatistics
 from .node import Statistics
 
 class CategoricalStatistics(Statistics):
-    pass
+    ndim_observations = 0
+    
+    def __init__(self, categories):
+        self.D = categories
+        super().__init__()
+        
+    def compute_fixed_moments(self, x):
+        """ Compute u(x) and f(x) for given x. """
+
+        x = np.array(x, dtype=np.int)
+
+        u0 = np.zeros((np.size(x), self.D))
+        u0[[np.arange(np.size(x)), x]] = 1
+        u0 = np.reshape(u0, np.shape(x) + (self.D,))
+        return [u0]
+
+    def compute_dims_from_values(self, x):
+        raise NotImplementedError("compute_dims_from_values not implemented "
+                                  "for %s"
+                                  % (self.__class__.__name__))
+
+
 
 def Categorical(p, **kwargs):
 
@@ -44,8 +65,8 @@ def Categorical(p, **kwargs):
 
         ndims = (1,)
 
-        _statistics_class = CategoricalStatistics
-        _parent_statistics_class = (Dirichlet._statistics_class,)
+        _statistics = CategoricalStatistics(n_categories)
+        _parent_statistics = (DirichletStatistics(),)
 
         @staticmethod
         def _compute_phi_from_parents(*u_parents):
