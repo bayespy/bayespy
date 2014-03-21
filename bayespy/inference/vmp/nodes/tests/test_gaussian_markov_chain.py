@@ -58,7 +58,7 @@ class TestGaussianMarkovChain(unittest.TestCase):
         V = Gamma(D,
                   np.random.rand(D))
         X = GaussianMarkovChain(Mu, Lambda, A, V, n=N)
-        Y = Gaussian(X.as_gaussian(), np.identity(D))
+        Y = Gaussian(X, np.identity(D))
 
         return (Y, X, Mu, Lambda, A, V)
         
@@ -216,7 +216,7 @@ class TestGaussianMarkovChain(unittest.TestCase):
 
         # Construct VB model
         Xh = GaussianMarkovChain(np.zeros(D), np.identity(D), A, 1/v, n=N)
-        Yh = Gaussian(Xh.as_gaussian(), np.identity(D), plates=(N,))
+        Yh = Gaussian(Xh, np.identity(D), plates=(N,))
         # Put data 
         Yh.observe(Y)
         # Run inference

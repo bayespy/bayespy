@@ -52,7 +52,7 @@ class GaussianMarkovChainStatistics(Statistics):
         
     def converter(self, statistics_class):
         if statistics_class is GaussianStatistics:
-            raise NotImplementedError()
+            return _MarkovChainToGaussian
         return super().converter(statistics_class)
     
     ## def mean(self):
@@ -259,10 +259,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
 
     def show(self):
         raise NotImplementedError()
-
-    def as_gaussian(self):
-        return _MarkovChainToGaussian(self,
-                                      name=self.name+" as Gaussian")
 
     def rotate(self, R, inv=None, logdet=None):
 

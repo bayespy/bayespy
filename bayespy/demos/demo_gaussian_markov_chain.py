@@ -76,7 +76,7 @@ def run():
 
     # Construct VB model
     Xh = GaussianMarkovChain(np.zeros(D), np.identity(D), A, np.ones(D), n=N)
-    Yh = Gaussian(Xh.as_gaussian(), np.identity(D), plates=(N,))
+    Yh = Gaussian(Xh, np.identity(D), plates=(N,))
     Yh.observe(Y)
     Xh.update()
 

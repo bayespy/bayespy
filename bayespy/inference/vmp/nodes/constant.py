@@ -28,7 +28,7 @@ from .node import Node, Statistics
 
 class ConstantNumeric(Node):
 
-    _statistics_class = Statistics
+    _statistics = Statistics()
 
     def __init__(self, x, ndim, **kwargs):
         # Compute moments

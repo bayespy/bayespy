@@ -119,27 +119,6 @@ class Statistics():
                                   "for %s"
                                   % (self.__class__.__name__))
     
-    ## def __init__(self, X):
-    ##     self.X = X
-        
-    ## def get(self):
-    ##     return self.X._message_to_child()
-    
-    ## def _convert_node(self, statistics_class):
-    ##     if isinstance(self, statistics_class):
-    ##         return self.X
-    ##     else:
-    ##         raise Exception("No conversion defined from %s to %s"
-    ##                         % (self.X.statistics.__class__.__name__,
-    ##                            statistics_class.__name__))
-    ## def convert(self, statistics_class):
-    ##     try:
-    ##         # Just in case we were given a node class
-    ##         statistics_class = statistics_class._statistics_class
-    ##     except:
-    ##         pass
-    ##     return self._convert_node(statistics_class).statistics
-    
 class Node():
     """
     Base class for all nodes.
@@ -164,31 +143,12 @@ class Node():
        _plates_from_parent(self, index)
     """
 
-    # Child classes should consider overwriting these
-    #_statistics_class = Statistics # needed for: NodeObject.convert(NodeClass)
-    # Well, one can use NodeObject._convert(StatisticsClass)
-    # Conversions aren't meant for users, they are not in "public API".
-    
-    #_parent_statistics_class = None
     # These are objects of the _parent_statistics_class. If the default way of
     # creating them is not correct, write your own creation code.
-    _statistics = Statistics()
+    _statistics = None
     _parent_statistics = None
-
-    ## @staticmethod
-    ## def _get_parent_statistics(*parents, **kwargs):
-    ##     # This is default implementation
-    ##     return [_parent_statistics_class[ind]() for ind in range(len(parents))]
-        
     
     def __init__(self, *parents, dims=None, plates=None, name="", plotter=None):
-
-        ## # Default creation of _parent_statistics objects
-        ## if self._parent_statistics is None:
-        ##     self._parent_statistics = [self._parent_statistics_class[ind]()
-        ##                                for ind in range(len(parents))]
-        ## #self.statistics = self._statistics_class(self)
-        ## self._statistics = self._statistics_class()
 
         # Convert parents to proper nodes
         self.parents = []
@@ -199,16 +159,11 @@ class Node():
 
         if dims is None:
             dims = self.compute_dims(*self.parents)
-            ## raise Exception("You need to specify the dimensionality of the "
-            ##                 "distribution for class %s"
-            ##                 % str(self.__class__))
 
         self.dims = dims
         self.name = name
         self._plotter = plotter
 
-        # Parents
-        #self.parents = parents
         # Inform parent nodes
         for (index,parent) in enumerate(self.parents):
             if parent:

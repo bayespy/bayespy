@@ -52,6 +52,7 @@ class TestNode(unittest.TestCase):
 
         # Set up the dummy model
         class Dummy(Node):
+            _statistics = Statistics()
             def __init__(self, *args, **kwargs):
                 self._parent_statistics = len(args)*(Statistics(),)
                 super().__init__(*args, **kwargs)
@@ -237,107 +238,110 @@ class TestSlice(utils.TestCase):
         Test the constructor of the X[..] node operator.
         """
 
+        class MyNode(Node):
+            _statistics = Statistics()
+
         # Integer index
-        X = Node(plates=(3,4), dims=((),))
+        X = MyNode(plates=(3,4), dims=((),))
         Y = X[2,-4]
         self.assertEqual(Y.plates, ())
         
-        X = Node(plates=(3,4,5), dims=((),))
+        X = MyNode(plates=(3,4,5), dims=((),))
         Y = X[2,1]
         self.assertEqual(Y.plates, (5,))
 
         # Full slices
-        X = Node(plates=(3,4,5), dims=((),))
+        X = MyNode(plates=(3,4,5), dims=((),))
         Y = X[:,1,:]
         self.assertEqual(Y.plates, (3,5,))
 
-        X = Node(plates=(3,4,5), dims=((),))
+        X = MyNode(plates=(3,4,5), dims=((),))
         Y = X[1,:,:]
         self.assertEqual(Y.plates, (4,5,))
 
-        X = Node(plates=(3,4,5), dims=((),))
+        X = MyNode(plates=(3,4,5), dims=((),))
         Y = X[:,:,1]
         self.assertEqual(Y.plates, (3,4,))
 
         # Slice with step
-        X = Node(plates=(9,), dims=((),))
+        X = MyNode(plates=(9,), dims=((),))
         Y = X[::3]
         self.assertEqual(Y.plates, (3,))
 
-        X = Node(plates=(10,), dims=((),))
+        X = MyNode(plates=(10,), dims=((),))
         Y = X[::3]
         self.assertEqual(Y.plates, (4,))
 
-        X = Node(plates=(11,), dims=((),))
+        X = MyNode(plates=(11,), dims=((),))
         Y = X[::3]
         self.assertEqual(Y.plates, (4,))
 
         # Slice with a start value
-        X = Node(plates=(10,), dims=((),))
+        X = MyNode(plates=(10,), dims=((),))
         Y = X[3:]
         self.assertEqual(Y.plates, (7,))
 
         # Slice with an end value
-        X = Node(plates=(10,), dims=((),))
+        X = MyNode(plates=(10,), dims=((),))
         Y = X[:7]
         self.assertEqual(Y.plates, (7,))
 
         # Slice with only one element
-        X = Node(plates=(10,), dims=((),))
+        X = MyNode(plates=(10,), dims=((),))
         Y = X[6:7]
         self.assertEqual(Y.plates, (1,))
 
         # Slice starts out of range
-        X = Node(plates=(10,), dims=((),))
+        X = MyNode(plates=(10,), dims=((),))
         Y = X[-20:]
         self.assertEqual(Y.plates, (10,))
 
         # Slice ends out of range
-        X = Node(plates=(10,), dims=((),))
+        X = MyNode(plates=(10,), dims=((),))
         Y = X[:20]
         self.assertEqual(Y.plates, (10,))
 
         # Counter-intuitive: This slice is not empty
-        X = Node(plates=(3,), dims=((),))
+        X = MyNode(plates=(3,), dims=((),))
         Y = X[-4::4]
         self.assertEqual(Y.plates, (1,))
         
         # One ellipsis
-        X = Node(plates=(3,4,5,6), dims=((),))
+        X = MyNode(plates=(3,4,5,6), dims=((),))
         Y = X[...,2,1]
         self.assertEqual(Y.plates, (3,4))
 
-        X = Node(plates=(3,4,5,6), dims=((),))
+        X = MyNode(plates=(3,4,5,6), dims=((),))
         Y = X[2,...,1]
         self.assertEqual(Y.plates, (4,5))
 
-        X = Node(plates=(3,4,5,6), dims=((),))
+        X = MyNode(plates=(3,4,5,6), dims=((),))
         Y = X[2,1,...]
         self.assertEqual(Y.plates, (5,6))
 
         # Multiple ellipsis
-        X = Node(plates=(3,4,5), dims=((),))
+        X = MyNode(plates=(3,4,5), dims=((),))
         Y = X[...,2,...]
         self.assertEqual(Y.plates, (3,5))
 
-        X = Node(plates=(3,4,5), dims=((),))
+        X = MyNode(plates=(3,4,5), dims=((),))
         Y = X[...,2,...,...]
         self.assertEqual(Y.plates, (4,5))
 
-        X = Node(plates=(3,4,5), dims=((),))
+        X = MyNode(plates=(3,4,5), dims=((),))
         Y = X[...,...,...,...]
         self.assertEqual(Y.plates, (3,4,5))
 
         # New axis
-        X = Node(plates=(3,), dims=((),))
+        X = MyNode(plates=(3,), dims=((),))
         Y = X[None]
         self.assertEqual(Y.plates, (1,3))
         
-        X = Node(plates=(3,), dims=((),))
+        X = MyNode(plates=(3,), dims=((),))
         Y = X[:,None]
         self.assertEqual(Y.plates, (3,1))
         
-        X = Node(plates=(3,4), dims=((),))
+        X = MyNode(plates=(3,4), dims=((),))
         Y = X[None,:,None,:]
         self.assertEqual(Y.plates, (1,3,1,4))
 
@@ -351,41 +355,41 @@ class TestSlice(utils.TestCase):
 
         # Invalid argument
         self.assertRaises(TypeError,
-                          Node(plates=(3,),
+                          MyNode(plates=(3,),
                                dims=((),)).__getitem__,
                           Z()['a'])
         self.assertRaises(TypeError,
-                          Node(plates=(3,),
+                          MyNode(plates=(3,),
                                dims=((),)).__getitem__,
                           Z()[[2,1]])
 
         # Too many indices
         self.assertRaises(IndexError,
-                          Node(plates=(3,),
+                          MyNode(plates=(3,),
                                dims=((),)).__getitem__,
                           Z()[:,:])
         self.assertRaises(IndexError,
-                          Node(plates=(3,),
+                          MyNode(plates=(3,),
                                dims=((),)).__getitem__,
                           Z()[...,...,...])
 
         # Index out of range
         self.assertRaises(IndexError,
-                          Node(plates=(3,),
+                          MyNode(plates=(3,),
                                dims=((),)).__getitem__,
                           Z()[3])
         self.assertRaises(IndexError,
-                          Node(plates=(3,),
+                          MyNode(plates=(3,),
                                dims=((),)).__getitem__,
                           Z()[-4])
 
         # Empty slice
         self.assertRaises(IndexError,
-                          Node(plates=(3,),
+                          MyNode(plates=(3,),
                                dims=((),)).__getitem__,
                           Z()[3:])
         self.assertRaises(IndexError,
-                          Node(plates=(3,),
+                          MyNode(plates=(3,),
                                dims=((),)).__getitem__,
                           Z()[:-3])
         
@@ -397,6 +401,7 @@ class TestSlice(utils.TestCase):
         """
 
         class DummyNode(Node):
+            _statistics = Statistics()
             _parent_statistics = (Statistics(),)
             def __init__(self, u, **kwargs):
                 self.u = u
@@ -558,7 +563,11 @@ class TestSlice(utils.TestCase):
         Test message to parent of X[..] node operator.
         """
 
+        class ParentNode(Node):
+            _statistics = Statistics()
+            
         class ChildNode(Node):
+            _statistics = Statistics()
             _parent_statistics = (Statistics(),)
             def __init__(self, X, m, mask, **kwargs):
                 super().__init__(X, **kwargs)
@@ -570,8 +579,8 @@ class TestSlice(utils.TestCase):
                 return self.mask2
 
         # General broadcasting
-        V = Node(plates=(3,3,3),
-                 dims=((),))
+        V = ParentNode(plates=(3,3,3),
+                       dims=((),))
         X = V[...]
         m = [ np.random.randn(3,1) ]
         msg = [ np.zeros((1,3,1)) ]
@@ -582,7 +591,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Integer indices
-        V = Node(plates=(3,4),
+        V = ParentNode(plates=(3,4),
                  dims=((),))
         X = V[2,1]
         m = [np.random.randn()]
@@ -594,7 +603,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Integer indices with broadcasting
-        V = Node(plates=(3,3),
+        V = ParentNode(plates=(3,3),
                  dims=((),))
         X = V[2,2]
         m = [ np.random.randn(1) ]
@@ -606,7 +615,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Slice indices
-        V = Node(plates=(2,3,4,5),
+        V = ParentNode(plates=(2,3,4,5),
                  dims=((),))
         X = V[:,:2,1:,::2]
         m = [np.random.randn(2,2,3,3)]
@@ -618,7 +627,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Full slice with broadcasting
-        V = Node(plates=(2,3),
+        V = ParentNode(plates=(2,3),
                  dims=((),))
         X = V[:,:]
         m = [np.random.randn(1)]
@@ -630,7 +639,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Start slice with broadcasting
-        V = Node(plates=(3,3,3,3),
+        V = ParentNode(plates=(3,3,3,3),
                  dims=((),))
         X = V[0:,1:,-2:,-3:]
         m = [np.random.randn(1,1)]
@@ -642,7 +651,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # End slice with broadcasting
-        V = Node(plates=(3,3,3,3),
+        V = ParentNode(plates=(3,3,3,3),
                  dims=((),))
         X = V[:2,:3,:4,:-1]
         m = [np.random.randn(1,1)]
@@ -654,7 +663,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Step slice with broadcasting
-        V = Node(plates=(3,3,1),
+        V = ParentNode(plates=(3,3,1),
                  dims=((),))
         X = V[::1,::2,::2]
         m = [np.random.randn(1)]
@@ -666,7 +675,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Ellipsis
-        V = Node(plates=(3,3,3),
+        V = ParentNode(plates=(3,3,3),
                  dims=((),))
         X = V[...,0]
         m = [np.random.randn(3,3)]
@@ -678,7 +687,7 @@ class TestSlice(utils.TestCase):
                            msg)
         
         # New axes
-        V = Node(plates=(3,3),
+        V = ParentNode(plates=(3,3),
                  dims=((),))
         X = V[None,:,None,None,:]
         m = [np.random.randn(1,3,1,1,3)]
@@ -690,7 +699,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # New axes with broadcasting
-        V = Node(plates=(3,3),
+        V = ParentNode(plates=(3,3),
                  dims=((),))
         X = V[None,:,None,:,None]
         m = [np.random.randn(1,3,1)]
@@ -702,7 +711,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Multiple messages
-        V = Node(plates=(3,),
+        V = ParentNode(plates=(3,),
                  dims=((),()))
         X = V[:]
         m = [np.random.randn(3),
@@ -716,7 +725,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Non-scalar variables
-        V = Node(plates=(2,3),
+        V = ParentNode(plates=(2,3),
                  dims=((4,),))
         X = V[...]
         m = [np.random.randn(2,3,4)]
@@ -728,7 +737,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Missing values
-        V = Node(plates=(3,3,3),
+        V = ParentNode(plates=(3,3,3),
                  dims=((3,),))
         X = V[:,0,::2,None]
         m = [np.random.randn(3,2,1,3)]
@@ -744,7 +753,7 @@ class TestSlice(utils.TestCase):
                            msg)
 
         # Found bug: int index after slice
-        V = Node(plates=(3,3),
+        V = ParentNode(plates=(3,3),
                  dims=((),))
         X = V[:,0]
         m = [np.random.randn(3)]

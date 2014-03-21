@@ -770,7 +770,7 @@ class TestRotateGaussianMarkovChain(TestCase):
                                     rho,
                                     n=N+1,
                                     initialize=False)
-            Y = Gaussian(X.as_gaussian(),
+            Y = Gaussian(X,
                          V,
                          initialize=False)
 
@@ -852,7 +852,7 @@ class TestRotateGaussianMarkovChain(TestCase):
                                     rho,
                                     n=N+1,
                                     initialize=False)
-            Y = Gaussian(X.as_gaussian(),
+            Y = Gaussian(X,
                          V,
                          initialize=False)
 
@@ -1002,7 +1002,7 @@ class TestRotateDriftingMarkovChain(TestCase):
                                     rho,
                                     n=N+1,
                                     initialize=False)
-            Y = Gaussian(X.as_gaussian(),
+            Y = Gaussian(X,
                          V,
                          initialize=False)
 
@@ -1090,7 +1090,7 @@ class TestRotateDriftingMarkovChain(TestCase):
                                     rho,
                                     n=N+1,
                                     initialize=False)
-            Y = Gaussian(X.as_gaussian(),
+            Y = Gaussian(X,
                          V,
                          initialize=False)
 
