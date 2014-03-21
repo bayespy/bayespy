@@ -99,7 +99,7 @@ def run(M=1, N=1000, D=5, K=4, seed=42, maxiter=200,
                             debug=debug,
                             precompute=precompute,
                             drift_A=drift,
-                            update_drift=10,
+                            update_hyper=10,
                             start_rotating_drift=20)
 
     ## plt.figure()

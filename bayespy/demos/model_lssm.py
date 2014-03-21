@@ -35,6 +35,8 @@ from bayespy.nodes import GaussianArrayARD
 from bayespy.nodes import Gamma
 from bayespy.nodes import SumMultiply
 
+from bayespy.inference.vmp.nodes.gaussian import GaussianStatistics
+
 from bayespy.utils import utils
 from bayespy.utils import random
 
@@ -154,7 +156,8 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
         X = DriftingGaussianMarkovChain(np.zeros(D),         # mean of x0
                                         1e-3*np.identity(D), # prec of x0
                                         A,                   # dynamics matrices
-                                        S.as_gaussian()[1:], # temporal weights
+                                        S._convert(GaussianStatistics)[1:], # temporal weights
+        #S.as_gaussian()[1:], # temporal weights
                                         np.ones(D),          # innovation
                                         n=N,                 # time instances
                                         name='X',
@@ -188,7 +191,7 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
         # F : (M,N) x ()
         F = SumMultiply('d,d',
                         C,
-                        X.as_gaussian(),
+                        X,
                         name='F')
     else:
         # Mixing matrix from latent space to observation space using ARD
@@ -214,8 +217,8 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
         # F : (M,N) x ()
         F = SumMultiply('dk,d,k',
                         C,
-                        X.as_gaussian(),
-                        S.as_gaussian(),
+                        X,
+                        S,
                         name='F')
         
                   
@@ -248,7 +251,7 @@ def run_lssm(y, D,
              rotate=False, 
              debug=False, 
              precompute=False,
-             update_drift=0,
+             update_hyper=0,
              start_rotating=0,
              start_rotating_drift=0,
              plot_C=True,
@@ -284,7 +287,8 @@ def run_lssm(y, D,
         if drift_A:
             rotX = transformations.RotateDriftingMarkovChain(Q['X'], 
                                                              Q['A'], 
-                                                             Q['S'].as_gaussian()[...,1:,None], 
+                                                             Q['S']._convert(GaussianStatistics)[...,1:,None], 
+            #Q['S'].as_gaussian()[...,1:,None], 
                                                              rotA)
         else:
             rotX = transformations.RotateGaussianMarkovChain(Q['X'], 
@@ -335,7 +339,7 @@ def run_lssm(y, D,
     # Run inference using rotations
     for ind in range(maxiter):
 
-        if ind < update_drift:
+        if ind < update_hyper:
             # It might be a good idea to learn the lower level nodes a bit
             # before starting to learn the higher level nodes.
             Q.update('X', 'C', 'A', 'tau', plot=True)

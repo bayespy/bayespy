@@ -84,7 +84,7 @@ def linear_state_space_model(D=3, N=100, M=10):
     # Underlying noiseless function
     F = SumMultiply('i,i', 
                     C, 
-                    X.as_gaussian())
+                    X)
     
     # Noisy observations
     Y = GaussianArrayARD(F,

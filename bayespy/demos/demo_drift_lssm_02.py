@@ -326,7 +326,7 @@ def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
                             precompute=precompute,
                             drift_A=drift_A,
                             drift_C=drift_C,
-                            update_drift=20,
+                            update_hyper=20,
                             start_rotating_drift=40,
                             autosave=filename)
         
