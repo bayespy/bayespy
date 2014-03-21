@@ -27,6 +27,59 @@ from bayespy.utils import utils
 
 from .stochastic import Stochastic
 
+class Distribution():
+    """
+    Sub-classes implement distribution specific computations.
+    """
+
+    #
+    # The following methods are for ExponentialFamily distributions
+    #
+
+    def compute_message_to_parent(self, index, u_self, *u_parents):
+        raise NotImplementedError()
+
+    def compute_phi_from_parents(self, *u_parents, mask=True):
+        raise NotImplementedError()
+
+    def compute_moments_and_cgf(self, phi, mask=True):
+        raise NotImplementedError()
+
+    #
+    # The following methods are for Mixture class
+    #
+
+    def compute_cgf_from_parents(self, *u_parents):
+        raise NotImplementedError()
+        
+    def compute_fixed_moments_and_f(self, x, mask=True):
+        raise NotImplementedError()
+
+    def compute_dims(self):
+        raise NotImplementedError()
+
+
+def useconstructor(__init__):
+    def new_init(self, *args, **kwargs):
+        if (self._distribution is None or
+            self._statistics is None or 
+            self._parent_statistics is None):
+
+            (dist,
+             stats,
+             pstats) = self._construct_distribution_and_statistics(*args,
+                                                                   **kwargs)
+            if self._distribution is None:
+                self._distribution = dist
+            if self._statistics is None:
+                self._statistics = stats
+            if self._parent_statistics is None:
+                self._parent_statistics = pstats
+
+        __init__(self, *args, **kwargs)
+
+    return new_init
+
 class ExponentialFamily(Stochastic):
     """
     A base class for nodes using natural parameterization `phi`.
@@ -47,6 +100,10 @@ class ExponentialFamily(Stochastic):
     
     """
 
+    # Sub-classes should overwrite this
+    _distribution = None
+
+    @useconstructor
     def __init__(self, *args, initialize=True, **kwargs):
 
         # Terms for the lower bound (G for latent and F for observed)
@@ -61,6 +118,21 @@ class ExponentialFamily(Stochastic):
             axes = len(self.plates)*(1,)
             self.phi = [utils.nans(axes+dim) for dim in self.dims]
 
+
+    @classmethod
+    def _construct_distribution_and_statistics(cls, *args, **kwargs):
+        """
+        Constructs distribution and statistics objects.
+
+        The method is given the same inputs as __init__. For some nodes, some of
+        these can't be "static" class attributes, then the node class must
+        overwrite this method to construct the objects manually.
+
+        The point of distribution class is to move general distribution but
+        not-node specific code. The point of statistics class is to define the
+        messaging protocols.
+        """
+        return (cls._distribution, cls._statistics, cls._parent_statistics)
 
     def initialize_from_prior(self):
         if not np.all(self.observed):
