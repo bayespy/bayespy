@@ -32,9 +32,6 @@ class ExponentialFamilyDistribution(Distribution):
     Sub-classes implement distribution specific computations.
     """
 
-    # Sub-classes should overwrite this
-    ndims = None
-
     #
     # The following methods are for ExponentialFamily distributions
     #
