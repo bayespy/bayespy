@@ -27,6 +27,22 @@ from bayespy.utils import utils
 
 from .node import Node
 
+class Distribution():
+    """
+    Sub-classes implement distribution specific computations.
+    """
+
+    # Sub-classes should overwrite these
+    ndims = None
+    ndims_parents = None
+
+    def compute_message_to_parent(self, parent, index, u_self, *u_parents):
+        raise NotImplementedError()
+
+    def compute_mask_to_parent(self, index, mask):
+        # Sub-classes may need to overwrite this method
+        return mask
+
 class Stochastic(Node):
     """
     Base class for nodes that are stochastic.
@@ -53,6 +69,9 @@ class Stochastic(Node):
     
     """
 
+    # Sub-classes must over-write this
+    _distribution = None
+
     def __init__(self, *args, initialize=True, **kwargs):
 
         super().__init__(*args,
@@ -68,30 +87,25 @@ class Stochastic(Node):
         if initialize:
             self.initialize_from_prior()
 
-    # TODO: Write the initialization method.
+    def _compute_mask_to_parent(self, index, mask):
+        return self._distribution.compute_mask_to_parent(index, mask)
 
     def get_moments(self):
         # Just for safety, do not return a reference to the moment list of this
         # node but instead create a copy of the list. 
         return [ui for ui in self.u]
 
-    ## @staticmethod
-    ## def _compute_message_to_parent(index, u_self, *u_parents):
-    ##     # Sub-classes should implement this
-    ##     raise NotImplementedError()
-
     def _get_message_and_mask_to_parent(self, index):
         u_parents = self._message_from_parents(exclude=index)
-        m = self._compute_message_to_parent(self.parents[index], index, self.u, *u_parents)
-        mask = self._compute_mask_to_parent(index, self.mask)
+        m = self._distribution.compute_message_to_parent(self.parents[index], 
+                                                         index, 
+                                                         self.u, 
+                                                         *u_parents)
+        mask = self._distribution.compute_mask_to_parent(index, self.mask)
+        ## m = self._compute_message_to_parent(self.parents[index], index, self.u, *u_parents)
+        ## mask = self._compute_mask_to_parent(index, self.mask)
         return (m, mask)
 
-    ## def get_mask(self):
-    ##     return self.mask
-    
-    ## def _get_message_mask(self):
-    ##     return self.mask
-    
     def _set_mask(self, mask):
         self.mask = np.logical_or(mask, self.observed)
     
@@ -101,7 +115,7 @@ class Stochastic(Node):
         for ind in range(len(u)):
             # Add axes to the mask for the variable dimensions (mask
             # contains only axes for the plates).
-            u_mask = utils.add_trailing_axes(mask, self.ndims[ind])
+            u_mask = utils.add_trailing_axes(mask, self._distribution.ndims[ind])
 
             # Enlarge self.u[ind] as necessary so that it can store the
             # broadcasted result.
@@ -154,31 +168,7 @@ class Stochastic(Node):
         """
         Fix moments, compute f and propagate mask.
         """
-
-        # Compute fixed moments
-        (u, f) = self._compute_fixed_moments_and_f(np.asanyarray(x), mask=mask)
-
-        # Check the dimensionality of the observations
-        for (i,v) in enumerate(u):
-            # This is what the dimensionality "should" be
-            s = self.plates + self.dims[i]
-            t = np.shape(v)
-            if s != t:
-                msg = "Dimensionality of the observations incorrect."
-                msg += "\nShape of input: " + str(t)
-                msg += "\nExpected shape: " + str(s)
-                msg += "\nCheck plates."
-                raise Exception(msg)
-
-        # Set the moments
-        self._set_moments(u, mask=mask)
-        
-        # TODO/FIXME: Use the mask?
-        self.f = f
-
-        # Observed nodes should not be ignored
-        self.observed = mask
-        self._update_mask()
+        raise NotImplementedError()
 
     def unobserve(self):
         # Update mask
@@ -188,11 +178,6 @@ class Stochastic(Node):
     def lowerbound(self):
         # Sub-class should implement this
         raise NotImplementedError()
-
-    ## @staticmethod
-    ## def _compute_fixed_moments_and_f(x, mask=True):
-    ##     # Sub-classes should implement this
-    ##     raise NotImplementedError()
 
     def _update_distribution_and_lowerbound(self, m_children, *u_parents):
         # Sub-classes should implement this

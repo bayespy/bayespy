@@ -24,8 +24,7 @@
 import numpy as np
 import scipy.special as special
 
-#from .variable import Variable
-from .expfamily import ExponentialFamily
+from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
 from .node import Node, Statistics
 
@@ -50,26 +49,18 @@ class DirichletPriorStatistics(Statistics):
 class DirichletStatistics(Statistics):
     pass
 
-class Dirichlet(ExponentialFamily):
+class DirichletDistribution(ExponentialFamilyDistribution):
 
-    _statistics = DirichletStatistics()
-    _parent_statistics = (DirichletPriorStatistics(),)
     ndims = (1,)
+    ndims_parents = ( (1,), )
 
-    def __init__(self, alpha, **kwargs):
-        super().__init__(alpha, **kwargs)
+    def compute_message_to_parent(self, parent, index, u_self, *u_parents):
+        raise NotImplementedError()
 
-    @staticmethod
-    def _compute_phi_from_parents(*u_parents):
+    def compute_phi_from_parents(self, *u_parents, mask=True):
         return [u_parents[0][0]]
-        #return [u_parents[0][0].copy()]
 
-    @staticmethod
-    def _compute_cgf_from_parents(*u_parents):
-        return u_parents[0][1]
-
-    @staticmethod
-    def _compute_moments_and_cgf(phi, mask=True):
+    def compute_moments_and_cgf(self, phi, mask=True):
         sum_gammaln = np.sum(special.gammaln(phi[0]), axis=-1)
         gammaln_sum = special.gammaln(np.sum(phi[0], axis=-1))
         psi_sum = special.psi(np.sum(phi[0], axis=-1, keepdims=True))
@@ -81,6 +72,22 @@ class Dirichlet(ExponentialFamily):
         g = gammaln_sum - sum_gammaln
 
         return (u, g)
+
+    def compute_cgf_from_parents(self, *u_parents):
+        return u_parents[0][1]
+        
+    def compute_fixed_moments_and_f(self, x, mask=True):
+        raise NotImplementedError()
+
+
+class Dirichlet(ExponentialFamily):
+
+    _statistics = DirichletStatistics()
+    _parent_statistics = (DirichletPriorStatistics(),)
+    _distribution = DirichletDistribution()
+    
+    def __init__(self, alpha, **kwargs):
+        super().__init__(alpha, **kwargs)
 
     @staticmethod
     def compute_message(index, u, u_parents):

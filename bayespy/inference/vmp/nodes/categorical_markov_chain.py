@@ -66,6 +66,9 @@ class CategoricalMarkovChainStatistics(Statistics):
 
 class CategoricalMarkovChainDistribution():
 
+    ndims = (1, 3)
+    ndims_parents = None
+
     def __init__(self, categories, states):
         self.categories = categories
         self.states = states

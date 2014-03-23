@@ -26,8 +26,7 @@ import scipy.special as special
 
 from bayespy.utils import utils
 
-#from .variable import Variable
-from .expfamily import ExponentialFamily
+from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
 
 from .node import Statistics, Node
@@ -68,29 +67,33 @@ class WishartStatistics(Statistics):
         d = np.shape(x)[-1]
         return ( (d,d), () )
 
-
-class Wishart(ExponentialFamily):
-
+class WishartDistribution(ExponentialFamilyDistribution):
+    """
+    Sub-classes implement distribution specific computations.
+    """
 
     ndims = (2, 0)
     ndims_parents = [None, (2, 0)]
 
-    # Observations/values are 2-D matrices
-    ndim_observations = 2
+    def compute_message_to_parent(self, parent, index, u_self, *u_parents):
+        raise NotImplementedError()
 
-    _statistics = WishartStatistics()
-    def __init__(self, n, V, **kwargs):
+    def compute_phi_from_parents(self, *u_parents, mask=True):
+        return [-0.5 * u_parents[1][0],
+                0.5 * u_parents[0][0]]
 
-        V = self._ensure_statistics(V, WishartStatistics())
+    def compute_moments_and_cgf(self, phi, mask=True):
+        U = utils.m_chol(-phi[0])
+        k = np.shape(phi[0])[-1]
+        #k = self.dims[0][0]
+        logdet_phi0 = utils.m_chol_logdet(U)
+        u0 = phi[1][...,np.newaxis,np.newaxis] * utils.m_chol_inv(U)
+        u1 = -logdet_phi0 + utils.m_digamma(phi[1], k)
+        u = [u0, u1]
+        g = phi[1] * logdet_phi0 - special.multigammaln(phi[1], k)
+        return (u, g)
 
-        k = V.dims[0][-1]
-        self._parent_statistics = (WishartPriorStatistics(k), 
-                                   WishartStatistics())
-        
-        super().__init__(n, V, **kwargs)
-        
-    @staticmethod
-    def _compute_cgf_from_parents(*u_parents):
+    def compute_cgf_from_parents(self, *u_parents):
         n = u_parents[0][0]
         gammaln_n = u_parents[0][1]
         V = u_parents[1][0]
@@ -102,25 +105,7 @@ class Wishart(ExponentialFamily):
         g = 0.5*n*logdet_V - 0.5*k*n*np.log(2) - gammaln_n #special.multigammaln(n/2, k)
         return g
 
-    @staticmethod
-    def _compute_phi_from_parents(*u_parents):
-        return [-0.5 * u_parents[1][0],
-                0.5 * u_parents[0][0]]
-
-    @staticmethod
-    def _compute_moments_and_cgf(phi, mask=True):
-        U = utils.m_chol(-phi[0])
-        k = np.shape(phi[0])[-1]
-        #k = self.dims[0][0]
-        logdet_phi0 = utils.m_chol_logdet(U)
-        u0 = phi[1][...,np.newaxis,np.newaxis] * utils.m_chol_inv(U)
-        u1 = -logdet_phi0 + utils.m_digamma(phi[1], k)
-        u = [u0, u1]
-        g = phi[1] * logdet_phi0 - special.multigammaln(phi[1], k)
-        return (u, g)
-
-    @staticmethod
-    def compute_fixed_u_and_f(Lambda):
+    def compute_fixed_moments_and_f(self, Lambda, mask=True):
         """ Compute u(x) and f(x) for given x. """
         k = np.shape(Lambda)[-1]
         ldet = utils.m_chol_logdet(utils.m_chol(Lambda))
@@ -129,6 +114,26 @@ class Wishart(ExponentialFamily):
         f = -(k+1)/2 * ldet
         return (u, f)
 
+
+class Wishart(ExponentialFamily):
+
+
+    # Observations/values are 2-D matrices
+    ndim_observations = 2
+
+    _distribution = WishartDistribution()
+    _statistics = WishartStatistics()
+    
+    def __init__(self, n, V, **kwargs):
+
+        V = self._ensure_statistics(V, WishartStatistics())
+
+        k = V.dims[0][-1]
+        self._parent_statistics = (WishartPriorStatistics(k), 
+                                   WishartStatistics())
+        
+        super().__init__(n, V, **kwargs)
+        
     @staticmethod
     def message(index, u, u_parents):
         if index == 0:

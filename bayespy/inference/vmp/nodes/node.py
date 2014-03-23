@@ -270,8 +270,7 @@ class Node():
     ##     return mask
 
     # TODO: Rename to _compute_message_mask_to_parent(index, mask)
-    @staticmethod
-    def _compute_mask_to_parent(index, mask):
+    def _compute_mask_to_parent(self, index, mask):
         """
         Compute the mask used for messages sent to parent[index].
 
@@ -909,26 +908,14 @@ def AddPlateAxis(to_plate):
             plates = list(self.parents[index].plates)
             plates.insert(len(plates)-to_plate+1, 1)
             return tuple(plates)
-        #raise Exception("IMPLEMENT THIS")
 
-        @staticmethod
-        def _compute_mask_to_parent(index, mask):
-            # Ouch, how can you compute this in a static function?
-
-            # Maybe this does not have to be a static funtion?
-
-            # Maybe Mixture node requires this and _plates_to/from_parent to be
-            # static as well..
-
+        def _compute_mask_to_parent(self, index, mask):
             # Remove the added mask plate
-            #diff = len(self.plates) - np.ndim(mask)
-            #mask = utils.add_leading_axes(mask, diff)
             if abs(to_plate) <= np.ndim(mask):
                 sh_mask = list(np.shape(mask))
                 sh_mask.pop(to_plate)
                 mask = np.reshape(mask, sh_mask)
             return mask
-        #raise Exception("IMPLEMENT THIS")
 
 
         def _compute_message_and_mask_to_parent(self, index, m, *u_parents):

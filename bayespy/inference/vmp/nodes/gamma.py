@@ -26,7 +26,7 @@ import scipy.special as special
 
 from .node import Node
 from .deterministic import Deterministic
-from .expfamily import ExponentialFamily
+from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
 
 from bayespy.utils import utils
@@ -65,64 +65,58 @@ class GammaStatistics(Statistics):
         """ Compute the dimensions of phi and u. """
         return ( (), () )
 
-class Gamma(ExponentialFamily):
-
-    ndims = (0, 0)
-
-    # Observations/values are scalars (0-dimensional)
-    ndim_observations = 0
-
-    _statistics = GammaStatistics()
-    _parent_statistics = (GammaPriorStatistics(),
-                          GammaStatistics())
+class GammaDistribution(ExponentialFamilyDistribution):
     
-    def __init__(self, a, b, **kwargs):
-        super().__init__(a, b, **kwargs)
+    ndims = (0, 0)
+    ndims_parents = ( (0,0),
+                      (0,0) )
 
-    @staticmethod
-    def _compute_phi_from_parents(*u_parents):
+    def compute_message_to_parent(self, parent, index, u_self, *u_parents):
+        if index == 0:
+            raise Exception("No analytic solution exists")
+        elif index == 1:
+            return [-u[0],
+                    u_parents[0][0]]
+        else:
+            raise ValueError("Index out of bounds")
+
+    def compute_phi_from_parents(self, *u_parents, mask=True):
         return [-u_parents[1][0],
                 1*u_parents[0][0]]
 
-    @staticmethod
-    def _compute_cgf_from_parents(*u_parents):
-        a = u_parents[0][0]
-        gammaln_a = u_parents[0][1] #special.gammaln(a)
-        b = u_parents[1][0]
-        log_b = u_parents[1][1]
-        g = a * log_b - gammaln_a
-        return g
-
-    @staticmethod
-    def _compute_moments_and_cgf(phi, mask=True):
+    def compute_moments_and_cgf(self, phi, mask=True):
         log_b = np.log(-phi[0])
         u0 = phi[1] / (-phi[0])
         u1 = special.digamma(phi[1]) - log_b
         u = [u0, u1]
         g = phi[1] * log_b - special.gammaln(phi[1])
         return (u, g)
-        
 
-    @staticmethod
-    def _compute_fixed_moments_and_f(x, mask=True):
-        """ Compute u(x) and f(x) for given x. """
+    def compute_cgf_from_parents(self, *u_parents):
+        a = u_parents[0][0]
+        gammaln_a = u_parents[0][1] #special.gammaln(a)
+        b = u_parents[1][0]
+        log_b = u_parents[1][1]
+        g = a * log_b - gammaln_a
+        return g
+        
+    def compute_fixed_moments_and_f(self, x, mask=True):
         u = [x, np.log(x)]
         f = 0
         return (u, f)
 
-    @staticmethod
-    def _compute_message_to_parent(parent, index, u, *u_parents):
-        """ . """
-        if index == 0:
-            raise Exception("No analytic solution exists")
-        elif index == 1:
-            return [-u[0],
-                    u_parents[0][0]]
+class Gamma(ExponentialFamily):
 
-    @staticmethod
-    def compute_dims(*parents):
-        """ Compute the dimensions of phi/u. """
-        return ( (), () )
+    # Observations/values are scalars (0-dimensional)
+    ndim_observations = 0
+
+    _distribution = GammaDistribution()
+    _statistics = GammaStatistics()
+    _parent_statistics = (GammaPriorStatistics(),
+                          GammaStatistics())
+    
+    def __init__(self, a, b, **kwargs):
+        super().__init__(a, b, **kwargs)
 
     def get_shape_of_value(self):
         # Dimensionality of a realization
@@ -136,6 +130,9 @@ class Gamma(ExponentialFamily):
                                -1/self.phi[0],
                                size=self.plates)
     
+    def compute_dims(self, a, b):
+        return ( (), () )
+
     def show(self):
         a = self.phi[1]
         b = -self.phi[0]

@@ -35,7 +35,6 @@ from numpy import testing
 
 from ..dot import Dot, SumMultiply
 from ..gaussian import Gaussian, GaussianArrayARD
-from ..normal import Normal
 
 from ...vmp import VB
 
@@ -51,7 +50,7 @@ class TestSumMultiply(TestCase):
         """
         Test that the parent nodes are validated properly in SumMultiply
         """
-        V = Normal(1, 1)
+        V = GaussianArrayARD(1, 1)
         X = Gaussian(np.ones(1), np.identity(1))
         Y = Gaussian(np.ones(3), np.identity(3))
         Z = Gaussian(np.ones(5), np.identity(5))

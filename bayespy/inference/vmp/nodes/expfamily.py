@@ -25,18 +25,21 @@ import numpy as np
 
 from bayespy.utils import utils
 
-from .stochastic import Stochastic
+from .stochastic import Stochastic, Distribution
 
-class Distribution():
+class ExponentialFamilyDistribution(Distribution):
     """
     Sub-classes implement distribution specific computations.
     """
+
+    # Sub-classes should overwrite this
+    ndims = None
 
     #
     # The following methods are for ExponentialFamily distributions
     #
 
-    def compute_message_to_parent(self, index, u_self, *u_parents):
+    def compute_message_to_parent(self, parent, index, u_self, *u_parents):
         raise NotImplementedError()
 
     def compute_phi_from_parents(self, *u_parents, mask=True):
@@ -55,8 +58,22 @@ class Distribution():
     def compute_fixed_moments_and_f(self, x, mask=True):
         raise NotImplementedError()
 
-    def compute_dims(self):
-        raise NotImplementedError()
+    def compute_logpdf(self, u, phi, g, f):
+        """ Compute E[log p(X)] given E[u], E[phi], E[g] and
+        E[f]. Does not sum over plates."""
+
+        # TODO/FIXME: Should I take into account what is latent or
+        # observed, or what is even totally ignored (by the mask).
+        L = g + f
+        for (phi_i, u_i, ndims_i) in zip(phi, u, self.ndims):
+        #for (phi_i, u_i, len_dims_i) in zip(phi, u, len_dims):
+            # Axes to sum (dimensions of the variable, not the plates)
+            axis_sum = tuple(range(-ndims_i,0))
+            #axis_sum = tuple(range(-len_dims_i,0))
+            # Compute the term
+            # TODO/FIXME: Use einsum!
+            L = L + np.sum(phi_i * u_i, axis=axis_sum)
+        return L
 
 
 def useconstructor(__init__):
@@ -124,6 +141,9 @@ class ExponentialFamily(Stochastic):
         """
         Constructs distribution and statistics objects.
 
+        If __init__ uses useconstructor decorator, this method is called to
+        construct distribution and statistics objects.
+
         The method is given the same inputs as __init__. For some nodes, some of
         these can't be "static" class attributes, then the node class must
         overwrite this method to construct the objects manually.
@@ -146,7 +166,8 @@ class ExponentialFamily(Stochastic):
 
             # Update moments
             mask = np.logical_not(self.observed)
-            (u, g) = self._compute_moments_and_cgf(self.phi, mask=mask)
+            (u, g) = self._distribution.compute_moments_and_cgf(self.phi,
+                                                                mask=mask)
             # TODO/FIXME/BUG: You should use observation mask in order to not
             # overwrite them!
             self._set_moments_and_cgf(u, g, mask=mask)
@@ -166,7 +187,7 @@ class ExponentialFamily(Stochastic):
         # Update moments
         # TODO/FIXME: Use the mask of observations!
         mask = np.logical_not(self.observed)
-        (u, g) = self._compute_moments_and_cgf(self.phi, mask=mask)
+        (u, g) = self._distribution.compute_moments_and_cgf(self.phi, mask=mask)
         self._set_moments_and_cgf(u, g, mask=mask)
 
     def initialize_from_value(self, x):
@@ -178,7 +199,7 @@ class ExponentialFamily(Stochastic):
                               np.shape(x),
                               self.plates + self.get_shape_of_value()))
         mask = np.logical_not(self.observed)
-        (u, f) = self._compute_fixed_moments_and_f(x, mask=mask)
+        (u, f) = self._distribution.compute_fixed_moments_and_f(x, mask=mask)
         self._set_moments_and_cgf(u, np.inf, mask=mask)
 
     def initialize_from_random(self):
@@ -193,18 +214,19 @@ class ExponentialFamily(Stochastic):
         # No, because some initialization methods may want to use this.
 
         # This makes correct broadcasting
-        self.phi = self._compute_phi_from_parents(*u_parents)
+        self.phi = self._distribution.compute_phi_from_parents(*u_parents)
+        #self.phi = self._compute_phi_from_parents(*u_parents)
         self.phi = list(self.phi)
         # Make sure phi has the correct number of axes. It makes life
         # a bit easier elsewhere.
         for i in range(len(self.phi)):
-            axes = len(self.plates) + self.ndims[i] - np.ndim(self.phi[i])
+            axes = len(self.plates) + self._distribution.ndims[i] - np.ndim(self.phi[i])
             if axes > 0:
                 # Add axes
                 self.phi[i] = utils.add_leading_axes(self.phi[i], axes)
             elif axes < 0:
                 # Remove extra leading axes
-                first = -(len(self.plates)+self.ndims[i])
+                first = -(len(self.plates)+self._distribution.ndims[i])
                 sh = np.shape(self.phi[i])[first:]
                 self.phi[i] = np.reshape(self.phi[i], sh)
             # Check that the shape is correct
@@ -236,19 +258,51 @@ class ExponentialFamily(Stochastic):
         update_mask = np.logical_not(self.observed)
 
         # Compute the moments (u) and CGF (g)...
-        (u, g) = self._compute_moments_and_cgf(self.phi, mask=update_mask)
+        (u, g) = self._distribution.compute_moments_and_cgf(self.phi,
+                                                            mask=update_mask)
         # ... and store them
         self._set_moments_and_cgf(u, g, mask=update_mask)
             
+    def observe(self, x, mask=True):
+        """
+        Fix moments, compute f and propagate mask.
+        """
+
+        # Compute fixed moments
+        (u, f) = self._distribution.compute_fixed_moments_and_f(np.asanyarray(x),
+                                                                mask=mask)
+
+        # Check the dimensionality of the observations
+        for (i,v) in enumerate(u):
+            # This is what the dimensionality "should" be
+            s = self.plates + self.dims[i]
+            t = np.shape(v)
+            if s != t:
+                msg = "Dimensionality of the observations incorrect."
+                msg += "\nShape of input: " + str(t)
+                msg += "\nExpected shape: " + str(s)
+                msg += "\nCheck plates."
+                raise Exception(msg)
+
+        # Set the moments
+        self._set_moments(u, mask=mask)
+        
+        # TODO/FIXME: Use the mask?
+        self.f = f
+
+        # Observed nodes should not be ignored
+        self.observed = mask
+        self._update_mask()
+
     def lower_bound_contribution(self, gradient=False):
         # Compute E[ log p(X|parents) - log q(X) ] over q(X)q(parents)
         
         # Messages from parents
         #u_parents = [parent.message_to_child() for parent in self.parents]
         u_parents = self._message_from_parents()
-        phi = self._compute_phi_from_parents(*u_parents)
+        phi = self._distribution.compute_phi_from_parents(*u_parents)
         # G from parents
-        L = self._compute_cgf_from_parents(*u_parents)
+        L = self._distribution.compute_cgf_from_parents(*u_parents)
         # L = g
         # G for unobserved variables (ignored variables are handled
         # properly automatically)
@@ -285,7 +339,7 @@ class ExponentialFamily(Stochastic):
         """
         if mask is not True:
             raise NotImplementedError('Mask not yet implemented')
-        (u, f) = self._compute_fixed_moments_and_f(X, mask=mask)
+        (u, f) = self._distribution.compute_fixed_moments_and_f(X, mask=mask)
         Z = 0
         for (phi_d, u_d, dims) in zip(self.phi, u, self.dims):
             axis_sum = tuple(range(-len(dims),0))
@@ -305,24 +359,6 @@ class ExponentialFamily(Stochastic):
         """
         return np.exp(self.logpdf(X, mask=mask))
         
-
-    @classmethod
-    def _compute_logpdf(cls, u, phi, g, f):
-        """ Compute E[log p(X)] given E[u], E[phi], E[g] and
-        E[f]. Does not sum over plates."""
-
-        # TODO/FIXME: Should I take into account what is latent or
-        # observed, or what is even totally ignored (by the mask).
-        L = g + f
-        for (phi_i, u_i, ndims_i) in zip(phi, u, cls.ndims):
-        #for (phi_i, u_i, len_dims_i) in zip(phi, u, len_dims):
-            # Axes to sum (dimensions of the variable, not the plates)
-            axis_sum = tuple(range(-ndims_i,0))
-            #axis_sum = tuple(range(-len_dims_i,0))
-            # Compute the term
-            # TODO/FIXME: Use einsum!
-            L = L + np.sum(phi_i * u_i, axis=axis_sum)
-        return L
 
     def save(self, group):
         """
