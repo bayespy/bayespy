@@ -28,6 +28,7 @@ General functions random sampling and distributions.
 import numpy as np
 
 from . import linalg
+from . import utils
 
 def intervals(N, length, amount=1, gap=0):
     """
@@ -229,7 +230,49 @@ def svd(s):
 def sphere(N=1):
     """
     Draw random points uniformly on a unit sphere.
+
+    Returns (latitude,longitude) in degrees.
     """
     lon = np.random.uniform(-180, 180, N)
     lat = (np.arccos(np.random.uniform(-1, 1, N)) * 180 / np.pi) - 90
     return (lat, lon)
+
+def categorical(p, size=None):
+    """
+    Draw random samples from a categorical distribution.
+    """
+    if size is None:
+        size = np.shape(p)[:-1]
+
+    if np.any(np.asanyarray(p)<0):
+        raise ValueError("Array contains negative probabilities")
+
+    if not utils.is_shape_subset(np.shape(p)[:-1], size):
+        raise ValueError("Probability array shape and requested size are "
+                         "inconsistent")
+
+    size = tuple(size)
+
+    # Normalize probabilities
+    p = p / np.sum(p, axis=-1, keepdims=True)
+
+    # Compute cumulative probabilities (p_1, p_1+p_2, ..., p_1+...+p_N):
+    P = np.cumsum(p, axis=-1)
+
+    # Draw samples from interval [0,1]
+    x = np.random.rand(*size)
+
+    # For simplicity, repeat p to the size of the output (plus probability axis)
+    K = np.shape(p)[-1]
+    P = P * np.ones(tuple(size)+(K,))
+
+    if size == ():
+        z = np.searchsorted(P, x)
+    else:
+        # Seach the indices
+        z = np.zeros(size)
+        inds = utils.nested_iterator(size)
+        for ind in inds:
+            z[ind] = np.searchsorted(P[ind], x[ind])
+
+    return z
