@@ -36,7 +36,6 @@ from numpy import testing
 from .. import gaussian
 from ..gaussian import Gaussian, GaussianArrayARD
 from ..gamma import Gamma
-#from ..normal import Normal
 
 from ...vmp import VB
 

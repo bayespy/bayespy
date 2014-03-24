@@ -134,7 +134,6 @@ class Gaussian(ExponentialFamily):
 
     See also
     --------
-    Normal
     Wishart
     
     Notes
@@ -641,7 +640,6 @@ class GaussianArrayARD(ExponentialFamily):
 
     See also
     --------
-    Normal
     Wishart
 
     Notes
@@ -999,64 +997,6 @@ class GaussianArrayARD(ExponentialFamily):
         self._update_moments_and_cgf()
 
         return
-
-## def GaussianArrayARD(mu, alpha, ndim=None, shape=None, **kwargs):
-##     """
-##     A wrapper for constructing a Gaussian array node.
-
-##     This method tries to 'intelligently' deduce the shape of the node.
-##     """
-    
-##     # Check consistency
-##     if ndim is not None and shape is not None and ndim != len(shape):
-##         raise ValueError("Given shape and ndim inconsistent")
-##     if ndim is None and shape is not None:
-##         ndim = len(shape)
-
-##     # Infer shape of mu
-##     try:
-##         shape_mu = mu.dims[0]
-##     except:
-##         if ndim is None and shape is None:
-##             shape_mu = np.shape(mu)
-##         elif ndim == 0:
-##             shape_mu = ()
-##         elif ndim is not None and ndim > 0:
-##             shape_mu = np.shape(mu)[-ndim:]
-##         else:
-##             raise ValueError("Can't infer the shape of the parent mu")
-##     ndim_mu = len(shape_mu)
-
-##     # Infer shape of alpha
-##     try:
-##         shape_alpha = alpha.plates
-##     except:
-##         shape_alpha = np.shape(alpha)
-##     if ndim == 0:
-##         shape_alpha = ()
-##     elif ndim is not None and ndim > 0:
-##         shape_alpha = shape_alpha[-ndim:]
-##     elif ndim is not None:
-##         raise ValueError("Can't infer the shape of the parent alpha")
-##     ndim_alpha = len(shape_alpha)
-        
-##     # Infer dimensionality
-##     if ndim is None:
-##         ndim = max(ndim_mu, ndim_alpha)
-##     elif ndim < ndim_mu or ndim < ndim_alpha:
-##         raise ValueError("Parent mu has more axes")
-
-##     # Infer shape of the node
-##     shape_bc = utils.utils.broadcasted_shape(shape_mu, shape_alpha)
-##     if shape is None:
-##         shape = (ndim-len(shape_bc))*(1,) + shape_bc
-##     elif not utils.utils.is_shape_subset(shape_bc, shape):
-##         raise ValueError("Broadcasted shape of the parents %s does not "
-##                          "broadcast to the given shape %s" 
-##                          % (shape_bc, shape))
-
-##     # Construct the Gaussian array variable
-##     return _GaussianArrayARD(shape, shape_mu=shape_mu)(mu, alpha, **kwargs)
 
 
 def reshape_gaussian_array(dims_from, dims_to, x0, x1):

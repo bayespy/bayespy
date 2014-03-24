@@ -32,7 +32,6 @@ import matplotlib.pyplot as plt
 from bayespy.nodes import GaussianMarkovChain
 from bayespy.nodes import Gaussian, GaussianArrayARD
 from bayespy.nodes import Gamma
-from bayespy.nodes import Normal
 from bayespy.nodes import SumMultiply
 from bayespy.inference.vmp.nodes.gamma import diagonal
 
