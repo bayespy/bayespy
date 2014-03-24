@@ -353,7 +353,7 @@ def sum_to_plates(V, plates_to, plates_from=None, ndim=0):
             r = 1
         return r * utils.utils.sum_to_shape(V, shape_to)
 
-class RotateGaussianArrayARD():
+class RotateGaussianARD():
     """
     Class for computing the cost of rotating a Gaussian array with ARD prior.
 
@@ -362,7 +362,7 @@ class RotateGaussianArrayARD():
     alpha ~ N(a, b)
     X ~ N(mu, alpha)
 
-    X can be an array (e.g., GaussianArrayARD).
+    X can be an array (e.g., GaussianARD).
 
     Transform q(X) and q(alpha) by rotating X.
 

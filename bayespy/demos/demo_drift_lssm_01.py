@@ -38,7 +38,6 @@ import matplotlib.pyplot as plt
 
 from bayespy.nodes import GaussianMarkovChain
 from bayespy.nodes import DriftingGaussianMarkovChain
-from bayespy.nodes import GaussianArrayARD
 from bayespy.nodes import Gamma
 from bayespy.nodes import SumMultiply
 

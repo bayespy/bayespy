@@ -27,7 +27,7 @@ Unit tests for `transformations` module.
 
 import numpy as np
 
-from bayespy.inference.vmp.nodes.gaussian import GaussianArrayARD
+from bayespy.inference.vmp.nodes.gaussian import GaussianARD
 from bayespy.inference.vmp.nodes.gaussian import Gaussian
 from bayespy.inference.vmp.nodes.gamma import Gamma
 from bayespy.inference.vmp.nodes.wishart import Wishart
@@ -39,13 +39,13 @@ from bayespy.utils import linalg
 from bayespy.utils import random
 from bayespy.utils import optimize
 
-from ..transformations import RotateGaussianArrayARD
+from ..transformations import RotateGaussianARD
 from ..transformations import RotateGaussianMarkovChain
 from ..transformations import RotateDriftingMarkovChain
 
 from bayespy.utils.utils import TestCase
 
-class TestRotateGaussianArrayARD(TestCase):
+class TestRotateGaussianARD(TestCase):
 
     def test_cost_function(self):
         """
@@ -75,25 +75,25 @@ class TestRotateGaussianArrayARD(TestCase):
                     alpha.initialize_from_random()
                 else:
                     alpha = 2
-                X = GaussianArrayARD(mu, alpha,
-                                     shape=shape,
-                                     plates=plates)
+                X = GaussianARD(mu, alpha,
+                                shape=shape,
+                                plates=plates)
 
                 # Some initial learning and rotator constructing
                 X.initialize_from_random()
-                Y = GaussianArrayARD(X, 1)
+                Y = GaussianARD(X, 1)
                 Y.observe(np.random.randn(*(Y.get_shape(0))))
                 X.update()
                 if alpha_plates is not None:
                     alpha.update()
                     true_cost0_alpha = alpha.lower_bound_contribution()
-                    rotX = RotateGaussianArrayARD(X, alpha, 
-                                                  axis=axis,
-                                                  precompute=precompute)
+                    rotX = RotateGaussianARD(X, alpha, 
+                                             axis=axis,
+                                             precompute=precompute)
                 else:
-                    rotX = RotateGaussianArrayARD(X, 
-                                                  axis=axis,
-                                                  precompute=precompute)
+                    rotX = RotateGaussianARD(X, 
+                                             axis=axis,
+                                             precompute=precompute)
                 true_cost0_X = X.lower_bound_contribution()
 
                 # Rotation matrices
@@ -177,17 +177,17 @@ class TestRotateGaussianArrayARD(TestCase):
 
         # Test mu array broadcasting
         test( (2,3,4), (5,6,7), axis=-2,
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,1),
-                                  plates=(6,1)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,1),
+                             plates=(6,1)))
         test( (2,3,4), (5,6,7), axis=-3,
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,1),
-                                  plates=(6,1)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,1),
+                             plates=(6,1)))
         test( (2,3,4), (5,6,7), axis=-2, alpha_plates=(5,1,7,2,1,1),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,1),
-                                  plates=(6,1)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,1),
+                             plates=(6,1)))
 
         # Plate rotation
         test( (3,), (5,), axis=-1, plate_axis=-1)
@@ -201,17 +201,17 @@ class TestRotateGaussianArrayARD(TestCase):
 
         # Plate rotation with mu
         test( (2,3,4), (5,6,7), axis=-2, plate_axis=-2,
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,1),
-                                  plates=(6,1)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,1),
+                             plates=(6,1)))
         test( (2,3,4), (5,6,7), axis=-3, plate_axis=-2,
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,1),
-                                  plates=(6,1)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,1),
+                             plates=(6,1)))
         test( (2,3,4), (5,6,7), axis=-2, alpha_plates=(5,1,7,2,1,1), plate_axis=-2,
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,1),
-                                  plates=(6,1)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,1),
+                             plates=(6,1)))
 
         #
         # Plate rotation with mu and alpha
@@ -220,86 +220,86 @@ class TestRotateGaussianArrayARD(TestCase):
         # Basic, matching sizes
         test( (3,), (4,), axis=-1, plate_axis=-1,
               alpha_plates=(4,3),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,),
-                                  plates=(4,)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,),
+                             plates=(4,)))
         # Broadcast for mu
         test( (3,), (4,), axis=-1, plate_axis=-1,
               alpha_plates=(4,3),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(1,),
-                                  plates=(4,)))
+              mu=GaussianARD(3, 1,
+                             shape=(1,),
+                             plates=(4,)))
         test( (3,), (4,), axis=-1, plate_axis=-1,
               alpha_plates=(4,3),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(),
-                                  plates=(1,)))
+              mu=GaussianARD(3, 1,
+                             shape=(),
+                             plates=(1,)))
         test( (3,), (4,), axis=-1, plate_axis=-1,
               alpha_plates=(4,3),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,),
-                                  plates=(1,)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,),
+                             plates=(1,)))
         # Broadcast for alpha
         test( (3,), (4,), axis=-1, plate_axis=-1,
               alpha_plates=(4,1),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,),
-                                  plates=(4,)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,),
+                             plates=(4,)))
         test( (3,), (4,), axis=-1, plate_axis=-1,
               alpha_plates=(3,),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,),
-                                  plates=(4,)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,),
+                             plates=(4,)))
         # Several variable dimensions
         test( (3,4,5), (2,), axis=-2, plate_axis=-1,
               alpha_plates=(2,3,4,5),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(3,4,5),
-                                  plates=(2,)))
+              mu=GaussianARD(3, 1,
+                             shape=(3,4,5),
+                             plates=(2,)))
         test( (3,4,5), (2,), axis=-2, plate_axis=-1,
               alpha_plates=(2,3,1,5),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(4,1),
-                                  plates=(2,)))
+              mu=GaussianARD(3, 1,
+                             shape=(4,1),
+                             plates=(2,)))
         # Several plate dimensions
         test( (5,), (2,3,4), axis=-1, plate_axis=-2,
               alpha_plates=(2,3,4,5),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(5,),
-                                  plates=(2,3,4)))
+              mu=GaussianARD(3, 1,
+                             shape=(5,),
+                             plates=(2,3,4)))
         # Several plate dimensions, rotated plate broadcasted in alpha
         test( (5,), (2,3,4), axis=-1, plate_axis=-2,
               alpha_plates=(2,1,4,5),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(5,),
-                                  plates=(2,3,4)))
+              mu=GaussianARD(3, 1,
+                             shape=(5,),
+                             plates=(2,3,4)))
         test( (5,), (2,3,4), axis=-1, plate_axis=-2,
               alpha_plates=(4,5),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(5,),
-                                  plates=(2,3,4)))
+              mu=GaussianARD(3, 1,
+                             shape=(5,),
+                             plates=(2,3,4)))
         # Several plate dimensions, rotated plate broadcasted in mu
         test( (5,), (2,3,4), axis=-1, plate_axis=-2,
               alpha_plates=(2,3,4,5),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(5,),
-                                  plates=(2,1,4)))
+              mu=GaussianARD(3, 1,
+                             shape=(5,),
+                             plates=(2,1,4)))
         test( (5,), (2,3,4), axis=-1, plate_axis=-2,
               alpha_plates=(2,3,4,5),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(5,),
-                                  plates=(4,)))
+              mu=GaussianARD(3, 1,
+                             shape=(5,),
+                             plates=(4,)))
         # Several plate dimensions, rotated plate broadcasted in mu and alpha
         test( (5,), (2,3,4), axis=-1, plate_axis=-2,
               alpha_plates=(2,1,4,5),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(5,),
-                                  plates=(2,1,4)))
+              mu=GaussianARD(3, 1,
+                             shape=(5,),
+                             plates=(2,1,4)))
         test( (5,), (2,3,4), axis=-1, plate_axis=-2,
               alpha_plates=(4,5),
-              mu=GaussianArrayARD(3, 1,
-                                  shape=(5,),
-                                  plates=(4,)))
+              mu=GaussianARD(3, 1,
+                             shape=(5,),
+                             plates=(4,)))
 
         # TODO: Missing values
         
@@ -333,24 +333,24 @@ class TestRotateGaussianArrayARD(TestCase):
                     alpha.initialize_from_random()
                 else:
                     alpha = 2
-                X = GaussianArrayARD(mu, alpha,
-                                     shape=shape,
-                                     plates=plates)
+                X = GaussianARD(mu, alpha,
+                                shape=shape,
+                                plates=plates)
 
                 # Some initial learning and rotator constructing
                 X.initialize_from_random()
-                Y = GaussianArrayARD(X, 1)
+                Y = GaussianARD(X, 1)
                 Y.observe(np.random.randn(*(Y.get_shape(0))))
                 X.update()
                 if alpha_plates is not None:
                     alpha.update()
-                    rotX = RotateGaussianArrayARD(X, alpha, 
-                                                  axis=axis,
-                                                  precompute=precompute)
+                    rotX = RotateGaussianARD(X, alpha, 
+                                             axis=axis,
+                                             precompute=precompute)
                 else:
-                    rotX = RotateGaussianArrayARD(X, 
-                                                  axis=axis,
-                                                  precompute=precompute)
+                    rotX = RotateGaussianARD(X, 
+                                             axis=axis,
+                                             precompute=precompute)
                 try:
                     mu.update()
                 except:
@@ -416,49 +416,49 @@ class TestRotateGaussianArrayARD(TestCase):
 
         # Simple
         test((1,), (), axis=-1,
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(1,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(1,),
+                            plates=()))
         test((3,), (), axis=-1,
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=()))
         # Broadcast mu over rotated dim
         test((3,), (), axis=-1,
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(1,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(1,),
+                            plates=()))
         test((3,), (), axis=-1,
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(),
+                            plates=()))
         # Broadcast mu over dim when multiple dims
         test((2,3), (), axis=-1,
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(1,3),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(1,3),
+                            plates=()))
         test((2,3), (), axis=-1,
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=()))
         # Broadcast mu over rotated dim when multiple dims
         test((2,3), (), axis=-2,
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(1,3),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(1,3),
+                            plates=()))
         test((2,3), (), axis=-2,
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=()))
         # Broadcast mu over plates
         test((3,), (4,5), axis=-1,
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=(4,1)))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=(4,1)))
         test((3,), (4,5), axis=-1,
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=(5,)))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=(5,)))
 
         #
         # Rotation with alpha
@@ -497,91 +497,91 @@ class TestRotateGaussianArrayARD(TestCase):
         # Simple
         test((1,), (), axis=-1,
              alpha_plates=(1,),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(1,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(1,),
+                            plates=()))
         test((3,), (), axis=-1,
              alpha_plates=(3,),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=()))
         # Broadcast mu over rotated dim
         test((3,), (), axis=-1,
              alpha_plates=(3,),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(1,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(1,),
+                            plates=()))
         test((3,), (), axis=-1,
              alpha_plates=(3,),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(),
+                            plates=()))
         # Broadcast alpha over rotated dim
         test((3,), (), axis=-1,
              alpha_plates=(1,),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=()))
         test((3,), (), axis=-1,
              alpha_plates=(),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=()))
         # Broadcast both mu and alpha over rotated dim
         test((3,), (), axis=-1,
              alpha_plates=(1,),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(1,),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(1,),
+                            plates=()))
         test((3,), (), axis=-1,
              alpha_plates=(),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(),
-                                 plates=()))
+             mu=GaussianARD(2, 4,
+                            shape=(),
+                            plates=()))
         # Broadcast mu over plates
         test((3,), (4,5), axis=-1,
              alpha_plates=(4,5,3),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=(4,1)))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=(4,1)))
         test((3,), (4,5), axis=-1,
              alpha_plates=(4,5,3),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=(5,)))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=(5,)))
         # Broadcast alpha over plates
         test((3,), (4,5), axis=-1,
              alpha_plates=(4,1,3),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=(4,5)))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=(4,5)))
         test((3,), (4,5), axis=-1,
              alpha_plates=(5,3),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=(4,5)))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=(4,5)))
         # Broadcast both mu and alpha over plates
         test((3,), (4,5), axis=-1,
              alpha_plates=(4,1,3),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=(4,1)))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=(4,1)))
         test((3,), (4,5), axis=-1,
              alpha_plates=(5,3),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=(5,)))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=(5,)))
         # Broadcast both mu and alpha over plates but different plates
         test((3,), (4,5), axis=-1,
              alpha_plates=(4,1,3),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=(5,)))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=(5,)))
         test((3,), (4,5), axis=-1,
              alpha_plates=(5,3),
-             mu=GaussianArrayARD(2, 4,
-                                 shape=(3,),
-                                 plates=(4,1)))
+             mu=GaussianARD(2, 4,
+                            shape=(3,),
+                            plates=(4,1)))
 
         #
         # Rotation with missing values
@@ -602,28 +602,28 @@ class TestRotateGaussianArrayARD(TestCase):
 
         # With mu
         test((2,), (3,), axis=-1, plate_axis=-1,
-             mu=GaussianArrayARD(3, 4,
-                                 shape=(2,),
-                                 plates=(3,)))
+             mu=GaussianARD(3, 4,
+                            shape=(2,),
+                            plates=(3,)))
         # With mu broadcasted
         test((2,), (3,), axis=-1, plate_axis=-1,
-             mu=GaussianArrayARD(3, 4,
-                                 shape=(2,),
-                                 plates=(1,)))
+             mu=GaussianARD(3, 4,
+                            shape=(2,),
+                            plates=(1,)))
         test((2,), (3,), axis=-1, plate_axis=-1,
-             mu=GaussianArrayARD(3, 4,
-                                 shape=(2,),
-                                 plates=()))
+             mu=GaussianARD(3, 4,
+                            shape=(2,),
+                            plates=()))
         # With mu multiple plates
         test((2,), (3,4,5), axis=-1, plate_axis=-2,
-             mu=GaussianArrayARD(3, 4,
-                                 shape=(2,),
-                                 plates=(3,4,5)))
+             mu=GaussianARD(3, 4,
+                            shape=(2,),
+                            plates=(3,4,5)))
         # With mu multiple dims
         test((2,3,4), (5,), axis=-2, plate_axis=-1,
-             mu=GaussianArrayARD(3, 4,
-                                 shape=(2,3,4),
-                                 plates=(5,)))
+             mu=GaussianARD(3, 4,
+                            shape=(2,3,4),
+                            plates=(5,)))
 
         #
         # With alpha
@@ -675,66 +675,66 @@ class TestRotateGaussianArrayARD(TestCase):
         print("Test: Plate rotation with alpha and mu. Scalars.")
         test((1,), (1,), axis=-1, plate_axis=-1,
              alpha_plates=(1,1),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(1,),
-                                 plates=(1,)))
+             mu=GaussianARD(2, 3,
+                            shape=(1,),
+                            plates=(1,)))
         print("Test: Plate rotation with alpha and mu. Plates.")
         test((1,), (3,), axis=-1, plate_axis=-1,
              alpha_plates=(3,1),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(1,),
-                                 plates=(3,)))
+             mu=GaussianARD(2, 3,
+                            shape=(1,),
+                            plates=(3,)))
         print("Test: Plate rotation with alpha and mu. Dims.")
         test((3,), (1,), axis=-1, plate_axis=-1,
              alpha_plates=(1,3),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(3,),
-                                 plates=(1,)))
+             mu=GaussianARD(2, 3,
+                            shape=(3,),
+                            plates=(1,)))
         print("Test: Plate rotation with alpha and mu. Broadcast over rotated "
               "plates.")
         test((1,), (3,), axis=-1, plate_axis=-1,
              alpha_plates=(1,1),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(1,),
-                                 plates=(1,)))
+             mu=GaussianARD(2, 3,
+                            shape=(1,),
+                            plates=(1,)))
         test((1,), (3,), axis=-1, plate_axis=-1,
              alpha_plates=(1,),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(1,),
-                                 plates=()))
+             mu=GaussianARD(2, 3,
+                            shape=(1,),
+                            plates=()))
         print("Test: Plate rotation with alpha and mu. Broadcast over dims.")
         test((3,), (1,), axis=-1, plate_axis=-1,
              alpha_plates=(1,1),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(1,),
-                                 plates=(1,)))
+             mu=GaussianARD(2, 3,
+                            shape=(1,),
+                            plates=(1,)))
         test((3,), (1,), axis=-1, plate_axis=-1,
              alpha_plates=(),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(),
-                                 plates=(1,)))
+             mu=GaussianARD(2, 3,
+                            shape=(),
+                            plates=(1,)))
         print("Test: Plate rotation with alpha and mu. Multiple dims.")
         test((2,3,4,5), (6,), axis=-2, plate_axis=-1,
              alpha_plates=(6,2,3,4,5),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(2,3,4,5),
-                                 plates=(6,)))
+             mu=GaussianARD(2, 3,
+                            shape=(2,3,4,5),
+                            plates=(6,)))
         print("Test: Plate rotation with alpha and mu. Multiple plates.")
         test((2,), (3,4,5), axis=-1, plate_axis=-1,
              alpha_plates=(3,4,5,2),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(2,),
-                                 plates=(3,4,5,)))
+             mu=GaussianARD(2, 3,
+                            shape=(2,),
+                            plates=(3,4,5,)))
         test((2,), (3,4,5), axis=-1, plate_axis=-2,
              alpha_plates=(3,4,5,2),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(2,),
-                                 plates=(3,4,5,)))
+             mu=GaussianARD(2, 3,
+                            shape=(2,),
+                            plates=(3,4,5,)))
         test((2,), (3,4,5), axis=-1, plate_axis=-3,
              alpha_plates=(3,4,5,2),
-             mu=GaussianArrayARD(2, 3,
-                                 shape=(2,),
-                                 plates=(3,4,5,)))
+             mu=GaussianARD(2, 3,
+                            shape=(2,),
+                            plates=(3,4,5,)))
 
         # TODO: With missing values
         
@@ -757,9 +757,9 @@ class TestRotateGaussianMarkovChain(TestCase):
             if rho is None:
                 rho = np.ones(D)
             if A is None:
-                A = GaussianArrayARD(3, 5,
-                                     shape=(D,),
-                                     plates=(D,))
+                A = GaussianARD(3, 5,
+                                shape=(D,),
+                                plates=(D,))
                 
             V = np.identity(D) + np.ones((D,D))
 
@@ -795,7 +795,7 @@ class TestRotateGaussianMarkovChain(TestCase):
                 pass
 
             # Construct rotator
-            rotA = RotateGaussianArrayARD(A, axis=-1)
+            rotA = RotateGaussianARD(A, axis=-1)
             rotX = RotateGaussianMarkovChain(X, rotA)
 
             # Rotation
@@ -839,9 +839,9 @@ class TestRotateGaussianMarkovChain(TestCase):
             if rho is None:
                 rho = np.ones(D)
             if A is None:
-                A = GaussianArrayARD(3, 5,
-                                     shape=(D,),
-                                     plates=(D,))
+                A = GaussianARD(3, 5,
+                                shape=(D,),
+                                plates=(D,))
                 
             V = np.identity(D) + np.ones((D,D))
 
@@ -877,7 +877,7 @@ class TestRotateGaussianMarkovChain(TestCase):
                 pass
 
             # Construct rotator
-            rotA = RotateGaussianArrayARD(A, axis=-1)
+            rotA = RotateGaussianARD(A, axis=-1)
             rotX = RotateGaussianMarkovChain(X, rotA)
             rotX.setup()
 
@@ -907,9 +907,9 @@ class TestRotateGaussianMarkovChain(TestCase):
 
         # Test mu
         check(2, 3,
-              mu=GaussianArrayARD(2, 4,
-                                  shape=(2,),
-                                  plates=()))
+              mu=GaussianARD(2, 4,
+                             shape=(2,),
+                             plates=()))
 
         # Test Lambda
         check(2, 3,
@@ -917,46 +917,46 @@ class TestRotateGaussianMarkovChain(TestCase):
 
         # Test A
         check(2, 3,
-              A=GaussianArrayARD(2, 4,
-                                 shape=(2,),
-                                 plates=(2,)))
+              A=GaussianARD(2, 4,
+                            shape=(2,),
+                            plates=(2,)))
         check(2, 3,
-              A=GaussianArrayARD(2, 4,
-                                 shape=(2,),
-                                 plates=(3,2)))
+              A=GaussianARD(2, 4,
+                            shape=(2,),
+                            plates=(3,2)))
 
         # Test Lambda and mu
         check(2, 3,
-              mu=GaussianArrayARD(2, 4,
-                                  shape=(2,),
-                                  plates=()),
+              mu=GaussianARD(2, 4,
+                             shape=(2,),
+                             plates=()),
               Lambda=Wishart(2, random.covariance(2)))
 
         # Test mu and A
         check(2, 3,
-              mu=GaussianArrayARD(2, 4,
-                                  shape=(2,),
-                                  plates=()),
-              A=GaussianArrayARD(2, 4,
-                                 shape=(2,),
-                                 plates=(2,)))
+              mu=GaussianARD(2, 4,
+                             shape=(2,),
+                             plates=()),
+              A=GaussianARD(2, 4,
+                            shape=(2,),
+                            plates=(2,)))
 
         # Test Lambda and A
         check(2, 3,
               Lambda=Wishart(2, random.covariance(2)),
-              A=GaussianArrayARD(2, 4,
-                                 shape=(2,),
-                                 plates=(2,)))
+              A=GaussianARD(2, 4,
+                            shape=(2,),
+                            plates=(2,)))
 
         # Test mu, Lambda and A
         check(2, 3,
-              mu=GaussianArrayARD(2, 4,
-                                  shape=(2,),
-                                  plates=()),
+              mu=GaussianARD(2, 4,
+                             shape=(2,),
+                             plates=()),
               Lambda=Wishart(2, random.covariance(2)),
-              A=GaussianArrayARD(2, 4,
-                                 shape=(2,),
-                                 plates=(2,)))
+              A=GaussianARD(2, 4,
+                            shape=(2,),
+                            plates=(2,)))
             
         # TODO: Test plates
 
@@ -989,12 +989,12 @@ class TestRotateDriftingMarkovChain(TestCase):
             V = np.identity(D) + np.ones((D,D))
 
             # Construct model
-            B = GaussianArrayARD(3, 5,
-                                 shape=(D,K),
-                                 plates=(1,D))
-            S = GaussianArrayARD(2, 4,
-                                 shape=(K,),
-                                 plates=(N,1))
+            B = GaussianARD(3, 5,
+                            shape=(D,K),
+                            plates=(1,D))
+            S = GaussianARD(2, 4,
+                            shape=(K,),
+                            plates=(N,1))
             A = SumMultiply('dk,k->d', B, S)
             X = GaussianMarkovChain(mu,
                                     Lambda,
@@ -1025,7 +1025,7 @@ class TestRotateDriftingMarkovChain(TestCase):
                 pass
 
             # Construct rotator
-            rotB = RotateGaussianArrayARD(B, axis=-2)
+            rotB = RotateGaussianARD(B, axis=-2)
             rotX = RotateDriftingMarkovChain(X, B, S, rotB)
 
             # Rotation
@@ -1077,12 +1077,12 @@ class TestRotateDriftingMarkovChain(TestCase):
             V = np.identity(D) + np.ones((D,D))
 
             # Construct model
-            B = GaussianArrayARD(3, 5,
-                                 shape=(D,K),
-                                 plates=(1,D))
-            S = GaussianArrayARD(2, 4,
-                                 shape=(K,),
-                                 plates=(N,1))
+            B = GaussianARD(3, 5,
+                            shape=(D,K),
+                            plates=(1,D))
+            S = GaussianARD(2, 4,
+                            shape=(K,),
+                            plates=(N,1))
             A = SumMultiply('dk,k->d', B, S)
             X = GaussianMarkovChain(mu,
                                     Lambda,
@@ -1113,7 +1113,7 @@ class TestRotateDriftingMarkovChain(TestCase):
                 pass
 
             # Construct rotator
-            rotB = RotateGaussianArrayARD(B, axis=-2)
+            rotB = RotateGaussianARD(B, axis=-2)
             rotX = RotateDriftingMarkovChain(X, B, S, rotB)
             rotX.setup()
 
@@ -1147,9 +1147,9 @@ class TestRotateDriftingMarkovChain(TestCase):
 
         # Test mu
         check(2, 3, 4,
-              mu=GaussianArrayARD(2, 4,
-                                  shape=(2,),
-                                  plates=()))
+              mu=GaussianARD(2, 4,
+                             shape=(2,),
+                             plates=()))
 
         # Test Lambda
         check(2, 3, 4,
@@ -1157,9 +1157,9 @@ class TestRotateDriftingMarkovChain(TestCase):
 
         # Test Lambda and mu
         check(2, 3, 4,
-              mu=GaussianArrayARD(2, 4,
-                                  shape=(2,),
-                                  plates=()),
+              mu=GaussianARD(2, 4,
+                             shape=(2,),
+                             plates=()),
               Lambda=Wishart(2, random.covariance(2)))
 
         # TODO: Test plates

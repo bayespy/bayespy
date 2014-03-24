@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 
 from bayespy.nodes import GaussianMarkovChain
 from bayespy.nodes import DriftingGaussianMarkovChain
-from bayespy.nodes import GaussianArrayARD
+from bayespy.nodes import GaussianARD
 from bayespy.nodes import Gamma
 from bayespy.nodes import SumMultiply
 
@@ -59,15 +59,15 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                      plates=(K,),
                      name='beta')
         # B : (K) x (K)
-        B = GaussianArrayARD(np.identity(K),
-                             beta,
-                             shape=(K,),
-                             plates=(K,),
-                             name='B',
-                             plotter=bpplt.GaussianHintonPlotter(rows=0, 
-                                                                 cols=1,
-                                                                 scale=0),
-                             initialize=False)
+        B = GaussianARD(np.identity(K),
+                        beta,
+                        shape=(K,),
+                        plates=(K,),
+                        name='B',
+                        plotter=bpplt.GaussianHintonPlotter(rows=0, 
+                                                            cols=1,
+                                                            scale=0),
+                        initialize=False)
         B.initialize_from_value(np.identity(K))
         #B.initialize_from_mean_and_covariance(np.identity(K),
         #                                      0.1*np.identity(K))
@@ -98,15 +98,15 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                       name='alpha')
         alpha.initialize_from_value(1*np.ones(D))
         # A : (D) x (D)
-        A = GaussianArrayARD(0,
-                             alpha,
-                             shape=(D,),
-                             plates=(D,),
-                             name='A',
-                             plotter=bpplt.GaussianHintonPlotter(rows=0, 
-                                                                 cols=1,
-                                                                 scale=0),
-                             initialize=False)
+        A = GaussianARD(0,
+                        alpha,
+                        shape=(D,),
+                        plates=(D,),
+                        name='A',
+                        plotter=bpplt.GaussianHintonPlotter(rows=0, 
+                                                            cols=1,
+                                                            scale=0),
+                        initialize=False)
         A.initialize_from_value(np.identity(D))
 
         # Latent states with dynamics
@@ -131,15 +131,15 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                       name='alpha')
         alpha.initialize_from_value(1*np.ones((D,K)))
         # A : (D) x (D,K)
-        A = GaussianArrayARD(0,
-                             alpha,
-                             shape=(D,K),
-                             plates=(D,),
-                             name='A',
-                             plotter=bpplt.GaussianHintonPlotter(rows=0, 
-                                                                 cols=1,
-                                                                 scale=0),
-                             initialize=False)
+        A = GaussianARD(0,
+                        alpha,
+                        shape=(D,K),
+                        plates=(D,),
+                        name='A',
+                        plotter=bpplt.GaussianHintonPlotter(rows=0, 
+                                                            cols=1,
+                                                            scale=0),
+                        initialize=False)
 
         # Initialize S and A such that A*S is almost an identity matrix
         a = np.zeros((D,D,K))
@@ -174,14 +174,14 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                       name='gamma')
         gamma.initialize_from_value(1e-2*np.ones(D))
         # C : (M,1) x (D)
-        C = GaussianArrayARD(0,
-                             gamma,
-                             shape=(D,),
-                             plates=(M,1),
-                             name='C',
-                             plotter=bpplt.GaussianHintonPlotter(rows=0,
-                                                                 cols=2,
-                                                                 scale=0))
+        C = GaussianARD(0,
+                        gamma,
+                        shape=(D,),
+                        plates=(M,1),
+                        name='C',
+                        plotter=bpplt.GaussianHintonPlotter(rows=0,
+                                                            cols=2,
+                                                            scale=0))
         C.initialize_from_value(np.random.randn(M,1,D))
         #C.initialize_from_random()
         #C.initialize_from_mean_and_covariance(C.random(),
@@ -201,14 +201,14 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
                       plates=(D,K),
                       name='gamma')
         # C : (M,1) x (D,K)
-        C = GaussianArrayARD(0,
-                             gamma,
-                             shape=(D,K),
-                             plates=(M,1),
-                             name='C',
-                             plotter=bpplt.GaussianHintonPlotter(rows=0,
-                                                                 cols=2,
-                                                                 scale=0))
+        C = GaussianARD(0,
+                        gamma,
+                        shape=(D,K),
+                        plates=(M,1),
+                        name='C',
+                        plotter=bpplt.GaussianHintonPlotter(rows=0,
+                                                            cols=2,
+                                                            scale=0))
         C.initialize_from_random()
         #C.initialize_from_mean_and_covariance(C.random(),
         #                                      0.1*utils.identity(D, K))
@@ -231,9 +231,9 @@ def lssm(M, N, D, K=1, drift_C=False, drift_A=False):
 
     # Observations
     # Y: (M,N) x ()
-    Y = GaussianArrayARD(F,
-                         tau,
-                         name='Y')
+    Y = GaussianARD(F,
+                    tau,
+                    name='Y')
 
     # Construct inference machine
     if drift_C or drift_A:
@@ -280,10 +280,10 @@ def run_lssm(y, D,
     if rotate:
         
         # Rotate the D-dimensional state space (X, A, C)
-        rotA = transformations.RotateGaussianArrayARD(Q['A'], 
-                                                      Q['alpha'],
-                                                      axis=0,
-                                                      precompute=precompute)
+        rotA = transformations.RotateGaussianARD(Q['A'], 
+                                                 Q['alpha'],
+                                                 axis=0,
+                                                 precompute=precompute)
         if drift_A:
             rotX = transformations.RotateDriftingMarkovChain(Q['X'], 
                                                              Q['A'], 
@@ -293,29 +293,29 @@ def run_lssm(y, D,
         else:
             rotX = transformations.RotateGaussianMarkovChain(Q['X'], 
                                                              rotA)
-        rotC = transformations.RotateGaussianArrayARD(Q['C'],
-                                                      Q['gamma'],
-                                                      axis=0,
-                                                      precompute=precompute)
+        rotC = transformations.RotateGaussianARD(Q['C'],
+                                                 Q['gamma'],
+                                                 axis=0,
+                                                 precompute=precompute)
         R_X = transformations.RotationOptimizer(rotX, rotC, D)
 
         # Rotate the K-dimensional latent dynamics space (S, A, C)
         if drift_A or drift_C:
-            rotB = transformations.RotateGaussianArrayARD(Q['B'],
-                                                          Q['beta'], 
-                                                          precompute=precompute)
+            rotB = transformations.RotateGaussianARD(Q['B'],
+                                                     Q['beta'], 
+                                                     precompute=precompute)
             rotS = transformations.RotateGaussianMarkovChain(Q['S'], rotB)
 
             if drift_A:
-                rotA = transformations.RotateGaussianArrayARD(Q['A'],
-                                                              Q['alpha'],
-                                                              axis=-1,
-                                                              precompute=precompute)
+                rotA = transformations.RotateGaussianARD(Q['A'],
+                                                         Q['alpha'],
+                                                         axis=-1,
+                                                         precompute=precompute)
             if drift_C:
-                rotC = transformations.RotateGaussianArrayARD(Q['C'],
-                                                              Q['gamma'],
-                                                              axis=-1,
-                                                              precompute=precompute)
+                rotC = transformations.RotateGaussianARD(Q['C'],
+                                                         Q['gamma'],
+                                                         axis=-1,
+                                                         precompute=precompute)
 
             if drift_A and not drift_C:
                 rotAC = rotA

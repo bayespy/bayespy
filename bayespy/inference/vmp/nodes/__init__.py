@@ -25,7 +25,7 @@
 
 from . import *
 
-from .gaussian import Gaussian, GaussianArrayARD
+from .gaussian import Gaussian, GaussianARD
 from .wishart import Wishart
 from .gamma import Gamma
 from .dirichlet import Dirichlet

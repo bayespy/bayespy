@@ -45,18 +45,18 @@ def model(M, N, D):
                         name='alpha')
 
     # Loadings
-    W = nodes.GaussianArrayARD(0,
-                               alpha,
-                               shape=(D,),
-                               plates=(M,1),
-                               name='W')
+    W = nodes.GaussianARD(0,
+                          alpha,
+                          shape=(D,),
+                          plates=(M,1),
+                          name='W')
 
     # States
-    X = nodes.GaussianArrayARD(0,
-                               1,
-                               shape=(D,),
-                               plates=(1,N),
-                               name='X')
+    X = nodes.GaussianARD(0,
+                          1,
+                          shape=(D,),
+                          plates=(1,N),
+                          name='X')
 
     # PCA
     F = nodes.SumMultiply('i,i', W, X,
@@ -67,8 +67,8 @@ def model(M, N, D):
                       name='tau')
 
     # Noisy observations
-    Y = nodes.GaussianArrayARD(F, tau,
-                               name='Y')
+    Y = nodes.GaussianARD(F, tau,
+                          name='Y')
 
     return (Y, F, W, X, tau, alpha)
 
@@ -102,8 +102,8 @@ def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=False, maxiter=100, debug=False
     # Run inference algorithm
     if rotate:
         # Use rotations to speed up learning
-        rotW = transformations.RotateGaussianArrayARD(W, alpha)
-        rotX = transformations.RotateGaussianArrayARD(X)
+        rotW = transformations.RotateGaussianARD(W, alpha)
+        rotX = transformations.RotateGaussianARD(X)
         R = transformations.RotationOptimizer(rotW, rotX, D)
         for ind in range(maxiter):
             Q.update()

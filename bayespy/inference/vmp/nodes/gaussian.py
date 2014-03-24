@@ -393,20 +393,6 @@ class Gaussian(ExponentialFamily):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         
 
 
@@ -612,7 +598,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
 
-class GaussianArrayARD(ExponentialFamily):
+class GaussianARD(ExponentialFamily):
     r"""
     VMP node for Gaussian array variable.
 

@@ -34,7 +34,7 @@ from numpy import testing
 from ..gaussian_markov_chain import GaussianMarkovChain
 from ..gaussian_markov_chain import DriftingGaussianMarkovChain
 from ..gaussian import Gaussian
-from ..gaussian import GaussianArrayARD
+from ..gaussian import GaussianARD
 from ..wishart import Wishart
 from ..gamma import Gamma
 
@@ -263,14 +263,14 @@ class TestDriftingGaussianMarkovChain(TestCase):
                           random.covariance(D))
             Lambda = Wishart(D+np.ones(plates_Lambda),
                              random.covariance(D))
-            B = GaussianArrayARD(np.random.randn(*(plates_B+(D,D,K))),
-                                 1+np.random.rand(*(plates_B+(D,D,K))),
-                                 shape=(D,K),
-                                 plates=plates_B+(D,))
-            S = GaussianArrayARD(np.random.randn(*(plates_S+(N,K))),
-                                 1+np.random.rand(*(plates_S+(N,K))),
-                                 shape=(K,),
-                                 plates=plates_S+(N,))
+            B = GaussianARD(np.random.randn(*(plates_B+(D,D,K))),
+                            1+np.random.rand(*(plates_B+(D,D,K))),
+                            shape=(D,K),
+                            plates=plates_B+(D,))
+            S = GaussianARD(np.random.randn(*(plates_S+(N,K))),
+                            1+np.random.rand(*(plates_S+(N,K))),
+                            shape=(K,),
+                            plates=plates_S+(N,))
             v = Gamma(1+np.random.rand(*(plates_v+(1,D))),
                       1+np.random.rand(*(plates_v+(1,D))))
             X = DriftingGaussianMarkovChain(mu,
@@ -472,40 +472,40 @@ class TestDriftingGaussianMarkovChain(TestCase):
 
         # Simple
         check(4,3,2,
-              B=GaussianArrayARD(np.random.randn(3,3,2),
-                                 np.random.rand(3,3,2),
-                                 shape=(3,2),
-                                 plates=(3,)))
+              B=GaussianARD(np.random.randn(3,3,2),
+                            np.random.rand(3,3,2),
+                            shape=(3,2),
+                            plates=(3,)))
         # Plates
         check(4,3,2,
-              B=GaussianArrayARD(np.random.randn(5,6,3,3,2),
-                                 np.random.rand(5,6,3,3,2),
-                                 shape=(3,2),
-                                 plates=(5,6,3)))
+              B=GaussianARD(np.random.randn(5,6,3,3,2),
+                            np.random.rand(5,6,3,3,2),
+                            shape=(3,2),
+                            plates=(5,6,3)))
         # Plates with moments broadcasted over plates
         check(4,3,2,
-              B=GaussianArrayARD(np.random.randn(3,3,2),
-                                 np.random.rand(3,3,2),
-                                 shape=(3,2),
-                                 plates=(5,3)))
+              B=GaussianARD(np.random.randn(3,3,2),
+                            np.random.rand(3,3,2),
+                            shape=(3,2),
+                            plates=(5,3)))
         check(4,3,2,
-              B=GaussianArrayARD(np.random.randn(1,3,3,2),
-                                 np.random.rand(1,3,3,2),
-                                 shape=(3,2),
-                                 plates=(5,3)))
+              B=GaussianARD(np.random.randn(1,3,3,2),
+                            np.random.rand(1,3,3,2),
+                            shape=(3,2),
+                            plates=(5,3)))
         # Plates broadcasting
         check(4,3,2,
               plates=(5,),
-              B=GaussianArrayARD(np.random.randn(3,3,2),
-                                 np.random.rand(3,3,2),
-                                 shape=(3,2),
-                                 plates=(3,)))
+              B=GaussianARD(np.random.randn(3,3,2),
+                            np.random.rand(3,3,2),
+                            shape=(3,2),
+                            plates=(3,)))
         check(4,3,2,
               plates=(5,),
-              B=GaussianArrayARD(np.random.randn(3,3,2),
-                                 np.random.rand(3,3,2),
-                                 shape=(3,2),
-                                 plates=(1,3)))
+              B=GaussianARD(np.random.randn(3,3,2),
+                            np.random.rand(3,3,2),
+                            shape=(3,2),
+                            plates=(1,3)))
 
         #
         # Test S
@@ -513,40 +513,40 @@ class TestDriftingGaussianMarkovChain(TestCase):
             
         # Simple
         check(4,3,2,
-              S=GaussianArrayARD(np.random.randn(4-1,2),
-                                 np.random.rand(4-1,2),
-                                 shape=(2,),
-                                 plates=(4-1,)))
+              S=GaussianARD(np.random.randn(4-1,2),
+                            np.random.rand(4-1,2),
+                            shape=(2,),
+                            plates=(4-1,)))
         # Plates
         check(4,3,2,
-              S=GaussianArrayARD(np.random.randn(5,6,4-1,2),
-                                 np.random.rand(5,6,4-1,2),
-                                 shape=(2,),
-                                 plates=(5,6,4-1,)))
+              S=GaussianARD(np.random.randn(5,6,4-1,2),
+                            np.random.rand(5,6,4-1,2),
+                            shape=(2,),
+                            plates=(5,6,4-1,)))
         # Plates with moments broadcasted over plates
         check(4,3,2,
-              S=GaussianArrayARD(np.random.randn(4-1,2),
-                                 np.random.rand(4-1,2),
-                                 shape=(2,),
-                                 plates=(5,4-1,)))
+              S=GaussianARD(np.random.randn(4-1,2),
+                            np.random.rand(4-1,2),
+                            shape=(2,),
+                            plates=(5,4-1,)))
         check(4,3,2,
-              S=GaussianArrayARD(np.random.randn(1,4-1,2),
-                                 np.random.rand(1,4-1,2),
-                                 shape=(2,),
-                                 plates=(5,4-1,)))
+              S=GaussianARD(np.random.randn(1,4-1,2),
+                            np.random.rand(1,4-1,2),
+                            shape=(2,),
+                            plates=(5,4-1,)))
         # Plates broadcasting
         check(4,3,2,
               plates=(5,),
-              S=GaussianArrayARD(np.random.randn(4-1,2),
-                                 np.random.rand(4-1,2),
-                                 shape=(2,),
-                                 plates=(4-1,)))
+              S=GaussianARD(np.random.randn(4-1,2),
+                            np.random.rand(4-1,2),
+                            shape=(2,),
+                            plates=(4-1,)))
         check(4,3,2,
               plates=(5,),
-              S=GaussianArrayARD(np.random.randn(4-1,2),
-                                 np.random.rand(4-1,2),
-                                 shape=(2,),
-                                 plates=(1,4-1,)))
+              S=GaussianARD(np.random.randn(4-1,2),
+                            np.random.rand(4-1,2),
+                            shape=(2,),
+                            plates=(1,4-1,)))
 
         #
         # Test v
@@ -591,14 +591,14 @@ class TestDriftingGaussianMarkovChain(TestCase):
         # Uncertainty in both B and S
         #
         check(4,3,2,
-              B=GaussianArrayARD(np.random.randn(3,3,2),
-                                 np.random.rand(3,3,2),
-                                 shape=(3,2),
-                                 plates=(3,)),
-              S=GaussianArrayARD(np.random.randn(4-1,2),
-                                 np.random.rand(4-1,2),
-                                 shape=(2,),
-                                 plates=(4-1,)))
+              B=GaussianARD(np.random.randn(3,3,2),
+                            np.random.rand(3,3,2),
+                            shape=(3,2),
+                            plates=(3,)),
+              S=GaussianARD(np.random.randn(4-1,2),
+                            np.random.rand(4-1,2),
+                            shape=(2,),
+                            plates=(4-1,)))
                             
         pass
 

@@ -63,7 +63,7 @@ def pca_model(M, N, D):
     tau = nodes.Gamma(1e-2, 1e-2, name="tau", plates=())
 
     # Noisy observations
-    Y = nodes.GaussianArrayARD(WX, tau, name="Y", plates=(M,N))
+    Y = nodes.GaussianARD(WX, tau, name="Y", plates=(M,N))
 
     return (Y, WX, W, X, tau, alpha)
 

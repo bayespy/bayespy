@@ -34,7 +34,7 @@ import scipy
 from numpy import testing
 
 from ..dot import Dot, SumMultiply
-from ..gaussian import Gaussian, GaussianArrayARD
+from ..gaussian import Gaussian, GaussianARD
 
 from ...vmp import VB
 
@@ -50,7 +50,7 @@ class TestSumMultiply(TestCase):
         """
         Test that the parent nodes are validated properly in SumMultiply
         """
-        V = GaussianArrayARD(1, 1)
+        V = GaussianARD(1, 1)
         X = Gaussian(np.ones(1), np.identity(1))
         Y = Gaussian(np.ones(3), np.identity(3))
         Z = Gaussian(np.ones(5), np.identity(5))
@@ -161,10 +161,10 @@ class TestSumMultiply(TestCase):
                         y)
 
         # Do nothing for 2-D array
-        Y = GaussianArrayARD(np.random.randn(5,2,3),
-                             np.random.rand(5,2,3),
-                             plates=(5,),
-                             shape=(2,3))
+        Y = GaussianARD(np.random.randn(5,2,3),
+                        np.random.rand(5,2,3),
+                        plates=(5,),
+                        shape=(2,3))
         y = Y.get_moments()
         compare_moments(y[0],
                         y[1],
@@ -177,10 +177,10 @@ class TestSumMultiply(TestCase):
                         [0,1])
 
         # Sum over the rows of a matrix
-        Y = GaussianArrayARD(np.random.randn(5,2,3),
-                             np.random.rand(5,2,3),
-                             plates=(5,),
-                             shape=(2,3))
+        Y = GaussianARD(np.random.randn(5,2,3),
+                        np.random.rand(5,2,3),
+                        plates=(5,),
+                        shape=(2,3))
         y = Y.get_moments()
         mu = np.einsum('...ij->...j', y[0])
         cov = np.einsum('...ijkl->...jl', y[1])
@@ -195,20 +195,20 @@ class TestSumMultiply(TestCase):
                         [1])
 
         # Inner product of three vectors
-        X1 = GaussianArrayARD(np.random.randn(2),
-                              np.random.rand(2),
-                              plates=(),
-                              shape=(2,))
+        X1 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2),
+                         plates=(),
+                         shape=(2,))
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(6,1,2),
-                              np.random.rand(6,1,2),
-                              plates=(6,1),
-                              shape=(2,))
+        X2 = GaussianARD(np.random.randn(6,1,2),
+                         np.random.rand(6,1,2),
+                         plates=(6,1),
+                         shape=(2,))
         x2 = X2.get_moments()
-        X3 = GaussianArrayARD(np.random.randn(7,6,5,2),
-                              np.random.rand(7,6,5,2),
-                              plates=(7,6,5),
-                              shape=(2,))
+        X3 = GaussianARD(np.random.randn(7,6,5,2),
+                         np.random.rand(7,6,5,2),
+                         plates=(7,6,5),
+                         shape=(2,))
         x3 = X3.get_moments()
         mu = np.einsum('...i,...i,...i->...', x1[0], x2[0], x3[0])
         cov = np.einsum('...ij,...ij,...ij->...', x1[1], x2[1], x3[1])
@@ -244,15 +244,15 @@ class TestSumMultiply(TestCase):
                             
 
         # Outer product of two vectors
-        X1 = GaussianArrayARD(np.random.randn(2),
-                              np.random.rand(2),
-                              plates=(5,),
-                              shape=(2,))
+        X1 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2),
+                         plates=(5,),
+                         shape=(2,))
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(6,1,2),
-                              np.random.rand(6,1,2),
-                              plates=(6,1),
-                              shape=(2,))
+        X2 = GaussianARD(np.random.randn(6,1,2),
+                         np.random.rand(6,1,2),
+                         plates=(6,1),
+                         shape=(2,))
         x2 = X2.get_moments()
         mu = np.einsum('...i,...j->...ij', x1[0], x2[0])
         cov = np.einsum('...ik,...jl->...ijkl', x1[1], x2[1])
@@ -270,15 +270,15 @@ class TestSumMultiply(TestCase):
                         [9,7])
 
         # Matrix product
-        Y1 = GaussianArrayARD(np.random.randn(3,2),
-                              np.random.rand(3,2),
-                              plates=(),
-                              shape=(3,2))
+        Y1 = GaussianARD(np.random.randn(3,2),
+                         np.random.rand(3,2),
+                         plates=(),
+                         shape=(3,2))
         y1 = Y1.get_moments()
-        Y2 = GaussianArrayARD(np.random.randn(5,2,3),
-                              np.random.rand(5,2,3),
-                              plates=(5,),
-                              shape=(2,3))
+        Y2 = GaussianARD(np.random.randn(5,2,3),
+                         np.random.rand(5,2,3),
+                         plates=(5,),
+                         shape=(2,3))
         y2 = Y2.get_moments()
         mu = np.einsum('...ik,...kj->...ij', y1[0], y2[0])
         cov = np.einsum('...ikjl,...kmln->...imjn', y1[1], y2[1])
@@ -296,15 +296,15 @@ class TestSumMultiply(TestCase):
                         ['i','j'])
 
         # Trace of a matrix product
-        Y1 = GaussianArrayARD(np.random.randn(3,2),
-                              np.random.rand(3,2),
-                              plates=(),
-                              shape=(3,2))
+        Y1 = GaussianARD(np.random.randn(3,2),
+                         np.random.rand(3,2),
+                         plates=(),
+                         shape=(3,2))
         y1 = Y1.get_moments()
-        Y2 = GaussianArrayARD(np.random.randn(5,2,3),
-                              np.random.rand(5,2,3),
-                              plates=(5,),
-                              shape=(2,3))
+        Y2 = GaussianARD(np.random.randn(5,2,3),
+                         np.random.rand(5,2,3),
+                         plates=(5,),
+                         shape=(2,3))
         y2 = Y2.get_moments()
         mu = np.einsum('...ij,...ji->...', y1[0], y2[0])
         cov = np.einsum('...ikjl,...kilj->...', y1[1], y2[1])
@@ -333,20 +333,20 @@ class TestSumMultiply(TestCase):
                         [])
 
         # Vector-matrix-vector product
-        X1 = GaussianArrayARD(np.random.randn(3),
-                              np.random.rand(3),
-                              plates=(),
-                              shape=(3,))
+        X1 = GaussianARD(np.random.randn(3),
+                         np.random.rand(3),
+                         plates=(),
+                         shape=(3,))
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(6,1,2),
-                              np.random.rand(6,1,2),
-                              plates=(6,1),
-                              shape=(2,))
+        X2 = GaussianARD(np.random.randn(6,1,2),
+                         np.random.rand(6,1,2),
+                         plates=(6,1),
+                         shape=(2,))
         x2 = X2.get_moments()
-        Y = GaussianArrayARD(np.random.randn(3,2),
-                             np.random.rand(3,2),
-                             plates=(),
-                             shape=(3,2))
+        Y = GaussianARD(np.random.randn(3,2),
+                        np.random.rand(3,2),
+                        plates=(),
+                        shape=(3,2))
         y = Y.get_moments()
         mu = np.einsum('...i,...ij,...j->...', x1[0], y[0], x2[0])
         cov = np.einsum('...ia,...ijab,...jb->...', x1[1], y[1], x2[1])
@@ -366,25 +366,25 @@ class TestSumMultiply(TestCase):
                         [2])
         
         # Complex sum-product of 0-D, 1-D, 2-D and 3-D arrays
-        V = GaussianArrayARD(np.random.randn(7,6,5),
-                             np.random.rand(7,6,5),
-                             plates=(7,6,5),
-                             shape=())
+        V = GaussianARD(np.random.randn(7,6,5),
+                        np.random.rand(7,6,5),
+                        plates=(7,6,5),
+                        shape=())
         v = V.get_moments()
-        X = GaussianArrayARD(np.random.randn(6,1,2),
-                              np.random.rand(6,1,2),
-                              plates=(6,1),
-                              shape=(2,))
+        X = GaussianARD(np.random.randn(6,1,2),
+                        np.random.rand(6,1,2),
+                        plates=(6,1),
+                        shape=(2,))
         x = X.get_moments()
-        Y = GaussianArrayARD(np.random.randn(3,4),
-                             np.random.rand(3,4),
-                             plates=(5,),
-                             shape=(3,4))
+        Y = GaussianARD(np.random.randn(3,4),
+                        np.random.rand(3,4),
+                        plates=(5,),
+                        shape=(3,4))
         y = Y.get_moments()
-        Z = GaussianArrayARD(np.random.randn(4,2,3),
-                              np.random.rand(4,2,3),
-                              plates=(6,5),
-                              shape=(4,2,3))
+        Z = GaussianARD(np.random.randn(4,2,3),
+                        np.random.rand(4,2,3),
+                        plates=(6,5),
+                        shape=(4,2,3))
         z = Z.get_moments()
         mu = np.einsum('...,...i,...kj,...jik->...k', v[0], x[0], y[0], z[0])
         cov = np.einsum('...,...ia,...kjcb,...jikbac->...kc', v[1], x[1], y[1], z[1])
@@ -420,7 +420,7 @@ class TestSumMultiply(TestCase):
         def check_message(true_m0, true_m1, parent, *args, F=None):
             if F is None:
                 A = SumMultiply(*args)
-                B = GaussianArrayARD(A, tau)
+                B = GaussianARD(A, tau)
                 B.observe(data*np.ones(A.plates + A.dims[0]))
             else:
                 A = F
@@ -430,11 +430,11 @@ class TestSumMultiply(TestCase):
             pass
 
         # Check: different message to each of multiple parents
-        X1 = GaussianArrayARD(np.random.randn(2),
-                              np.random.rand(2))
+        X1 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2))
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(2),
-                              np.random.rand(2))
+        X2 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2))
         x2 = X2.get_moments()
         m0 = tau * data * x2[0]
         m1 = -0.5 * tau * x2[1] * np.identity(2)
@@ -462,8 +462,8 @@ class TestSumMultiply(TestCase):
                       [9])
         
         # Check: key not in output
-        X1 = GaussianArrayARD(np.random.randn(2),
-                              np.random.rand(2))
+        X1 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2))
         x1 = X1.get_moments()
         m0 = tau * data * np.ones(2)
         m1 = -0.5 * tau * np.ones((2,2))
@@ -482,11 +482,11 @@ class TestSumMultiply(TestCase):
                       [])
 
         # Check: key not in some input
-        X1 = GaussianArrayARD(np.random.randn(),
-                              np.random.rand())
+        X1 = GaussianARD(np.random.randn(),
+                         np.random.rand())
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(2),
-                              np.random.rand(2))
+        X2 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2))
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(x2[0], axis=-1)
         m1 = -0.5 * tau * np.sum(x2[1] * np.identity(2),
@@ -515,11 +515,11 @@ class TestSumMultiply(TestCase):
                       [9])
 
         # Check: keys in different order
-        Y1 = GaussianArrayARD(np.random.randn(3,2),
-                              np.random.rand(3,2))
+        Y1 = GaussianARD(np.random.randn(3,2),
+                         np.random.rand(3,2))
         y1 = Y1.get_moments()
-        Y2 = GaussianArrayARD(np.random.randn(2,3),
-                              np.random.rand(2,3))
+        Y2 = GaussianARD(np.random.randn(2,3),
+                         np.random.rand(2,3))
         y2 = Y2.get_moments()
         m0 = tau * data * y2[0].T
         m1 = -0.5 * tau * np.einsum('ijlk->jikl', y2[1] * utils.identity(2,3))
@@ -547,15 +547,15 @@ class TestSumMultiply(TestCase):
                       ['i','j'])
 
         # Check: plates when different dimensionality
-        X1 = GaussianArrayARD(np.random.randn(5),
-                              np.random.rand(5),
-                              shape=(),
-                              plates=(5,))
+        X1 = GaussianARD(np.random.randn(5),
+                         np.random.rand(5),
+                         shape=(),
+                         plates=(5,))
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(5,3),
-                              np.random.rand(5,3),
-                              shape=(3,),
-                              plates=(5,))
+        X2 = GaussianARD(np.random.randn(5,3),
+                         np.random.rand(5,3),
+                         shape=(3,),
+                         plates=(5,))
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(np.ones((5,3)) * x2[0], axis=-1)
         m1 = -0.5 * tau * np.sum(x2[1] * utils.identity(3), axis=(-1,-2))
@@ -584,15 +584,15 @@ class TestSumMultiply(TestCase):
         
         # Check: other parent's moments broadcasts over plates when node has the
         # same plates
-        X1 = GaussianArrayARD(np.random.randn(5,4,3),
-                              np.random.rand(5,4,3),
-                              shape=(3,),
-                              plates=(5,4))
+        X1 = GaussianARD(np.random.randn(5,4,3),
+                         np.random.rand(5,4,3),
+                         shape=(3,),
+                         plates=(5,4))
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(3),
-                              np.random.rand(3),
-                              shape=(3,),
-                              plates=(5,4))
+        X2 = GaussianARD(np.random.randn(3),
+                         np.random.rand(3),
+                         shape=(3,),
+                         plates=(5,4))
         x2 = X2.get_moments()
         m0 = tau * data * np.ones((5,4,3)) * x2[0]
         m1 = -0.5 * tau * x2[1] * utils.identity(3)
@@ -609,15 +609,15 @@ class TestSumMultiply(TestCase):
         
         # Check: other parent's moments broadcasts over plates when node does
         # not have that plate
-        X1 = GaussianArrayARD(np.random.randn(3),
-                              np.random.rand(3),
-                              shape=(3,),
-                              plates=())
+        X1 = GaussianARD(np.random.randn(3),
+                         np.random.rand(3),
+                         shape=(3,),
+                         plates=())
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(3),
-                              np.random.rand(3),
-                              shape=(3,),
-                              plates=(5,4))
+        X2 = GaussianARD(np.random.randn(3),
+                         np.random.rand(3),
+                         shape=(3,),
+                         plates=(5,4))
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(np.ones((5,4,3)) * x2[0], axis=(0,1))
         m1 = -0.5 * tau * np.sum(np.ones((5,4,1,1))
@@ -637,15 +637,15 @@ class TestSumMultiply(TestCase):
         
         # Check: other parent's moments broadcasts over plates when the node
         # only broadcasts that plate
-        X1 = GaussianArrayARD(np.random.randn(3),
-                              np.random.rand(3),
-                              shape=(3,),
-                              plates=(1,1))
+        X1 = GaussianARD(np.random.randn(3),
+                         np.random.rand(3),
+                         shape=(3,),
+                         plates=(1,1))
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(3),
-                              np.random.rand(3),
-                              shape=(3,),
-                              plates=(5,4))
+        X2 = GaussianARD(np.random.randn(3),
+                         np.random.rand(3),
+                         shape=(3,),
+                         plates=(5,4))
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(np.ones((5,4,3)) * x2[0], axis=(0,1), keepdims=True)
         m1 = -0.5 * tau * np.sum(np.ones((5,4,1,1))
@@ -665,11 +665,11 @@ class TestSumMultiply(TestCase):
                       ['i'])
         
         # Check: broadcasted dimensions
-        X1 = GaussianArrayARD(np.random.randn(1,1),
-                              np.random.rand(1,1))
+        X1 = GaussianARD(np.random.randn(1,1),
+                         np.random.rand(1,1))
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(3,2),
-                              np.random.rand(3,2))
+        X2 = GaussianARD(np.random.randn(3,2),
+                         np.random.rand(3,2))
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(np.ones((3,2)) * x2[0], 
                                  keepdims=True)
@@ -699,8 +699,8 @@ class TestSumMultiply(TestCase):
                       [0,1])
 
         # Check: non-ARD observations
-        X1 = GaussianArrayARD(np.random.randn(2),
-                              np.random.rand(2))
+        X1 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2))
         x1 = X1.get_moments()
         Lambda = np.array([[2, 1.5], [1.5, 2]])
         F = SumMultiply('i->i', X1)
@@ -720,14 +720,14 @@ class TestSumMultiply(TestCase):
                       F=F)
 
         # Check: mask with same shape
-        X1 = GaussianArrayARD(np.random.randn(3,2),
-                              np.random.rand(3,2),
-                              shape=(2,),
-                              plates=(3,))
+        X1 = GaussianARD(np.random.randn(3,2),
+                         np.random.rand(3,2),
+                         shape=(2,),
+                         plates=(3,))
         x1 = X1.get_moments()
         mask = np.array([True, False, True])
         F = SumMultiply('i->i', X1)
-        Y = GaussianArrayARD(F, tau)                     
+        Y = GaussianARD(F, tau)                     
         Y.observe(data*np.ones((3,2)), mask=mask)
         m0 = tau * data * mask[:,np.newaxis] * np.ones(2)
         m1 = -0.5 * tau * mask[:,np.newaxis,np.newaxis] * np.identity(2)
@@ -742,20 +742,20 @@ class TestSumMultiply(TestCase):
                       F=F)
 
         # Check: mask larger
-        X1 = GaussianArrayARD(np.random.randn(2),
-                              np.random.rand(2),
-                              shape=(2,),
-                              plates=())
+        X1 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2),
+                         shape=(2,),
+                         plates=())
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(3,2),
-                              np.random.rand(3,2),
-                              shape=(2,),
-                              plates=(3,))
+        X2 = GaussianARD(np.random.randn(3,2),
+                         np.random.rand(3,2),
+                         shape=(2,),
+                         plates=(3,))
         x2 = X2.get_moments()
         mask = np.array([True, False, True])
         F = SumMultiply('i,i->i', X1, X2)
-        Y = GaussianArrayARD(F, tau,
-                             plates=(3,))                     
+        Y = GaussianARD(F, tau,
+                        plates=(3,))                     
         Y.observe(data*np.ones((3,2)), mask=mask)
         m0 = tau * data * np.sum(mask[:,np.newaxis] * x2[0], axis=0)
         m1 = -0.5 * tau * np.sum(mask[:,np.newaxis,np.newaxis]
@@ -776,18 +776,18 @@ class TestSumMultiply(TestCase):
                       F=F)
 
         # Check: mask for broadcasted plate
-        X1 = GaussianArrayARD(np.random.randn(2),
-                              np.random.rand(2),
-                              plates=(1,))
+        X1 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2),
+                         plates=(1,))
         x1 = X1.get_moments()
-        X2 = GaussianArrayARD(np.random.randn(2),
-                              np.random.rand(2),
-                              plates=(3,))
+        X2 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2),
+                         plates=(3,))
         x2 = X2.get_moments()
         mask = np.array([True, False, True])
         F = SumMultiply('i,i->i', X1, X2)
-        Y = GaussianArrayARD(F, tau,
-                             plates=(3,))
+        Y = GaussianARD(F, tau,
+                        plates=(3,))
         Y.observe(data*np.ones((3,2)), mask=mask)
         m0 = tau * data * np.sum(mask[:,np.newaxis] * x2[0], 
                                  axis=0,
@@ -823,16 +823,16 @@ def check_performance(scale=1e2):
     # Check: Broadcasted plates are computed efficiently
     # (bad implementation will take a long time to run)
     s = scale
-    X1 = GaussianArrayARD(np.random.randn(s,s),
-                          np.random.rand(s,s),
-                          shape=(s,),
-                          plates=(s,))
-    X2 = GaussianArrayARD(np.random.randn(s,1,s),
-                          np.random.rand(s,1,s),
-                          shape=(s,),
-                          plates=(s,1))
+    X1 = GaussianARD(np.random.randn(s,s),
+                     np.random.rand(s,s),
+                     shape=(s,),
+                     plates=(s,))
+    X2 = GaussianARD(np.random.randn(s,1,s),
+                     np.random.rand(s,1,s),
+                     shape=(s,),
+                     plates=(s,1))
     F = SumMultiply('i,i', X1, X2)
-    Y = GaussianArrayARD(F, 1)
+    Y = GaussianARD(F, 1)
     Y.observe(np.ones((s,s)))
     try:
         F._message_to_parent(1)

@@ -30,7 +30,7 @@ import scipy
 import matplotlib.pyplot as plt
 
 from bayespy.nodes import GaussianMarkovChain
-from bayespy.nodes import Gaussian, GaussianArrayARD
+from bayespy.nodes import Gaussian, GaussianARD
 from bayespy.nodes import Gamma
 from bayespy.nodes import SumMultiply
 from bayespy.inference.vmp.nodes.gamma import diagonal
@@ -50,11 +50,11 @@ def linear_state_space_model(D=3, N=100, M=10):
                   1e-5,
                   plates=(D,),
                   name='alpha')
-    A = GaussianArrayARD(0,
-                         alpha,
-                         shape=(D,),
-                         plates=(D,),
-                         name='A')
+    A = GaussianARD(0,
+                    alpha,
+                    shape=(D,),
+                    plates=(D,),
+                    name='A')
 
     # Latent states with dynamics
     X = GaussianMarkovChain(np.zeros(D),         # mean of x0
@@ -69,11 +69,11 @@ def linear_state_space_model(D=3, N=100, M=10):
                   1e-5,
                   plates=(D,),
                   name='gamma')
-    C = GaussianArrayARD(0,
-                         gamma,
-                         shape=(D,),
-                         plates=(M,1),
-                         name='C')
+    C = GaussianARD(0,
+                    gamma,
+                    shape=(D,),
+                    plates=(M,1),
+                    name='C')
 
     # Observation noise
     tau = Gamma(1e-5,
@@ -86,9 +86,9 @@ def linear_state_space_model(D=3, N=100, M=10):
                     X)
     
     # Noisy observations
-    Y = GaussianArrayARD(F,
-                         tau,
-                         name='Y')
+    Y = GaussianARD(F,
+                    tau,
+                    name='Y')
 
     return (Y, F, X, tau, C, gamma, A, alpha)
 
@@ -139,9 +139,9 @@ def run(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=False, precom
     # Run inference with rotations.
     #
     if rotate:
-        rotA = transformations.RotateGaussianArrayARD(A, alpha, precompute=precompute)
+        rotA = transformations.RotateGaussianARD(A, alpha, precompute=precompute)
         rotX = transformations.RotateGaussianMarkovChain(X, rotA)
-        rotC = transformations.RotateGaussianArrayARD(C, gamma)
+        rotC = transformations.RotateGaussianARD(C, gamma)
         R = transformations.RotationOptimizer(rotX, rotC, D)
 
         for ind in range(maxiter):

@@ -41,7 +41,6 @@ from .expfamily import ExponentialFamilyDistribution
 from .expfamily import useconstructor
 from .constant import ConstantNumeric
 from .gaussian import Gaussian, GaussianStatistics
-from .gaussian import GaussianArrayARD
 from .wishart import Wishart, WishartStatistics
 from .gamma import Gamma, GammaStatistics
 from .node import Statistics, ensureparents
@@ -56,13 +55,6 @@ class GaussianMarkovChainStatistics(Statistics):
             return _MarkovChainToGaussian
         return super().converter(statistics_class)
     
-    ## def mean(self):
-    ##     return self.get()[0]
-    ## def covariance(self):
-    ##     (x, xx) = self.get()[:2]
-    ##     Cov = xx - linalg.outer(x, x, ndim=1)
-    ##     return Cov
-
 class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
     """
     Sub-classes implement distribution specific computations.
