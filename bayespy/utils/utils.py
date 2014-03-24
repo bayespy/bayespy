@@ -30,12 +30,10 @@ import itertools
 
 import numpy as np
 import scipy as sp
-#import scipy.linalg.decomp_cholesky as decomp
 import scipy.linalg as linalg
 import scipy.special as special
 import scipy.optimize as optimize
 import scipy.sparse as sparse
-#import scikits.sparse.cholmod as cholmod
 
 import tempfile as tmp
 
@@ -80,6 +78,11 @@ class TestCase(unittest.TestCase):
 
         self.assertEqual(np.shape(A), np.shape(B), msg=msg)
         testing.assert_allclose(A, B, err_msg=msg, rtol=rtol, atol=atol)
+        pass
+
+    def assertArrayEqual(self, A, B, msg="Arrays not equal"):
+        self.assertEqual(np.shape(A), np.shape(B), msg=msg)
+        testing.assert_array_equal(A, B, err_msg=msg)
         pass
 
     def assertMessage(self, M1, M2):
