@@ -36,14 +36,15 @@ from bayespy.utils import linalg
 
 from .node import Node, message_sum_multiply
 from .deterministic import Deterministic
-from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
+from .expfamily import ExponentialFamily
+from .expfamily import ExponentialFamilyDistribution
+from .expfamily import useconstructor
 from .constant import ConstantNumeric
 from .gaussian import Gaussian, GaussianStatistics
 from .gaussian import GaussianArrayARD
-from .gaussian import _GaussianArrayARD
 from .wishart import Wishart, WishartStatistics
 from .gamma import Gamma, GammaStatistics
-from .node import Statistics
+from .node import Statistics, ensureparents
 
 class GaussianMarkovChainStatistics(Statistics):
 
@@ -69,6 +70,10 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
 
     ndims = (2, 3, 3)
     
+    def __init__(self, N):
+        self.N = N
+        super().__init__()
+
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
         raise NotImplementedError()
 
@@ -147,11 +152,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
     nodes may vary.
 
     Child classes must implement the following methods:
-        _compute_phi_from_parents
-        _compute_cgf_from_parents
-        _compute_mask_to_parent
-        _compute_message_to_parent
-        compute_dims
         _plates_to_parent
         _plates_from_parent
 
@@ -173,70 +173,8 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
     def __init__(self, *parents, n=None, **kwargs):
         """
         """
-
-        N = ConstantNumeric(n, 0)
-        parents = parents + (N,)
-
         # Construct
         super().__init__(*parents, **kwargs)
-
-    @staticmethod
-    def _compute_phi_from_parents(*u_parents):
-        """
-        Compute the natural parameters using parents' moments.
-
-        Child classes must implement this.
-
-        Parameters
-        ----------
-        u_parents : list of list of arrays
-           List of parents' lists of moments.
-
-        Returns
-        -------
-        phi : list of arrays
-           Natural parameters.
-        dims : tuple
-           Shape of the variable part of phi.
-
-        """
-        raise NotImplementedError()
-
-
-    @staticmethod
-    def _compute_cgf_from_parents(*u_parents):
-        """
-        Compute CGF using the moments of the parents.
-
-        Child classes must implement this.
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def _compute_message_to_parent(parent, index, u, *u_parents):
-        """
-        Compute a message to a parent.
-
-        Child classes must implement this.
-
-        Parameters:
-        -----------
-        index : int
-            Index of the parent requesting the message.
-        u : list of ndarrays
-            Moments of this node.
-        u_parents : list of list of ndarrays
-            Moments of parent nodes.
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def compute_dims(*parents):
-        """
-        Compute the dimensions of phi and u based on parent nodes.
-        """
-        raise NotImplementedError()
-
 
     def get_shape_of_value(self):
         # Dimensionality of a realization
@@ -333,7 +271,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
     ndims_parents = [(1, 2), (2, 0), (1, 2), (0, 0)]
 
-    def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_A, u_v, u_N):
+    def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_A, u_v):
         """
         Compute a message to a parent.
 
@@ -397,11 +335,11 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             return mask[...,np.newaxis,np.newaxis]
         elif index == 3: # v
             return mask[...,np.newaxis,np.newaxis]
-        elif index == 4: # N
-            return mask
+        else:
+            raise ValueError("Index out of bounds")
 
 
-    def compute_phi_from_parents(self, u_mu, u_Lambda, u_A, u_v, u_N, mask=True):
+    def compute_phi_from_parents(self, u_mu, u_Lambda, u_A, u_v, mask=True):
         """
         Compute the natural parameters using parents' moments.
 
@@ -423,7 +361,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         D = np.shape(u_mu[0])[-1]
 
         # Number of time instances in the process
-        N = u_N[0]
+        N = self.N
         
         # TODO/FIXME: Take into account plates!
         phi0 = np.zeros((N,D))
@@ -453,7 +391,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
         return (phi0, phi1, phi2)
 
-    def compute_cgf_from_parents(self, u_mu, u_Lambda, u_A, u_v, u_N):
+    def compute_cgf_from_parents(self, u_mu, u_Lambda, u_A, u_v):
         """
         Compute CGF using the moments of the parents.
         """
@@ -461,7 +399,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
                                                       u_Lambda[0],
                                                       u_Lambda[1],
                                                       u_v[1],
-                                                      u_N[0])
+                                                      self.N)
 
 
 
@@ -502,13 +440,13 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     """
 
-    _distribution = GaussianMarkovChainDistribution()
     _parent_statistics = (GaussianStatistics(1),
                           WishartStatistics(),
                           GaussianStatistics(1),
-                          GammaStatistics(),
-                          Statistics())
-    
+                          GammaStatistics())
+
+    @ensureparents
+    @useconstructor
     def __init__(self, mu, Lambda, A, v, n=None, **kwargs):
         """
         `mu` is the mean of x_0
@@ -517,10 +455,32 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         `v` is the diagonal precision of the innovation
         """
         
-        A = self._ensure_statistics(A, self._parent_statistics[2])
-        v = self._ensure_statistics(v, self._parent_statistics[3])
+        # Construct
+        super().__init__(mu, Lambda, A, v, **kwargs)
 
-        # A dummy wrapper for the number of time instances.
+    @classmethod
+    def _construct_distribution_and_statistics(cls, mu, Lambda, A, v,
+                                               n=None,
+                                               **kwargs):
+        """
+        Constructs distribution and statistics objects.
+        
+        Compute the dimensions of phi and u.
+
+        The plates and dimensions of the parents should be:
+        mu:     (...)                    and D-dimensional
+        Lambda: (...)                    and D-dimensional
+        A:      (...,1,D) or (...,N-1,D) and D-dimensional
+        v:      (...,1,D) or (...,N-1,D) and 0-dimensional
+        N:      ()                       and 0-dimensional (dummy parent)
+
+        Check that the dimensionalities of the parents are proper.
+        For instance, A should be a collection of DxD matrices, thus
+        the dimensionality and the last plate should both equal D.
+        Similarly, `v` should be a collection of diagonal innovation
+        matrix elements, thus the last plate should equal D.
+        """
+        
         n_A = 1
         if len(A.plates) >= 2:
             n_A = A.plates[-2]
@@ -541,29 +501,9 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
                             "the number of last plates of parents: "
                             "%d != %d+1" % (n, n_A))
                                 
-        # Construct
-        super().__init__(mu, Lambda, A, v, n=n, **kwargs)
-
-    @staticmethod
-    def compute_dims(mu, Lambda, A, v, N):
-        """
-        Compute the dimensions of phi and u.
-
-        The plates and dimensions of the parents should be:
-        mu:     (...)                    and D-dimensional
-        Lambda: (...)                    and D-dimensional
-        A:      (...,1,D) or (...,N-1,D) and D-dimensional
-        v:      (...,1,D) or (...,N-1,D) and 0-dimensional
-        N:      ()                       and 0-dimensional (dummy parent)
-
-        Check that the dimensionalities of the parents are proper.
-        For instance, A should be a collection of DxD matrices, thus
-        the dimensionality and the last plate should both equal D.
-        Similarly, `v` should be a collection of diagonal innovation
-        matrix elements, thus the last plate should equal D.
-        """
         D = mu.dims[0][0]
-        M = N.get_moments()[0]
+        #M = N.get_moments()[0]
+        M = n
 
         # Check mu
         if mu.dims != ( (D,), (D,D) ):
@@ -601,7 +541,13 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
                              "instances.")
 
         
-        return ( (M,D), (M,D,D), (M-1,D,D) )
+        dims = ( (M,D), (M,D,D), (M-1,D,D) )
+        distribution = GaussianMarkovChainDistribution(M)
+
+        return ( dims,
+                 distribution, 
+                 cls._statistics, 
+                 cls._parent_statistics)
 
     
     def _plates_to_parent(self, index):
@@ -615,7 +561,6 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
           Lambda: (...)
           A:      (...,N-1,D)
           v:      (...,N-1,D)
-          N:      ()
 
         Parameters:
         -----------
@@ -682,7 +627,7 @@ class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistrib
                       (0, 0) )
 
     def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_B,
-                                   u_S, u_v, u_N):
+                                   u_S, u_v):
         """
         Compute a message to a parent.
 
@@ -702,8 +647,6 @@ class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistrib
             Moments of parent `S`.
         u_v : list of ndarrays
             Moments of parent `v`.
-        u_N : list of ndarrays
-            Moments of parent `N`.
         """
         
         if index == 0:   # mu
@@ -785,7 +728,7 @@ class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistrib
             raise ValueError("Invalid index")
 
 
-    def compute_phi_from_parents(self, u_mu, u_Lambda, u_B, u_S, u_v, u_N,
+    def compute_phi_from_parents(self, u_mu, u_Lambda, u_B, u_S, u_v,
                                  mask=True):
         """
         Compute the natural parameters using parents' moments.
@@ -808,7 +751,7 @@ class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistrib
         D = np.shape(u_mu[0])[-1]
 
         # Number of time instances in the process
-        N = u_N[0]
+        N = self.N
 
         # Helpful variables (show shapes in comments)
         mu = u_mu[0]         # (..., D)
@@ -871,7 +814,7 @@ class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistrib
 
         return (phi0, phi1, phi2)
 
-    def compute_cgf_from_parents(self, u_mu, u_Lambda, u_B, u_S, u_v, u_N):
+    def compute_cgf_from_parents(self, u_mu, u_Lambda, u_B, u_S, u_v):
         """
         Compute CGF using the moments of the parents.
         """
@@ -880,7 +823,7 @@ class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistrib
                                                       u_Lambda[0],
                                                       u_Lambda[1],
                                                       u_v[1],
-                                                      u_N[0])
+                                                      self.N)
 
 
 
@@ -922,17 +865,14 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     """
 
-    ndims_parents = [(1, 2), (2, 0), (2, 4), (1, 2), (0, 0)]
-    
-    _distribution = DriftingGaussianMarkovChainDistribution()
-
     _parent_statistics = (GaussianStatistics(1),
                           WishartStatistics(),
                           GaussianStatistics(2),
                           GaussianStatistics(1),
-                          GammaStatistics(),
-                          Statistics())
-    
+                          GammaStatistics())
+
+    @ensureparents
+    @useconstructor
     def __init__(self, mu, Lambda, B, S, v, n=None, **kwargs):
         """
         `mu` is the mean of x_0, (...)x(D)
@@ -942,9 +882,29 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         `v` is the diagonal precision of the innovation, (...,D)x()
         """
 
-        # Make sure the parents are nodes and of correct type
-        S = self._ensure_statistics(S, self._parent_statistics[3])
-        v = self._ensure_statistics(v, self._parent_statistics[4])
+        # Construct
+        super().__init__(mu, Lambda, B, S, v, **kwargs)
+
+
+    @classmethod
+    def _construct_distribution_and_statistics(cls, mu, Lambda, B, S, v, 
+                                               n=None,
+                                               **kwargs):
+        """
+        Constructs distribution and statistics objects.
+        
+        Compute the dimensions of phi and u.
+
+        The plates and dimensions of the parents should be:
+        mu:     (...)                    and D-dimensional
+        Lambda: (...)                    and D-dimensional
+        B:      (...,D)                  and D-dimensional
+        S:      (...,N-1)                and D-dimensional
+        v:      (...,1,D) or (...,N-1,D) and 0-dimensional
+        N:      ()                       and 0-dimensional (dummy parent)
+
+        Check that the dimensionalities of the parents are proper.
+        """
 
         # A dummy wrapper for the number of time instances.
         n_S = 1
@@ -971,28 +931,9 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                 "plates of parents:" "%d != %d+1" 
                 % (n, n_S))
                                 
-        # Construct
-        super().__init__(mu, Lambda, B, S, v, n=n, **kwargs)
-
-
-    @staticmethod
-    def compute_dims(mu, Lambda, B, S, v, N):
-        """
-        Compute the dimensions of phi and u.
-
-        The plates and dimensions of the parents should be:
-        mu:     (...)                    and D-dimensional
-        Lambda: (...)                    and D-dimensional
-        B:      (...,D)                  and D-dimensional
-        S:      (...,N-1)                and D-dimensional
-        v:      (...,1,D) or (...,N-1,D) and 0-dimensional
-        N:      ()                       and 0-dimensional (dummy parent)
-
-        Check that the dimensionalities of the parents are proper.
-        """
         D = mu.dims[0][0]
         K = B.dims[0][-1]
-        M = N.get_moments()[0]
+        M = n #N.get_moments()[0]
 
         # Check mu
         if mu.dims != ( (D,), (D,D) ):
@@ -1034,7 +975,14 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                              "instances.")
 
         
-        return ( (M,D), (M,D,D), (M-1,D,D) )
+        dims = ( (M,D), (M,D,D), (M-1,D,D) )
+        distribution = DriftingGaussianMarkovChainDistribution(M)
+
+        return (dims,
+                distribution,
+                cls._statistics,
+                cls._parent_statistics)
+    
 
     def _plates_to_parent(self, index):
         """
@@ -1047,7 +995,6 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
           Lambda: (...)
           A:      (...,N-1,D)
           v:      (...,N-1,D)
-          N:      ()
 
         Parameters:
         -----------
@@ -1101,9 +1048,8 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
             return self.parents[3].plates[:-1]
         elif index == 4: # v, remove last plates N-1,D
             return self.parents[4].plates[:-2]
-        elif index == 5: # N
-            return ()
-        raise ValueError("Invalid parent index.")
+        else:
+            raise ValueError("Invalid parent index.")
 
 
             
@@ -1118,8 +1064,6 @@ class _MarkovChainToGaussian(Deterministic):
 
     _statistics = GaussianStatistics(1)
     _parent_statistics = (GaussianMarkovChainStatistics(),)
-    ## _statistics_class = Gaussian._statistics_class
-    ## _parent_statistics_class = (GaussianMarkovChainStatistics,)
 
     def __init__(self, X, **kwargs):
 
@@ -1219,11 +1163,6 @@ class _MarkovChainToGaussian(Deterministic):
         mask : boolean ndarray
             Mask telling which plates should be taken into account.
         """
-        
-        #(m, mask) = self.message_from_children()
 
         # Add the third empty message
         return [m_children[0], m_children[1], None]
-    #mask = self._compute_mask
-
-    #return (m, mask)

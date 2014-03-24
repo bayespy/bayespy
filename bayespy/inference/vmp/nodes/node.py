@@ -118,6 +118,17 @@ class Statistics():
         raise NotImplementedError("compute_dims_from_values not implemented "
                                   "for %s"
                                   % (self.__class__.__name__))
+
+def ensureparents(__init__):
+    def new_init(self, *parents, **kwargs):
+        # Convert parents to proper nodes
+        parents = list(parents)
+        for (ind, parent) in enumerate(parents):
+            parents[ind] = self._ensure_statistics(parent, 
+                                                   self._parent_statistics[ind])
+        __init__(self, *parents, **kwargs)
+    return new_init
+
     
 class Node():
     """
@@ -147,19 +158,11 @@ class Node():
     # creating them is not correct, write your own creation code.
     _statistics = None
     _parent_statistics = None
-    
+
+    @ensureparents
     def __init__(self, *parents, dims=None, plates=None, name="", plotter=None):
 
-        # Convert parents to proper nodes
-        self.parents = []
-        for (ind, parent) in enumerate(parents):
-            parent = self._ensure_statistics(parent, 
-                                             self._parent_statistics[ind])
-            self.parents.append(parent)
-
-        if dims is None:
-            dims = self.compute_dims(*self.parents)
-
+        self.parents = parents
         self.dims = dims
         self.name = name
         self._plotter = plotter

@@ -27,12 +27,14 @@ import numpy as np
 from bayespy import utils
 from bayespy.utils.linalg import dot, mvdot
 
-from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
+from .expfamily import ExponentialFamily
+from .expfamily import ExponentialFamilyDistribution
+from .expfamily import useconstructor
 from .wishart import Wishart, WishartStatistics
 from .gamma import Gamma, GammaStatistics
 from .deterministic import Deterministic
 
-from .node import Statistics
+from .node import Statistics, ensureparents
 
 class GaussianStatistics(Statistics):
     def __init__(self, ndim):
@@ -102,9 +104,6 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         u = [x, utils.utils.m_outer(x,x)]
         f = -k/2*np.log(2*np.pi)
         return (u, f)
-
-    def compute_dims(self):
-        raise NotImplementedError()
 
 
 class Gaussian(ExponentialFamily):
@@ -228,9 +227,6 @@ class Gaussian(ExponentialFamily):
 
     """
 
-    ## _statistics_class = GaussianStatistics
-    ## _parent_statistics_class = (GaussianStatistics,
-    ##                             Wishart._statistics_class)
     _distribution = GaussianDistribution()
     _statistics = GaussianStatistics(1)
     _parent_statistics = (GaussianStatistics(1),
@@ -239,26 +235,15 @@ class Gaussian(ExponentialFamily):
     # Observations are vectors (1-D):
     ndim_observations = 1
 
-
-    
+    @ensureparents
+    @useconstructor
     def __init__(self, mu, Lambda, **kwargs):
         super().__init__(mu, Lambda, **kwargs)
 
-    @staticmethod
-    def compute_dims(mu, Lambda):
+    @classmethod
+    def _construct_distribution_and_statistics(cls, mu, Lambda, **kwargs):
         """
-        Compute the dimensions of phi and u using the parent nodes.
-
-        Also, check that the dimensionalities of the parents are
-        consistent with each other.
-
-        Parameters
-        ----------
-        mu : Node
-            A VB node with ( (D,), (D,D) ) dimensional Gaussian
-            output.
-        Lambda: Node
-            A VB node with ( (D,D), () ) dimensional Wishart output.
+        Constructs distribution and statistics objects.
         """
         D = mu.dims[0][0]
 
@@ -267,7 +252,12 @@ class Gaussian(ExponentialFamily):
         if Lambda.dims != ( (D,D), () ):
             raise Exception("Second parent has wrong dimensionality")
         
-        return ( (D,), (D,D) )
+        dims = ( (D,), (D,D) )
+        return (dims, 
+                cls._distribution, 
+                cls._statistics, 
+                cls._parent_statistics)
+
 
     def get_shape_of_value(self):
         # Dimensionality of a realization
@@ -622,67 +612,451 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         f = -k/2*np.log(2*np.pi)
         return (u, f)
 
-    def compute_dims(self):
-        raise NotImplementedError()
 
+class GaussianArrayARD(ExponentialFamily):
+    r"""
+    VMP node for Gaussian array variable.
 
-def GaussianArrayARD(mu, alpha, ndim=None, shape=None, **kwargs):
+    The node represents a :math:`(D0,D1,...,DN)`-dimensional vector from the
+    Gaussian distribution:
+
+    .. math::
+
+       \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu},
+       \mathbf{\Lambda}),
+
+    where :math:`\boldsymbol{\mu}` is the mean vector and
+    :math:`\mathbf{\Lambda}` is the precision matrix (i.e., inverse of
+    the covariance matrix).
+
+    .. math::
+
+       \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
+       \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
+       \quad \mathbf{\Lambda} \text{ symmetric positive definite}
+
+    Plates!
+
+    Parent nodes? Child nodes?
+
+    See also
+    --------
+    Normal
+    Wishart
+
+    Notes
+    -----
+
+    Message passing equations:
+
+    .. math::
+
+       \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu}, \mathbf{\Lambda}),
+
+    .. math::
+
+       \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
+       \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
+       \quad \mathbf{\Lambda} \text{ symmetric positive definite}
+
+    .. math::
+
+       \log\mathcal{N}( \mathbf{x} | \boldsymbol{\mu}, \mathbf{\Lambda} )
+       &= 
+       - \frac{1}{2} \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \mathbf{x}
+       + \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \boldsymbol{\mu}
+       - \frac{1}{2} \boldsymbol{\mu}^{\mathrm{T}} \mathbf{\Lambda}
+         \boldsymbol{\mu}
+       + \frac{1}{2} \log |\mathbf{\Lambda}|
+       - \frac{D}{2} \log (2\pi)
+
+    .. math::
+
+       \mathbf{u} (\mathbf{x})
+       &=
+       \left[ \begin{matrix}
+         \mathbf{x}
+         \\
+         \mathbf{xx}^{\mathrm{T}}
+       \end{matrix} \right]
+       \\
+       \boldsymbol{\phi} (\boldsymbol{\mu}, \mathbf{\Lambda})
+       &=
+       \left[ \begin{matrix}
+         \mathbf{\Lambda} \boldsymbol{\mu} 
+         \\
+         - \frac{1}{2} \mathbf{\Lambda}
+       \end{matrix} \right]
+       \\
+       \boldsymbol{\phi}_{\boldsymbol{\mu}} (\mathbf{x}, \mathbf{\Lambda})
+       &=
+       \left[ \begin{matrix}
+         \mathbf{\Lambda} \mathbf{x} 
+         \\
+         - \frac{1}{2} \mathbf{\Lambda}
+       \end{matrix} \right]
+       \\
+       \boldsymbol{\phi}_{\mathbf{\Lambda}} (\mathbf{x}, \boldsymbol{\mu})
+       &=
+       \left[ \begin{matrix}
+         - \frac{1}{2} \mathbf{xx}^{\mathrm{T}}
+         + \frac{1}{2} \mathbf{x}\boldsymbol{\mu}^{\mathrm{T}}
+         + \frac{1}{2} \boldsymbol{\mu}\mathbf{x}^{\mathrm{T}}
+         - \frac{1}{2} \boldsymbol{\mu\mu}^{\mathrm{T}}
+         \\
+         \frac{1}{2}
+       \end{matrix} \right]
+       \\
+       g (\boldsymbol{\mu}, \mathbf{\Lambda})
+       &=
+       - \frac{1}{2} \operatorname{tr}(\boldsymbol{\mu\mu}^{\mathrm{T}}
+                                       \mathbf{\Lambda} )
+       + \frac{1}{2} \log |\mathbf{\Lambda}|
+       \\
+       g_{\boldsymbol{\phi}} (\boldsymbol{\phi})
+       &=
+       \frac{1}{4} \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
+       \boldsymbol{\phi}_1
+       + \frac{1}{2} \log | -2 \boldsymbol{\phi}_2 |
+       \\
+       f(\mathbf{x})
+       &= - \frac{D}{2} \log(2\pi)
+       \\
+       \overline{\mathbf{u}}  (\boldsymbol{\phi})
+       &=
+       \left[ \begin{matrix}
+         - \frac{1}{2} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
+         \\
+         \frac{1}{4} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
+         \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
+         - \frac{1}{2} \boldsymbol{\phi}^{-1}_2
+       \end{matrix} \right]
+
     """
-    A wrapper for constructing a Gaussian array node.
 
-    This method tries to 'intelligently' deduce the shape of the node.
-    """
+
     
-    # Check consistency
-    if ndim is not None and shape is not None and ndim != len(shape):
-        raise ValueError("Given shape and ndim inconsistent")
-    if ndim is None and shape is not None:
-        ndim = len(shape)
-
-    # Infer shape of mu
-    try:
-        shape_mu = mu.dims[0]
-    except:
-        if ndim is None and shape is None:
-            shape_mu = np.shape(mu)
-        elif ndim == 0:
-            shape_mu = ()
-        elif ndim is not None and ndim > 0:
-            shape_mu = np.shape(mu)[-ndim:]
-        else:
-            raise ValueError("Can't infer the shape of the parent mu")
-    ndim_mu = len(shape_mu)
-
-    # Infer shape of alpha
-    try:
-        shape_alpha = alpha.plates
-    except:
-        shape_alpha = np.shape(alpha)
-    if ndim == 0:
-        shape_alpha = ()
-    elif ndim is not None and ndim > 0:
-        shape_alpha = shape_alpha[-ndim:]
-    elif ndim is not None:
-        raise ValueError("Can't infer the shape of the parent alpha")
-    ndim_alpha = len(shape_alpha)
+    @useconstructor
+    def __init__(self, mu, alpha, ndim=None, shape=None, **kwargs):
+        super().__init__(mu, alpha, **kwargs)
         
-    # Infer dimensionality
-    if ndim is None:
-        ndim = max(ndim_mu, ndim_alpha)
-    elif ndim < ndim_mu or ndim < ndim_alpha:
-        raise ValueError("Parent mu has more axes")
+    @classmethod
+    def _construct_distribution_and_statistics(cls, mu, alpha,
+                                               ndim=None,
+                                               shape=None, 
+                                               **kwargs):
+        """
+        Constructs distribution and statistics objects.
 
-    # Infer shape of the node
-    shape_bc = utils.utils.broadcasted_shape(shape_mu, shape_alpha)
-    if shape is None:
-        shape = (ndim-len(shape_bc))*(1,) + shape_bc
-    elif not utils.utils.is_shape_subset(shape_bc, shape):
-        raise ValueError("Broadcasted shape of the parents %s does not "
-                         "broadcast to the given shape %s" 
-                         % (shape_bc, shape))
+        If __init__ uses useconstructor decorator, this method is called to
+        construct distribution and statistics objects.
 
-    # Construct the Gaussian array variable
-    return _GaussianArrayARD(shape, shape_mu=shape_mu)(mu, alpha, **kwargs)
+        The method is given the same inputs as __init__. For some nodes, some of
+        these can't be "static" class attributes, then the node class must
+        overwrite this method to construct the objects manually.
+
+        The point of distribution class is to move general distribution but
+        not-node specific code. The point of statistics class is to define the
+        messaging protocols.
+        """
+        # Check consistency
+        if ndim is not None and shape is not None and ndim != len(shape):
+            raise ValueError("Given shape and ndim inconsistent")
+        if ndim is None and shape is not None:
+            ndim = len(shape)
+
+        # Infer shape of mu
+        try:
+            shape_mu = mu.dims[0]
+        except:
+            if ndim is None and shape is None:
+                shape_mu = np.shape(mu)
+            elif ndim == 0:
+                shape_mu = ()
+            elif ndim is not None and ndim > 0:
+                shape_mu = np.shape(mu)[-ndim:]
+            else:
+                raise ValueError("Can't infer the shape of the parent mu")
+        ndim_mu = len(shape_mu)
+
+        # Infer shape of alpha
+        try:
+            shape_alpha = alpha.plates
+        except:
+            shape_alpha = np.shape(alpha)
+        if ndim == 0:
+            shape_alpha = ()
+        elif ndim is not None and ndim > 0:
+            shape_alpha = shape_alpha[-ndim:]
+        elif ndim is not None:
+            raise ValueError("Can't infer the shape of the parent alpha")
+        ndim_alpha = len(shape_alpha)
+
+        # Infer dimensionality
+        if ndim is None:
+            ndim = max(ndim_mu, ndim_alpha)
+        elif ndim < ndim_mu or ndim < ndim_alpha:
+            raise ValueError("Parent mu has more axes")
+
+        # Infer shape of the node
+        shape_bc = utils.utils.broadcasted_shape(shape_mu, shape_alpha)
+        if shape is None:
+            shape = (ndim-len(shape_bc))*(1,) + shape_bc
+        elif not utils.utils.is_shape_subset(shape_bc, shape):
+            raise ValueError("Broadcasted shape of the parents %s does not "
+                             "broadcast to the given shape %s" 
+                             % (shape_bc, shape))
+
+        ndim = len(shape)
+        if shape_mu is None:
+            shape_mu = shape
+        ndim_mu = len(shape_mu)
+    
+        statistics = GaussianStatistics(ndim)
+        parent_statistics = (GaussianStatistics(ndim_mu),
+                             GammaStatistics())
+        distribution = GaussianARDDistribution(shape, ndim_mu)
+
+        # Observations are scalar/vectors/matrices/tensors based on ndim:
+        #ndim_observations = ndim
+
+        # Convert parents to proper nodes
+        mu = cls._ensure_statistics(mu, parent_statistics[0])
+        alpha = cls._ensure_statistics(alpha, parent_statistics[1])
+
+        # Check consistency with respect to parent mu
+        shape_mean = shape[-ndim_mu:]
+        # Check mean
+        if not utils.utils.is_shape_subset(mu.dims[0], shape_mean):
+            raise ValueError("Parent node %s with mean shaped %s does not "
+                             "broadcast to the shape %s of this node"
+                             % (mu.name,
+                                mu.dims[0],
+                                shape))
+        # Check covariance
+        shape_cov = shape[-ndim_mu:] + shape[-ndim_mu:]
+        if not utils.utils.is_shape_subset(mu.dims[1], shape_cov):
+            raise ValueError("Parent node %s with covariance shaped %s "
+                             "does not broadcast to the shape %s of this "
+                             "node"
+                             % (mu.name,
+                                mu.dims[1],
+                                shape+shape))
+
+        # Check consistency with respect to parent alpha
+        if ndim == 0:
+            shape_alpha = ()
+        else:
+            shape_alpha = alpha.plates[-ndim:]
+        if not utils.utils.is_shape_subset(shape_alpha, shape):
+            raise ValueError("Parent node (precision) does not broadcast "
+                             "to the shape of this node")
+        if alpha.dims != ( (), () ):
+            raise Exception("Second parent has wrong dimensionality")
+        
+        dims = (shape, shape+shape)
+
+        return (dims, distribution, statistics, parent_statistics)
+        
+    def _plates_to_parent(self, index):
+        if index == 1:
+            shape = self._distribution.shape
+            return self.plates + shape
+        else:
+            return super()._plates_to_parent(index)
+
+    def _plates_from_parent(self, index):
+        ndim = len(self._distribution.shape)
+        if index == 1 and ndim > 0:
+            return self.parents[index].plates[:-ndim]
+        else:
+            return super()._plates_from_parent(index)
+
+    def initialize_from_mean_and_covariance(self, mu, Cov):
+        ndim = len(self._distribution.shape)
+        u = [mu, Cov + utils.linalg.outer(mu, mu, ndim=ndim)]
+        mask = np.logical_not(self.observed)
+        # TODO: You could compute the CGF but it requires Cholesky of
+        # Cov. Do it later.
+        self._set_moments_and_cgf(u, np.nan, mask=mask)
+        return
+
+    def get_shape_of_value(self):
+        # Dimensionality of a realization
+        return self.dims[0]
+
+    def random(self):
+        """
+        Draw a random sample from the Gaussian distribution.
+        """
+        # TODO/FIXME: You shouldn't draw random values for
+        # observed/fixed elements!
+        D = len(self.dims[0])
+        if np.prod(self.dims[1]) == 1.0:
+            # Scalar Gaussian
+            phi1 = self.phi[1]
+            if D > 0:
+                # Because the covariance matrix has shape (1,1,...,1,1),
+                # that is 2*D number of ones, remove the extra half of the
+                # shape
+                phi1 = np.reshape(phi1, np.shape(phi1)[:-2*D] + D*(1,))
+
+            std = np.sqrt(-0.5 / phi1)
+            mu = self.u[0]
+            z = np.random.normal(0, 1, self.get_shape(0))
+            x = mu + std * z
+        else:
+            N = np.prod(self.dims[0])
+            dims_cov = self.dims[1]
+            # Reshape precision matrix
+            plates_cov = np.shape(self.phi[1])[:-2*D]
+            V = -2 * np.reshape(self.phi[1], plates_cov + (N,N))
+            # Reshape mean vector
+            plates_mu = np.shape(self.u[0])[:-D]
+            mu = np.reshape(self.u[0], plates_mu + (N,))
+            # Compute Cholesky
+            U = utils.linalg.chol(V)
+            # Compute mu + U'*z
+            z = np.random.normal(0, 1, self.plates + (N,))
+            x = mu + utils.linalg.solve_triangular(U, z,
+                                                   trans='T', 
+                                                   lower=False)
+            x = np.reshape(x, self.plates + self.dims[0])
+        return x
+
+    def show(self):
+        raise NotImplementedError()
+        mu = self.u[0]
+        Cov = self.u[1] - utils.utils.m_outer(mu, mu)
+        print("%s ~ Gaussian(mu, Cov)" % self.name)
+        print("  mu = ")
+        print(mu)
+        print("  Cov = ")
+        print(str(Cov))
+
+
+    def rotate(self, R, inv=None, logdet=None, axis=-1, Q=None):
+
+        ndim = len(self._distribution.shape)
+        
+        if inv is not None:
+            invR = inv
+        else:
+            invR = np.linalg.inv(R)
+
+        if logdet is not None:
+            logdetR = logdet
+        else:
+            logdetR = np.linalg.slogdet(R)[1]
+
+        self.phi[0] = rotate_mean(self.phi[0], invR.T,
+                                  axis=axis,
+                                  ndim=ndim)
+        self.phi[1] = rotate_covariance(self.phi[1], invR.T,
+                                        axis=axis,
+                                        ndim=ndim)
+        self.u[0] = rotate_mean(self.u[0], R,
+                                axis=axis,
+                                ndim=ndim)
+        self.u[1] = rotate_covariance(self.u[1], R, 
+                                      axis=axis,
+                                      ndim=ndim)
+        s = list(self.dims[0])
+        s.pop(axis)
+        self.g -= logdetR * np.prod(s)
+
+        return
+
+    def rotate_plates(self, Q, plate_axis=-1):
+        """
+        Approximate rotation of a plate axis.
+
+        Mean is rotated exactly but covariance/precision matrix is rotated
+        approximately.
+        """
+
+        ndim = len(self._distribution.shape)
+        
+        # Rotate moments using Q
+        if not isinstance(plate_axis, int):
+            raise ValueError("Plate axis must be integer")
+        if plate_axis >= 0:
+            plate_axis -= len(self.plates)
+        if plate_axis < -len(self.plates) or plate_axis >= 0:
+            raise ValueError("Axis out of bounds")
+
+        u0 = rotate_mean(self.u[0], Q, 
+                         ndim=ndim+(-plate_axis),
+                         axis=0)
+        sumQ = utils.utils.add_trailing_axes(np.sum(Q, axis=0),
+                                             2*ndim-plate_axis-1)
+        phi1 = sumQ**(-2) * self.phi[1]
+        phi0 = -2 * matrix_dot_vector(phi1, u0, ndim=ndim)
+
+        self.phi[0] = phi0
+        self.phi[1] = phi1
+
+        self._update_moments_and_cgf()
+
+        return
+
+## def GaussianArrayARD(mu, alpha, ndim=None, shape=None, **kwargs):
+##     """
+##     A wrapper for constructing a Gaussian array node.
+
+##     This method tries to 'intelligently' deduce the shape of the node.
+##     """
+    
+##     # Check consistency
+##     if ndim is not None and shape is not None and ndim != len(shape):
+##         raise ValueError("Given shape and ndim inconsistent")
+##     if ndim is None and shape is not None:
+##         ndim = len(shape)
+
+##     # Infer shape of mu
+##     try:
+##         shape_mu = mu.dims[0]
+##     except:
+##         if ndim is None and shape is None:
+##             shape_mu = np.shape(mu)
+##         elif ndim == 0:
+##             shape_mu = ()
+##         elif ndim is not None and ndim > 0:
+##             shape_mu = np.shape(mu)[-ndim:]
+##         else:
+##             raise ValueError("Can't infer the shape of the parent mu")
+##     ndim_mu = len(shape_mu)
+
+##     # Infer shape of alpha
+##     try:
+##         shape_alpha = alpha.plates
+##     except:
+##         shape_alpha = np.shape(alpha)
+##     if ndim == 0:
+##         shape_alpha = ()
+##     elif ndim is not None and ndim > 0:
+##         shape_alpha = shape_alpha[-ndim:]
+##     elif ndim is not None:
+##         raise ValueError("Can't infer the shape of the parent alpha")
+##     ndim_alpha = len(shape_alpha)
+        
+##     # Infer dimensionality
+##     if ndim is None:
+##         ndim = max(ndim_mu, ndim_alpha)
+##     elif ndim < ndim_mu or ndim < ndim_alpha:
+##         raise ValueError("Parent mu has more axes")
+
+##     # Infer shape of the node
+##     shape_bc = utils.utils.broadcasted_shape(shape_mu, shape_alpha)
+##     if shape is None:
+##         shape = (ndim-len(shape_bc))*(1,) + shape_bc
+##     elif not utils.utils.is_shape_subset(shape_bc, shape):
+##         raise ValueError("Broadcasted shape of the parents %s does not "
+##                          "broadcast to the given shape %s" 
+##                          % (shape_bc, shape))
+
+##     # Construct the Gaussian array variable
+##     return _GaussianArrayARD(shape, shape_mu=shape_mu)(mu, alpha, **kwargs)
 
 
 def reshape_gaussian_array(dims_from, dims_to, x0, x1):
@@ -864,356 +1238,4 @@ def matrix_dot_vector(A, x, ndim=1):
     y = np.einsum('...ik,...k->...i', A, x)
 
     return vector_to_array(y, dims_x)
-
-## Mixture(z, GaussianARD, mu, alpha, kwargs_par=dict(ndim=2))
-## in mixture:
-##     statistics = GaussianARD.statistics
-##     distribution = GaussianARD.get_distribution(**kwargs_par)
-## Constant(GaussianARD, x, ndim)
-## in constant:
-##     u = GaussianARD.compute_fixed_moments(x, ndim)
-## How about constant parent in Mixture?
-##     distribution = GaussianARD.get_distribution(mu, alpha, **kwargs_par)
-## class GaussianARD(ExponentialFamily):
-##     def __init__(self, mu, alpha, ndim=None, shape=None, **kwargs):
-##         try:
-##             shape_mu = mu.dims[0]
-##         except:
-##             blaablaa
-##         self._parent_statistics = (GaussianStatistics(len(shape_mu)),
-##                                    GammaStatistics())
-##         super().__init__(mu, alpha, **kwargs)
-##         self._statistics = GaussianStatistics(ndim)
         
-def _GaussianArrayARD(shape, shape_mu=None):
-
-    ndim = len(shape)
-    if shape_mu is None:
-        shape_mu = shape
-    ndim_mu = len(shape_mu)
-    
-    class __GaussianArrayARD(ExponentialFamily):
-        r"""
-        VMP node for Gaussian array variable.
-
-        The node represents a :math:`(D0,D1,...,DN)`-dimensional vector from the
-        Gaussian distribution:
-
-        .. math::
-
-           \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu},
-           \mathbf{\Lambda}),
-
-        where :math:`\boldsymbol{\mu}` is the mean vector and
-        :math:`\mathbf{\Lambda}` is the precision matrix (i.e., inverse of
-        the covariance matrix).
-
-        .. math::
-
-           \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
-           \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
-           \quad \mathbf{\Lambda} \text{ symmetric positive definite}
-
-        Plates!
-
-        Parent nodes? Child nodes?
-
-        See also
-        --------
-        Normal
-        Wishart
-
-        Notes
-        -----
-
-        Message passing equations:
-
-        .. math::
-
-           \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu}, \mathbf{\Lambda}),
-
-        .. math::
-
-           \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
-           \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
-           \quad \mathbf{\Lambda} \text{ symmetric positive definite}
-
-        .. math::
-
-           \log\mathcal{N}( \mathbf{x} | \boldsymbol{\mu}, \mathbf{\Lambda} )
-           &= 
-           - \frac{1}{2} \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \mathbf{x}
-           + \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \boldsymbol{\mu}
-           - \frac{1}{2} \boldsymbol{\mu}^{\mathrm{T}} \mathbf{\Lambda}
-             \boldsymbol{\mu}
-           + \frac{1}{2} \log |\mathbf{\Lambda}|
-           - \frac{D}{2} \log (2\pi)
-
-        .. math::
-
-           \mathbf{u} (\mathbf{x})
-           &=
-           \left[ \begin{matrix}
-             \mathbf{x}
-             \\
-             \mathbf{xx}^{\mathrm{T}}
-           \end{matrix} \right]
-           \\
-           \boldsymbol{\phi} (\boldsymbol{\mu}, \mathbf{\Lambda})
-           &=
-           \left[ \begin{matrix}
-             \mathbf{\Lambda} \boldsymbol{\mu} 
-             \\
-             - \frac{1}{2} \mathbf{\Lambda}
-           \end{matrix} \right]
-           \\
-           \boldsymbol{\phi}_{\boldsymbol{\mu}} (\mathbf{x}, \mathbf{\Lambda})
-           &=
-           \left[ \begin{matrix}
-             \mathbf{\Lambda} \mathbf{x} 
-             \\
-             - \frac{1}{2} \mathbf{\Lambda}
-           \end{matrix} \right]
-           \\
-           \boldsymbol{\phi}_{\mathbf{\Lambda}} (\mathbf{x}, \boldsymbol{\mu})
-           &=
-           \left[ \begin{matrix}
-             - \frac{1}{2} \mathbf{xx}^{\mathrm{T}}
-             + \frac{1}{2} \mathbf{x}\boldsymbol{\mu}^{\mathrm{T}}
-             + \frac{1}{2} \boldsymbol{\mu}\mathbf{x}^{\mathrm{T}}
-             - \frac{1}{2} \boldsymbol{\mu\mu}^{\mathrm{T}}
-             \\
-             \frac{1}{2}
-           \end{matrix} \right]
-           \\
-           g (\boldsymbol{\mu}, \mathbf{\Lambda})
-           &=
-           - \frac{1}{2} \operatorname{tr}(\boldsymbol{\mu\mu}^{\mathrm{T}}
-                                           \mathbf{\Lambda} )
-           + \frac{1}{2} \log |\mathbf{\Lambda}|
-           \\
-           g_{\boldsymbol{\phi}} (\boldsymbol{\phi})
-           &=
-           \frac{1}{4} \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
-           \boldsymbol{\phi}_1
-           + \frac{1}{2} \log | -2 \boldsymbol{\phi}_2 |
-           \\
-           f(\mathbf{x})
-           &= - \frac{D}{2} \log(2\pi)
-           \\
-           \overline{\mathbf{u}}  (\boldsymbol{\phi})
-           &=
-           \left[ \begin{matrix}
-             - \frac{1}{2} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
-             \\
-             \frac{1}{4} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
-             \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
-             - \frac{1}{2} \boldsymbol{\phi}^{-1}_2
-           \end{matrix} \right]
-
-        """
-
-        ## _statistics_class = GaussianStatistics
-        ## _parent_statistics_class = (GaussianStatistics, 
-        ##                             Gamma._statistics_class)
-        _statistics = GaussianStatistics(ndim)
-        _parent_statistics = (GaussianStatistics(ndim_mu),
-                              GammaStatistics())
-        _distribution = GaussianARDDistribution(shape, ndim_mu)
-        
-        # Number of axes for the mean and covariance
-        # Number of axes for the parameters of the parents
-        # Observations are scalar/vectors/matrices/tensors based on ndim:
-        ndim_observations = ndim
-
-        def __init__(self, mu, alpha, **kwargs):
-            super().__init__(mu, alpha, **kwargs)
-
-        def _plates_to_parent(self, index):
-            if index == 1:
-                return self.plates + shape
-            else:
-                return super()._plates_to_parent(index)
-                
-        def _plates_from_parent(self, index):
-            if index == 1 and ndim > 0:
-                return self.parents[index].plates[:-ndim]
-            else:
-                return super()._plates_from_parent(index)
-
-        def initialize_from_mean_and_covariance(self, mu, Cov):
-            u = [mu, Cov + utils.linalg.outer(mu, mu, ndim=ndim)]
-            mask = np.logical_not(self.observed)
-            # TODO: You could compute the CGF but it requires Cholesky of
-            # Cov. Do it later.
-            self._set_moments_and_cgf(u, np.nan, mask=mask)
-            return
-            
-        @staticmethod
-        def compute_dims(mu, alpha):
-            """
-            Compute the dimensions of phi and u using the parent nodes.
-
-            Also, check that the dimensionalities of the parents are
-            consistent with each other.
-
-            Parameters
-            ----------
-            mu : Node
-                A VB node with Gaussian array output.
-            alpha: Node
-                A VB node with Gamma output.
-            """
-
-            # Actually, the shape of this node is already fixed. Just check that
-            # everything is consistent
-
-            # Check consistency with respect to parent mu
-            shape_mean = shape[-ndim_mu:]
-            # Check mean
-            if not utils.utils.is_shape_subset(mu.dims[0], shape_mean):
-                raise ValueError("Parent node %s with mean shaped %s does not "
-                                 "broadcast to the shape %s of this node"
-                                 % (mu.name,
-                                    mu.dims[0],
-                                    shape))
-            # Check covariance
-            shape_cov = shape[-ndim_mu:] + shape[-ndim_mu:]
-            if not utils.utils.is_shape_subset(mu.dims[1], shape_cov):
-                raise ValueError("Parent node %s with covariance shaped %s "
-                                 "does not broadcast to the shape %s of this "
-                                 "node"
-                                 % (mu.name,
-                                    mu.dims[1],
-                                    shape+shape))
-
-            # Check consistency with respect to parent alpha
-            if ndim == 0:
-                shape_alpha = ()
-            else:
-                shape_alpha = alpha.plates[-ndim:]
-            if not utils.utils.is_shape_subset(shape_alpha, shape):
-                raise ValueError("Parent node (precision) does not broadcast "
-                                 "to the shape of this node")
-            if alpha.dims != ( (), () ):
-                raise Exception("Second parent has wrong dimensionality")
-
-            return (shape, shape+shape)
-
-        def get_shape_of_value(self):
-            # Dimensionality of a realization
-            return self.dims[0]
-
-        def random(self):
-            """
-            Draw a random sample from the Gaussian distribution.
-            """
-            # TODO/FIXME: You shouldn't draw random values for
-            # observed/fixed elements!
-            D = len(self.dims[0])
-            if np.prod(self.dims[1]) == 1.0:
-                # Scalar Gaussian
-                phi1 = self.phi[1]
-                if D > 0:
-                    # Because the covariance matrix has shape (1,1,...,1,1),
-                    # that is 2*D number of ones, remove the extra half of the
-                    # shape
-                    phi1 = np.reshape(phi1, np.shape(phi1)[:-2*D] + D*(1,))
-                    
-                std = np.sqrt(-0.5 / phi1)
-                mu = self.u[0]
-                z = np.random.normal(0, 1, self.get_shape(0))
-                x = mu + std * z
-            else:
-                N = np.prod(self.dims[0])
-                dims_cov = self.dims[1]
-                # Reshape precision matrix
-                plates_cov = np.shape(self.phi[1])[:-2*D]
-                V = -2 * np.reshape(self.phi[1], plates_cov + (N,N))
-                # Reshape mean vector
-                plates_mu = np.shape(self.u[0])[:-D]
-                mu = np.reshape(self.u[0], plates_mu + (N,))
-                # Compute Cholesky
-                U = utils.linalg.chol(V)
-                # Compute mu + U'*z
-                z = np.random.normal(0, 1, self.plates + (N,))
-                x = mu + utils.linalg.solve_triangular(U, z,
-                                                       trans='T', 
-                                                       lower=False)
-                x = np.reshape(x, self.plates + self.dims[0])
-            return x
-
-        def show(self):
-            raise NotImplementedError()
-            mu = self.u[0]
-            Cov = self.u[1] - utils.utils.m_outer(mu, mu)
-            print("%s ~ Gaussian(mu, Cov)" % self.name)
-            print("  mu = ")
-            print(mu)
-            print("  Cov = ")
-            print(str(Cov))
-            
-
-        def rotate(self, R, inv=None, logdet=None, axis=-1, Q=None):
-
-            if inv is not None:
-                invR = inv
-            else:
-                invR = np.linalg.inv(R)
-
-            if logdet is not None:
-                logdetR = logdet
-            else:
-                logdetR = np.linalg.slogdet(R)[1]
-
-            self.phi[0] = rotate_mean(self.phi[0], invR.T,
-                                      axis=axis,
-                                      ndim=ndim)
-            self.phi[1] = rotate_covariance(self.phi[1], invR.T,
-                                            axis=axis,
-                                            ndim=ndim)
-            self.u[0] = rotate_mean(self.u[0], R,
-                                    axis=axis,
-                                    ndim=ndim)
-            self.u[1] = rotate_covariance(self.u[1], R, 
-                                          axis=axis,
-                                          ndim=ndim)
-            s = list(self.dims[0])
-            s.pop(axis)
-            self.g -= logdetR * np.prod(s)
-
-            return
-
-        def rotate_plates(self, Q, plate_axis=-1):
-            """
-            Approximate rotation of a plate axis.
-
-            Mean is rotated exactly but covariance/precision matrix is rotated
-            approximately.
-            """
-
-            # Rotate moments using Q
-            if not isinstance(plate_axis, int):
-                raise ValueError("Plate axis must be integer")
-            if plate_axis >= 0:
-                plate_axis -= len(self.plates)
-            if plate_axis < -len(self.plates) or plate_axis >= 0:
-                raise ValueError("Axis out of bounds")
-
-            u0 = rotate_mean(self.u[0], Q, 
-                             ndim=ndim+(-plate_axis),
-                             axis=0)
-            sumQ = utils.utils.add_trailing_axes(np.sum(Q, axis=0),
-                                                 2*ndim-plate_axis-1)
-            phi1 = sumQ**(-2) * self.phi[1]
-            phi0 = -2 * matrix_dot_vector(phi1, u0, ndim=ndim)
-
-            self.phi[0] = phi0
-            self.phi[1] = phi1
-            
-            self._update_moments_and_cgf()
-
-            return
-
-
-    return __GaussianArrayARD

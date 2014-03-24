@@ -23,10 +23,13 @@
 
 import numpy as np
 
-from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
-from .constant import Constant
+from .expfamily import ExponentialFamily
+from .expfamily import ExponentialFamilyDistribution
+from .expfamily import useconstructor
 from .dirichlet import Dirichlet, DirichletStatistics
 from .node import Statistics
+
+from bayespy.utils import random
 
 class CategoricalStatistics(Statistics):
     ndim_observations = 0
@@ -101,47 +104,52 @@ class CategoricalDistribution(ExponentialFamilyDistribution):
         return ([u0], f)
 
 
+class Categorical(ExponentialFamily):
+    
+    _parent_statistics = (DirichletStatistics(),)
 
-def Categorical(p, **kwargs):
-
-    # Get the number of categories (static methods may need this)
-    if np.isscalar(p) or isinstance(p, np.ndarray):
-        n_categories = np.shape(p)[-1]
-    else:
-        n_categories = p.dims[0][0]
-
-    # The actual categorical distribution node
-    class _Categorical(ExponentialFamily):
-
-        _statistics = CategoricalStatistics(n_categories)
-        _parent_statistics = (DirichletStatistics(),)
-        _distribution = CategoricalDistribution(n_categories)
-
-        def __init__(self, p, **kwargs):
-
-            # Check for constant mu
-            if np.isscalar(p) or isinstance(p, np.ndarray):
-                p = ConstantDirichlet(p)
-
-            # Construct
-            super().__init__(p,
-                             **kwargs)
+    @useconstructor
+    def __init__(self, p, **kwargs):
+        super().__init__(p, **kwargs)
 
 
-        @staticmethod
-        def compute_dims(*parents):
-            """ Compute the dimensions of phi/u. """
-            # Has the same dimensionality as the parent.
-            return parents[0].dims
+    @classmethod
+    def _construct_distribution_and_statistics(cls, p, **kwargs):
+        """
+        Constructs distribution and statistics objects.
 
-        def random(self):
-            raise NotImplementedError()
+        This method is called if useconstructor decorator is used for __init__.
+        
+        Becase the distribution and statistics object depend on the number of
+        categories, that is, they depend on the parent node, this method can be
+        used to construct those objects.
+        """
 
-        def show(self):
-            p = self.u[0] #np.exp(self.phi[0])
-            #p /= np.sum(p, axis=-1, keepdims=True)
-            print("%s ~ Categorical(p)" % self.name)
-            print("  p = ")
-            print(p)
+        p = cls._ensure_statistics(p, cls._parent_statistics[0])
+        
+        # Get the number of categories
+        D = p.dims[0][0]
 
-    return _Categorical(p, **kwargs)
+        statistics = CategoricalStatistics(D)
+        distribution = CategoricalDistribution(D)
+
+        return (( (D,), ),
+                distribution, 
+                statistics, 
+                cls._parent_statistics)
+
+    def get_shape_of_value(self):
+        return ()
+
+    def random(self):
+        logp = self.phi[0]
+        logp -= np.amax(logp, axis=-1, keepdims=True)
+        p = np.exp(logp)
+        return random.categorical(p, size=self.plates)
+
+    def show(self):
+        p = self.u[0] #np.exp(self.phi[0])
+        #p /= np.sum(p, axis=-1, keepdims=True)
+        print("%s ~ Categorical(p)" % self.name)
+        print("  p = ")
+        print(p)

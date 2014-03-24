@@ -26,7 +26,9 @@ import scipy.special as special
 
 from bayespy.utils import utils
 
-from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
+from .expfamily import ExponentialFamily
+from .expfamily import ExponentialFamilyDistribution
+from .expfamily import useconstructor
 from .constant import Constant
 
 from .node import Statistics, Node
@@ -123,30 +125,34 @@ class Wishart(ExponentialFamily):
 
     _distribution = WishartDistribution()
     _statistics = WishartStatistics()
-    
+
+    @useconstructor
     def __init__(self, n, V, **kwargs):
-
-        V = self._ensure_statistics(V, WishartStatistics())
-
-        k = V.dims[0][-1]
-        self._parent_statistics = (WishartPriorStatistics(k), 
-                                   WishartStatistics())
-        
         super().__init__(n, V, **kwargs)
         
-    @staticmethod
-    def message(index, u, u_parents):
-        if index == 0:
-            raise Exception("No analytic solution exists")
-        elif index == 1:
-            return (-0.5 * u[0],
-                    0.5 * u_parents[0][0])
+    @classmethod
+    def _construct_distribution_and_statistics(cls, n, V, **kwargs):
+        """
+        Constructs distribution and statistics objects.
+        """
 
-    @staticmethod
-    def compute_dims(*parents):
-        """ Compute the dimensions of phi/u. """
-        # Has the same dimensionality as the second parent.
-        return parents[1].dims
+        # Make V a proper parent node
+        V = cls._ensure_statistics(V, WishartStatistics())
+
+        # Dimensionality of the matrix
+        k = V.dims[0][-1]
+
+        # Parent node message types
+        parent_statistics = (WishartPriorStatistics(k), 
+                             WishartStatistics())
+
+        # Dimensionality of the natural parameters
+        dims = ( (k,k), () )
+        
+        return (dims, 
+                cls._distribution, 
+                cls._statistics, 
+                parent_statistics)
 
     def show(self):
         print("%s ~ Wishart(n, A)" % self.name)

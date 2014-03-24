@@ -75,14 +75,18 @@ class ExponentialFamilyDistribution(Distribution):
 
 def useconstructor(__init__):
     def new_init(self, *args, **kwargs):
-        if (self._distribution is None or
+        if (self.dims is None or
+            self._distribution is None or
             self._statistics is None or 
             self._parent_statistics is None):
 
-            (dist,
+            (dims,
+             dist,
              stats,
              pstats) = self._construct_distribution_and_statistics(*args,
                                                                    **kwargs)
+            if self.dims is None:
+                self.dims = dims
             if self._distribution is None:
                 self._distribution = dist
             if self._statistics is None:
@@ -114,6 +118,10 @@ class ExponentialFamily(Stochastic):
     
     """
 
+    # Sub-classes should overwrite this (possibly using
+    # _construct_distribution_and_statistics)
+    dims = None
+    
     # Sub-classes should overwrite this
     _distribution = None
 
@@ -126,6 +134,7 @@ class ExponentialFamily(Stochastic):
 
         super().__init__(*args,
                          initialize=initialize,
+                         dims=self.dims,
                          **kwargs)
 
         if not initialize:
@@ -149,7 +158,10 @@ class ExponentialFamily(Stochastic):
         not-node specific code. The point of statistics class is to define the
         messaging protocols.
         """
-        return (cls._distribution, cls._statistics, cls._parent_statistics)
+        return (cls.dims, 
+                cls._distribution, 
+                cls._statistics, 
+                cls._parent_statistics)
 
     def initialize_from_prior(self):
         if not np.all(self.observed):

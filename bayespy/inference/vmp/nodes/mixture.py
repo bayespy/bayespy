@@ -31,9 +31,12 @@ import scipy.spatial.distance as distance
 
 from bayespy.utils import utils
 
-from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
-from .constant import Constant
-from .categorical import Categorical, CategoricalStatistics
+from .expfamily import ExponentialFamily, \
+                       ExponentialFamilyDistribution, \
+                       useconstructor
+                       
+from .categorical import Categorical, \
+                         CategoricalStatistics
 
 class MixtureDistribution(ExponentialFamilyDistribution):
 
@@ -232,144 +235,140 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         """ Compute u(x) and f(x) for given x. """
         return self.distribution.compute_fixed_moments_and_f(x, mask=True)
 
+class Mixture(ExponentialFamily):
 
-def Mixture(node_class, cluster_plate=-1):
+    @useconstructor
+    def __init__(self, z, node_class, *args, cluster_plate=-1, **kwargs):
+        self.cluster_plate = cluster_plate
+        super().__init__(z, *args, **kwargs)
 
-    if cluster_plate >= 0:
-        raise Exception("Give negative value for axis index cluster_plates")
 
-    class _Mixture(ExponentialFamily):
+    @classmethod
+    def _construct_distribution_and_statistics(cls, z, node_class, *args,
+                                               cluster_plate=-1,
+                                               **kwargs):
         """
-
-        Mixtured distributions must implement:
-           _compute_cgf_from_parents
-           _compute_fixed_moments_and_f(x, mask)
-           _compute_dims
-
-        Sub-classes of ExponentialFamily should implement anyway:
-           _compute_message_to_parent
-           _compute_phi_from_parents
-           _compute_moments_and_cgf(phi, mask)
-
-        ExponentialFamily implements already:
-           _compute_logpdf
+        Constructs distribution and statistics objects.
         """
-
-        _distribution = MixtureDistribution(node_class._distribution,
-                                            cluster_plate)
-        _statistics = node_class._statistics
-
-        def __init__(self, z, *args, **kwargs):
-
-            # TODO/FIXME: Constant (non-node, numeric) z is a bit
-            # non-trivial. Constant z is an array of cluster assignments, e.g.,
-            # [2,0,2,3,1,2]. However, it is not possible to know the number of
-            # clusters from this. It could be 4 but it could be 10 as well.
-            # Thus, we can't create a constant node from z because the number of
-            # clusters is required by constant categorical. It might be possible
-            # to infer the number of clusters from the cluster_plate axis of the
-            # other parameters but that is not trivial. A simple solution is to
-            # require the user to provide the number of clusters when it can't
-            # be inferred otherwise. Anyway, this is left for future work.
-
-            try:
-                z = z._convert(CategoricalStatistics)
-            except:
-                # z is constant
-                raise NotImplementedError("Constant cluster assignments are "
-                                          "not yet implemented")
-
-            n_clusters = z.dims[0][0]
-            self._parent_statistics = ((CategoricalStatistics(n_clusters),) 
-                                       + node_class._parent_statistics)
-            
-            # Construct
-            super().__init__(z, *args,
-                             **kwargs)
-
-
-        @staticmethod
-        def compute_dims(*parents):
-            """ Compute the dimensions of phi and u. """
-            return node_class.compute_dims(*parents[1:])
-
-        def _plates_to_parent(self, index):
-            if index == 0:
-                return self.plates
-            else:
-                if cluster_plate < 0:
-                    plates = list(self.plates)
-                    if cluster_plate < 0:
-                        k = len(self.plates) + cluster_plate + 1
-                    else:
-                        k = cluster_plate
-                    plates.insert(k, self.parents[0].dims[0][0])
-                    plates = tuple(plates)
-                    
-                return plates
-
-        def _plates_from_parent(self, index):
-            if index == 0:
-                return self.parents[index].plates
-            else:
-                plates = list(self.parents[index].plates)
-                plates.pop(cluster_plate)
-                return tuple(plates)
-            
-        def integrated_logpdf_from_parents(self, x, index):
-
-            """ Approximates the posterior predictive pdf \int
-            p(x|parents) q(parents) dparents in log-scale as \int
-            q(parents_i) exp( \int q(parents_\i) \log p(x|parents)
-            dparents_\i ) dparents_i."""
-
-            if index == 0:
-                # Integrate out the cluster assignments
-
-                # First, integrate the cluster parameters in log-scale
-                
-                # compute_logpdf(cls, u, phi, g, f):
-
-                # Shape(x) = [M1,..,Mm,N1,..,Nn,D1,..,Dd]
-                # Add the cluster axis to x:
-                # Shape(x) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
-                cluster_axis = cluster_plate - node_class.ndim_observations
-                x = np.expand_dims(x, axis=cluster_axis)
-
-                u_parents = self._message_from_parents()
-                
-                # Shape(u) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
-                # Shape(f) = [M1,..,Mm,N1,..,1,..,Nn]
-                (u, f) = self._distribution.distribution.compute_fixed_moments_and_f(x)
-                # Shape(phi) = [N1,..,K,..,Nn,D1,..,Dd]
-                phi = self._distribution.distribution.compute_phi_from_parents(*(u_parents[1:]))
-                # Shape(g) = [N1,..,K,..,Nn]
-                g = self._distribution.distribution.compute_cgf_from_parents(*(u_parents[1:]))
-                # Shape(lpdf) = [M1,..,Mm,N1,..,K,..,Nn]
-                lpdf = self._distribution.distribution.compute_logpdf(u, phi, g, f)
-
-                # From logpdf to pdf, but avoid over/underflow
-                lpdf_max = np.max(lpdf, axis=cluster_plate, keepdims=True)
-                pdf = np.exp(lpdf-lpdf_max)
-
-                # Move cluster axis to be the last:
-                # Shape(pdf) = [M1,..,Mm,N1,..,Nn,K]
-                pdf = utils.moveaxis(pdf, cluster_plate, -1)
-
-                # Cluster assignments/probabilities/weights
-                # Shape(p) = [N1,..,Nn,K]
-                p = u_parents[0][0]
-
-                # Weighted average. TODO/FIXME: Use einsum!
-                # Shape(pdf) = [M1,..,Mm,N1,..,Nn]
-                pdf = np.sum(pdf * p, axis=cluster_plate)
-
-                # Back to log-scale (add the overflow fix!)
-                lpdf_max = np.squeeze(lpdf_max, axis=cluster_plate)
-                lpdf = np.log(pdf) + lpdf_max
-
-                return lpdf
-
-            raise NotImplementedError()
+        if cluster_plate >= 0:
+            raise Exception("Give negative value for axis index cluster_plates")
         
-    return _Mixture
+        # TODO/FIXME: Constant (non-node, numeric) z is a bit
+        # non-trivial. Constant z is an array of cluster assignments, e.g.,
+        # [2,0,2,3,1,2]. However, it is not possible to know the number of
+        # clusters from this. It could be 4 but it could be 10 as well.
+        # Thus, we can't create a constant node from z because the number of
+        # clusters is required by constant categorical. It might be possible
+        # to infer the number of clusters from the cluster_plate axis of the
+        # other parameters but that is not trivial. A simple solution is to
+        # require the user to provide the number of clusters when it can't
+        # be inferred otherwise. Anyway, this is left for future work.
+
+        try:
+            # Convert a node
+            z = z._convert(CategoricalStatistics)
+        except:
+            # Conversion failed, thus z is a constant (or invalid node)
+            raise NotImplementedError("Constant cluster assignments are "
+                                      "not yet implemented")
+
+        # Number of clusters
+        K = z.dims[0][0]
+
+        # Get the stuff for the mixed distribution
+        (dims, distribution, statistics, parent_statistics) = \
+          node_class._construct_distribution_and_statistics(*args)
+
+        # Convert the distribution to a mixture
+        distribution = MixtureDistribution(distribution,
+                                           cluster_plate)
+
+        # Add cluster assignments to parents
+        parent_statistics = ((CategoricalStatistics(K),) + \
+                            parent_statistics)
+          
+        return (dims, 
+                distribution, 
+                statistics, 
+                parent_statistics)
+
+    def _plates_to_parent(self, index):
+        if index == 0:
+            return self.plates
+        else:
+            if self.cluster_plate < 0:
+                plates = list(self.plates)
+                if self.cluster_plate < 0:
+                    k = len(self.plates) + self.cluster_plate + 1
+                else:
+                    k = self.cluster_plate
+                plates.insert(k, self.parents[0].dims[0][0])
+                plates = tuple(plates)
+
+            return plates
+
+    def _plates_from_parent(self, index):
+        if index == 0:
+            return self.parents[index].plates
+        else:
+            plates = list(self.parents[index].plates)
+            plates.pop(self.cluster_plate)
+            return tuple(plates)
+
+    def integrated_logpdf_from_parents(self, x, index):
+
+        """ Approximates the posterior predictive pdf \int
+        p(x|parents) q(parents) dparents in log-scale as \int
+        q(parents_i) exp( \int q(parents_\i) \log p(x|parents)
+        dparents_\i ) dparents_i."""
+
+        if index == 0:
+            # Integrate out the cluster assignments
+
+            # First, integrate the cluster parameters in log-scale
+
+            # compute_logpdf(cls, u, phi, g, f):
+
+            # Shape(x) = [M1,..,Mm,N1,..,Nn,D1,..,Dd]
+            # Add the cluster axis to x:
+            # Shape(x) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
+            cluster_axis = self.cluster_plate - \
+                           self._statistics.ndim_observations
+            #cluster_axis = self.cluster_plate - node_class.ndim_observations
+            x = np.expand_dims(x, axis=cluster_axis)
+
+            u_parents = self._message_from_parents()
+
+            # Shape(u) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
+            # Shape(f) = [M1,..,Mm,N1,..,1,..,Nn]
+            (u, f) = self._distribution.distribution.compute_fixed_moments_and_f(x)
+            # Shape(phi) = [N1,..,K,..,Nn,D1,..,Dd]
+            phi = self._distribution.distribution.compute_phi_from_parents(*(u_parents[1:]))
+            # Shape(g) = [N1,..,K,..,Nn]
+            g = self._distribution.distribution.compute_cgf_from_parents(*(u_parents[1:]))
+            # Shape(lpdf) = [M1,..,Mm,N1,..,K,..,Nn]
+            lpdf = self._distribution.distribution.compute_logpdf(u, phi, g, f)
+
+            # From logpdf to pdf, but avoid over/underflow
+            lpdf_max = np.max(lpdf, axis=self.cluster_plate, keepdims=True)
+            pdf = np.exp(lpdf-lpdf_max)
+
+            # Move cluster axis to be the last:
+            # Shape(pdf) = [M1,..,Mm,N1,..,Nn,K]
+            pdf = utils.moveaxis(pdf, self.cluster_plate, -1)
+
+            # Cluster assignments/probabilities/weights
+            # Shape(p) = [N1,..,Nn,K]
+            p = u_parents[0][0]
+
+            # Weighted average. TODO/FIXME: Use einsum!
+            # Shape(pdf) = [M1,..,Mm,N1,..,Nn]
+            pdf = np.sum(pdf * p, axis=self.cluster_plate)
+
+            # Back to log-scale (add the overflow fix!)
+            lpdf_max = np.squeeze(lpdf_max, axis=self.cluster_plate)
+            lpdf = np.log(pdf) + lpdf_max
+
+            return lpdf
+
+        raise NotImplementedError()

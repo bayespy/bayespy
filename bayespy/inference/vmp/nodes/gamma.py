@@ -110,6 +110,7 @@ class Gamma(ExponentialFamily):
     # Observations/values are scalars (0-dimensional)
     ndim_observations = 0
 
+    dims = ( (), () )
     _distribution = GammaDistribution()
     _statistics = GammaStatistics()
     _parent_statistics = (GammaPriorStatistics(),
@@ -130,9 +131,6 @@ class Gamma(ExponentialFamily):
                                -1/self.phi[0],
                                size=self.plates)
     
-    def compute_dims(self, a, b):
-        return ( (), () )
-
     def show(self):
         a = self.phi[1]
         b = -self.phi[0]

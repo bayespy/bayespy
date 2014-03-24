@@ -89,18 +89,19 @@ class Dirichlet(ExponentialFamily):
     def __init__(self, alpha, **kwargs):
         super().__init__(alpha, **kwargs)
 
-    @staticmethod
-    def compute_message(index, u, u_parents):
-        """ . """
-        if index == 0:
-            return [u[0], 1]
-
-    @staticmethod
-    def compute_dims(*parents):
-        """ Compute the dimensions of phi/u. """
-        # Has the same dimensionality as the parent for its first
-        # moment.
-        return parents[0].dims[:1]
+    @classmethod
+    def _construct_distribution_and_statistics(cls, alpha, **kwargs):
+        """
+        Constructs distribution and statistics objects.
+        """
+        # Number of categories
+        alpha = cls._ensure_statistics(alpha, cls._parent_statistics[0])
+        D = alpha.dims[0][0]
+        
+        return ( ( (D,), ),
+                 cls._distribution, 
+                 cls._statistics, 
+                 cls._parent_statistics)
 
     def random(self):
         raise NotImplementedError()
