@@ -1192,9 +1192,9 @@ def alpha_beta_recursion(logp0, logP):
 
     # TODO: Use some scaling so the log-probabilities are in better range
     maxlogP = np.amax(logP, axis=(-1,-2), keepdims=True)
-    logP -= maxlogP
+    logP = logP - maxlogP
     maxlogp0 = np.amax(logp0, axis=-1, keepdims=True)
-    logp0 -= maxlogp0
+    logp0 = logp0 - maxlogp0
 
     # Allocate memory
     alpha = np.zeros(plates+(N,D,D))
