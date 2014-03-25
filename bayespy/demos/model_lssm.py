@@ -255,6 +255,7 @@ def run_lssm(y, D,
              start_rotating=0,
              start_rotating_drift=0,
              plot_C=True,
+             monitor=True,
              drift_C=False,
              drift_A=False,
              autosave=None):
@@ -334,7 +335,8 @@ def run_lssm(y, D,
             rotate_kwargs = {'maxiter': 10}
 
     # Plot initial distributions
-    Q.plot() 
+    if monitor:
+        Q.plot()
 
     # Run inference using rotations
     for ind in range(maxiter):
@@ -342,11 +344,11 @@ def run_lssm(y, D,
         if ind < update_hyper:
             # It might be a good idea to learn the lower level nodes a bit
             # before starting to learn the higher level nodes.
-            Q.update('X', 'C', 'A', 'tau', plot=True)
+            Q.update('X', 'C', 'A', 'tau', plot=monitor)
             if rotate and ind >= start_rotating:
                 R_X.rotate(**rotate_kwargs)
         else:
-            Q.update(plot=True)
+            Q.update(plot=monitor)
             if rotate and ind >= start_rotating:
                 # It might be a good idea to not rotate immediately because it
                 # might lead to pruning out components too efficiently before
