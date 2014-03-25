@@ -39,7 +39,6 @@ from .deterministic import Deterministic
 from .expfamily import ExponentialFamily
 from .expfamily import ExponentialFamilyDistribution
 from .expfamily import useconstructor
-from .constant import ConstantNumeric
 from .gaussian import Gaussian, GaussianStatistics
 from .wishart import Wishart, WishartStatistics
 from .gamma import Gamma, GammaStatistics

@@ -23,25 +23,7 @@
 
 import numpy as np
 
-from .node import Node, Statistics
-
-
-class ConstantNumeric(Node):
-
-    _statistics = Statistics()
-
-    def __init__(self, x, ndim, **kwargs):
-        # Compute moments
-        self.u = [np.asarray(x)]
-        # Dimensions and plates of the moments
-        ind_dim = np.ndim(x) - ndim
-        dims = np.shape(x)[ind_dim:]
-        plates = np.shape(x)[:ind_dim]
-        # Parent constructor
-        super().__init__(dims=dims, plates=plates, **kwargs)
-
-    def get_moments(self):
-        return self.u
+from .node import Node
 
 class Constant(Node):
 
