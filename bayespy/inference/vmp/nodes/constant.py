@@ -40,10 +40,5 @@ class Constant(Node):
         # Parent constructor
         super().__init__(dims=dims, plates=plates, **kwargs)
 
-    @staticmethod
-    def compute_fixed_moments(x):
-        """ Compute u(x) for given x. """
-        return self._statistics.compute_fixed_moments(x)
-
     def get_moments(self):
         return self.u
