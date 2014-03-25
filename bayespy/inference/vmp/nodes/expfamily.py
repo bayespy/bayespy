@@ -80,11 +80,8 @@ def useconstructor(__init__):
             self._statistics is None or 
             self._parent_statistics is None):
 
-            (dims,
-             dist,
-             stats,
-             pstats) = self._construct_distribution_and_statistics(*args,
-                                                                   **kwargs)
+            (dims, dist, stats, pstats) = self._constructor(*args, **kwargs)
+            
             if self.dims is None:
                 self.dims = dims
             if self._distribution is None:
@@ -118,8 +115,7 @@ class ExponentialFamily(Stochastic):
     
     """
 
-    # Sub-classes should overwrite this (possibly using
-    # _construct_distribution_and_statistics)
+    # Sub-classes should overwrite this (possibly using _constructor)
     dims = None
     
     # Sub-classes should overwrite this
@@ -143,7 +139,7 @@ class ExponentialFamily(Stochastic):
 
 
     @classmethod
-    def _construct_distribution_and_statistics(cls, *args, **kwargs):
+    def _constructor(cls, *args, **kwargs):
         """
         Constructs distribution and statistics objects.
 

@@ -119,10 +119,6 @@ class WishartDistribution(ExponentialFamilyDistribution):
 
 class Wishart(ExponentialFamily):
 
-
-    # Observations/values are 2-D matrices
-    ndim_observations = 2
-
     _distribution = WishartDistribution()
     _statistics = WishartStatistics()
 
@@ -131,7 +127,7 @@ class Wishart(ExponentialFamily):
         super().__init__(n, V, **kwargs)
         
     @classmethod
-    def _construct_distribution_and_statistics(cls, n, V, **kwargs):
+    def _constructor(cls, n, V, **kwargs):
         """
         Constructs distribution and statistics objects.
         """

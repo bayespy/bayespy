@@ -231,16 +231,13 @@ class Gaussian(ExponentialFamily):
     _parent_statistics = (GaussianStatistics(1),
                           WishartStatistics())
     
-    # Observations are vectors (1-D):
-    ndim_observations = 1
-
     @ensureparents
     @useconstructor
     def __init__(self, mu, Lambda, **kwargs):
         super().__init__(mu, Lambda, **kwargs)
 
     @classmethod
-    def _construct_distribution_and_statistics(cls, mu, Lambda, **kwargs):
+    def _constructor(cls, mu, Lambda, **kwargs):
         """
         Constructs distribution and statistics objects.
         """
@@ -725,10 +722,7 @@ class GaussianARD(ExponentialFamily):
         super().__init__(mu, alpha, **kwargs)
         
     @classmethod
-    def _construct_distribution_and_statistics(cls, mu, alpha,
-                                               ndim=None,
-                                               shape=None, 
-                                               **kwargs):
+    def _constructor(cls, mu, alpha, ndim=None, shape=None, **kwargs):
         """
         Constructs distribution and statistics objects.
 
@@ -800,9 +794,6 @@ class GaussianARD(ExponentialFamily):
         parent_statistics = (GaussianStatistics(ndim_mu),
                              GammaStatistics())
         distribution = GaussianARDDistribution(shape, ndim_mu)
-
-        # Observations are scalar/vectors/matrices/tensors based on ndim:
-        #ndim_observations = ndim
 
         # Convert parents to proper nodes
         mu = cls._ensure_statistics(mu, parent_statistics[0])

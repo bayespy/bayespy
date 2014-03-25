@@ -24,33 +24,24 @@
 import numpy as np
 
 from .expfamily import ExponentialFamily
-from .dirichlet import Dirichlet, DirichletStatistics
+from .categorical import CategoricalStatistics
+from .dirichlet import Dirichlet, \
+                       DirichletStatistics
 from .node import Statistics
-
-Mixture(z1, Mixture, z2, Gaussian, mu, tau, axis=-1, kwargs_par=dict(axis=-2, kwargs_par=dict(ndim=2)))
-_distribution_class = Mixture._distribution_from_parents(z2, Gaussian, mu, tau)
-Gaussian._distribution_from_parents(mu, tau)
-
-
-parent_stats = GaussianStatistics(ndim=3)
-my_stats = GaussianStatistics(ndim=4)
-#my_stats.get_stats(u)
-
-#X.stats().mean()
-#X.stats().covariance()
-
 
 class CategoricalMarkovChainStatistics(Statistics):
 
+    ndim_observations = 0
+
     def __init__(self, categories):
-        self.categories = categories
+        self.D = categories
 
     def converter(self, statistics_class):
         """
         Returns a node class which converts the node's statistics to another
         """
-        if isinstance(self, statistics_class):
-            return lambda X: X
+        if statistics_class is CategoricalStatistics:
+            raise NotImplementedError()
         return super().converter(statistics_class)
 
     def compute_fixed_moments(self, x):
@@ -113,6 +104,7 @@ class CategoricalMarkovChain(ExponentialFamily):
 
     ndims = (1, 3)
 
+    @useconstructor
     def __init__(self, p0, P, **kwargs):
 
         super().__init__(p0, P, **kwargs)
@@ -120,7 +112,7 @@ class CategoricalMarkovChain(ExponentialFamily):
         return
 
     @classmethod
-    def _construct_distribution_and_statistics(cls, p0, P, **kwargs):
+    def _constructor(cls, p0, P, **kwargs):
         p0 = cls._ensure_statistics(p0, cls._parent_statistics[0])
         P = cls._ensure_statistics(P, cls._parent_statistics[1])
 

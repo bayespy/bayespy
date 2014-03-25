@@ -107,9 +107,6 @@ class GammaDistribution(ExponentialFamilyDistribution):
 
 class Gamma(ExponentialFamily):
 
-    # Observations/values are scalars (0-dimensional)
-    ndim_observations = 0
-
     dims = ( (), () )
     _distribution = GammaDistribution()
     _statistics = GammaStatistics()
@@ -151,9 +148,6 @@ class _GammaToDiagonalWishart(Deterministic):
     
     ndims = (2, 0)
     ndims_parents = [None, (2, 0)]
-
-    # Observations/values are 2-D matrices
-    ndim_observations = 2
 
     def __init__(self, alpha, **kwargs):
 

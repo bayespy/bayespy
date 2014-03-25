@@ -90,7 +90,7 @@ class Dirichlet(ExponentialFamily):
         super().__init__(alpha, **kwargs)
 
     @classmethod
-    def _construct_distribution_and_statistics(cls, alpha, **kwargs):
+    def _constructor(cls, alpha, **kwargs):
         """
         Constructs distribution and statistics objects.
         """

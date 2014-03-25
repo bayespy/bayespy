@@ -242,11 +242,8 @@ class Mixture(ExponentialFamily):
         self.cluster_plate = cluster_plate
         super().__init__(z, *args, **kwargs)
 
-
     @classmethod
-    def _construct_distribution_and_statistics(cls, z, node_class, *args,
-                                               cluster_plate=-1,
-                                               **kwargs):
+    def _constructor(cls, z, node_class, *args, cluster_plate=-1, **kwargs):
         """
         Constructs distribution and statistics objects.
         """
@@ -277,7 +274,7 @@ class Mixture(ExponentialFamily):
 
         # Get the stuff for the mixed distribution
         (dims, distribution, statistics, parent_statistics) = \
-          node_class._construct_distribution_and_statistics(*args)
+          node_class._constructor(*args)
 
         # Convert the distribution to a mixture
         distribution = MixtureDistribution(distribution,
@@ -334,7 +331,6 @@ class Mixture(ExponentialFamily):
             # Shape(x) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
             cluster_axis = self.cluster_plate - \
                            self._statistics.ndim_observations
-            #cluster_axis = self.cluster_plate - node_class.ndim_observations
             x = np.expand_dims(x, axis=cluster_axis)
 
             u_parents = self._message_from_parents()

@@ -114,7 +114,7 @@ class Categorical(ExponentialFamily):
 
 
     @classmethod
-    def _construct_distribution_and_statistics(cls, p, **kwargs):
+    def _constructor(cls, p, **kwargs):
         """
         Constructs distribution and statistics objects.
 
