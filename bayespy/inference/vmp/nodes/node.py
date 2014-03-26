@@ -119,15 +119,15 @@ class Statistics():
                                   "for %s"
                                   % (self.__class__.__name__))
 
-def ensureparents(__init__):
-    def new_init(self, *parents, **kwargs):
+def ensureparents(func):
+    def new_func(self, *parents, **kwargs):
         # Convert parents to proper nodes
         parents = list(parents)
         for (ind, parent) in enumerate(parents):
             parents[ind] = self._ensure_statistics(parent, 
                                                    self._parent_statistics[ind])
-        __init__(self, *parents, **kwargs)
-    return new_init
+        return func(self, *parents, **kwargs)
+    return new_func
 
     
 class Node():
@@ -169,8 +169,7 @@ class Node():
 
         # Inform parent nodes
         for (index,parent) in enumerate(self.parents):
-            if parent:
-                parent._add_child(self, index)
+            parent._add_child(self, index)
 
         # Check plates
         parent_plates = [self._plates_from_parent(index) 
@@ -199,7 +198,7 @@ class Node():
         self.mask = np.array(False)
 
         # Children
-        self.children = list()
+        self.children = []
 
     @staticmethod
     def _ensure_statistics(node, statistics):
@@ -235,6 +234,12 @@ class Node():
            number.
         """
         self.children.append((child, index))
+
+    def _remove_child(self, child, index):
+        """
+        Remove a child node.
+        """
+        self.children.remove((child, index))
 
     def get_mask(self):
         return self.mask
@@ -333,28 +338,34 @@ class Node():
             if ndim > 0:
                 if np.shape(ui)[-ndim:] != dim:
                     raise RuntimeError(
-                        "A bug found by _message_to_child: "
+                        "A bug found by _message_to_child for %s: "
                         "The variable axes of the moments %s are not equal to "
-                        "the axes %s defined by the node %s."
-                        % (np.shape(ui)[-ndim:],
+                        "the axes %s defined by the node %s. A possible reason "
+                        "is that the plates of the node are inferred "
+                        "incorrectly from the parents, and the method "
+                        "_plates_from_parents should be implemented."
+                        % (self.__class__.__name__,
+                           np.shape(ui)[-ndim:],
                            dim,
                            self.name))
                 if not utils.is_shape_subset(np.shape(ui)[:-ndim],
                                              self.plates):
                     raise RuntimeError(
-                        "A bug found by _message_to_child: "
+                        "A bug found by _message_to_child for %s: "
                         "The plate axes of the moments %s are not a subset of "
                         "the plate axes %s defined by the node %s."
-                        % (np.shape(ui)[:-ndim],
+                        % (self.__class__.__name__,
+                           np.shape(ui)[:-ndim],
                            self.plates,
                            self.name))
             else:
                 if not utils.is_shape_subset(np.shape(ui), self.plates):
                     raise RuntimeError(
-                        "A bug found by _message_to_child: "
+                        "A bug found by _message_to_child for %s: "
                         "The plate axes of the moments %s are not a subset of "
                         "the plate axes %s defined by the node %s."
-                        % (np.shape(ui),
+                        % (self.__class__.__name__,
+                           np.shape(ui),
                            self.plates,
                            self.name))
         return u
@@ -443,7 +454,8 @@ class Node():
         return m
 
     def _message_from_children(self):
-        msg = [np.array(0.0) for i in range(len(self.dims))]
+        msg = [np.zeros(shape) for shape in self.dims]
+        #msg = [np.array(0.0) for i in range(len(self.dims))]
         for (child,index) in self.children:
             m = child._message_to_parent(index)
             for i in range(len(self.dims)):
@@ -467,6 +479,14 @@ class Node():
     def get_moments(self):
         raise NotImplementedError()
 
+    def delete(self):
+        """
+        Delete this node and the children
+        """
+        for child in self.children:
+            child.delete()
+        for (ind, parent) in enumerate(self.parents):
+            parent._remove_child(self, ind)
 
     @staticmethod
     def _plate_multiplier(plates, *args):
