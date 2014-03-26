@@ -231,18 +231,25 @@ class Gaussian(ExponentialFamily):
     _parent_statistics = (GaussianStatistics(1),
                           WishartStatistics())
     
-    @ensureparents
     @useconstructor
     def __init__(self, mu, Lambda, **kwargs):
         super().__init__(mu, Lambda, **kwargs)
 
     @classmethod
+    @ensureparents
     def _constructor(cls, mu, Lambda, **kwargs):
         """
         Constructs distribution and statistics objects.
         """
-        D = mu.dims[0][0]
+        D_mu = mu.dims[0][0]
+        D_Lambda = Lambda.dims[0][0]
 
+        if D_mu != D_Lambda:
+            raise ValueError("Mean vector (%d-D) and precision matrix (%d-D) "
+                             "have different dimensionalities"
+                             % (D_mu, D_Lambda))
+        D = D_mu
+        
         if mu.dims != ( (D,), (D,D) ):
             raise Exception("First parent has wrong dimensionality")
         if Lambda.dims != ( (D,D), () ):

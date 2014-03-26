@@ -26,7 +26,7 @@ import scipy.special as special
 
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
-from .node import Node, Statistics
+from .node import Node, Statistics, ensureparents
 
 
 class DirichletPriorStatistics(Statistics):
@@ -107,12 +107,12 @@ class Dirichlet(ExponentialFamily):
         super().__init__(alpha, **kwargs)
 
     @classmethod
+    @ensureparents
     def _constructor(cls, alpha, **kwargs):
         """
         Constructs distribution and statistics objects.
         """
         # Number of categories
-        alpha = cls._ensure_statistics(alpha, cls._parent_statistics[0])
         D = alpha.dims[0][0]
         
         return ( ( (D,), ),

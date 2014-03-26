@@ -436,7 +436,6 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
                           GaussianStatistics(1),
                           GammaStatistics())
 
-    @ensureparents
     @useconstructor
     def __init__(self, mu, Lambda, A, v, n=None, **kwargs):
         """
@@ -450,6 +449,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         super().__init__(mu, Lambda, A, v, **kwargs)
 
     @classmethod
+    @ensureparents
     def _constructor(cls, mu, Lambda, A, v, n=None, **kwargs):
         """
         Constructs distribution and statistics objects.
@@ -860,7 +860,6 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                           GaussianStatistics(1),
                           GammaStatistics())
 
-    @ensureparents
     @useconstructor
     def __init__(self, mu, Lambda, B, S, v, n=None, **kwargs):
         """
@@ -876,6 +875,7 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
 
     @classmethod
+    @ensureparents
     def _constructor(cls, mu, Lambda, B, S, v, n=None, **kwargs):
         """
         Constructs distribution and statistics objects.

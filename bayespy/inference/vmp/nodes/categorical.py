@@ -27,7 +27,7 @@ from .expfamily import ExponentialFamily
 from .expfamily import ExponentialFamilyDistribution
 from .expfamily import useconstructor
 from .dirichlet import Dirichlet, DirichletStatistics
-from .node import Statistics
+from .node import Statistics, ensureparents
 
 from bayespy.utils import random
 
@@ -114,6 +114,7 @@ class Categorical(ExponentialFamily):
 
 
     @classmethod
+    @ensureparents
     def _constructor(cls, p, **kwargs):
         """
         Constructs distribution and statistics objects.
@@ -125,8 +126,6 @@ class Categorical(ExponentialFamily):
         used to construct those objects.
         """
 
-        p = cls._ensure_statistics(p, cls._parent_statistics[0])
-        
         # Get the number of categories
         D = p.dims[0][0]
 

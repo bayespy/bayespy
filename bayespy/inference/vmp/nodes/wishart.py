@@ -132,11 +132,17 @@ class Wishart(ExponentialFamily):
         Constructs distribution and statistics objects.
         """
 
-        # Make V a proper parent node
+        # Make V a proper parent node and get the dimensionality of the matrix
+        V_original = V
         V = cls._ensure_statistics(V, WishartStatistics())
-
-        # Dimensionality of the matrix
         k = V.dims[0][-1]
+        # Delete the conversion node if a conversion was done so it won't stay
+        # haunting.
+        # TODO/FIXME: What if the conversion was done by using two or more
+        # consecutive conversion nodes? This would only delete the last
+        # node. This whole problem may require further thinking..
+        if V is not V_original:
+            V.delete()
 
         # Parent node message types
         parent_statistics = (WishartPriorStatistics(k), 
