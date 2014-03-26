@@ -23,11 +23,16 @@
 
 import numpy as np
 
-from .expfamily import ExponentialFamily
+from .deterministic import Deterministic
+from .expfamily import ExponentialFamily, \
+                       useconstructor
+from .node import Statistics, \
+                  ensureparents
 from .categorical import CategoricalStatistics
 from .dirichlet import Dirichlet, \
                        DirichletStatistics
-from .node import Statistics
+
+from bayespy.utils import utils
 
 class CategoricalMarkovChainStatistics(Statistics):
 
@@ -41,7 +46,7 @@ class CategoricalMarkovChainStatistics(Statistics):
         Returns a node class which converts the node's statistics to another
         """
         if statistics_class is CategoricalStatistics:
-            raise NotImplementedError()
+            return CategoricalMarkovChainToCategorical
         return super().converter(statistics_class)
 
     def compute_fixed_moments(self, x):
@@ -58,43 +63,32 @@ class CategoricalMarkovChainStatistics(Statistics):
 class CategoricalMarkovChainDistribution():
 
     ndims = (1, 3)
-    ndims_parents = None
+    ndims_parents = ( (1,), (1,) )
 
     def __init__(self, categories, states):
-        self.categories = categories
-        self.states = states
+        self.K = categories
+        self.N = states
         return
-
-    #
-    # The following methods are for ExponentialFamily distributions
-    #
 
     def compute_message_to_parent(self, index, u_self, u_p0, u_P):
         raise NotImplementedError()
 
     def compute_phi_from_parents(self, u_p0, u_P, mask=True):
         phi0 = u_p0[0]
-        phi1 = utils.atleast_nd(u_P[0], 3)
-        if np.shape(phi1)[-3] != self.states:
-            if np.shape(phi1)[-3] != 1:
-                raise ValueError("Moments of parent P have wrong shape")
-            phi1 = np.repeat(phi1, self.states, axis=-3)
+        phi1 = u_P[0] * np.ones((self.N,self.K,self.K))
         return [phi0, phi1]
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        raise NotImplementedError()
+        logp0 = phi[0]
+        logP = phi[1]
+        (z0, zz, cgf) = utils.alpha_beta_recursion(logp0, logP)
+        u = [z0, zz]
+        return (u, cgf)
 
-    #
-    # The following methods are for Mixture class
-    #
-
-    def compute_cgf_from_parents(self, ):
-        raise NotImplementedError()
+    def compute_cgf_from_parents(self, u_p0, u_P):
+        return 0
         
     def compute_fixed_moments_and_f(self, x, mask=True):
-        raise NotImplementedError()
-
-    def compute_dims(self):
         raise NotImplementedError()
 
 class CategoricalMarkovChain(ExponentialFamily):
@@ -102,19 +96,13 @@ class CategoricalMarkovChain(ExponentialFamily):
     _parent_statistics = (DirichletStatistics(),
                           DirichletStatistics())
 
-    ndims = (1, 3)
-
     @useconstructor
-    def __init__(self, p0, P, **kwargs):
-
+    def __init__(self, p0, P, states=None, **kwargs):
         super().__init__(p0, P, **kwargs)
 
-        return
-
     @classmethod
-    def _constructor(cls, p0, P, **kwargs):
-        p0 = cls._ensure_statistics(p0, cls._parent_statistics[0])
-        P = cls._ensure_statistics(P, cls._parent_statistics[1])
+    @ensureparents
+    def _constructor(cls, p0, P, states=None, **kwargs):
 
         # Number of categories
         D = p0.dims[0][0]
@@ -137,11 +125,98 @@ class CategoricalMarkovChain(ExponentialFamily):
                                      "probability matrix")
                 N = P.plates[-2]
 
+        if p0.dims != P.dims:
+            raise ValueError("Initial state probability vector and state "
+                             "transition probability matrix have different "
+                             "size")
+
+        if len(P.plates) < 1 or P.plates[-1] != D:
+            raise ValueError("Transition probability matrix is not square")
+
+        dims = ( (D,), (N,D,D) )
 
         distribution = CategoricalMarkovChainDistribution(D, N)
-        
         statistics = CategoricalMarkovChainStatistics(D)
-
         parent_statistics = cls._parent_statistics
 
-        return (distribution, statistics, parent_statistics)
+        return (dims, distribution, statistics, parent_statistics)
+
+    def _plates_to_parent(self, index):
+        if index == 0:
+            return self.plates
+        elif index == 1:
+            N = self.dims[0][0]
+            D = self.dims[0][1]
+            return self.plates + (N, D)
+        else:
+            raise ValueError("Parent index out of bounds")
+        
+    def _plates_from_parent(self, index):
+        if index == 0:
+            return self.parents[0].plates
+        elif index == 1:
+            return self.parents[1].plates[:-2]
+        else:
+            raise ValueError("Parent index out of bounds")
+        
+        
+class CategoricalMarkovChainToCategorical(Deterministic):
+    
+    def __init__(self, Z, **kwargs):
+        # Convert parent to proper type. Z must be a node.
+        Z = Z._convert(CategoricalMarkovChainStatistics)
+        K = Z.dims[0][-1]
+        dims = ( (K,), )
+        self._statistics = CategoricalStatistics(K)
+        self._parent_statistics = (CategoricalMarkovChainStatistics(K),)
+        super().__init__(Z, dims=dims, **kwargs)
+        
+    def _compute_moments(self, u_Z):
+        # Add time axis to p0
+        p0 = u_Z[0][...,None,:]
+        # Sum joint probability arrays to marginal probability vectors
+        zz = u_Z[1]
+        p = np.sum(zz, axis=-2)
+
+        # Broadcast p0 and p to same shape, except the time axis
+        plates_p0 = np.shape(p0)[:-2]
+        plates_p = np.shape(p)[:-2]
+        shape = utils.broadcasted_shape(plates_p0, plates_p) + (1,1)
+        p0 = p0 * np.ones(shape)
+        p = p * np.ones(shape)
+
+        # Concatenate
+        P = np.concatenate((p0,p), axis=-2)
+
+        return [P]
+
+    def _compute_message_to_parent(self, index, m, u_Z):
+        if len(self.children) == 0:
+            raise Exception("WAAAAT")
+        m[0] = utils.atleast_nd(m[0], 2)
+        if np.shape(m[0])[-2] == 1:
+            # This is a bit pathological case but may happen if this node does
+            # not have any children
+            m0 = m[0][0,:]
+            m1 = m[0][None,0,:]
+        else:
+            # This is the normal case
+            m0 = m[0][...,0,:]
+            m1 = m[0][...,1:,None,:]
+        return [m0, m1]
+    
+    def _compute_mask_to_parent(self, index, mask):
+        raise NotImplementedError()
+    
+    def _plates_to_parent(self, index):
+        if index == 0:
+            raise NotImplementedError()
+        else:
+            raise ValueError("Parent index out of bounds")
+    
+    def _plates_from_parent(self, index):
+        if index == 0:
+            N = self.parents[0].dims[1][0]
+            return self.parents[0].plates + (N+1,)
+        else:
+            raise ValueError("Parent index out of bounds")
