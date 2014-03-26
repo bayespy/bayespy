@@ -47,7 +47,24 @@ class DirichletPriorStatistics(Statistics):
         return [(d,), ()]
 
 class DirichletStatistics(Statistics):
-    pass
+
+    ndim_observations = 1
+    
+    def compute_fixed_moments(self, p):
+        # Check that probabilities are non-negative
+        if np.any(np.asanyarray(p)<0):
+            raise ValueError("Probabilities may not be negative")
+        # Normalize probabilities
+        p = p / np.sum(p, axis=-1, keepdims=True)
+        # Message is log-probabilities
+        logp = np.log(p)
+        u = [logp]
+        return u
+    
+    def compute_dims_from_values(self, x):
+        D = np.shape(x)[-1]
+        return ( (D,), )
+
 
 class DirichletDistribution(ExponentialFamilyDistribution):
 
