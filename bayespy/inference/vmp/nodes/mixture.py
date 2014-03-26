@@ -87,7 +87,9 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             # Hmm.. I think the message passing method will do
             # that automatically
 
-            return [L]
+            m = [L]
+
+            return m
 
         elif index >= 1:
 
@@ -261,28 +263,31 @@ class Mixture(ExponentialFamily):
         # require the user to provide the number of clusters when it can't
         # be inferred otherwise. Anyway, this is left for future work.
 
-        try:
-            # Convert a node
-            z = z._convert(CategoricalStatistics)
-        except:
-            # Conversion failed, thus z is a constant (or invalid node)
+        if not hasattr(z, '_convert'):
             raise NotImplementedError("Constant cluster assignments are "
                                       "not yet implemented")
-
-        # Number of clusters
+            
+        # Convert a node to get the number of clusters
+        original_z = z
+        z = z._convert(CategoricalStatistics)
         K = z.dims[0][0]
+        # Delete the conversion node if a conversion was done so it won't stay
+        # haunting.
+        # TODO/FIXME: What if the conversion was done by using two or more
+        # consecutive conversion nodes? This would only delete the last
+        # node. This whole problem may require further thinking..
+        if z is not original_z:
+            z.delete()
 
         # Get the stuff for the mixed distribution
         (dims, distribution, statistics, parent_statistics) = \
           node_class._constructor(*args)
 
         # Convert the distribution to a mixture
-        distribution = MixtureDistribution(distribution,
-                                           cluster_plate)
+        distribution = MixtureDistribution(distribution, cluster_plate)
 
         # Add cluster assignments to parents
-        parent_statistics = ((CategoricalStatistics(K),) + \
-                            parent_statistics)
+        parent_statistics = (CategoricalStatistics(K),) + parent_statistics
           
         return (dims, 
                 distribution, 
@@ -309,7 +314,9 @@ class Mixture(ExponentialFamily):
             return self.parents[index].plates
         else:
             plates = list(self.parents[index].plates)
-            plates.pop(self.cluster_plate)
+            # Remove the cluster plate, if the parent has it
+            if len(plates) >= abs(self.cluster_plate):
+                plates.pop(self.cluster_plate)
             return tuple(plates)
 
     def integrated_logpdf_from_parents(self, x, index):
