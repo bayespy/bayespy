@@ -122,11 +122,20 @@ class Statistics():
 def ensureparents(func):
     def new_func(self, *parents, **kwargs):
         # Convert parents to proper nodes
-        parents = list(parents)
-        for (ind, parent) in enumerate(parents):
-            parents[ind] = self._ensure_statistics(parent, 
+        new_parents = list(parents)
+        for (ind, parent) in enumerate(new_parents):
+            new_parents[ind] = self._ensure_statistics(parent, 
                                                    self._parent_statistics[ind])
-        return func(self, *parents, **kwargs)
+        # Run the function
+        retval = func(self, *new_parents, **kwargs)
+        # Delete possible conversion nodes if they are unused
+        for ind in range(len(parents)):
+            converted = new_parents[ind] is not parents[ind]
+            unused = len(new_parents[ind].children) == 0
+            if converted and unused: 
+                new_parents[ind].delete()
+
+        return retval
     return new_func
 
     
