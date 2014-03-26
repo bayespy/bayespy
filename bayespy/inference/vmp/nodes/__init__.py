@@ -34,3 +34,4 @@ from .dot import Dot, SumMultiply
 from .mixture import Mixture
 from .gaussian_markov_chain import GaussianMarkovChain
 from .gaussian_markov_chain import DriftingGaussianMarkovChain
+from .categorical_markov_chain import CategoricalMarkovChain
