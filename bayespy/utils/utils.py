@@ -1188,7 +1188,9 @@ def alpha_beta_recursion(logp0, logP):
     plates = broadcasted_shape(np.shape(logp0)[:-1], np.shape(logP)[:-3])
 
     if np.shape(logP)[-2:] != (D,D):
-        raise ValueError("Dimension mismatch", np.shape(logP))
+        raise ValueError("Dimension mismatch %s != %s"
+                         % (np.shape(logP)[-2:],
+                            (D,D)))
 
     # TODO: Use some scaling so the log-probabilities are in better range
     maxlogP = np.amax(logP, axis=(-1,-2), keepdims=True)
