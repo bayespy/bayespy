@@ -53,7 +53,7 @@ class Deterministic(Node):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, plates=None, **kwargs)
+        super().__init__(*args, plates=None, notify_parents=False, **kwargs)
 
     def get_moments(self):
         u_parents = self._message_from_parents()
@@ -76,6 +76,52 @@ class Deterministic(Node):
     def _compute_moments(self, *u_parents):
         # Sub-classes should implement this
         raise NotImplementedError()
+
+    def _add_child(self, child, index):
+        """
+        Add a child node.
+
+        Only child nodes that are stochastic (or have stochastic children
+        recursively) are counted as children because deterministic nodes without
+        stochastic children do not have any messages to send so the parents do
+        not need to know about the deterministic node.
+
+        A deterministic node does not notify its parents when created, but if it
+        gets a stochastic child node, then notify parents. This method is called
+        only if a stochastic child (recursively) node is added, thus there is at
+        least one stochastic node below this deterministic node.
+
+        Parameters
+        ----------
+        child : node
+        index : int
+           The parent index of this node for the child node.  
+           The child node recognizes its parents by their index 
+           number.
+        """
+        super()._add_child(child, index)
+        # Now that this deterministic node has non-deterministic children,
+        # notify parents
+        for (ind,parent) in enumerate(self.parents):
+            parent._add_child(self, ind)
+
+    def _remove_child(self, child, index):
+        """
+        Remove a child node.
+
+        Only child nodes that are stochastic (or have stochastic children
+        recursively) are counted as children because deterministic nodes without
+        stochastic children do not have any messages to send so the parents do
+        not need to know about the deterministic node.
+
+        So, if the deterministic node does not have any stochastic children left
+        after removal, remove it from its parents.
+        """
+        super()._remove_child(child, index)
+        # Check whether there are any children left. If not, remove from parents
+        if len(self.children) == 0:
+            for (ind, parent) in enumerate(self.parents):
+                parent._remove_child(self, ind)
 
     def lower_bound_contribution(self, gradient=False):
         # Deterministic functions are delta distributions so the lower bound

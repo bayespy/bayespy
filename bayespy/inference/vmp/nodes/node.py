@@ -122,20 +122,13 @@ class Statistics():
 def ensureparents(func):
     def new_func(self, *parents, **kwargs):
         # Convert parents to proper nodes
-        new_parents = list(parents)
-        for (ind, parent) in enumerate(new_parents):
-            new_parents[ind] = self._ensure_statistics(parent, 
+        parents = list(parents)
+        for (ind, parent) in enumerate(parents):
+            parents[ind] = self._ensure_statistics(parent, 
                                                    self._parent_statistics[ind])
         # Run the function
-        retval = func(self, *new_parents, **kwargs)
-        # Delete possible conversion nodes if they are unused
-        for ind in range(len(parents)):
-            converted = new_parents[ind] is not parents[ind]
-            unused = len(new_parents[ind].children) == 0
-            if converted and unused: 
-                new_parents[ind].delete()
-
-        return retval
+        return func(self, *parents, **kwargs)
+    
     return new_func
 
     
@@ -169,7 +162,8 @@ class Node():
     _parent_statistics = None
 
     @ensureparents
-    def __init__(self, *parents, dims=None, plates=None, name="", plotter=None):
+    def __init__(self, *parents, dims=None, plates=None, name="", 
+                 notify_parents=True, plotter=None):
 
         self.parents = parents
         self.dims = dims
@@ -177,8 +171,9 @@ class Node():
         self._plotter = plotter
 
         # Inform parent nodes
-        for (index,parent) in enumerate(self.parents):
-            parent._add_child(self, index)
+        if notify_parents:
+            for (index,parent) in enumerate(self.parents):
+                parent._add_child(self, index)
 
         # Check plates
         parent_plates = [self._plates_from_parent(index) 
@@ -207,7 +202,7 @@ class Node():
         self.mask = np.array(False)
 
         # Children
-        self.children = []
+        self.children = set()
 
     @staticmethod
     def _ensure_statistics(node, statistics):
@@ -242,7 +237,7 @@ class Node():
            The child node recognizes its parents by their index 
            number.
         """
-        self.children.append((child, index))
+        self.children.add((child, index))
 
     def _remove_child(self, child, index):
         """

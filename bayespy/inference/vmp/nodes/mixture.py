@@ -268,16 +268,8 @@ class Mixture(ExponentialFamily):
                                       "not yet implemented")
             
         # Convert a node to get the number of clusters
-        original_z = z
         z = z._convert(CategoricalStatistics)
         K = z.dims[0][0]
-        # Delete the conversion node if a conversion was done so it won't stay
-        # haunting.
-        # TODO/FIXME: What if the conversion was done by using two or more
-        # consecutive conversion nodes? This would only delete the last
-        # node. This whole problem may require further thinking..
-        if z is not original_z:
-            z.delete()
 
         # Get the stuff for the mixed distribution
         (dims, distribution, statistics, parent_statistics) = \
