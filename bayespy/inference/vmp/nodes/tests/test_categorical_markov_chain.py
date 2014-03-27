@@ -101,6 +101,22 @@ class TestCategoricalMarkovChain(utils.TestCase):
                               [[0.25, 0.25],
                                [0.25, 0.25]] ])
 
+        # Random init, deterministic dynamics
+        p0 = np.array([0.5, 0.5])
+        P = np.array(3*[[[0, 1],
+                         [1, 0]]])
+        Z = CategoricalMarkovChain(p0, P)
+        u = Z._message_to_child()
+        self.assertAllClose(u[0],
+                            [0.5, 0.5])
+        self.assertAllClose(u[1],
+                            [ [[0.0, 0.5],
+                               [0.5, 0.0]],
+                              [[0.0, 0.5],
+                               [0.5, 0.0]],
+                              [[0.0, 0.5],
+                               [0.5, 0.0]] ])
+
         # Unnormalized probabilities
         p0 = np.array([2, 2])
         P = np.array([ [[4, 4],

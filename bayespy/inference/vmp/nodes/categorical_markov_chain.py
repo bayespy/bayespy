@@ -25,6 +25,7 @@ import numpy as np
 
 from .deterministic import Deterministic
 from .expfamily import ExponentialFamily, \
+                       ExponentialFamilyDistribution, \
                        useconstructor
 from .node import Statistics, \
                   ensureparents
@@ -60,7 +61,7 @@ class CategoricalMarkovChainStatistics(Statistics):
                                   % (self.__class__.__name__))
 
 
-class CategoricalMarkovChainDistribution():
+class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
 
     ndims = (1, 3)
     ndims_parents = ( (1,), (1,) )
@@ -68,10 +69,24 @@ class CategoricalMarkovChainDistribution():
     def __init__(self, categories, states):
         self.K = categories
         self.N = states
-        return
 
-    def compute_message_to_parent(self, index, u_self, u_p0, u_P):
-        raise NotImplementedError()
+    def compute_message_to_parent(self, parent, index, u, u_p0, u_P):
+        if index == 0:
+            return [ u[0] ]
+        elif index == 1:
+            return [ u[1] ]
+        else:
+            raise ValueError("Parent index out of bounds")
+
+    def compute_mask_to_parent(self, index, mask):
+        if index == 0:
+            return mask
+        elif index == 1:
+            # Add plate axis for the time axis and row axis of the transition
+            # matrix
+            return np.asanyarray(mask)[...,None,None]
+        else:
+            raise ValueError("Parent index out of bounds")
 
     def compute_phi_from_parents(self, u_p0, u_P, mask=True):
         phi0 = u_p0[0]
@@ -133,9 +148,9 @@ class CategoricalMarkovChain(ExponentialFamily):
         if len(P.plates) < 1 or P.plates[-1] != D:
             raise ValueError("Transition probability matrix is not square")
 
-        dims = ( (D,), (N,D,D) )
+        dims = ( (D,), (N-1,D,D) )
 
-        distribution = CategoricalMarkovChainDistribution(D, N)
+        distribution = CategoricalMarkovChainDistribution(D, N-1)
         statistics = CategoricalMarkovChainStatistics(D)
         parent_statistics = cls._parent_statistics
 
@@ -145,8 +160,8 @@ class CategoricalMarkovChain(ExponentialFamily):
         if index == 0:
             return self.plates
         elif index == 1:
-            N = self.dims[0][0]
-            D = self.dims[0][1]
+            N = self.dims[1][0]
+            D = self.dims[1][-1]
             return self.plates + (N, D)
         else:
             raise ValueError("Parent index out of bounds")
@@ -191,26 +206,19 @@ class CategoricalMarkovChainToCategorical(Deterministic):
         return [P]
 
     def _compute_message_to_parent(self, index, m, u_Z):
-        if len(self.children) == 0:
-            raise Exception("WAAAAT")
-        m[0] = utils.atleast_nd(m[0], 2)
-        if np.shape(m[0])[-2] == 1:
-            # This is a bit pathological case but may happen if this node does
-            # not have any children
-            m0 = m[0][0,:]
-            m1 = m[0][None,0,:]
-        else:
-            # This is the normal case
-            m0 = m[0][...,0,:]
-            m1 = m[0][...,1:,None,:]
+        m0 = m[0][...,0,:]
+        m1 = m[0][...,1:,None,:]
         return [m0, m1]
     
     def _compute_mask_to_parent(self, index, mask):
-        raise NotImplementedError()
+        if index == 0:
+            return np.any(mask, axis=-1)
+        else:
+            raise ValueError("Parent index out of bounds")
     
     def _plates_to_parent(self, index):
         if index == 0:
-            raise NotImplementedError()
+            return self.plates[:-1]
         else:
             raise ValueError("Parent index out of bounds")
     
