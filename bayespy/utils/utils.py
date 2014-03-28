@@ -513,8 +513,20 @@ def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
                             keepdims=keepdims)
 
 def moveaxis(A, axis_from, axis_to):
+    """
+    Move the axis `axis_from` to position `axis_to`. 
+    """
+    if ((axis_from < 0 and abs(axis_from) > np.ndim(A)) or
+        (axis_from >= 0 and axis_from >= np.ndim(A)) or
+        (axis_to < 0 and abs(axis_to) > np.ndim(A)) or
+        (axis_to >= 0  and axis_to >= np.ndim(A))):
 
-    """ Move the axis number axis_from to be the axis number axis_to. """
+        raise ValueError("Can't move axis %d to position %d. Axis index out of "
+                         "bounds for array with shape %s"
+                         % (axis_from,
+                            axis_to,
+                            np.shape(A)))
+                            
     axes = np.arange(np.ndim(A))
     axes[axis_from:axis_to] += 1
     axes[axis_from:axis_to:-1] -= 1

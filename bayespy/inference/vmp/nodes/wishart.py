@@ -127,7 +127,7 @@ class Wishart(ExponentialFamily):
         super().__init__(n, V, **kwargs)
         
     @classmethod
-    def _constructor(cls, n, V, **kwargs):
+    def _constructor(cls, n, V, plates=None, **kwargs):
         """
         Constructs distribution and statistics objects.
         """
@@ -142,8 +142,13 @@ class Wishart(ExponentialFamily):
 
         # Dimensionality of the natural parameters
         dims = ( (k,k), () )
+
+        n = cls._ensure_statistics(n, parent_statistics[0])
         
         return (dims, 
+                cls._total_plates(plates,
+                                  cls._distribution.plates_from_parent(0, n.plates),
+                                  cls._distribution.plates_from_parent(1, V.plates)),
                 cls._distribution, 
                 cls._statistics, 
                 parent_statistics)

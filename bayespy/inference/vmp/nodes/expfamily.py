@@ -74,13 +74,14 @@ class ExponentialFamilyDistribution(Distribution):
 
 
 def useconstructor(__init__):
-    def new_init(self, *args, **kwargs):
+    def constructor_decorator(self, *args, **kwargs):
         if (self.dims is None or
             self._distribution is None or
             self._statistics is None or 
             self._parent_statistics is None):
 
-            (dims, dist, stats, pstats) = self._constructor(*args, **kwargs)
+            (dims, plates, dist, stats, pstats) = \
+              self._constructor(*args, **kwargs)
             
             if self.dims is None:
                 self.dims = dims
@@ -93,7 +94,7 @@ def useconstructor(__init__):
 
         __init__(self, *args, **kwargs)
 
-    return new_init
+    return constructor_decorator
 
 class ExponentialFamily(Stochastic):
     """
@@ -122,13 +123,13 @@ class ExponentialFamily(Stochastic):
     _distribution = None
 
     @useconstructor
-    def __init__(self, *args, initialize=True, **kwargs):
+    def __init__(self, *parents, initialize=True, **kwargs):
 
         # Terms for the lower bound (G for latent and F for observed)
         self.g = np.array(np.nan)
         self.f = np.array(np.nan)
 
-        super().__init__(*args,
+        super().__init__(*parents,
                          initialize=initialize,
                          dims=self.dims,
                          **kwargs)
@@ -139,7 +140,7 @@ class ExponentialFamily(Stochastic):
 
 
     @classmethod
-    def _constructor(cls, *args, **kwargs):
+    def _constructor(cls, *parents, initialize=True, plates=None, **kwargs):
         """
         Constructs distribution and statistics objects.
 
@@ -154,7 +155,10 @@ class ExponentialFamily(Stochastic):
         not-node specific code. The point of statistics class is to define the
         messaging protocols.
         """
-        return (cls.dims, 
+        parent_plates = [cls._distribution.plates_from_parent(ind, parent.plates)
+                         for (ind, parent) in enumerate(parents)]
+        return (cls.dims,
+                cls._total_plates(plates, *parent_plates),
                 cls._distribution, 
                 cls._statistics, 
                 cls._parent_statistics)

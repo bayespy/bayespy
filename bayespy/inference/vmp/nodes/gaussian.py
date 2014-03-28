@@ -237,7 +237,7 @@ class Gaussian(ExponentialFamily):
 
     @classmethod
     @ensureparents
-    def _constructor(cls, mu, Lambda, **kwargs):
+    def _constructor(cls, mu, Lambda, plates=None, **kwargs):
         """
         Constructs distribution and statistics objects.
         """
@@ -257,6 +257,9 @@ class Gaussian(ExponentialFamily):
         
         dims = ( (D,), (D,D) )
         return (dims, 
+                cls._total_plates(plates, 
+                                  cls._distribution.plates_from_parent(0, mu.plates),
+                                  cls._distribution.plates_from_parent(1, Lambda.plates)),
                 cls._distribution, 
                 cls._statistics, 
                 cls._parent_statistics)
@@ -601,6 +604,19 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         f = -k/2*np.log(2*np.pi)
         return (u, f)
 
+    def plates_to_parent(self, index, plates):
+        if index == 1:
+            return plates + self.shape
+        else:
+            return super().plates_to_parent(index, plates)
+
+    def plates_from_parent(self, index, plates):
+        ndim = len(self.shape)
+        if index == 1 and ndim > 0:
+            return plates[:-ndim]
+        else:
+            return super().plates_from_parent(index, plates)
+
 
 class GaussianARD(ExponentialFamily):
     r"""
@@ -729,7 +745,7 @@ class GaussianARD(ExponentialFamily):
         super().__init__(mu, alpha, **kwargs)
         
     @classmethod
-    def _constructor(cls, mu, alpha, ndim=None, shape=None, **kwargs):
+    def _constructor(cls, mu, alpha, ndim=None, shape=None, plates=None, **kwargs):
         """
         Constructs distribution and statistics objects.
 
@@ -839,23 +855,12 @@ class GaussianARD(ExponentialFamily):
             raise Exception("Second parent has wrong dimensionality")
         
         dims = (shape, shape+shape)
+        plates = cls._total_plates(plates,
+                                   distribution.plates_from_parent(0, mu.plates),
+                                   distribution.plates_from_parent(1, alpha.plates))
 
-        return (dims, distribution, statistics, parent_statistics)
+        return (dims, plates, distribution, statistics, parent_statistics)
         
-    def _plates_to_parent(self, index):
-        if index == 1:
-            shape = self._distribution.shape
-            return self.plates + shape
-        else:
-            return super()._plates_to_parent(index)
-
-    def _plates_from_parent(self, index):
-        ndim = len(self._distribution.shape)
-        if index == 1 and ndim > 0:
-            return self.parents[index].plates[:-ndim]
-        else:
-            return super()._plates_from_parent(index)
-
     def initialize_from_mean_and_covariance(self, mu, Cov):
         ndim = len(self._distribution.shape)
         u = [mu, Cov + utils.linalg.outer(mu, mu, ndim=ndim)]

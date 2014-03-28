@@ -115,7 +115,7 @@ class Categorical(ExponentialFamily):
 
     @classmethod
     @ensureparents
-    def _constructor(cls, p, **kwargs):
+    def _constructor(cls, p, plates=None, **kwargs):
         """
         Constructs distribution and statistics objects.
 
@@ -133,6 +133,8 @@ class Categorical(ExponentialFamily):
         distribution = CategoricalDistribution(D)
 
         return (( (D,), ),
+                cls._total_plates(plates, 
+                                  distribution.plates_from_parent(0, p.plates)),
                 distribution, 
                 statistics, 
                 cls._parent_statistics)

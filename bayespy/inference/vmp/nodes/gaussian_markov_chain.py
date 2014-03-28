@@ -61,8 +61,9 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
 
     ndims = (2, 3, 3)
     
-    def __init__(self, N):
+    def __init__(self, N, D):
         self.N = N
+        self.D = D
         super().__init__()
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
@@ -125,6 +126,32 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
         f = -0.5 * np.shape(x)[-2] * np.shape(x)[-1] * np.log(2*np.pi)
         return (u, f)
 
+    def plates_to_parent(self, index, plates):
+        """
+        Computes the plates of this node with respect to a parent.
+
+        Child classes must implement this.
+
+        Parameters:
+        -----------
+        index : int
+            The index of the parent node to use.
+        """
+        raise NotImplementedError()
+
+    def plates_from_parent(self, index, plates):
+        """
+        Compute the plates using information of a parent node.
+
+        Child classes must implement this.
+
+        Parameters
+        ----------
+        index : int
+            Index of the parent to use.
+        """
+        raise NotImplementedError()
+
 
 
 # TODO/FIXME: The plates of masks are not handled properly! Try having
@@ -171,32 +198,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
         # Dimensionality of a realization
         return self.dims[0]
     
-    def _plates_to_parent(self, index):
-        """
-        Computes the plates of this node with respect to a parent.
-
-        Child classes must implement this.
-
-        Parameters:
-        -----------
-        index : int
-            The index of the parent node to use.
-        """
-        raise NotImplementedError()
-
-    def _plates_from_parent(self, index):
-        """
-        Compute the plates using information of a parent node.
-
-        Child classes must implement this.
-
-        Parameters
-        ----------
-        index : int
-            Index of the parent to use.
-        """
-        raise NotImplementedError()
-
     def random(self):
         raise NotImplementedError()
 
@@ -400,6 +401,62 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
                                                       u_v[1],
                                                       self.N)
 
+    def plates_to_parent(self, index, plates):
+        """
+        Computes the plates of this node with respect to a parent.
+
+        If this node has plates (...), the latent dimensionality is D
+        and the number of time instances is N, the plates with respect
+        to the parents are:
+          mu:     (...)
+          Lambda: (...)
+          A:      (...,N-1,D)
+          v:      (...,N-1,D)
+
+        Parameters:
+        -----------
+        index : int
+            The index of the parent node to use.
+        """
+
+        if index == 0:   # mu
+            return plates
+        elif index == 1: # Lambda
+            return plates
+        elif index == 2: # A
+            return plates + (self.N-1, self.D)
+        elif index == 3: # v
+            return plates + (self.N-1, self.D)
+        else:
+            raise ValueError("Invalid parent index.")
+
+    def plates_from_parent(self, index, plates):
+        """
+        Compute the plates using information of a parent node.
+
+        If the plates of the parents are:
+          mu:     (...)
+          Lambda: (...)
+          A:      (...,N-1,D)
+          v:      (...,N-1,D)
+          N:      ()
+        the resulting plates of this node are (...)
+
+        Parameters
+        ----------
+        index : int
+            Index of the parent to use.
+        """
+        if index == 0:   # mu
+            return plates
+        elif index == 1: # Lambda
+            return plates
+        elif index == 2: # A
+            return plates[:-2]
+        elif index == 3: # v
+            return plates[:-2]
+        else:
+            raise ValueError("Invalid parent index.")
 
 
 class GaussianMarkovChain(_TemplateGaussianMarkovChain):
@@ -458,7 +515,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     @classmethod
     @ensureparents
-    def _constructor(cls, mu, Lambda, A, v, n=None, **kwargs):
+    def _constructor(cls, mu, Lambda, A, v, n=None, plates=None, **kwargs):
         """
         Constructs distribution and statistics objects.
         
@@ -539,77 +596,19 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
         
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
-        distribution = GaussianMarkovChainDistribution(M)
+        distribution = GaussianMarkovChainDistribution(M, D)
 
         return ( dims,
+                 cls._total_plates(plates,
+                                   distribution.plates_from_parent(0, mu.plates),
+                                   distribution.plates_from_parent(1, Lambda.plates),
+                                   distribution.plates_from_parent(2, A.plates),
+                                   distribution.plates_from_parent(3, v.plates)),
                  distribution, 
                  cls._statistics, 
                  cls._parent_statistics)
 
     
-    def _plates_to_parent(self, index):
-        """
-        Computes the plates of this node with respect to a parent.
-
-        If this node has plates (...), the latent dimensionality is D
-        and the number of time instances is N, the plates with respect
-        to the parents are:
-          mu:     (...)
-          Lambda: (...)
-          A:      (...,N-1,D)
-          v:      (...,N-1,D)
-
-        Parameters:
-        -----------
-        index : int
-            The index of the parent node to use.
-        """
-
-        N = self.dims[0][0]
-        D = self.dims[0][1]
-        
-        if index == 0:   # mu
-            return self.plates
-        elif index == 1: # Lambda
-            return self.plates
-        elif index == 2: # A
-            return self.plates + (N-1,D)
-            #raise NotImplementedError()
-        elif index == 3: # v
-            return self.plates + (N-1,D)
-        elif index == 4: # N
-            return ()
-        raise ValueError("Invalid parent index.")
-        #raise NotImplementedError()
-
-    def _plates_from_parent(self, index):
-        """
-        Compute the plates using information of a parent node.
-
-        If the plates of the parents are:
-          mu:     (...)
-          Lambda: (...)
-          A:      (...,N-1,D)
-          v:      (...,N-1,D)
-          N:      ()
-        the resulting plates of this node are (...)
-
-        Parameters
-        ----------
-        index : int
-            Index of the parent to use.
-        """
-        if index == 0:   # mu
-            return self.parents[0].plates
-        elif index == 1: # Lambda
-            return self.parents[1].plates
-        elif index == 2: # A
-            return self.parents[2].plates[:-2]
-        elif index == 3: # v
-            return self.parents[3].plates[:-2]
-        elif index == 4: # N
-            return ()
-        raise ValueError("Invalid parent index.")
 
 
 class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
@@ -822,6 +821,69 @@ class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistrib
                                                       u_v[1],
                                                       self.N)
 
+    def plates_to_parent(self, index, plates):
+        """
+        Computes the plates of this node with respect to a parent.
+
+        If this node has plates (...), the latent dimensionality is D
+        and the number of time instances is N, the plates with respect
+        to the parents are:
+          mu:     (...)
+          Lambda: (...)
+          A:      (...,N-1,D)
+          v:      (...,N-1,D)
+
+        Parameters:
+        -----------
+        index : int
+            The index of the parent node to use.
+        """
+
+        if index == 0:   # mu
+            return plates
+        elif index == 1: # Lambda
+            return plates
+        elif index == 2: # B
+            return plates + (self.D,)
+        elif index == 3: # S
+            return plates + (self.N-1,)
+        elif index == 4: # v
+            return plates + (self.N-1,self.D)
+        else:
+            raise ValueError("Invalid parent index.")
+
+    def plates_from_parent(self, index, plates):
+        """
+        Compute the plates using information of a parent node.
+
+        If the plates of the parents are:
+          mu:     (...)
+          Lambda: (...)
+          B:      (...,D)
+          S:      (...,N-1)
+          v:      (...,N-1,D)
+          N:      ()
+        the resulting plates of this node are (...)
+
+        Parameters
+        ----------
+        index : int
+            Index of the parent to use.
+        """
+        if index == 0:   # mu
+            return plates
+        elif index == 1: # Lambda
+            return plates
+        elif index == 2: # B, remove last plate D
+            return plates[:-1]
+        elif index == 3: # S, remove last plate N-1
+            return plates[:-1]
+        elif index == 4: # v, remove last plates N-1,D
+            return plates[:-2]
+        else:
+            raise ValueError("Invalid parent index.")
+
+
 
 
 class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
@@ -884,7 +946,7 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     @classmethod
     @ensureparents
-    def _constructor(cls, mu, Lambda, B, S, v, n=None, **kwargs):
+    def _constructor(cls, mu, Lambda, B, S, v, n=None, plates=None, **kwargs):
         """
         Constructs distribution and statistics objects.
         
@@ -971,81 +1033,19 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
         
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
-        distribution = DriftingGaussianMarkovChainDistribution(M)
+        distribution = DriftingGaussianMarkovChainDistribution(M, D)
 
         return (dims,
+                cls._total_plates(plates,
+                                  distribution.plates_from_parent(0, mu.plates),
+                                  distribution.plates_from_parent(1, Lambda.plates),
+                                  distribution.plates_from_parent(2, B.plates),
+                                  distribution.plates_from_parent(3, S.plates),
+                                  distribution.plates_from_parent(4, v.plates)),
                 distribution,
                 cls._statistics,
                 cls._parent_statistics)
     
-
-    def _plates_to_parent(self, index):
-        """
-        Computes the plates of this node with respect to a parent.
-
-        If this node has plates (...), the latent dimensionality is D
-        and the number of time instances is N, the plates with respect
-        to the parents are:
-          mu:     (...)
-          Lambda: (...)
-          A:      (...,N-1,D)
-          v:      (...,N-1,D)
-
-        Parameters:
-        -----------
-        index : int
-            The index of the parent node to use.
-        """
-
-        N = self.dims[0][0]
-        D = self.dims[0][1]
-        
-        if index == 0:   # mu
-            return self.plates
-        elif index == 1: # Lambda
-            return self.plates
-        elif index == 2: # B
-            return self.plates + (D,)
-        elif index == 3: # S
-            return self.plates + (N-1,)
-        elif index == 4: # v
-            return self.plates + (N-1,D)
-        elif index == 5: # N
-            return ()
-        else:
-            raise ValueError("Invalid parent index.")
-
-    def _plates_from_parent(self, index):
-        """
-        Compute the plates using information of a parent node.
-
-        If the plates of the parents are:
-          mu:     (...)
-          Lambda: (...)
-          B:      (...,D)
-          S:      (...,N-1)
-          v:      (...,N-1,D)
-          N:      ()
-        the resulting plates of this node are (...)
-
-        Parameters
-        ----------
-        index : int
-            Index of the parent to use.
-        """
-        if index == 0:   # mu
-            return self.parents[0].plates
-        elif index == 1: # Lambda
-            return self.parents[1].plates
-        elif index == 2: # B, remove last plate D
-            return self.parents[2].plates[:-1]
-        elif index == 3: # S, remove last plate N-1
-            return self.parents[3].plates[:-1]
-        elif index == 4: # v, remove last plates N-1,D
-            return self.parents[4].plates[:-2]
-        else:
-            raise ValueError("Invalid parent index.")
-
 
             
 

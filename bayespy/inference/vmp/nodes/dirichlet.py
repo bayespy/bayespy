@@ -108,7 +108,7 @@ class Dirichlet(ExponentialFamily):
 
     @classmethod
     @ensureparents
-    def _constructor(cls, alpha, **kwargs):
+    def _constructor(cls, alpha, plates=None, **kwargs):
         """
         Constructs distribution and statistics objects.
         """
@@ -116,6 +116,7 @@ class Dirichlet(ExponentialFamily):
         D = alpha.dims[0][0]
         
         return ( ( (D,), ),
+                 cls._total_plates(plates, alpha.plates),
                  cls._distribution, 
                  cls._statistics, 
                  cls._parent_statistics)

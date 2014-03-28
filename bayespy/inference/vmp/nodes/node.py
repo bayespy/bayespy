@@ -180,33 +180,36 @@ class Node():
                          for index in range(len(self.parents))]
         if any(p is None for p in parent_plates):
             raise ValueError("Method _plates_from_parent returned None")
-        
-        if plates is None:
-            # By default, use the minimum number of plates determined
-            # from the parent nodes
-            try:
-                self.plates = utils.broadcasted_shape(*parent_plates)
-            except ValueError:
-                raise ValueError("The plates of the parents do not broadcast.")
-        else:
-            # Use custom plates
-            self.plates = plates
-            # Check that the parent_plates are a subset of plates.
-            for (ind, p) in enumerate(parent_plates):
-                if not utils.is_shape_subset(p, plates):
-                    raise ValueError("The plates %s of the parent %d %s are "
-                                     "not broadcastable to the given plates %s."
-                                     % (p,
-                                        ind,
-                                        self.parents[ind].name,
-                                        plates))
-                                                 
+
+        # Get and validate the plates for this node
+        self.plates = self._total_plates(plates, *parent_plates)
 
         # By default, ignore all plates
         self.mask = np.array(False)
 
         # Children
         self.children = set()
+
+    @classmethod
+    def _total_plates(cls, plates, *parent_plates):
+        if plates is None:
+            # By default, use the minimum number of plates determined
+            # from the parent nodes
+            try:
+                return utils.broadcasted_shape(*parent_plates)
+            except ValueError:
+                raise ValueError("The plates of the parents do not broadcast.")
+        else:
+            # Check that the parent_plates are a subset of plates.
+            for (ind, p) in enumerate(parent_plates):
+                if not utils.is_shape_subset(p, plates):
+                    raise ValueError("The plates %s of the parents "
+                                     "are not broadcastable to the given "
+                                     "plates %s."
+                                     % (p,
+                                        plates))
+            return plates
+        
 
     @staticmethod
     def _ensure_statistics(node, statistics):

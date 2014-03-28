@@ -40,11 +40,12 @@ from .categorical import Categorical, \
 
 class MixtureDistribution(ExponentialFamilyDistribution):
 
-    def __init__(self, distribution, cluster_plate):
+    def __init__(self, distribution, cluster_plate, n_clusters):
         self.distribution = distribution
         self.cluster_plate = cluster_plate
         self.ndims = distribution.ndims
         self.ndims_parents = distribution.ndims_parents
+        self.K = n_clusters
 
     def compute_message_to_parent(self, parent, index, u, *u_parents):
 
@@ -65,12 +66,22 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             # Compute phi:
             # Shape(phi)    = [Nn,..,K,..,N0,Dd,..,D0]
             phi = self.distribution.compute_phi_from_parents(*(u_parents[1:]))
-            # Reshape phi:
+            # Move phi axis:
             # Shape(phi)    = [Nn,..,N0,K,Dd,..,D0]
             for ind in range(len(phi)):
-                phi[ind] = utils.moveaxis(phi[ind],
-                                          self.cluster_plate-self.distribution.ndims[ind],
-                                          -1-self.distribution.ndims[ind])
+                if self.cluster_plate < 0:
+                    axis_from = self.cluster_plate-self.distribution.ndims[ind]
+                else:
+                    raise RuntimeError("Cluster plate axis must be negative")
+                axis_to = -1-self.distribution.ndims[ind]
+                if np.ndim(phi[ind]) >= abs(axis_from):
+                    # Cluster plate axis exists, move it to the correct position
+                    phi[ind] = utils.moveaxis(phi[ind], axis_from, axis_to)
+                else:
+                    # No cluster plate axis, just add a new axis to the correct
+                    # position, if phi has something on that axis
+                    if np.ndim(phi[ind]) >= abs(axis_to):
+                        phi[ind] = np.expand_dims(phi[ind], axis=axis_to)
 
             # Reshape u:
             # Shape(u)      = [Nn,..,N0,1,Dd,..,D0]
@@ -130,6 +141,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                 p = u_parents[0][0]
                 # Move the cluster axis to the proper place:
                 # Shape(p)      = [Nn,..,K,..,N0]
+                p = utils.atleast_nd(p, abs(self.cluster_plate))
                 p = utils.moveaxis(p, -1, self.cluster_plate)
                 # Add axes for variable dimensions to the contributions
                 # Shape(p)      = [Nn,..,K,..,N0,1,..,1]
@@ -181,12 +193,15 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             if self.cluster_plate < 0:
                 cluster_axis = self.cluster_plate - self.distribution.ndims[ind]
-            #else:
-            #    cluster_axis = cluster_plate
+            else:
+                raise RuntimeError("Cluster plate should be negative")
 
             # Move cluster axis to the last:
             # Shape(phi)    = [Nn,..,N0,Dd,..,D0,K]
-            phi.append(utils.moveaxis(Phi[ind], cluster_axis, -1))
+            if np.ndim(Phi[ind]) >= abs(cluster_axis):
+                phi.append(utils.moveaxis(Phi[ind], cluster_axis, -1))
+            else:
+                phi.append(Phi[ind][...,None])
 
             # Add axes to p:
             # Shape(p)      = [Nn,..,N0,K,1,..,1]
@@ -237,6 +252,34 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         """ Compute u(x) and f(x) for given x. """
         return self.distribution.compute_fixed_moments_and_f(x, mask=True)
 
+    def plates_to_parent(self, index, plates):
+        if index == 0:
+            return plates
+        else:
+
+            # Add the cluster plate axis
+            plates = list(plates)
+            if self.cluster_plate < 0:
+                knd = len(plates) + self.cluster_plate + 1
+            else:
+                raise RuntimeError("Cluster plate axis must be negative")
+            plates.insert(knd, self.K)
+            plates = tuple(plates)
+
+            return self.distribution.plates_to_parent(index-1, plates)
+
+    def plates_from_parent(self, index, plates):
+        if index == 0:
+            return plates
+        else:
+            plates = self.distribution.plates_from_parent(index-1, plates)
+            
+            # Remove the cluster plate, if the parent has it
+            plates = list(plates)
+            if len(plates) >= abs(self.cluster_plate):
+                plates.pop(self.cluster_plate)
+            return tuple(plates)
+
 class Mixture(ExponentialFamily):
 
     @useconstructor
@@ -245,13 +288,17 @@ class Mixture(ExponentialFamily):
         super().__init__(z, *args, **kwargs)
 
     @classmethod
-    def _constructor(cls, z, node_class, *args, cluster_plate=-1, **kwargs):
+    def _constructor(cls, z, node_class, *args, cluster_plate=-1, plates=None, **kwargs):
         """
         Constructs distribution and statistics objects.
         """
         if cluster_plate >= 0:
-            raise Exception("Give negative value for axis index cluster_plates")
+            raise ValueError("Cluster plate axis must be negative")
         
+        # Get the stuff for the mixed distribution
+        (dims, mixture_plates, distribution, statistics, parent_statistics) = \
+          node_class._constructor(*args)
+
         # TODO/FIXME: Constant (non-node, numeric) z is a bit
         # non-trivial. Constant z is an array of cluster assignments, e.g.,
         # [2,0,2,3,1,2]. However, it is not possible to know the number of
@@ -271,45 +318,28 @@ class Mixture(ExponentialFamily):
         z = z._convert(CategoricalStatistics)
         K = z.dims[0][0]
 
-        # Get the stuff for the mixed distribution
-        (dims, distribution, statistics, parent_statistics) = \
-          node_class._constructor(*args)
-
+        # Check that at least one of the parents has the cluster plate axis
+        if len(mixture_plates) < abs(cluster_plate):
+            raise ValueError("The mixed distribution does not have a plates "
+                             "axis for the cluster plate axis")
+        if mixture_plates[cluster_plate] != K:
+            raise ValueError("The cluster plate axis of the mixed distribution "
+                             "has incorrect length")
+        mixture_plates = list(mixture_plates)
+        mixture_plates.pop(cluster_plate)
+        plates = cls._total_plates(plates, mixture_plates, z.plates)
+        
         # Convert the distribution to a mixture
-        distribution = MixtureDistribution(distribution, cluster_plate)
+        distribution = MixtureDistribution(distribution, cluster_plate, K)
 
         # Add cluster assignments to parents
         parent_statistics = (CategoricalStatistics(K),) + parent_statistics
-          
-        return (dims, 
+
+        return (dims,
+                plates,
                 distribution, 
                 statistics, 
                 parent_statistics)
-
-    def _plates_to_parent(self, index):
-        if index == 0:
-            return self.plates
-        else:
-            if self.cluster_plate < 0:
-                plates = list(self.plates)
-                if self.cluster_plate < 0:
-                    k = len(self.plates) + self.cluster_plate + 1
-                else:
-                    k = self.cluster_plate
-                plates.insert(k, self.parents[0].dims[0][0])
-                plates = tuple(plates)
-
-            return plates
-
-    def _plates_from_parent(self, index):
-        if index == 0:
-            return self.parents[index].plates
-        else:
-            plates = list(self.parents[index].plates)
-            # Remove the cluster plate, if the parent has it
-            if len(plates) >= abs(self.cluster_plate):
-                plates.pop(self.cluster_plate)
-            return tuple(plates)
 
     def integrated_logpdf_from_parents(self, x, index):
 

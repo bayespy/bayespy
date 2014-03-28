@@ -43,6 +43,12 @@ class Distribution():
         # Sub-classes may need to overwrite this method
         return mask
 
+    def plates_to_parent(self, index, plates):
+        return plates
+
+    def plates_from_parent(self, index, plates):
+        return plates
+
 class Stochastic(Node):
     """
     Base class for nodes that are stochastic.
@@ -87,6 +93,13 @@ class Stochastic(Node):
         if initialize:
             self.initialize_from_prior()
 
+    def _plates_to_parent(self, index):
+        return self._distribution.plates_to_parent(index, self.plates)
+
+    def _plates_from_parent(self, index):
+        return self._distribution.plates_from_parent(index,
+                                                     self.parents[index].plates)
+    
     def _compute_mask_to_parent(self, index, mask):
         return self._distribution.compute_mask_to_parent(index, mask)
 

@@ -106,6 +106,22 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
     def compute_fixed_moments_and_f(self, x, mask=True):
         raise NotImplementedError()
 
+    def plates_to_parent(self, index, plates):
+        if index == 0:
+            return plates
+        elif index == 1:
+            return self.plates + (self.N, self.K)
+        else:
+            raise ValueError("Parent index out of bounds")
+        
+    def plates_from_parent(self, index, plates):
+        if index == 0:
+            return plates
+        elif index == 1:
+            return plates[:-2]
+        else:
+            raise ValueError("Parent index out of bounds")
+        
 class CategoricalMarkovChain(ExponentialFamily):
     
     _parent_statistics = (DirichletStatistics(),
@@ -117,7 +133,7 @@ class CategoricalMarkovChain(ExponentialFamily):
 
     @classmethod
     @ensureparents
-    def _constructor(cls, p0, P, states=None, **kwargs):
+    def _constructor(cls, p0, P, states=None, plates=None, **kwargs):
 
         # Number of categories
         D = p0.dims[0][0]
@@ -154,26 +170,14 @@ class CategoricalMarkovChain(ExponentialFamily):
         statistics = CategoricalMarkovChainStatistics(D)
         parent_statistics = cls._parent_statistics
 
-        return (dims, distribution, statistics, parent_statistics)
+        return (dims, 
+                cls._total_plates(plates,
+                                  distribution.plates_from_parent(0, p0.plates),
+                                  distribution.plates_from_parent(1, P.plates)),
+                distribution, 
+                statistics, 
+                parent_statistics)
 
-    def _plates_to_parent(self, index):
-        if index == 0:
-            return self.plates
-        elif index == 1:
-            N = self.dims[1][0]
-            D = self.dims[1][-1]
-            return self.plates + (N, D)
-        else:
-            raise ValueError("Parent index out of bounds")
-        
-    def _plates_from_parent(self, index):
-        if index == 0:
-            return self.parents[0].plates
-        elif index == 1:
-            return self.parents[1].plates[:-2]
-        else:
-            raise ValueError("Parent index out of bounds")
-        
         
 class CategoricalMarkovChainToCategorical(Deterministic):
     
