@@ -193,9 +193,17 @@ class TestGaussianARD(TestCase):
         # Create from node parents
         #
 
-        # Take broadcasted shape
-        check_init((),
-                   (4,2,2,3),
+        # Infer ndim from parent mu
+        check_init((3,),
+                   (),
+                   GaussianARD(0, 1,
+                               plates=(3,)),
+                   Gamma(1, 1,
+                         plates=(3,)))
+
+        # Infer ndim from mu, take broadcasted shape
+        check_init((4,),
+                   (2,2,3),
                    GaussianARD(np.zeros((2,1,3)),
                                np.ones((2,1,3))),
                    Gamma(np.ones((4,1,2,3)),

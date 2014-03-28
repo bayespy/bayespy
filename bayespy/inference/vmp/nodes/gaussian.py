@@ -753,6 +753,8 @@ class GaussianARD(ExponentialFamily):
         # Infer shape of mu
         try:
             shape_mu = mu.dims[0]
+            if ndim is None and shape is None:
+                ndim = len(shape_mu)
         except:
             if ndim is None and shape is None:
                 shape_mu = np.shape(mu)
