@@ -237,7 +237,11 @@ class ExponentialFamily(Stochastic):
             # Check that the shape is correct
             if not utils.is_shape_subset(np.shape(self.phi[i]),
                                          self.get_shape(i)):
-                raise ValueError("Incorrect shape in phi")
+                raise ValueError("Incorrect shape in phi[%d]. Shape is %s but "
+                                 "it should be broadcastable to shape %s."
+                                 % (i,
+                                    np.shape(self.phi[i]),
+                                    self.get_shape(i)))
 
     def _set_moments_and_cgf(self, u, g, mask=True):
         self._set_moments(u, mask=mask)

@@ -90,7 +90,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
 
     def compute_phi_from_parents(self, u_p0, u_P, mask=True):
         phi0 = u_p0[0]
-        phi1 = u_P[0] * np.ones((self.N,self.K,self.K))
+        phi1 = u_P[0] * np.ones((self.N-1,self.K,self.K))
         return [phi0, phi1]
 
     def compute_moments_and_cgf(self, phi, mask=True):
@@ -130,15 +130,15 @@ class CategoricalMarkovChain(ExponentialFamily):
         else:
             if P.plates[-2] == 1:
                 if states is None:
-                    N = 1
+                    N = 2
                 else:
                     N = int(states)
             else:
-                if states is not None and P.plates[-2] != states:
+                if states is not None and P.plates[-2]+1 != states:
                     raise ValueError("Given length of the Markov chain is "
                                      "inconsistent with the transition "
                                      "probability matrix")
-                N = P.plates[-2]
+                N = P.plates[-2] + 1
 
         if p0.dims != P.dims:
             raise ValueError("Initial state probability vector and state "
@@ -150,7 +150,7 @@ class CategoricalMarkovChain(ExponentialFamily):
 
         dims = ( (D,), (N-1,D,D) )
 
-        distribution = CategoricalMarkovChainDistribution(D, N-1)
+        distribution = CategoricalMarkovChainDistribution(D, N)
         statistics = CategoricalMarkovChainStatistics(D)
         parent_statistics = cls._parent_statistics
 

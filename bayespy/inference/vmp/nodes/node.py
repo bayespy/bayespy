@@ -192,10 +192,14 @@ class Node():
             # Use custom plates
             self.plates = plates
             # Check that the parent_plates are a subset of plates.
-            for p in parent_plates:
+            for (ind, p) in enumerate(parent_plates):
                 if not utils.is_shape_subset(p, plates):
-                    raise ValueError("The plates of the parents are not "
-                                     "subsets of the given plates.")
+                    raise ValueError("The plates %s of the parent %d %s are "
+                                     "not broadcastable to the given plates %s."
+                                     % (p,
+                                        ind,
+                                        self.parents[ind].name,
+                                        plates))
                                                  
 
         # By default, ignore all plates
