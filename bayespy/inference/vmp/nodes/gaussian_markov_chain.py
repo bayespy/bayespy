@@ -354,21 +354,29 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         # Number of time instances in the process
         N = self.N
         
-        # TODO/FIXME: Take into account plates!
-        phi0 = np.zeros((N,D))
-        phi1 = np.zeros((N,D,D))
-        phi2 = np.zeros((N-1,D,D))
-
-        # Parameters for x0
+        # Helpful variables (show shapes in comments)
         mu = u_mu[0]         # (..., D)
         Lambda = u_Lambda[0] # (..., D, D)
+        A = u_A[0]           # (..., N-1, D, D)
+        AA = u_A[1]          # (..., N-1, D, D, D)
+        v = u_v[0]           # (..., N-1, D)
+
+        # Allocate memory (take into account effective plates)
+        plates_phi0 = utils.broadcasted_shape(np.shape(mu)[:-1],
+                                              np.shape(Lambda)[:-2])
+        plates_phi1 = utils.broadcasted_shape(np.shape(Lambda)[:-2],
+                                              np.shape(v)[:-2],
+                                              np.shape(AA)[:-4])
+        plates_phi2 = utils.broadcasted_shape(np.shape(v)[:-2],
+                                              np.shape(A)[:-3])
+        
+        phi0 = np.zeros(plates_phi0+(N,D))
+        phi1 = np.zeros(plates_phi1+(N,D,D))
+        phi2 = np.zeros(plates_phi2+(N-1,D,D))
+
+        # Parameters for x0
         phi0[...,0,:] = np.einsum('...ik,...k->...i', Lambda, mu)
         phi1[...,0,:,:] = Lambda
-
-        # Helpful variables (show shapes in comments)
-        A = u_A[0]  # (..., N-1, D, D)
-        AA = u_A[1] # (..., N-1, D, D, D)
-        v = u_v[0]  # (..., N-1, D)
 
         # Diagonal blocks: -0.5 * (V_i + A_{i+1}' * V_{i+1} * A_{i+1})
         phi1[..., 1:, :, :] = v[...,np.newaxis]*np.identity(D)
