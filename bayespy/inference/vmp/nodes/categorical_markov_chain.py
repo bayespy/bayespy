@@ -110,7 +110,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         if index == 0:
             return plates
         elif index == 1:
-            return self.plates + (self.N, self.K)
+            return plates + (self.N-1, self.K)
         else:
             raise ValueError("Parent index out of bounds")
         
