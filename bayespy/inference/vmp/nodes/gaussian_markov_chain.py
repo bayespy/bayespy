@@ -47,7 +47,10 @@ from .node import Statistics, ensureparents
 class GaussianMarkovChainStatistics(Statistics):
 
     def compute_fixed_moments(self, x):
-        raise NotImplementedError()
+        u0 = x
+        u1 = x[...,:,np.newaxis] * x[...,np.newaxis,:]
+        u2 = x[...,:-1,:,np.newaxis] * x[...,1:,np.newaxis,:]
+        return [u0, u1, u2]
         
     def converter(self, statistics_class):
         if statistics_class is GaussianStatistics:

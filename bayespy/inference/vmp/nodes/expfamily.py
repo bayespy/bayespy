@@ -211,7 +211,7 @@ class ExponentialFamily(Stochastic):
                               np.shape(x),
                               self.plates + self._distribution.shape_of_value(self.dims)))
         mask = np.logical_not(self.observed)
-        (u, f) = self._distribution.compute_fixed_moments_and_f(x, mask=mask)
+        u = self._statistics.compute_fixed_moments(x)
         self._set_moments_and_cgf(u, np.inf, mask=mask)
 
     def initialize_from_random(self):
