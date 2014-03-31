@@ -152,6 +152,10 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
         """
         raise NotImplementedError()
 
+    def shape_of_value(self, dims):
+        # Dimensionality of a realization
+        return dims[0]
+    
 
 
 # TODO/FIXME: The plates of masks are not handled properly! Try having
@@ -194,10 +198,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
         # Construct
         super().__init__(*parents, **kwargs)
 
-    def get_shape_of_value(self):
-        # Dimensionality of a realization
-        return self.dims[0]
-    
     def random(self):
         raise NotImplementedError()
 

@@ -121,6 +121,10 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
             return plates[:-2]
         else:
             raise ValueError("Parent index out of bounds")
+
+    def shape_of_value(self, dims):
+        (M,D,_) = dims[1]
+        return (M+1,)
         
 class CategoricalMarkovChain(ExponentialFamily):
     

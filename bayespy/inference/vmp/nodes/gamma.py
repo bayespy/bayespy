@@ -105,6 +105,10 @@ class GammaDistribution(ExponentialFamilyDistribution):
         f = 0
         return (u, f)
 
+    def shape_of_value(self, dims):
+        # Dimensionality of a realization
+        return ()
+
 class Gamma(ExponentialFamily):
 
     dims = ( (), () )
@@ -115,10 +119,6 @@ class Gamma(ExponentialFamily):
     
     def __init__(self, a, b, **kwargs):
         super().__init__(a, b, **kwargs)
-
-    def get_shape_of_value(self):
-        # Dimensionality of a realization
-        return ()
 
     def random(self):
         """

@@ -105,6 +105,10 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         f = -k/2*np.log(2*np.pi)
         return (u, f)
 
+    def shape_of_value(self, dims):
+        # Dimensionality of a realization
+        return dims[0]
+    
 
 class Gaussian(ExponentialFamily):
     r"""
@@ -265,10 +269,6 @@ class Gaussian(ExponentialFamily):
                 cls._parent_statistics)
 
 
-    def get_shape_of_value(self):
-        # Dimensionality of a realization
-        return self.dims[0]
-    
     def random(self):
         # TODO/FIXME: You shouldn't draw random values for
         # observed/fixed elements!
@@ -617,6 +617,10 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         else:
             return super().plates_from_parent(index, plates)
 
+    def shape_of_value(self, dims):
+        # Dimensionality of a realization
+        return dims[0]
+
 
 class GaussianARD(ExponentialFamily):
     r"""
@@ -869,10 +873,6 @@ class GaussianARD(ExponentialFamily):
         # Cov. Do it later.
         self._set_moments_and_cgf(u, np.nan, mask=mask)
         return
-
-    def get_shape_of_value(self):
-        # Dimensionality of a realization
-        return self.dims[0]
 
     def random(self):
         """

@@ -72,6 +72,9 @@ class ExponentialFamilyDistribution(Distribution):
             L = L + np.sum(phi_i * u_i, axis=axis_sum)
         return L
 
+    def shape_of_value(self, dims):
+        raise NotImplementedError()
+
 
 def useconstructor(__init__):
     def constructor_decorator(self, *args, **kwargs):
@@ -201,12 +204,12 @@ class ExponentialFamily(Stochastic):
 
     def initialize_from_value(self, x):
         # Update moments from value
-        if np.shape(x) != self.plates + self.get_shape_of_value():
+        if np.shape(x) != self.plates + self._distribution.shape_of_value(self.dims):
             raise ValueError("The initial value for node %s has invalid shape "
                              "%s. The shape should be %s." %
                              (self.name,
                               np.shape(x),
-                              self.plates + self.get_shape_of_value()))
+                              self.plates + self._distribution.shape_of_value(self.dims)))
         mask = np.logical_not(self.observed)
         (u, f) = self._distribution.compute_fixed_moments_and_f(x, mask=mask)
         self._set_moments_and_cgf(u, np.inf, mask=mask)

@@ -96,6 +96,9 @@ class DirichletDistribution(ExponentialFamilyDistribution):
     def compute_fixed_moments_and_f(self, x, mask=True):
         raise NotImplementedError()
 
+    def shape_of_value(self, dims):
+        return dims[0]
+
 
 class Dirichlet(ExponentialFamily):
 

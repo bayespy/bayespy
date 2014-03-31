@@ -280,6 +280,9 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                 plates.pop(self.cluster_plate)
             return tuple(plates)
 
+    def shape_of_value(self, dims):
+        return self.distribution.shape_of_value(dims)
+
 class Mixture(ExponentialFamily):
 
     @useconstructor

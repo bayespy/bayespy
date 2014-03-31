@@ -103,6 +103,9 @@ class CategoricalDistribution(ExponentialFamilyDistribution):
         f = 0
         return ([u0], f)
 
+    def shape_of_value(self, dims):
+        return ()
+
 
 class Categorical(ExponentialFamily):
     
@@ -138,9 +141,6 @@ class Categorical(ExponentialFamily):
                 distribution, 
                 statistics, 
                 cls._parent_statistics)
-
-    def get_shape_of_value(self):
-        return ()
 
     def random(self):
         logp = self.phi[0]

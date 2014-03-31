@@ -116,6 +116,8 @@ class WishartDistribution(ExponentialFamilyDistribution):
         f = -(k+1)/2 * ldet
         return (u, f)
 
+    def shape_of_value(self, dims):
+        return dims[0]
 
 class Wishart(ExponentialFamily):
 
