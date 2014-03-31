@@ -22,11 +22,9 @@
 ######################################################################
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from bayespy.utils import utils
-
-#import bayespy.inference.vmp.nodes.constant as constant
-
 
 """
 This module contains a sketch of a new implementation of the framework.
@@ -575,6 +573,7 @@ class Node():
         """
         if callable(self._plotter):
             self._plotter(self, **kwargs)
+            plt.suptitle('q(%s)' % self.name)
         else:
             raise Exception("No plotter defined, can not plot")
         return

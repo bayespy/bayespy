@@ -310,7 +310,6 @@ class VB():
                     self._figures[node] = f.number
                 plt.clf()
                 node.plot()
-                plt.suptitle('q(%s)' % node.name)
                 plt.draw()
                 plt.show()
 
