@@ -60,6 +60,18 @@ class TestCategoricalMarkovChain(utils.TestCase):
         self.assertEqual((4,), Z.plates, msg="Incorrect plates")
         self.assertEqual(((2,),(3,2,2)), Z.dims, msg="Incorrect dimensions")
 
+        # Test some overflow bugs
+        p0 = np.array([0.5, 0.5])
+        P = Dirichlet(1e-3*np.ones(2),
+                      plates=(2,))
+        Z = CategoricalMarkovChain(p0, P,
+                                   states=2000)
+        u = Z._message_to_child()
+        self.assertTrue(np.all(~np.isnan(u[0])), 
+                        msg="Nans in moments")
+        self.assertTrue(np.all(~np.isnan(u[1])), 
+                        msg="Nans in moments")
+        
         pass
     
     def test_message_to_child(self):
@@ -170,5 +182,6 @@ class TestCategoricalMarkovChain(utils.TestCase):
                                [0.0, 1.0]],
                               [[0.0, 0.0],
                                [0.0, 1.0]] ])
+
 
         pass

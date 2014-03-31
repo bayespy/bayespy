@@ -1204,11 +1204,32 @@ def alpha_beta_recursion(logp0, logP):
                          % (np.shape(logP)[-2:],
                             (D,D)))
 
-    # TODO: Use some scaling so the log-probabilities are in better range
+    #
+    # Scale transition matrix such that the probabilities sum to D (as there are
+    # D rows which sum to one)
+    #
+
+    # First, scale such that the range is better
     maxlogP = np.amax(logP, axis=(-1,-2), keepdims=True)
     logP = logP - maxlogP
+    # Then, normalize
+    normlogP = np.log(np.sum(np.exp(logP), axis=(-1,-2), keepdims=True)) - np.log(D)
+    logP = logP - normlogP
+    # Total fix
+    fixlogP = maxlogP + normlogP
+    
+    # First, scale such that the range is better
     maxlogp0 = np.amax(logp0, axis=-1, keepdims=True)
     logp0 = logp0 - maxlogp0
+    # Then, normalize
+    normlogp0 = np.log(np.sum(np.exp(logp0), axis=-1, keepdims=True))
+    logp0 = logp0 - normlogp0
+    # Total fix
+    fixlogp0 = maxlogp0 + normlogp0
+
+    #
+    # Run the recursion algorithm
+    #
 
     # Allocate memory
     alpha = np.zeros(plates+(N,D,D))
@@ -1238,8 +1259,8 @@ def alpha_beta_recursion(logp0, logP):
     z0 /= v[...,None]
 
     # Cumulant generating function, e.g., a normalization term
-    g = -np.log(v) - (np.sum(maxlogP, axis=(-1,-2,-3)) 
-                      + np.sum(maxlogp0, axis=-1))
+    g = -np.log(v) - (np.sum(fixlogP, axis=(-1,-2,-3)) 
+                      + np.sum(fixlogp0, axis=-1))
 
     return (z0, zz, g)
 
