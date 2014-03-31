@@ -274,6 +274,11 @@ def gaussian_array(X, rows=-2, cols=-1, scale=1):
     x = np.transpose(x, axes=axes)
     std = np.transpose(std, axes=axes)
 
+    # Remove non-row and non-column axes that have length 1
+    squeezed_shape = tuple([sh for sh in np.shape(x)[:-2] if sh != 1])
+    x = np.reshape(x, squeezed_shape+np.shape(x)[-2:])
+    std = np.reshape(std, squeezed_shape+np.shape(x)[-2:])
+
     # Make explicit four axes
     x = utils.atleast_nd(x, 4)
     std = utils.atleast_nd(std, 4)
