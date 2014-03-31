@@ -31,6 +31,8 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 #from matplotlib.pyplot import *
 
+from bayespy.inference.vmp.nodes.categorical import CategoricalStatistics
+
 from bayespy.utils import utils
 
 def timeseries_gaussian_mc(X, scale=2):
@@ -160,7 +162,7 @@ def _rectangle(x, y, width, height, **kwargs):
     return
     
     
-def hinton(W, error=None, vmax=None):
+def hinton(W, error=None, vmax=None, square=True):
     """
     Draws a Hinton diagram for visualizing a weight matrix. 
 
@@ -188,7 +190,8 @@ def hinton(W, error=None, vmax=None):
              0.5+np.array([0,0,height,height]),
              'gray')
     plt.axis('off')
-    plt.axis('equal')
+    if square:
+        plt.axis('equal')
     plt.gca().invert_yaxis()
     for x in range(width):
         for y in range(height):
@@ -293,6 +296,30 @@ def gaussian_array(X, rows=-2, cols=-1, scale=1):
                 hinton(x[i,j], vmax=vmax, error=scale*std[i,j])
             #matrix(x[i,j])
 
+def timeseries_categorical_mc(Z):
+
+    # Make sure that the node is categorical
+    Z = Z._convert(CategoricalStatistics)
+
+    # Get expectations (and broadcast explicitly)
+    z = Z._message_to_child()[0] * np.ones(Z.get_shape(0))
+
+    # Compute the subplot layout
+    z = utils.atleast_nd(z, 4)
+    if np.ndim(z) != 4:
+        raise ValueError("Can not plot arrays with over 4 axes")
+    M = np.shape(z)[0]
+    N = np.shape(z)[1]
+
+    #print("DEBUG IN PLOT", Z.get_shape(0), np.shape(z))
+
+    # Plot Hintons
+    for i in range(M):
+        for j in range(N):
+            plt.subplot(M, N, i*N+j+1)
+            hinton(z[i,j].T, vmax=1.0, square=False)
+    
+
 class Plotter():
     def __init__(self, plotter, **kwargs):
         self._kwargs = kwargs
@@ -311,6 +338,10 @@ class GaussianTimeseriesPlotter(Plotter):
 class GaussianHintonPlotter(Plotter):
     def __init__(self, **kwargs):
         super().__init__(gaussian_array, **kwargs)
+
+class CategoricalMarkovChainPlotter(Plotter):
+    def __init__(self, **kwargs):
+        super().__init__(timeseries_categorical_mc, **kwargs)
 
 ## def matrix_animation_BACKUP(A, filename=None, fps=25, **kwargs):
 
