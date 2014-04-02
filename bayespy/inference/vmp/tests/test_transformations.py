@@ -744,7 +744,7 @@ class TestRotateGaussianMarkovChain(TestCase):
 
     def test_cost_function(self):
         """
-        Test the speed-up rotation of Markov chain
+        Test the cost function of the speed-up rotation for Markov chain
         """
 
         np.random.seed(42)
@@ -775,7 +775,7 @@ class TestRotateGaussianMarkovChain(TestCase):
                          initialize=False)
 
             # Posterior estimation
-            Y.observe(np.random.randn(N+1,D))
+            Y.observe(np.random.randn(*(Y.get_shape(0))))
             X.update()
             try:
                 A.update()
@@ -857,7 +857,7 @@ class TestRotateGaussianMarkovChain(TestCase):
                          initialize=False)
 
             # Posterior estimation
-            Y.observe(np.random.randn(N+1,D))
+            Y.observe(np.random.randn(*(Y.get_shape(0))))
             X.update()
             try:
                 A.update()
@@ -891,7 +891,7 @@ class TestRotateGaussianMarkovChain(TestCase):
                                           np.ravel(R), 
                                           verbose=False)
             self.assertAllClose(err, 0, 
-                                atol=1e-6,
+                                atol=1e-5,
                                 msg="Gradient incorrect")
             
             return
@@ -910,10 +910,17 @@ class TestRotateGaussianMarkovChain(TestCase):
               mu=GaussianARD(2, 4,
                              shape=(2,),
                              plates=()))
+        check(2, 3,
+              mu=GaussianARD(2, 4,
+                             shape=(2,),
+                             plates=(5,)))
 
         # Test Lambda
         check(2, 3,
               Lambda=Wishart(3, random.covariance(2)))
+        check(2, 3,
+              Lambda=Wishart(3, random.covariance(2),
+                             plates=(5,)))
 
         # Test A
         check(2, 3,
@@ -924,6 +931,10 @@ class TestRotateGaussianMarkovChain(TestCase):
               A=GaussianARD(2, 4,
                             shape=(2,),
                             plates=(3,2)))
+        check(2, 3,
+              A=GaussianARD(2, 4,
+                            shape=(2,),
+                            plates=(5,3,2)))
 
         # Test Lambda and mu
         check(2, 3,
@@ -931,6 +942,12 @@ class TestRotateGaussianMarkovChain(TestCase):
                              shape=(2,),
                              plates=()),
               Lambda=Wishart(2, random.covariance(2)))
+        check(2, 3,
+              mu=GaussianARD(2, 4,
+                             shape=(2,),
+                             plates=(5,)),
+              Lambda=Wishart(2, random.covariance(2),
+                             plates=(5,)))
 
         # Test mu and A
         check(2, 3,
@@ -940,6 +957,13 @@ class TestRotateGaussianMarkovChain(TestCase):
               A=GaussianARD(2, 4,
                             shape=(2,),
                             plates=(2,)))
+        check(2, 3,
+              mu=GaussianARD(2, 4,
+                             shape=(2,),
+                             plates=(5,)),
+              A=GaussianARD(2, 4,
+                            shape=(2,),
+                            plates=(5,1,2,)))
 
         # Test Lambda and A
         check(2, 3,
@@ -947,6 +971,12 @@ class TestRotateGaussianMarkovChain(TestCase):
               A=GaussianARD(2, 4,
                             shape=(2,),
                             plates=(2,)))
+        check(2, 3,
+              Lambda=Wishart(2, random.covariance(2),
+                             plates=(5,)),
+              A=GaussianARD(2, 4,
+                            shape=(2,),
+                            plates=(5,1,2,)))
 
         # Test mu, Lambda and A
         check(2, 3,
@@ -957,8 +987,15 @@ class TestRotateGaussianMarkovChain(TestCase):
               A=GaussianARD(2, 4,
                             shape=(2,),
                             plates=(2,)))
-            
-        # TODO: Test plates
+        check(2, 3,
+              mu=GaussianARD(2, 4,
+                             shape=(2,),
+                             plates=(5,)),
+              Lambda=Wishart(2, random.covariance(2),
+                             plates=(5,)),
+              A=GaussianARD(2, 4,
+                            shape=(2,),
+                            plates=(5,1,2,)))
 
         pass
 
