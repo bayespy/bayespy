@@ -37,6 +37,7 @@ from bayespy.nodes import GaussianARD, \
                           SumMultiply
 
 from bayespy.inference.vmp.vmp import VB
+from bayespy.inference.vmp import transformations
 
 import bayespy.plot.plotting as bpplt
 
@@ -57,7 +58,9 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
                     alpha,
                     shape=(D,),
                     plates=(K,1,1,D),
-                    name='A')
+                    name='A',
+                    plotter=bpplt.GaussianHintonPlotter())
+    A.initialize_from_value(np.identity(D)*np.ones((K,1,1,D,D)))
 
     # Latent states with dynamics
     # (K,1) x (N,D)
@@ -66,7 +69,9 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
                             A,                   # dynamics
                             np.ones(D),          # innovation
                             n=N,                 # time instances
-                            name='X')
+                            name='X',
+                            plotter=bpplt.GaussianMarkovChainPlotter())
+    X.initialize_from_value(10*np.random.randn(K,1,N,D))
 
     # Mixing matrix from latent space to observation space using ARD
     # (K,1,1,D) x ()
@@ -79,7 +84,8 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
                     gamma,
                     shape=(D,),
                     plates=(K,M,1),
-                    name='C')
+                    name='C',
+                    plotter=bpplt.GaussianHintonPlotter())
 
     # Underlying noiseless function
     # (K,M,N) x ()
@@ -99,12 +105,14 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
     V = Dirichlet(1e-3*np.ones(K),
                   plates=(K,),
                   name='V')
+    V.initialize_from_value(1000*np.identity(K) + 1*np.ones((K,K)))
 
     # Hidden states (with unknown initial state probabilities and state
     # transition probabilities)
     Z = CategoricalMarkovChain(rho, V,
                                states=N,
-                               name='Z')
+                               name='Z',
+                               plotter=bpplt.CategoricalMarkovChainPlotter())
 
     #
     # Mixing the models
@@ -114,6 +122,7 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
     tau = Gamma(1e-5,
                 1e-5,
                 name='tau')
+    tau.initialize_from_value(1)
 
     # Emission/observation distribution
     Y = Mixture(Z, GaussianARD, F, tau,
@@ -122,11 +131,45 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
 
     Q = VB(Y, 
            Z, rho, V,
-           C, gamma, X, A, alpha)
+           C, gamma, X, A, alpha,
+           tau)
 
     return Q
 
-def run(M=20, N=200, K=3, D=10, maxiter=10, seed=42, plot=True):
+def run_slssm(y, D, K, seed=42, rotate=True, debug=False, maxiter=100, monitor=False):
+    (M, N) = np.shape(y)
+
+    # Construct model
+    Q = switching_linear_state_space_model(M=1, K=K, N=N, D=D)
+
+    # Add observations/data
+    Q['Y'].observe(y)
+
+    # Set up rotation speed-up
+    if rotate:
+        # Rotate the D-dimensional state space (X, A, C)
+        rotA = transformations.RotateGaussianARD(Q['A'], 
+                                                 Q['alpha'])
+        rotX = transformations.RotateGaussianMarkovChain(Q['X'], 
+                                                         rotA)
+        rotC = transformations.RotateGaussianARD(Q['C'],
+                                                 Q['gamma'])
+        R = transformations.RotationOptimizer(rotX, rotC, D)
+        if debug:
+            rotate_kwargs = {'maxiter': 10,
+                             'check_bound': True,
+                             'check_gradient': True}
+        else:
+            rotate_kwargs = {'maxiter': 10}
+
+    # Run inference
+    for n in range(maxiter):
+        #Q.update('C', 'Z', 'X', 'A', 'tau', plot=monitor)
+        Q.update(plot=monitor)
+        R.rotate(**rotate_kwargs)
+    
+
+def run(N=1000, maxiter=30, D=2, K=3, seed=42, plot=True, debug=False, monitor=True):
 
     # Use deterministic random numbers
     if seed is not None:
@@ -135,22 +178,59 @@ def run(M=20, N=200, K=3, D=10, maxiter=10, seed=42, plot=True):
     #
     # Generate data
     #
+
+    # Two states: 1) oscillation, 2) random walk
+    w1 = 0.02 * 2*np.pi
+    A = [ [[np.cos(w1), -np.sin(w1)],
+           [np.sin(w1), np.cos(w1)]],
+          [[1.0, 0.0],
+           [0.0, 1.0]] ]
+    C = [ [[1.0, 0.0]],
+          [[0.5, 0.5]] ]
+
+    # State switching probabilities
+    q = 0.98         # probability to stay in the same state
+    r = (1-q)/(2-1) # probability to switch
+    P = q*np.identity(2) + r*(np.ones((2,2))-np.identity(2))
     
+    X = np.zeros((N, 2))
+    Z = np.zeros(N)
+    Y = np.zeros(N)
+    z = np.random.randint(2)
+    x = np.random.randn(2)
+    Z[0] = z
+    X[0,:] = x
+    for n in range(1,N):
+        x = np.dot(A[z], x) + np.random.randn(2)
+        y = np.dot(C[z], x) + np.random.randn()
+        z = np.random.choice(2, p=P[z])
 
-    plt.figure()
+        Z[n] = z
+        X[n,:] = x
+        Y[n] = y
 
-    # Plot data
+    if plot:
+        plt.figure()
+        plt.plot(Y)
 
     #
-    # Use switching linear state-space model
+    # Use switching linear state-space model for inference
     #
 
-    # Run VB inference for HMM
-    Q = switching_linear_state_space_model(M=M, K=K, N=N, D=D)
-    Q.update(repeat=maxiter)
+    Q = run_slssm(Y[None,:], D, K, 
+                  seed=seed, 
+                  debug=debug,
+                  maxiter=maxiter,
+                  monitor=monitor)
 
-    # Plot results
 
+    #
+    # Show results
+    #
+
+    if plot:
+        Q.plot()
+        
     plt.show()
     
 
@@ -162,6 +242,7 @@ if __name__ == '__main__':
                                    ["n=",
                                     "k=",
                                     "seed=",
+                                    "debug",
                                     "maxiter="])
     except getopt.GetoptError:
         print('python demo_lssm.py <options>')
@@ -170,6 +251,7 @@ if __name__ == '__main__':
         print('--k=<INT>        Number of mixed models')
         print('--maxiter=<INT>  Maximum number of VB iterations')
         print('--seed=<INT>     Seed (integer) for the random number generator')
+        print('--debug          Check that the rotations are implemented correctly')
         sys.exit(2)
 
     kwargs = {}
@@ -182,6 +264,8 @@ if __name__ == '__main__':
             kwargs["K"] = int(arg)
         elif opt == "--seed":
             kwargs["seed"] = int(arg)
+        elif opt == "--debug":
+            kwargs["debug"] = True
         elif opt in ("--n",):
             kwargs["N"] = int(arg)
         else:
