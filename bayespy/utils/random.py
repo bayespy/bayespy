@@ -276,3 +276,65 @@ def categorical(p, size=None):
             z[ind] = np.searchsorted(P[ind], x[ind])
 
     return z
+
+def alpha_beta_recursion(logp0, logP):
+    """
+    Compute alpha-beta recursion for Markov chain
+
+    Initial state log-probabilities are in `p0` and state transition
+    log-probabilities are in P. The probabilities do not need to be scaled to
+    sum to one, but they are interpreted as below:
+
+    logp0 = log P(z_0) + log P(y_0|z_0)
+    logP[...,n,:,:] = log P(z_{n+1}|z_n) + log P(y_{n+1}|z_{n+1})
+    """
+
+    logp0 = utils.atleast_nd(logp0, 1)
+    logP = utils.atleast_nd(logP, 3)
+    
+    D = np.shape(logp0)[-1]
+    N = np.shape(logP)[-3]
+    plates = utils.broadcasted_shape(np.shape(logp0)[:-1], np.shape(logP)[:-3])
+
+    if np.shape(logP)[-2:] != (D,D):
+        raise ValueError("Dimension mismatch %s != %s"
+                         % (np.shape(logP)[-2:],
+                            (D,D)))
+
+    #
+    # Run the recursion algorithm
+    #
+
+    # Allocate memory
+    logalpha = np.zeros(plates+(N,D))
+    logbeta = np.zeros(plates+(N,D))
+    g = np.zeros(plates)
+
+    # Forward recursion
+    logalpha[...,0,:] = logp0
+    for n in range(1,N):
+        # Compute: P(z_{n-1},z_n|x_1,...,x_n)
+        v = logalpha[...,n-1,:,None] + logP[...,n-1,:,:]
+        c = utils.logsumexp(v, axis=(-1,-2))
+        # Sum over z_{n-1} to get: log P(z_n|x_1,...,x_n)
+        logalpha[...,n,:] = utils.logsumexp(v - c[...,None,None], axis=-2)
+        g -= c
+
+    # Compute the normalization of the last term
+    v = logalpha[...,N-1,:,None] + logP[...,N-1,:,:]
+    g -= utils.logsumexp(v, axis=(-1,-2))
+
+    # Backward recursion 
+    logbeta[...,N-1,:] = 0
+    for n in reversed(range(N-1)):
+        v = logbeta[...,n+1,None,:] + logP[...,n+1,:,:]
+        c = utils.logsumexp(v, axis=(-1,-2))
+        logbeta[...,n,:] = utils.logsumexp(v - c[...,None,None], axis=-1)
+
+    v = logalpha[...,:,:,None] + logbeta[...,:,None,:] + logP[...,:,:,:]
+    c = utils.logsumexp(v, axis=(-1,-2))
+    zz = np.exp(v - c[...,None,None])
+
+    z0 = np.sum(zz[...,0,:,:], axis=-1)
+
+    return (z0, zz, g)
