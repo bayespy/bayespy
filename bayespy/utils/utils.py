@@ -1156,17 +1156,6 @@ def rts_smoother(mu, Cov, A, V, removethis=None):
     return (mu, Cov)
         
     
-    
-    ## x_p = A*x;
-    ## Covx_p = A*Covx*A' + Q;
-
-    ## S = (Covx*A') / Covx_p;
-    ## x = x + S*(x_s-x_p);
-    ## if nargout >= 2
-    ##   Covx = Covx + S*(Covx_s-Covx_p)*S';
-    ## end
-    pass
-
 def dist_haversine(c1, c2, radius=6372795):
 
     # Convert coordinates to radians
@@ -1183,86 +1172,20 @@ def dist_haversine(c1, c2, radius=6372795):
     
     return radius * C
 
-def alpha_beta_recursion(logp0, logP):
+def logsumexp(X, axis=None, keepdims=False):
     """
-    Compute alpha-beta recursion for Markov chain
-
-    Initial state log-probabilities are in `p0` and state transition
-    log-probabilities are in P. The probabilities do not need to be scaled to
-    sum to one.
+    Compute log(sum(exp(X)) in a numerically stable way
     """
 
-    logp0 = atleast_nd(logp0, 1)
-    logP = atleast_nd(logP, 3)
+    X = np.asanyarray(X)
     
-    D = np.shape(logp0)[-1]
-    N = np.shape(logP)[-3]
-    plates = broadcasted_shape(np.shape(logp0)[:-1], np.shape(logP)[:-3])
+    maxX = np.amax(X, axis=axis, keepdims=keepdims)
 
-    if np.shape(logP)[-2:] != (D,D):
-        raise ValueError("Dimension mismatch %s != %s"
-                         % (np.shape(logP)[-2:],
-                            (D,D)))
+    if np.ndim(maxX) > 0:
+        maxX[~np.isfinite(maxX)] = 0
+    elif not np.isfinite(maxX):
+        maxX = 0
 
-    #
-    # Scale transition matrix such that the probabilities sum to D (as there are
-    # D rows which sum to one)
-    #
+    X = X - maxX
 
-    # First, scale such that the range is better
-    maxlogP = np.amax(logP, axis=(-1,-2), keepdims=True)
-    logP = logP - maxlogP
-    # Then, normalize
-    normlogP = np.log(np.sum(np.exp(logP), axis=(-1,-2), keepdims=True)) - np.log(D)
-    logP = logP - normlogP
-    # Total fix
-    fixlogP = maxlogP + normlogP
-    
-    # First, scale such that the range is better
-    maxlogp0 = np.amax(logp0, axis=-1, keepdims=True)
-    logp0 = logp0 - maxlogp0
-    # Then, normalize
-    normlogp0 = np.log(np.sum(np.exp(logp0), axis=-1, keepdims=True))
-    logp0 = logp0 - normlogp0
-    # Total fix
-    fixlogp0 = maxlogp0 + normlogp0
-
-    #
-    # Run the recursion algorithm
-    #
-
-    # Allocate memory
-    alpha = np.zeros(plates+(N,D,D))
-    alpha[...] = np.exp(logP)
-    beta = np.zeros(plates+(N,D))
-
-    # Backward recursion 
-    # (Compute the backward recursion first, because exp(P) is stored in
-    # alpha. Of course, the algorithm could be written a bit differently in such
-    # a way that exp(P) would be stored in beta.)
-    beta[...,N-1,:] = 1
-    for n in reversed(range(N-1)):
-        beta[...,n,:] = np.sum(alpha[...,n+1,:,:]*beta[...,n+1,None,:],
-                               axis=-1)
-    
-    # Forward recursion
-    alpha[...,0,:,:] *= np.exp(logp0)[...,:,None]
-    for n in range(1,N):
-        alpha[...,n,:,:] *= np.sum(alpha[...,n-1,:,:], axis=-2)[...,:,None]
-
-    zz = alpha * beta[...,None,:]
-    z0 = np.sum(zz[...,0,:,:], axis=-1)
-
-    # Normalization
-    v = np.sum(z0, axis=-1)
-    zz /= v[...,None,None,None]
-    z0 /= v[...,None]
-
-    # Cumulant generating function, e.g., a normalization term
-    g = -np.log(v) - (np.sum(fixlogP, axis=(-1,-2,-3)) 
-                      + np.sum(fixlogp0, axis=-1))
-
-    return (z0, zz, g)
-
-
-    
+    return np.log(np.sum(np.exp(X), axis=axis, keepdims=keepdims)) + maxX
