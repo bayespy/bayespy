@@ -374,4 +374,11 @@ class TestLogSumExp(utils.TestCase):
                                              [-1e10, -np.inf]], axis=-1),
                             [1e10, -1e10])
 
+        # Test keeping dimensions
+        self.assertAllClose(utils.logsumexp([[1e10,  1e-10],
+                                             [-1e10, -np.inf]], 
+                                            axis=-1,
+                                            keepdims=True),
+                            [[1e10], [-1e10]])
+
         pass

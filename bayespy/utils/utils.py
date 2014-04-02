@@ -1188,5 +1188,7 @@ def logsumexp(X, axis=None, keepdims=False):
 
     X = X - maxX
 
-    return (np.log(np.sum(np.exp(X), axis=axis, keepdims=keepdims)) + 
-            np.squeeze(maxX, axis=axis))
+    if not keepdims:
+        maxX = np.squeeze(maxX, axis=axis)
+
+    return np.log(np.sum(np.exp(X), axis=axis, keepdims=keepdims)) + maxX
