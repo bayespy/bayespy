@@ -1179,7 +1179,7 @@ def logsumexp(X, axis=None, keepdims=False):
 
     X = np.asanyarray(X)
     
-    maxX = np.amax(X, axis=axis, keepdims=keepdims)
+    maxX = np.amax(X, axis=axis, keepdims=True)
 
     if np.ndim(maxX) > 0:
         maxX[~np.isfinite(maxX)] = 0
@@ -1188,4 +1188,5 @@ def logsumexp(X, axis=None, keepdims=False):
 
     X = X - maxX
 
-    return np.log(np.sum(np.exp(X), axis=axis, keepdims=keepdims)) + maxX
+    return (np.log(np.sum(np.exp(X), axis=axis, keepdims=keepdims)) + 
+            np.squeeze(maxX, axis=axis))
