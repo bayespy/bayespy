@@ -33,7 +33,7 @@ from .categorical import CategoricalStatistics
 from .dirichlet import Dirichlet, \
                        DirichletStatistics
 
-from bayespy.utils import utils
+from bayespy.utils import utils, random
 
 class CategoricalMarkovChainStatistics(Statistics):
 
@@ -96,7 +96,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
     def compute_moments_and_cgf(self, phi, mask=True):
         logp0 = phi[0]
         logP = phi[1]
-        (z0, zz, cgf) = utils.alpha_beta_recursion(logp0, logP)
+        (z0, zz, cgf) = random.alpha_beta_recursion(logp0, logP)
         u = [z0, zz]
         return (u, cgf)
 
