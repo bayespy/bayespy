@@ -335,6 +335,10 @@ def alpha_beta_recursion(logp0, logP):
     c = utils.logsumexp(v, axis=(-1,-2))
     zz = np.exp(v - c[...,None,None])
 
+    # The logsumexp normalization is not numerically accurate, so do
+    # normalization again:
+    zz /= np.sum(zz, axis=(-1,-2), keepdims=True)
+
     z0 = np.sum(zz[...,0,:,:], axis=-1)
 
     return (z0, zz, g)
