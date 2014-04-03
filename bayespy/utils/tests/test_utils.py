@@ -382,3 +382,49 @@ class TestLogSumExp(utils.TestCase):
                             [[1e10], [-1e10]])
 
         pass
+
+class TestMean(utils.TestCase):
+
+    def test_mean(self):
+        """
+        Test the ceil division
+        """
+
+        self.assertAllClose(utils.mean(3),
+                            3)
+        self.assertAllClose(utils.mean(np.nan),
+                            np.nan)
+
+        self.assertAllClose(utils.mean([[2,3],
+                                        [np.nan,np.nan]], 
+                                        axis=-1),
+                            [2.5,np.nan])
+        self.assertAllClose(utils.mean([[2,3],
+                                        [np.nan,np.nan]], 
+                                        axis=-1,
+                                        keepdims=True),
+                            [[2.5],[np.nan]])
+        
+        self.assertAllClose(utils.mean([[2,3],
+                                        [np.nan,np.nan]], 
+                                        axis=-2),
+                            [2,3])
+        self.assertAllClose(utils.mean([[2,3],
+                                        [np.nan,np.nan]], 
+                                        axis=-2,
+                                        keepdims=True),
+                            [[2,3]])
+
+        self.assertAllClose(utils.mean([[2,3],
+                                        [np.nan,np.nan]]),
+                            2.5)
+        self.assertAllClose(utils.mean([[2,3],
+                                        [np.nan,np.nan]],
+                                        axis=(-1,-2)),
+                            2.5)
+        self.assertAllClose(utils.mean([[2,3],
+                                        [np.nan,np.nan]], 
+                                        keepdims=True),
+                            [[2.5]])
+        
+        pass

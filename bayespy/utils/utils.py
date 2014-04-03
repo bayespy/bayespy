@@ -1192,3 +1192,19 @@ def logsumexp(X, axis=None, keepdims=False):
         maxX = np.squeeze(maxX, axis=axis)
 
     return np.log(np.sum(np.exp(X), axis=axis, keepdims=keepdims)) + maxX
+
+def mean(X, axis=None, keepdims=False):
+    """
+    Compute the mean, ignoring NaNs.
+    """
+    if np.ndim(X) == 0:
+        if axis is not None:
+            raise ValueError("Axis out of bounds")
+        return X
+    X = np.asanyarray(X)
+    nans = np.isnan(X)
+    X = X.copy()
+    X[nans] = 0
+    m = (np.sum(X, axis=axis, keepdims=keepdims) / 
+         np.sum(~nans, axis=axis, keepdims=keepdims))
+    return m
