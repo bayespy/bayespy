@@ -280,6 +280,24 @@ def run_lssm(y, D,
     # Set up rotation speed-up
     if rotate:
         
+        # Initial rotate the D-dimensional state space (X, A, C)
+        # Does not update hyperparameters
+        rotA_init = transformations.RotateGaussianARD(Q['A'], 
+                                                      axis=0,
+                                                      precompute=precompute)
+        if drift_A:
+            rotX_init = transformations.RotateDriftingMarkovChain(Q['X'], 
+                                                                  Q['A'], 
+                                                                  Q['S']._convert(GaussianStatistics)[...,1:,None], 
+                                                                  rotA_init)
+        else:
+            rotX_init = transformations.RotateGaussianMarkovChain(Q['X'], 
+                                                                  rotA_init)
+        rotC_init = transformations.RotateGaussianARD(Q['C'],
+                                                      axis=0,
+                                                      precompute=precompute)
+        R_X_init = transformations.RotationOptimizer(rotX_init, rotC_init, D)
+
         # Rotate the D-dimensional state space (X, A, C)
         rotA = transformations.RotateGaussianARD(Q['A'], 
                                                  Q['alpha'],
@@ -346,7 +364,8 @@ def run_lssm(y, D,
             # before starting to learn the higher level nodes.
             Q.update('X', 'C', 'A', 'tau', plot=monitor)
             if rotate and ind >= start_rotating:
-                R_X.rotate(**rotate_kwargs)
+                # Use the rotation which does not update alpha nor beta
+                R_X_init.rotate(**rotate_kwargs)
         else:
             Q.update(plot=monitor)
             if rotate and ind >= start_rotating:
