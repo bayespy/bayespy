@@ -250,8 +250,8 @@ def simulate_data(filename=None,
 
 def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
         debug=False, autosave=False, precompute=False, resolution=30,
-        dynamic=True, drift_A=False, drift_C=False, plot_Y=True, plot_X=True,
-        plot_S=True, lengthscale=1.0, innovation=1e-4):
+        dynamic=True, drift_A=False, drift_C=False, plot=True, lengthscale=1.0,
+        innovation=1e-4, monitor=True):
     
     # Seed for random number generator
     if seed is not None:
@@ -275,12 +275,13 @@ def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
                                  innovation_lengthscale=lengthscale,
                                  noise_ratio=5e-1)
 
-    plt.ion()
-    plt.plot(X[:,0], X[:,1], 'kx')
-    animation = bpplt.matrix_animation(U)
-    #bpplt.save_animation(animation, 'demo_drift_lssm_02_spde.mp4')
-    plt.show()
-    plt.ioff()
+    if plot:
+        plt.ion()
+        plt.plot(X[:,0], X[:,1], 'kx')
+        animation = bpplt.matrix_animation(U)
+        #bpplt.save_animation(animation, 'demo_drift_lssm_02_spde.mp4')
+        plt.show()
+        plt.ioff()
 
     # Create some gaps
     mask_gaps = utils.trues((M,N))
@@ -327,9 +328,10 @@ def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
                             drift_C=drift_C,
                             update_hyper=20,
                             start_rotating_drift=40,
+                            monitor=monitor,
                             autosave=filename)
         
-    if plot_Y:
+    if plot:
         ym = y.copy()
         ym[~mask] = np.nan
         plt.figure()
@@ -338,11 +340,11 @@ def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
         bpplt.timeseries(ym, 'r.')
     
     # Plot latent space
-    if plot_X:
+    if plot:
         Q.plot('X')
     
     # Plot drift space
-    if plot_S and (drift_A or drift_C):
+    if plot and (drift_A or drift_C):
         Q.plot('S')
 
     # Compute RMSE
@@ -377,9 +379,8 @@ if __name__ == '__main__':
                                        "no-dynamic",
                                        "debug",
                                        "precompute",
-                                       "plot-y",
-                                       "plot-x",
-                                       "plot-s",
+                                       "no-plot",
+                                       "no-monitor",
                                        "no-rotation",
                                        "autosave",
                                    ])
@@ -400,9 +401,8 @@ if __name__ == '__main__':
         print('--seed=<INT>        Seed (integer) for the random number generator')
         print('--autosave          Save the VB results automatically')
         print('--debug             Check that the rotations are implemented correctly')
-        print('--plot-y            Plot Y')
-        print('--plot-x            Plot X')
-        print('--plot-s            Plot S')
+        print('--no-plot           Do not plot stuff')
+        print('--no-monitor        Do not monitor variables during learning')
         print('--precompute        Precompute some moments when rotating. May '
               'speed up or slow down.')
         sys.exit(2)
@@ -444,12 +444,10 @@ if __name__ == '__main__':
             kwargs["drift_C"] = True
         elif opt == "--resolution":
             kwargs["resolution"] = int(arg)
-        elif opt == "--plot-x":
-            kwargs["plot_X"] = True
-        elif opt == "--plot-s":
-            kwargs["plot_S"] = True
-        elif opt == "--plot-y":
-            kwargs["plot_Y"] = True
+        elif opt == "--no-plot":
+            kwargs["plot"] = False
+        elif opt == "--no-monitor":
+            kwargs["monitor"] = False
         else:
             raise ValueError("Unhandled argument given")
 
