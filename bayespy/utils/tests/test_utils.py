@@ -381,6 +381,12 @@ class TestLogSumExp(utils.TestCase):
                                             keepdims=True),
                             [[1e10], [-1e10]])
 
+        # Test multiple axes
+        self.assertAllClose(utils.logsumexp([[1e10,  1e-10],
+                                             [-1e10, -np.inf]], 
+                                            axis=(-1,-2)),
+                            1e10)
+
         pass
 
 class TestMean(utils.TestCase):
