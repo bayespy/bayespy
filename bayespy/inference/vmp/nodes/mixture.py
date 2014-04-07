@@ -167,6 +167,16 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             return m
 
+    def compute_mask_to_parent(self, index, mask):
+        if index == 0:
+            return mask
+        else:
+            if self.cluster_plate >= 0:
+                raise ValueError("Cluster plate axis must be negative")
+            if np.ndim(mask) >= abs(self.cluster_plate):
+                mask = np.expand_dims(mask, axis=self.cluster_plate)
+            return self.distribution.compute_mask_to_parent(index-1, mask)
+
     def compute_phi_from_parents(self, *u_parents, mask=True):
 
         # Compute weighted average of the parameters

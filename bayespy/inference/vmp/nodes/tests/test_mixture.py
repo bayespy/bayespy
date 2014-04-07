@@ -211,3 +211,30 @@ class TestMixture(TestCase):
         self.assertAllClose(m[1] * np.ones((K,M)),
                             -0.5 * 1/K * alpha * np.ones((K,M)))
         
+
+        pass
+
+    def test_mask_to_parent(self):
+
+        K = 3
+        Z = Categorical(np.ones(K),
+                        plates=(4,5))
+        Mu = GaussianARD(0, 1,
+                         shape=(2,),
+                         plates=(4,K,5))
+        Alpha = Gamma(1, 1,
+                      plates=(4,K,5,2))
+        X = Mixture(Z, GaussianARD, Mu, Alpha, cluster_plate=-2)
+        Y = GaussianARD(X, 1)
+        mask = np.reshape((np.mod(np.arange(4*5), 2) == 0),
+                          (4,5))
+        Y.observe(np.ones((4,5,2)), 
+                  mask=mask)
+        self.assertArrayEqual(X._mask_to_parent(0),
+                              mask)
+        self.assertArrayEqual(X._mask_to_parent(1),
+                              mask[:,None,:])
+        self.assertArrayEqual(X._mask_to_parent(2),
+                              mask[:,None,:,None])
+                         
+        pass
