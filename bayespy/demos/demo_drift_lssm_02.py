@@ -69,8 +69,7 @@ from bayespy.utils.covfunc.covariance import covfunc_se as covfunc
 from bayespy.demos import model_lssm
 
 def simulate_process(M=100, N=100, T=100, velocity=1e-3, diffusion=1e-5,
-                     lengthscale=0.6,
-                     noise=1e0, decay=0.9995):
+                     lengthscale=0.6, noise=1e0, decay=0.9995, verbose=True):
     """
     Simulate advection-diffusion PDE on a unit square.
 
@@ -176,9 +175,11 @@ def simulate_process(M=100, N=100, T=100, velocity=1e-3, diffusion=1e-5,
         # Store the solution
         U[t] = np.reshape(u, (M,N))
 
-        print('\rSimulating SPDE data... %d%%' % (int(100.0*(t+1)/T)), end="")
+        if verbose:
+            print('\rSimulating SPDE data... %d%%' % (int(100.0*(t+1)/T)), end="")
 
-    print('\rSimulating SPDE data... Done.')
+    if verbose:
+        print('\rSimulating SPDE data... Done.')
 
     return U
 
@@ -194,6 +195,7 @@ def simulate_data(filename=None,
                   noise_ratio=1e-1,
                   decay=0.9997,
                   burnin=1000,
+                  verbose=True,
                   thin=20):
 
     # Simulate the process
@@ -214,6 +216,7 @@ def simulate_data(filename=None,
                          velocity=velocity,
                          noise=innovation_noise,
                          lengthscale=innovation_lengthscale,
+                         verbose=verbose,
                          decay=decay)
 
     # Put some stations randomly
@@ -251,7 +254,7 @@ def simulate_data(filename=None,
 def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
         debug=False, autosave=False, precompute=False, resolution=30,
         dynamic=True, drift_A=False, drift_C=False, plot=True, lengthscale=1.0,
-        innovation=1e-4, monitor=True):
+        innovation=1e-4, monitor=True, verbose=True):
     
     # Seed for random number generator
     if seed is not None:
@@ -273,6 +276,7 @@ def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
                                  decay=decay,
                                  innovation_noise=innovation,
                                  innovation_lengthscale=lengthscale,
+                                 verbose=verbose,
                                  noise_ratio=5e-1)
 
     if plot:
@@ -381,6 +385,7 @@ if __name__ == '__main__':
                                        "precompute",
                                        "no-plot",
                                        "no-monitor",
+                                       "no-verbose",
                                        "no-rotation",
                                        "autosave",
                                    ])
@@ -403,6 +408,7 @@ if __name__ == '__main__':
         print('--debug             Check that the rotations are implemented correctly')
         print('--no-plot           Do not plot stuff')
         print('--no-monitor        Do not monitor variables during learning')
+        print('--no-verbose        Do not print the progress of the simulation')
         print('--precompute        Precompute some moments when rotating. May '
               'speed up or slow down.')
         sys.exit(2)
@@ -448,6 +454,8 @@ if __name__ == '__main__':
             kwargs["plot"] = False
         elif opt == "--no-monitor":
             kwargs["monitor"] = False
+        elif opt == "--no-verbose":
+            kwargs["verbose"] = False
         else:
             raise ValueError("Unhandled argument given")
 
