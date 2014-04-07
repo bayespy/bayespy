@@ -32,6 +32,7 @@ from matplotlib import animation
 #from matplotlib.pyplot import *
 
 from bayespy.inference.vmp.nodes.categorical import CategoricalStatistics
+from bayespy.inference.vmp.nodes.gaussian import GaussianStatistics
 
 from bayespy.utils import utils
 
@@ -51,6 +52,7 @@ def timeseries_gaussian(X, axis=-1, scale=2):
     axis : int
         The index of the time axis.
     """
+    X = X._convert(GaussianStatistics)
     u_X = X.get_moments()
     x = u_X[0]
     xx = u_X[1]
