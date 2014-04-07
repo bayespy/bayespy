@@ -49,7 +49,8 @@ from bayespy.inference.vmp import transformations
 
 import bayespy.plot.plotting as bpplt
 
-from bayespy.demos import model_lssm
+from bayespy.demos.model_lssm import run_lssm
+from bayespy.demos.demo_switching_linear_state_space_model import run_slssm
 
 def simulate_drifting_lssm(M, N):
 
@@ -65,7 +66,7 @@ def simulate_drifting_lssm(M, N):
 
 def run(M=1, N=1000, D=5, K=4, seed=42, maxiter=200, 
         rotate=True, debug=False, precompute=False,
-        drift=False,
+        drift=False, switch=False,
         plot_X=False, plot_Y=True, plot_S=False):
 
     # Seed for random number generator
@@ -86,25 +87,40 @@ def run(M=1, N=1000, D=5, K=4, seed=42, maxiter=200,
                                 np.logical_not(mask_gaps))
     # Remove the observations
     mask = np.logical_and(mask_gaps, mask_random)
+    mask[:] = True # DEBUG
     # Remove the observations
     y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
-
-    # Run the method
-    Q = model_lssm.run_lssm(y, D, 
-                            mask=mask, 
-                            K=K, 
-                            maxiter=maxiter,
-                            rotate=rotate,
-                            debug=debug,
-                            precompute=precompute,
-                            drift_A=drift,
-                            update_hyper=10,
-                            start_rotating_drift=20)
-
-    ## plt.figure()
-    ## bpplt.timeseries(f, 'b-')
-    ## plt.ylim([-2, 2])
+    mask = True # DEBUG
     
+    # Plot observations
+    if plot_Y:
+        plt.figure()
+        bpplt.timeseries(f, 'b-')
+        bpplt.timeseries(y, 'r.')
+        plt.ylim([-2, 2])
+    
+    # Run the method
+    if switch:
+        Q = run_slssm(y, D, K,
+                      mask=mask, 
+                      maxiter=maxiter,
+                      rotate=rotate,
+                      debug=debug,
+                      update_hyper=10,
+                      monitor=True)
+    else:
+        Q = run_lssm(y, D, 
+                     mask=mask, 
+                     K=K, 
+                     maxiter=maxiter,
+                     rotate=rotate,
+                     debug=debug,
+                     precompute=precompute,
+                     drift_A=drift,
+                     update_hyper=10,
+                     start_rotating_drift=20,
+                     monitor=True)
+
     # Plot observations
     if plot_Y:
         plt.figure()
@@ -122,9 +138,9 @@ def run(M=1, N=1000, D=5, K=4, seed=42, maxiter=200,
         Q.plot('S')
 
     # Compute RMSE
-    rmse_random = utils.rmse(Q['F'].get_moments()[0][~mask_random], 
+    rmse_random = utils.rmse(Q['Y'].get_moments()[0][~mask_random], 
                              f[~mask_random])
-    rmse_gaps = utils.rmse(Q['F'].get_moments()[0][~mask_gaps],
+    rmse_gaps = utils.rmse(Q['Y'].get_moments()[0][~mask_gaps],
                            f[~mask_gaps])
     print("RMSE for randomly missing values: %f" % rmse_random)
     print("RMSE for gap values: %f" % rmse_gaps)
@@ -140,7 +156,7 @@ if __name__ == '__main__':
                                     "n=",
                                     "d=",
                                     "k=",
-                                    "drift",
+                                    "model=",
                                     "seed=",
                                     "maxiter=",
                                     "debug",
@@ -153,8 +169,8 @@ if __name__ == '__main__':
         print('python demo_lssm_drift.py <options>')
         print('--n=<INT>        Number of data vectors')
         print('--d=<INT>        Dimensionality of the latent vectors in the model')
-        print('--k=<INT>        Dimensionality of the latent drift space')
-        print('--drift          Use drift for dynamics')
+        print('--k=<INT>        Dimensionality of the latent drift space or number of mixtures in switching model')
+        print('--model          [static] / drift / switch')
         print('--no-rotation    Do not apply speed-up rotations')
         print('--maxiter=<INT>  Maximum number of VB iterations')
         print('--seed=<INT>     Seed (integer) for the random number generator')
@@ -168,7 +184,7 @@ if __name__ == '__main__':
 
     print("By default, this function runs the static LSSM with speed-up "
           "rotations")
-    print("If you want to use the drifting version, use --drift")
+    print("You may also choose --model=drift or --model=switch")
     print("See --help for more help")
 
     kwargs = {}
@@ -192,8 +208,11 @@ if __name__ == '__main__':
                 kwargs["K"] = None
             else:
                 kwargs["K"] = int(arg)
-        elif opt == "--drift":
-            kwargs["drift"] = True
+        elif opt == "--model":
+            if arg == "drift":
+                kwargs["drift"] = True
+            elif arg == "switch":
+                kwargs["switch"] = True
         elif opt == "--plot-x":
             kwargs["plot_X"] = True
         elif opt == "--plot-s":
