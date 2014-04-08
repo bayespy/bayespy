@@ -67,6 +67,7 @@ import bayespy.plot.plotting as bpplt
 from bayespy.utils.covfunc.covariance import covfunc_se as covfunc
 
 from bayespy.demos import model_lssm
+from bayespy.demos.demo_switching_linear_state_space_model import run_slssm
 
 def simulate_process(M=100, N=100, T=100, velocity=1e-3, diffusion=1e-5,
                      lengthscale=0.6, noise=1e0, decay=0.9995, verbose=True):
@@ -253,8 +254,8 @@ def simulate_data(filename=None,
 
 def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
         debug=False, autosave=False, precompute=False, resolution=30,
-        dynamic=True, drift_A=False, drift_C=False, plot=True, lengthscale=1.0,
-        innovation=1e-4, monitor=True, verbose=True):
+        dynamic=True, drift_A=False, drift_C=False, switch=False, plot=True,
+        lengthscale=1.0, innovation=1e-4, monitor=True, verbose=True):
     
     # Seed for random number generator
     if seed is not None:
@@ -311,6 +312,12 @@ def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
                            D,
                            K,
                            datetime.datetime.today().strftime('%Y%m%d%H%M%S')))
+        elif switch:
+            filename = ('demo_dlssm02_seed=%d_switch_D=%d_K=%d_date=%s.hdf5' 
+                        % (seed,
+                           D,
+                           K,
+                           datetime.datetime.today().strftime('%Y%m%d%H%M%S')))
         else:
             filename = ('demo_dlssm02_seed=%d_drift-A=0_drift-C=0_D=%d_date=%s.hdf5' 
                         % (seed,
@@ -321,19 +328,29 @@ def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
         filename = None
 
     # Run the method
-    Q = model_lssm.run_lssm(y, D, 
-                            mask=mask, 
-                            K=K, 
-                            maxiter=maxiter,
-                            rotate=rotate,
-                            debug=debug,
-                            precompute=precompute,
-                            drift_A=drift_A,
-                            drift_C=drift_C,
-                            update_hyper=5,
-                            start_rotating_drift=10,
-                            monitor=monitor,
-                            autosave=filename)
+    if switch:
+        Q = run_slssm(y, D, K,
+                      mask=mask, 
+                      maxiter=maxiter,
+                      rotate=rotate,
+                      debug=debug,
+                      update_hyper=5,
+                      monitor=monitor,
+                      autosave=filename)
+    else:
+        Q = model_lssm.run_lssm(y, D, 
+                                mask=mask, 
+                                K=K, 
+                                maxiter=maxiter,
+                                rotate=rotate,
+                                debug=debug,
+                                precompute=precompute,
+                                drift_A=drift_A,
+                                drift_C=drift_C,
+                                update_hyper=5,
+                                start_rotating_drift=10,
+                                monitor=monitor,
+                                autosave=filename)
         
     if plot:
         ym = y.copy()
@@ -352,9 +369,10 @@ def run(M=100, N=2000, D=30, K=5, rotate=True, maxiter=200, seed=42,
         Q.plot('S')
 
     # Compute RMSE
-    rmse_random = utils.rmse(Q['F'].get_moments()[0][~mask_random], 
+    Q['Y'].update()
+    rmse_random = utils.rmse(Q['Y'].get_moments()[0][~mask_random], 
                              f[~mask_random])
-    rmse_gaps = utils.rmse(Q['F'].get_moments()[0][~mask_gaps],
+    rmse_gaps = utils.rmse(Q['Y'].get_moments()[0][~mask_gaps],
                            f[~mask_gaps])
     print("RMSE for randomly missing values: %f" % rmse_random)
     print("RMSE for gap values: %f" % rmse_gaps)
@@ -377,6 +395,7 @@ if __name__ == '__main__':
                                        "innovation=",
                                        "drift-c",
                                        "drift-a",
+                                       "switch",
                                        "resolution=",
                                        "seed=",
                                        "maxiter=",
@@ -397,6 +416,7 @@ if __name__ == '__main__':
         print('--k=<INT>           Dimensionality of the latent drift space')
         print('--drift-a           Use drift for dynamics (A)')
         print('--drift-c           Use drift for loadings (C)')
+        print('--switch            Use switching linear state-space model')
         print('--resolution=<INT>  Grid resolution for the SPDE simulation')
         print('--lengthscale=2.0   Spatial innovation noise lengthscale')
         print('--innovation=...    Magnitude of the spatial innovation noise')
@@ -448,6 +468,8 @@ if __name__ == '__main__':
             kwargs["drift_A"] = True
         elif opt == "--drift-c":
             kwargs["drift_C"] = True
+        elif opt == "--switch":
+            kwargs["switch"] = True
         elif opt == "--resolution":
             kwargs["resolution"] = int(arg)
         elif opt == "--no-plot":

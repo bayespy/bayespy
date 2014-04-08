@@ -124,7 +124,7 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
     tau = Gamma(1e-5,
                 1e-5,
                 name='tau')
-    tau.initialize_from_value(1e4)
+    tau.initialize_from_value(1e2)
 
     # Emission/observation distribution
     Y = Mixture(Z, GaussianARD, F, tau,
@@ -139,12 +139,15 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
     return Q
 
 def run_slssm(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
-              monitor=False, update_hyper=0):
+              monitor=False, update_hyper=0, autosave=None):
     
     (M, N) = np.shape(y)
 
     # Construct model
     Q = switching_linear_state_space_model(M=M, K=K, N=N, D=D)
+
+    if autosave is not None:
+        Q.set_autosave(autosave, iterations=10)
 
     Q['Y'].observe(y, mask=mask)
 
