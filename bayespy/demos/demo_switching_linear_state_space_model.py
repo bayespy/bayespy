@@ -28,73 +28,22 @@ Demonstrate switching linear state-space model
 import numpy as np
 import matplotlib.pyplot as plt
 
-from bayespy.nodes import GaussianARD, \
-                          GaussianMarkovChain, \
-                          CategoricalMarkovChain, \
-                          Dirichlet, \
-                          Mixture, \
-                          Gamma, \
-                          SumMultiply
+from bayespy.nodes import (GaussianARD,
+                           SwitchingGaussianMarkovChain,
+                           CategoricalMarkovChain,
+                           Dirichlet,
+                           Mixture,
+                           Gamma,
+                           SumMultiply)
 
 from bayespy.inference.vmp.vmp import VB
 from bayespy.inference.vmp import transformations
 
 import bayespy.plot.plotting as bpplt
 
+
 def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
 
-    #
-    # Linear state-space models
-    #
-
-    # Dynamics matrix with ARD
-    # (K,1,1,1,D) x ()
-    alpha = Gamma(1e-5,
-                  1e-5,
-                  plates=(K,1,1,1,D),
-                  name='alpha')
-    # (K,1,1,D) x (D)
-    A = GaussianARD(0,
-                    alpha,
-                    shape=(D,),
-                    plates=(K,1,1,D),
-                    name='A',
-                    plotter=bpplt.GaussianHintonPlotter())
-    A.initialize_from_value(np.identity(D)*np.ones((K,1,1,D,D)))
-
-    # Latent states with dynamics
-    # (K,1) x (N,D)
-    X = GaussianMarkovChain(np.zeros(D),         # mean of x0
-                            1e-3*np.identity(D), # prec of x0
-                            A,                   # dynamics
-                            np.ones(D),          # innovation
-                            n=N,                 # time instances
-                            name='X',
-                            plotter=bpplt.GaussianMarkovChainPlotter())
-    X.initialize_from_value(10*np.random.randn(K,1,N,D))
-
-    # Mixing matrix from latent space to observation space using ARD
-    # (K,1,1,D) x ()
-    gamma = Gamma(1e-5,
-                  1e-5,
-                  plates=(K,1,1,D),
-                  name='gamma')
-    # (K,M,1) x (D)
-    C = GaussianARD(0,
-                    gamma,
-                    shape=(D,),
-                    plates=(K,M,1),
-                    name='C',
-                    plotter=bpplt.GaussianHintonPlotter())
-    C.initialize_from_value(np.random.randn(K,M,1,D))
-
-    # Underlying noiseless function
-    # (K,M,N) x ()
-    F = SumMultiply('i,i', 
-                    C, 
-                    X,
-                    name='F')
-    
     #
     # Switching dynamics (HMM)
     #
@@ -112,10 +61,64 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
     # Hidden states (with unknown initial state probabilities and state
     # transition probabilities)
     Z = CategoricalMarkovChain(rho, V,
-                               states=N,
+                               states=N-1,
                                name='Z',
                                plotter=bpplt.CategoricalMarkovChainPlotter())
 
+    #
+    # Linear state-space models
+    #
+
+    # Dynamics matrix with ARD
+    # (K,D) x ()
+    alpha = Gamma(1e-5,
+                  1e-5,
+                  plates=(K,1,D),
+                  name='alpha')
+    # (K,1,1,D) x (D)
+    A = GaussianARD(0,
+                    alpha,
+                    shape=(D,),
+                    plates=(K,D),
+                    name='A',
+                    plotter=bpplt.GaussianHintonPlotter())
+    A.initialize_from_value(np.identity(D)*np.ones((K,D,D))
+                            + 0.1*np.random.randn(K,D,D))
+
+    # Latent states with dynamics
+    # (K,1) x (N,D)
+    X = SwitchingGaussianMarkovChain(np.zeros(D),         # mean of x0
+                                     1e-3*np.identity(D), # prec of x0
+                                     A,                   # dynamics
+                                     Z,                   # dynamics selection
+                                     np.ones(D),          # innovation
+                                     n=N,                 # time instances
+                                     name='X',
+                                     plotter=bpplt.GaussianMarkovChainPlotter())
+    X.initialize_from_value(10*np.random.randn(N,D))
+
+    # Mixing matrix from latent space to observation space using ARD
+    # (K,1,1,D) x ()
+    gamma = Gamma(1e-5,
+                  1e-5,
+                  plates=(D,),
+                  name='gamma')
+    # (K,M,1) x (D)
+    C = GaussianARD(0,
+                    gamma,
+                    shape=(D,),
+                    plates=(M,1),
+                    name='C',
+                    plotter=bpplt.GaussianHintonPlotter())
+    C.initialize_from_value(np.random.randn(M,1,D))
+
+    # Underlying noiseless function
+    # (K,M,N) x ()
+    F = SumMultiply('i,i', 
+                    C, 
+                    X,
+                    name='F')
+    
     #
     # Mixing the models
     #
@@ -127,9 +130,8 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
     tau.initialize_from_value(1e2)
 
     # Emission/observation distribution
-    Y = Mixture(Z, GaussianARD, F, tau,
-                cluster_plate=-3,
-                name='Y')
+    Y = GaussianARD(F, tau,
+                    name='Y')
 
     Q = VB(Y, F,
            Z, rho, V,
@@ -137,6 +139,7 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
            tau)
 
     return Q
+
 
 def run_slssm(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
               monitor=False, update_hyper=0, autosave=None):
@@ -156,15 +159,19 @@ def run_slssm(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
         # Initial rotate the D-dimensional state space (X, A, C)
         # Do not update hyperparameters
         rotA_init = transformations.RotateGaussianARD(Q['A'])
-        rotX_init = transformations.RotateGaussianMarkovChain(Q['X'], 
-                                                              rotA_init)
+        rotX_init = transformations.RotateSwitchingMarkovChain(Q['X'],
+                                                               Q['A'],
+                                                               Q['Z'],
+                                                               rotA_init)
         rotC_init = transformations.RotateGaussianARD(Q['C'])
         R_init = transformations.RotationOptimizer(rotX_init, rotC_init, D)
         # Rotate the D-dimensional state space (X, A, C)
         rotA = transformations.RotateGaussianARD(Q['A'], 
                                                  Q['alpha'])
-        rotX = transformations.RotateGaussianMarkovChain(Q['X'], 
-                                                         rotA)
+        rotX = transformations.RotateSwitchingMarkovChain(Q['X'], 
+                                                          Q['A'],
+                                                          Q['Z'],
+                                                          rotA)
         rotC = transformations.RotateGaussianARD(Q['C'],
                                                  Q['gamma'])
         R = transformations.RotationOptimizer(rotX, rotC, D)
@@ -181,16 +188,18 @@ def run_slssm(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
     for n in range(maxiter):
         if n < update_hyper:
             Q.update('Z', 'X', 'C', 'A', 'tau', plot=monitor)
-            R_init.rotate(**rotate_kwargs)
+            if rotate:
+                R_init.rotate(**rotate_kwargs)
         else:
             Q.update(plot=monitor)
-            R.rotate(**rotate_kwargs)
+            if rotate:
+                R.rotate(**rotate_kwargs)
 
     return Q
     
 
-def run(N=1000, maxiter=100, D=2, K=3, seed=42, plot=True, debug=False, 
-        monitor=True):
+def run(N=1000, maxiter=100, D=3, K=2, seed=42, plot=True, debug=False,
+        rotate=True, monitor=True):
 
     # Use deterministic random numbers
     if seed is not None:
@@ -200,7 +209,7 @@ def run(N=1000, maxiter=100, D=2, K=3, seed=42, plot=True, debug=False,
     # Generate data
     #
 
-    case = 1
+    case = 2
     if case == 1:
 
         # Oscillation
@@ -225,32 +234,36 @@ def run(N=1000, maxiter=100, D=2, K=3, seed=42, plot=True, debug=False,
 
         # Two states: 1) oscillation, 2) random walk
         w1 = 0.02 * 2*np.pi
-        A = [[np.cos(w1), -np.sin(w1),   0],
-             [np.sin(w1),  np.cos(w1),   0],
-             [         0,           0, 1.0]]
-        C = [ [[1.0, 0.0, 0.0]],
-              [[0.0, 0.0, 1.0]] ]
+        A = [ [[np.cos(w1), -np.sin(w1)],
+               [np.sin(w1),  np.cos(w1)]],
+              [[        1.0,         0.0],
+               [        0.0,         0.0]] ]
+        C = [[1.0, 0.0]]
 
         # State switching probabilities
         q = 0.993        # probability to stay in the same state
         r = (1-q)/(2-1)  # probability to switch
         P = q*np.identity(2) + r*(np.ones((2,2))-np.identity(2))
 
-        X = np.zeros((N, 3))
+        X = np.zeros((N, 2))
         Z = np.zeros(N)
         Y = np.zeros(N)
+        F = np.zeros(N)
         z = np.random.randint(2)
-        x = np.random.randn(3)
+        x = np.random.randn(2)
         Z[0] = z
         X[0,:] = x
         for n in range(1,N):
-            x = np.dot(A, x) + np.random.randn(3)
-            y = np.dot(C[z], x) + np.random.randn()
+            x = np.dot(A[z], x) + np.random.randn(2)
+            f = np.dot(C, x)
+            y = f + 5*np.random.randn()
             z = np.random.choice(2, p=P[z])
 
             Z[n] = z
             X[n,:] = x
             Y[n] = y
+            F[n] = f
+            
         Y = Y[None,:]
 
     elif case == 3:
@@ -285,7 +298,8 @@ def run(N=1000, maxiter=100, D=2, K=3, seed=42, plot=True, debug=False,
 
     if plot:
         plt.figure()
-        bpplt.timeseries(Y, axis=-1)
+        bpplt.timeseries(F, 'b-')
+        bpplt.timeseries(Y, 'rx')
 
     #
     # Use switching linear state-space model for inference
@@ -295,8 +309,8 @@ def run(N=1000, maxiter=100, D=2, K=3, seed=42, plot=True, debug=False,
                   debug=debug,
                   maxiter=maxiter,
                   monitor=monitor,
+                  rotate=rotate,
                   update_hyper=5)
-
 
     #
     # Show results
@@ -314,9 +328,12 @@ if __name__ == '__main__':
         opts, args = getopt.getopt(sys.argv[1:],
                                    "",
                                    ["n=",
+                                    "d=",
                                     "k=",
                                     "seed=",
                                     "debug",
+                                    "no-rotation",
+                                    "no-monitor",
                                     "maxiter="])
     except getopt.GetoptError:
         print('python demo_lssm.py <options>')
@@ -325,6 +342,8 @@ if __name__ == '__main__':
         print('--k=<INT>        Number of mixed models')
         print('--maxiter=<INT>  Maximum number of VB iterations')
         print('--seed=<INT>     Seed (integer) for the random number generator')
+        print('--no-rotation    Do not peform rotation speed ups')
+        print('--no-monitor     Do not plot distributions during VB learning')
         print('--debug          Check that the rotations are implemented correctly')
         sys.exit(2)
 
@@ -338,6 +357,10 @@ if __name__ == '__main__':
             kwargs["K"] = int(arg)
         elif opt == "--seed":
             kwargs["seed"] = int(arg)
+        elif opt == "--no-rotation":
+            kwargs["rotate"] = False
+        elif opt == "--no-monitor":
+            kwargs["monitor"] = False
         elif opt == "--debug":
             kwargs["debug"] = True
         elif opt in ("--n",):
