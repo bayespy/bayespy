@@ -87,10 +87,8 @@ def run(M=1, N=1000, D=5, K=4, seed=42, maxiter=200,
                                 np.logical_not(mask_gaps))
     # Remove the observations
     mask = np.logical_and(mask_gaps, mask_random)
-    mask[:] = True # DEBUG
     # Remove the observations
     y[~mask] = np.nan # BayesPy doesn't require NaNs, they're just for plotting.
-    mask = True # DEBUG
     
     # Plot observations
     if plot_Y:
