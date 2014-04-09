@@ -42,6 +42,7 @@ from .expfamily import useconstructor
 from .gaussian import Gaussian, GaussianStatistics
 from .wishart import Wishart, WishartStatistics
 from .gamma import Gamma, GammaStatistics
+from .categorical import CategoricalStatistics
 from .node import Statistics, ensureparents
 
 class GaussianMarkovChainStatistics(Statistics):
@@ -160,9 +161,6 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
         return dims[0]
     
 
-
-# TODO/FIXME: The plates of masks are not handled properly! Try having
-# a plate of GMCs and then the message mask to A or v..
 
 class _TemplateGaussianMarkovChain(ExponentialFamily):
     r"""
@@ -655,15 +653,15 @@ class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistrib
         elif index == 2: # B, (...,D)x(D,K)
             XnXn = u[1] # (...,N,D,D)
             XpXn = u[2] # (...,N,D,D)
-            S = u_S[0]  # (...,N,K)
-            SS = u_S[1] # (...,N,K,K)
-            v = u_v[0]  # (...,N,D)
+            S = utils.atleast_nd(u_S[0], 2)  # (...,N,K)
+            SS = utils.atleast_nd(u_S[1], 3) # (...,N,K,K)
+            v = utils.atleast_nd(u_v[0], 2)  # (...,N,D)
 
             # m0: (...,D,D,K)
             m0 = np.einsum('...nji,...nk,...ni->...ijk',
                            XpXn,
-                           np.atleast_2d(S),
-                           np.atleast_2d(v))
+                           S,
+                           v)
             
             # m1: (...,D,D,K,D,K)
 
@@ -672,10 +670,10 @@ class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistrib
 
             m1 = np.einsum('...nij,...nkl->...ikjl',
                            XnXn[...,:-1,:,:],
-                           np.atleast_3d(SS))
+                           SS)
             m1 = -0.5 * np.einsum('...ikjl,...d->...dikjl',
                                   m1,
-                                  np.atleast_2d(v)[...,0,:])
+                                  v[...,0,:])
 
         elif index == 3: # S, (...,N-1)x(K)
             XnXn = u[1] # (...,N,D,D)
@@ -958,8 +956,8 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         The plates and dimensions of the parents should be:
         mu:     (...)                    and D-dimensional
         Lambda: (...)                    and D-dimensional
-        B:      (...,D)                  and D-dimensional
-        S:      (...,N-1)                and D-dimensional
+        B:      (...,D)                  and (D,K)-dimensional
+        S:      (...,N-1)                and K-dimensional
         v:      (...,1,D) or (...,N-1,D) and 0-dimensional
         N:      ()                       and 0-dimensional (dummy parent)
 
@@ -1050,7 +1048,467 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                 cls._parent_statistics)
     
 
+
+class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
+    """
+    Sub-classes implement distribution specific computations.
+    """
+
+    ndims_parents = ( (1, 2),   # mu
+                      (2, 0),   # Lambda
+                      (1, 2),   # B
+                      (1,),     # Z
+                      (0, 0) )  # v
+
+    def __init__(self, N, D, K):
+        self.K = K
+        super().__init__(N, D)
+        
+    def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_B,
+                                   u_Z, u_v):
+        """
+        Compute a message to a parent.
+
+        Parameters:
+        -----------
+        index : int
+            Index of the parent requesting the message.
+        u : list of ndarrays
+            Moments of this node.
+        u_mu : list of ndarrays
+            Moments of parent `mu`.
+        u_Lambda : list of ndarrays
+            Moments of parent `Lambda`.
+        u_B : list of ndarrays
+            Moments of parent `B`.
+        u_Z : list of ndarrays
+            Moments of parent `Z`.
+        u_v : list of ndarrays
+            Moments of parent `v`.
+        """
+        
+        if index == 0:   # mu
+            raise NotImplementedError()
+        elif index == 1: # Lambda
+            raise NotImplementedError()
+        
+        elif index == 2: # B, (...,K,D)x(D)
             
+            XnXn = u[1]                   # (...,N,D,D)
+            XpXn = u[2]                   # (...,N-1,D,D)
+            Z = u_Z[0]                    # (...,N-1,K)
+            v = utils.atleast_nd(u_v[0], 2)  # (...,N-1,D)
+
+            # Check that there is no time-dependency in v and remove the axis
+            if np.ndim(v) >= 2 and np.shape(v)[-2] > 1:
+                raise ValueError("Innovation noise is time dependent")
+            v = np.squeeze(v, axis=-2)
+
+            # m0: (...,K,D,D)
+            m0 = np.einsum('...nji,...nk,...i->...kij',
+                           XpXn,
+                           Z,
+                           v)
+            
+            # m1: (...,K,D,D,D)
+
+            m1 = np.einsum('...nij,...nk->...kij',
+                           XnXn[...,:-1,:,:],
+                           Z)
+            m1 = -0.5 * np.einsum('...kij,...d->...kdij',
+                                  m1,
+                                  v)
+
+            return [m0, m1]
+    
+        elif index == 3: # Z, (...,N-1)x(K)
+
+            XnXn = u[1]                     # (...,N,D,D)
+            XpXn = u[2]                     # (...,N-1,D,D)
+            B = u_B[0]                      # (...,K,D,D)
+            BB = u_B[1]                     # (...,K,D,D,D)
+            v = utils.atleast_nd(u_v[0], 2)    # (...,N-1,D)
+            logv = utils.atleast_nd(u_v[1], 2) # (...,N-1,D)
+
+            # Check that there is no time-dependency in v and remove the axis
+            if np.ndim(v) >= 2 and np.shape(v)[-2] > 1:
+                raise ValueError("Innovation noise is time dependent")
+            v = np.squeeze(v, axis=-2)
+            if np.ndim(logv) >= 2 and np.shape(logv)[-2] > 1:
+                raise ValueError("Innovation noise is time dependent")
+            logv = np.squeeze(logv, axis=-2)
+
+            XnXn_v = np.einsum('...nii,...i->...n', 
+                               XnXn[...,1:,:,:],
+                               v)
+            XpXn_v_B = np.einsum('...nil,...l,...kli->...nk',
+                                 XpXn,
+                                 v,
+                                 B)
+            BvB = np.einsum('...kdij,...d->...kij',
+                            BB,
+                            v)
+            XpXp_BvB = np.einsum('...nij,...kij->...nk',
+                                 XnXn[...,:-1,:,:],
+                                 BvB)
+
+            m0 = ( -0.5 * XnXn_v[...,None]
+                   + XpXn_v_B
+                   -0.5 * XpXp_BvB
+                   +0.5 * np.sum(logv, axis=-1)[...,None,None]
+                   -0.5 * self.D * np.log(2*np.pi) )
+
+            return [m0]
+
+        elif index == 4: # v
+            raise NotImplementedError()
+        elif index == 5: # N
+            raise NotImplementedError()
+
+
+
+    def compute_mask_to_parent(self, index, mask):
+
+        if index == 0: # mu: (...)x(N,D) -> (...)x(D)
+            return mask
+        elif index == 1: # Lambda: (...)x(N,D) -> (...)x(D,D)
+            return mask
+        elif index == 2: # B: (...)x(N,D) -> (...,K,D)x(D)
+            return mask[...,None,None]
+        elif index == 3: # Z: (...)x(N,D) -> (...,N-1)x(K)
+            return mask[...,None]
+        elif index == 4: # v: (...)x(N,D) -> (...,N-1,D)x()
+            return mask[...,None,None]
+        else:
+            raise ValueError("Invalid index")
+
+
+    def compute_phi_from_parents(self, u_mu, u_Lambda, u_B, u_Z, u_v,
+                                 mask=True):
+        """
+        Compute the natural parameters using parents' moments.
+
+        Parameters
+        ----------
+        u_parents : list of list of arrays
+           List of parents' lists of moments.
+
+        Returns
+        -------
+        phi : list of arrays
+           Natural parameters.
+        dims : tuple
+           Shape of the variable part of phi.
+
+        """
+
+        # Dimensionality of the Gaussian states
+        D = np.shape(u_mu[0])[-1]
+
+        # Number of time instances in the process
+        N = self.N
+
+        # Helpful variables (show shapes in comments)
+        mu = u_mu[0]                    # (..., D)
+        Lambda = u_Lambda[0]            # (..., D, D)
+        B = u_B[0]                      # (..., K, D, D)
+        BB = u_B[1]                     # (..., K, D, D, D)
+        Z = u_Z[0]                      # (..., N-1, K)
+        v = utils.atleast_nd(u_v[0], 2) # (..., N-1, D) or (..., 1, D)
+
+        # TODO/FIXME: Take into account plates!
+        plates_phi0 = utils.broadcasted_shape(np.shape(mu)[:-1],
+                                              np.shape(Lambda)[:-2])
+        plates_phi1 = utils.broadcasted_shape(np.shape(Lambda)[:-2],
+                                              np.shape(v)[:-2],
+                                              np.shape(BB)[:-4],
+                                              np.shape(Z)[:-2])
+        plates_phi2 = utils.broadcasted_shape(np.shape(B)[:-3],
+                                              np.shape(Z)[:-2],
+                                              np.shape(v)[:-2])
+        phi0 = np.zeros(plates_phi0 + (N,D))
+        phi1 = np.zeros(plates_phi1 + (N,D,D))
+        phi2 = np.zeros(plates_phi2 + (N-1,D,D))
+
+        # Parameters for x0
+        phi0[...,0,:] = np.einsum('...ik,...k->...i', Lambda, mu)
+        phi1[...,0,:,:] = Lambda
+
+
+        # Diagonal blocks: -0.5 * (V_i + A_{i+1}' * V_{i+1} * A_{i+1})
+        phi1[..., 1:, :, :] = v[...,None]*np.identity(D)
+        if np.shape(v)[-2] > 1:
+            raise Exception("This implementation is not efficient if "
+                            "innovation noise is time-dependent.")
+            phi1[..., :-1, :, :] += np.einsum('...kdij,...nk,...nd->...nij', 
+                                              BB[...,:,:,:,:],
+                                              Z,
+                                              v)
+        else:
+            # We know that S does not have the D plate so we can sum that plate
+            # axis out
+            v_BB = np.einsum('...kdij,...nd->...nkij',
+                             BB[...,:,:,:,:],
+                             v)
+            phi1[..., :-1, :, :] += np.einsum('...nkij,...nk->...nij', 
+                                              v_BB,
+                                              Z)
+            
+        phi1 *= -0.5
+
+        # Super-diagonal blocks: 0.5 * A.T * V
+        # However, don't multiply by 0.5 because there are both super- and
+        # sub-diagonal blocks (sum them together)
+        phi2[..., :, :, :] = np.einsum('...kji,...nk,...nj->...nij', 
+                                       B[...,:,:,:],
+                                       Z,
+                                       v)
+
+        return (phi0, phi1, phi2)
+
+    def compute_cgf_from_parents(self, u_mu, u_Lambda, u_B, u_Z, u_v):
+        """
+        Compute CGF using the moments of the parents.
+        """
+
+        return _compute_cgf_for_gaussian_markov_chain(u_mu[1],
+                                                      u_Lambda[0],
+                                                      u_Lambda[1],
+                                                      u_v[1],
+                                                      self.N)
+
+    def plates_to_parent(self, index, plates):
+        """
+        Computes the plates of this node with respect to a parent.
+
+        If this node has plates (...), the latent dimensionality is D
+        and the number of time instances is N, the plates with respect
+        to the parents are:
+          mu:     (...)
+          Lambda: (...)
+          A:      (...,N-1,D)
+          v:      (...,N-1,D)
+
+        Parameters:
+        -----------
+        index : int
+            The index of the parent node to use.
+        """
+
+        if index == 0:   # mu: (...)x(N,D) -> (...)x(D)
+            return plates
+        elif index == 1: # Lambda: (...)x(N,D) -> (...)x(D,D)
+            return plates
+        elif index == 2: # B: (...)x(N,D) -> (...,K,D)x(D)
+            return plates + (self.K,self.D)
+        elif index == 3: # Z: (...)x(N,D) -> (...,N-1)x(K)
+            return plates + (self.N-1,)
+        elif index == 4: # v: (...)x(N,D) -> (...,N-1,D)x()
+            return plates + (self.N-1,self.D)
+        else:
+            raise ValueError("Invalid parent index.")
+        
+        
+    def plates_from_parent(self, index, plates):
+        """
+        Compute the plates using information of a parent node.
+
+        If the plates of the parents are:
+          mu:     (...)
+          Lambda: (...)
+          B:      (...,D)
+          S:      (...,N-1)
+          v:      (...,N-1,D)
+          N:      ()
+        the resulting plates of this node are (...)
+
+        Parameters
+        ----------
+        index : int
+            Index of the parent to use.
+        """
+        if index == 0:   # mu: (...)x(D) -> (...)x(N,D)
+            return plates
+        elif index == 1: # Lambda: (...)x(D,D) -> (...)x(N,D)
+            return plates
+        elif index == 2: # B: (...,K,D)x(D) -> (...)x(N,D)
+            return plates[:-2]
+        elif index == 3: # Z: (...,N-1)x(K) -> (...)x(N,D)
+            return plates[:-1]
+        elif index == 4: # v: (...,N-1,D)x() -> (...)x(N,D)
+            return plates[:-2]
+        else:
+            raise ValueError("Invalid parent index.")
+
+
+
+
+class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
+    r"""
+    VB node for switching Gaussian Markov chain.
+
+    Parents are:
+    `mu` is the mean of x0 (Gaussian)
+    `Lambda` is the precision of x0 (Wishart)
+    `B` contains the template dynamic matrices
+    `z` is the temporal selection of dynamic matrix
+    `v` is the diagonal precision of the innovation (Gamma)
+
+    Not efficient if `v` is time dependent.
+
+    Output is Gaussian Markov chain variables.
+
+    .. bayesnet::
+
+       TODO: FIX THIS
+
+       \node[latent] (x1) {$\mathbf{x}_1$};
+       \node[latent, right=of x1] (x2) {$\mathbf{x}_2$};
+       \node[right=of x2] (dots) {$\cdots$};
+       \node[latent, right=of dots] (xn) {$\mathbf{x}_n$};
+       \edge {x1}{x2};
+       \edge {x2}{dots};
+       \edge {dots}{xn};
+
+
+    See also
+    --------
+    bayespy.inference.vmp.nodes.gaussian_markov_chain.GaussianMarkovChain
+    bayespy.inference.vmp.nodes.gaussian.Gaussian
+    bayespy.inference.vmp.nodes.wishart.Wishart
+
+    """
+
+    @useconstructor
+    def __init__(self, mu, Lambda, B, Z, v, n=None, **kwargs):
+        """
+        `mu` is the mean of x_0, (...)x(D)
+        `Lambda` is the precision of x_0, (...)x(D,D)
+        `B` is the dynamic matrices, (...,K,D)x(D)
+        `Z` is the temporal selection of the dynamic matrix, (...,N)x(K)
+        `v` is the diagonal precision of the innovation, (...,D)x()
+        """
+
+        # Construct
+        super().__init__(mu, Lambda, B, Z, v, **kwargs)
+
+
+    @classmethod
+    def _constructor(cls, mu, Lambda, B, Z, v, n=None, plates=None, **kwargs):
+        """
+        Constructs distribution and statistics objects.
+        
+        Compute the dimensions of phi and u.
+
+        The plates and dimensions of the parents should be:
+        mu:     (...)                    and D-dimensional
+        Lambda: (...)                    and D-dimensional
+        B:      (...,K,D)                and D-dimensional
+        Z:      (...,N-1)                and K-dimensional
+        v:      (...,1,D) or (...,N-1,D) and 0-dimensional
+
+        Check that the dimensionalities of the parents are proper.
+        """
+
+        # Infer the number of dynamic matrices
+        B = cls._ensure_statistics(B, GaussianStatistics(2))
+        K = B.plates[-2]
+
+        parent_statistics = (GaussianStatistics(1),
+                             WishartStatistics(),
+                             GaussianStatistics(1),
+                             CategoricalStatistics(K),
+                             GammaStatistics())
+
+        # Infer the length of the chain
+        Z = cls._ensure_statistics(Z, parent_statistics[3])
+        v = cls._ensure_statistics(v, parent_statistics[4])
+        n_Z = 1
+        if len(Z.plates) == 0:
+            raise ValueError("Z must have temporal axis on plates")
+        n_Z = Z.plates[-1]
+        n_v = 1
+        if len(v.plates) >= 2:
+            n_v = v.plates[-2]
+        if n_v != n_Z and n_v != 1 and n_Z != 1:
+            raise Exception(
+                "Plates of Z and v are giving different number of time "
+                "instances")
+        n_Z = max(n_v, n_Z)
+        if n is None:
+            if n_Z == 1:
+                raise Exception(
+                    "The number of time instances could not be determined "
+                    "automatically. Give the number of time instances.")
+                                 
+            n = n_Z + 1
+        elif n_Z != 1 and n_Z+1 != n:
+            raise Exception(
+                "The number of time instances must match the number of last "
+                "plates of parents:" "%d != %d+1" 
+                % (n, n_Z))
+
+                                
+        mu = cls._ensure_statistics(mu, parent_statistics[0])
+        D = mu.dims[0][0]
+        K = Z.dims[0][0]
+        M = n #N.get_moments()[0]
+
+        # Check mu
+        if mu.dims != ( (D,), (D,D) ):
+            raise ValueError("First parent has wrong dimensionality")
+        # Check Lambda
+        Lambda = cls._ensure_statistics(Lambda, parent_statistics[1])
+        if Lambda.dims != ( (D,D), () ):
+            raise ValueError("Second parent has wrong dimensionality")
+        # Check B
+        if B.dims != ( (D,), (D,D) ):
+            raise ValueError("Third parent has wrong dimensionality")
+        if len(B.plates) < 2 or B.plates[-2:] != (K,D):
+            raise ValueError("Third parent should have a last plate "
+                             "equal to the dimensionality of the "
+                             "system.")
+        if Z.dims != ( (K,), ):
+            raise ValueError("Fourth parent has wrong dimensionality %s, "
+                             "should be %s"
+                             % (Z.dims, ( (K,), )))
+        if Z.plates[-1] != M-1:
+            raise ValueError("The last plate of the fourth "
+                             "parent should have length equal to one or "
+                             "N-1, where N is the number of time "
+                             "instances.")
+        # Check v
+        if v.dims != ( (), () ):
+            raise Exception("Fifth parent has wrong dimensionality")
+        if len(v.plates) == 0 or v.plates[-1] != D:
+            raise Exception("Fifth parent should have a last plate "
+                            "equal to the dimensionality of the "
+                            "system.")
+        if (len(v.plates) >= 2 
+            and v.plates[-2] != 1
+            and v.plates[-2] != M-1):
+            raise ValueError("The second last plate of the fifth "
+                             "parent should have length equal to one or "
+                             "N-1 where N is the number of time "
+                             "instances.")
+
+        
+        dims = ( (M,D), (M,D,D), (M-1,D,D) )
+        distribution = SwitchingGaussianMarkovChainDistribution(M, D, K)
+
+        return (dims,
+                cls._total_plates(plates,
+                                  distribution.plates_from_parent(0, mu.plates),
+                                  distribution.plates_from_parent(1, Lambda.plates),
+                                  distribution.plates_from_parent(2, B.plates),
+                                  distribution.plates_from_parent(3, Z.plates),
+                                  distribution.plates_from_parent(4, v.plates)),
+                distribution,
+                cls._statistics,
+                parent_statistics)
+    
+
+
 
 
 class _MarkovChainToGaussian(Deterministic):
