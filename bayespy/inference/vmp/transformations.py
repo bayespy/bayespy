@@ -30,6 +30,8 @@ from bayespy.utils.linalg import dot, tracedot
 
 from .nodes import gaussian
 
+from .nodes.categorical import CategoricalStatistics
+
 class RotationOptimizer():
 
     def __init__(self, block1, block2, D):
@@ -1347,6 +1349,96 @@ class RotateDriftingMarkovChain(RotateGaussianMarkovChain):
                                              sumaxis=False)
 
         return (A_XpXn, A_XpXp_A, CovA_XpXp)
+
+
+class RotateSwitchingMarkovChain(RotateGaussianMarkovChain):
+    """
+    Assume the following model.
+
+    Constant, unit isotropic innovation noise.
+
+    :math:`A_n = B_{z_n}`
+    
+    Gaussian B:            (..., K,  D) x   (D)
+    Categorical Z:         (...,   N-1) x   (K)
+    GaussianMarkovChain X: (...)        x (N,D)
+
+    No plates for X.
+    """
+
+    def __init__(self, X, B, Z, B_rotator):
+        self.X_node = X
+        self.B_node = B
+        self.Z_node = Z._convert(CategoricalStatistics)
+        self.B_rotator = B_rotator
+
+        (N,D) = self.X_node.dims[0]
+        K = self.Z_node.dims[0][0]
+
+        if len(self.Z_node.plates) == 0 and self.Z_node.plates[-1] != N-1:
+            raise ValueError("Incorrect plate length in Z")
+        if self.B_node.plates[-2:] != (K,D):
+            raise ValueError("Incorrect plates in B")
+
+        if len(self.Z_node.dims[0]) != 1:
+            raise ValueError("Z should have exactly one variable axis")
+        if len(self.B_node.dims[0]) != 1:
+            raise ValueError("B should have exactly one variable axes")
+
+        super().__init__(X, B_rotator)
+
+    def _computations_for_A_and_X(self, XpXn, XpXp):
+
+        # Get moments of B and Z
+        (B, BB) = self.B_node.get_moments()
+        CovB = BB - B[...,:,None]*B[...,None,:]
+        
+        u_Z = self.Z_node.get_moments()
+        Z = u_Z[0]
+
+        #
+        # Expectations with respect to A and X
+        #
+
+        # Compute: \sum_n <A_n> <x_{n-1} x_n^T>
+        Z_XpXn = np.einsum('...nij,...nk->...kij',
+                           XpXn,
+                           Z)
+        A_XpXn = np.einsum('...kil,...klj->...ij',
+                           B,
+                           Z_XpXn)
+        A_XpXn = sum_to_plates(A_XpXn,
+                               (),
+                               ndim=2,
+                               plates_from=self.X_node.plates)
+        
+        # Compute: \sum_n <A_n> <x_{n-1} x_{n-1}^T> <A_n>^T
+        Z_XpXp = np.einsum('...nij,...nk->...kij',
+                           XpXp,
+                           Z)
+        B_Z_XpXp = np.einsum('...kil,...klj->...kij',
+                             B,
+                             Z_XpXp)
+        A_XpXp_A = np.einsum('...kil,...kjl->...ij',
+                             B_Z_XpXp,
+                             B)
+        A_XpXp_A = sum_to_plates(A_XpXp_A,
+                                 (),
+                                 ndim=2,
+                                 plates_from=self.X_node.plates)
+        
+        # Compute: \sum_n tr(CovA_n <x_{n-1} x_{n-1}^T>)
+        CovA_XpXp = np.einsum('...kij,...kdij->...d',
+                              Z_XpXp,
+                              CovB)
+        CovA_XpXp = sum_to_plates(CovA_XpXp,
+                                  (),
+                                  ndim=1,
+                                  plates_from=self.X_node.plates)
+
+
+        return (A_XpXn, A_XpXp_A, CovA_XpXp)
+
 
 class RotateMultiple():
     """
