@@ -63,7 +63,11 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
     Z = CategoricalMarkovChain(rho, V,
                                states=N-1,
                                name='Z',
-                               plotter=bpplt.CategoricalMarkovChainPlotter())
+                               plotter=bpplt.CategoricalMarkovChainPlotter(),
+                               initialize=False)
+    Z.u[0] = np.random.dirichlet(np.ones(K))
+    Z.u[1] = np.reshape(np.random.dirichlet(0.5*np.ones(K*K), size=(N-2)),
+                        (N-2, K, K))
 
     #
     # Linear state-space models
@@ -109,7 +113,7 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
                     shape=(D,),
                     plates=(M,1),
                     name='C',
-                    plotter=bpplt.GaussianHintonPlotter())
+                    plotter=bpplt.GaussianHintonPlotter(rows=-3,cols=-1))
     C.initialize_from_value(np.random.randn(M,1,D))
 
     # Underlying noiseless function
@@ -187,7 +191,7 @@ def run_slssm(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
         Q.plot()
     for n in range(maxiter):
         if n < update_hyper:
-            Q.update('Z', 'X', 'C', 'A', 'tau', plot=monitor)
+            Q.update('X', 'C', 'A', 'tau', plot=monitor)
             if rotate:
                 R_init.rotate(**rotate_kwargs)
         else:
