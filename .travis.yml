@@ -4,6 +4,8 @@ python:
   - "3.3"
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq libatlas-dev libatlas-base-dev liblapack-dev gfortran
   - pip install cython
   - pip install numpy
   - pip install scipy
@@ -11,3 +13,6 @@ install:
   - pip install h5py
 # command to run tests, e.g. python setup.py test
 script:  nosetests
+# check coverage
+after_success:
+  - coveralls
