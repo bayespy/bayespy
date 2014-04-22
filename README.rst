@@ -5,7 +5,7 @@ BayesPy - Bayesian Python
    :target: https://travis-ci.org/bayespy/bayespy/
 
 .. image:: https://coveralls.io/repos/bayespy/bayespy/badge.png?branch=master
-   :target: https://coveralls.io/r/bayespy/bayespy?branch=master 
+   :target: https://coveralls.io/r/bayespy/bayespy?branch=master
 
 BayesPy provides tools for Bayesian inference with Python.  The user
 constructs a model as a Bayesian network, observes data and runs
