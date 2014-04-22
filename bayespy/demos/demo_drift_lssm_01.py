@@ -56,9 +56,10 @@ def simulate_drifting_lssm(M, N):
 
     t = np.tile(np.arange(N), (M,1))
     a = 0.1 * 2*np.pi # base frequency
-    c = 0.01 * 2*np.pi # frequency of the frequency-change
-    b = 0.5/c # derivative of the inner sin: |-b*c*cos(c*t)| <= |b*c|
-    f = np.sin( a * (t + b*np.sin(c*t)) )
+    b = 0.01 * 2*np.pi # frequency of the frequency-change
+    c = 8
+    #c = 0.5/c # derivative of the inner sin: |-b*c*cos(c*t)| <= |b*c|
+    f = np.sin( a * (t + c*np.sin(b*t)) )
     y = f + (0.1*np.sqrt(M))*np.random.randn(M,N)
 
     return (y, f)
