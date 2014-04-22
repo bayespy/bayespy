@@ -68,7 +68,7 @@ These nodes should be interesting only for developers.
 
 .. autosummary::
    :toctree: generated/
-   :template: autosummary/myclass.rst
+   :template: autosummary/class.rst
 
    node.Node
    stochastic.Stochastic

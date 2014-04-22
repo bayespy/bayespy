@@ -35,12 +35,11 @@ https://github.com/bayespy/bayespy/issues.
 Installing requirements
 -----------------------
 
-BayesPy requires Python 3.2 and the following packages:
+BayesPy requires Python 3.2 (or later) and the following packages:
 
-* NumPy (>=1.7.1), 
-* SciPy (>=0.11) 
+* NumPy (>=1.8.0), 
+* SciPy (>=0.13.0) 
 * matplotlib (>=1.2)
-* Cython
 * h5py
 
 A proper installation of these packages can be a bit tricky and you may refer to
@@ -52,16 +51,13 @@ activate a new virtual environment, run
 
 .. code-block:: console
 
-    virtualenv -p python3.2 --system-site-packages ENV
+    virtualenv -p python3 --system-site-packages ENV
     source ENV/bin/activate
 
 If your system is properly set up, you may be able to install them from PyPI (a
 C compiler, Python development files, BLAS/LAPACK and other system files may be
 required).  For instance, on Ubuntu (>= 12.10), you may install the dependencies
 for each package as:
-
-..
-    sudo aptitude install build-essential python3.2-dev libatlas-base-dev gfortran
 
 .. code-block:: console
 
@@ -80,12 +76,12 @@ installation/upgrade from PyPI should work:
     pip install numpy --upgrade
     pip install scipy matplotlib --upgrade
 
-Note that this may take several minutes. You also need to install Cython and
-h5py, for instance, from PyPI:
+Note that this may take several minutes. You also need to instal h5py, for
+instance, from PyPI:
 
 .. code-block:: console
 
-    pip install cython h5py
+    pip install h5py
 
 If you have problems installing any of these packages, refer to the manual of
 that package.
@@ -93,10 +89,10 @@ that package.
 Installing BayesPy
 ------------------
 
-Before proceeding, make sure you have installed Cython, h5py and the latest
-versions of NumPy, Scipy and matplotlib for Python 3.2.  After the system has
-been properly set up and the virtual environment is activated (if wanted),
-BayesPy can be installed from PyPI simply as
+Before proceeding, make sure you have installed h5py and the latest versions of
+NumPy, Scipy and matplotlib for Python 3.  After the system has been properly
+set up and the virtual environment is activated (if wanted), BayesPy can be
+installed from PyPI simply as
 
 .. code-block:: console
     
@@ -122,12 +118,24 @@ Compiling documentation
 This documentation can be found at http://bayespy.org/.  The documentation
 source files are readable as such in reStructuredText format in ``doc/source/``
 directory.  It is possible to compile the documentation into HTML or PDF
-yourself.  However, this is not currently recommended as it may turn out to be
-quite tricky because you need to have a Python 3.2 compatible modification of
-numpydoc and a few other packages (e.g., sphinxcontrib-tikz and
-sphinxcontrib-bayesnet).  But if you have `Sphinx <http://sphinx.pocoo.org/>`_
-and all the requirements installed, the documentation can be compiled to HTML
-and PDF by running the following commands in the ``doc`` folder:
+yourself.  In order to compile the documentation, Sphinx is required and a few
+extensions for it. Those can be installed as:
+
+.. code-block:: console
+
+    pip install sphinx sphinxcontrib-tikz sphinxcontrib-bayesnet
+
+In addition, the ``numpydoc`` extension for Sphinx is required.  However, the
+latest stable release (0.4) does not support Python 3, thus one needs to install
+the development version:
+
+.. code-block:: console
+
+    pip install https://github.com/numpy/numpydoc/archive/master.zip
+
+
+After the requirements have been installed, the documentation can be compiled to
+HTML and PDF by running the following commands in the ``doc`` folder:
 
 .. code-block:: console
 
