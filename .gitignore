@@ -18,3 +18,4 @@ MANIFEST
 doc/source/generated
 ENV
 *.hdf5
+.env*
