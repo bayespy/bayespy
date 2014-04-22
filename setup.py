@@ -53,11 +53,11 @@ if __name__ == "__main__":
     # Remove Cython dependency for now, in order to keep the installation
     # simpler.
     #
-    sparse_distance = Extension('bayespy.utils.covfunc.distance',
-                                sources=['bayespy/utils/covfunc/distance.pyx',
-                                         'bayespy/utils/covfunc/sparse_distance/sparse_distance.c'],
-                                         include_dirs=['bayespy/utils/covfunc/sparse_distance',
-                                                       np.get_include()])
+    ## sparse_distance = Extension('bayespy.utils.covfunc.distance',
+    ##                             sources=['bayespy/utils/covfunc/distance.pyx',
+    ##                                      'bayespy/utils/covfunc/sparse_distance/sparse_distance.c'],
+    ##                                      include_dirs=['bayespy/utils/covfunc/sparse_distance',
+    ##                                                    np.get_include()])
 
     # Setup for BayesPy
     setup(
@@ -79,8 +79,8 @@ if __name__ == "__main__":
           ##     ],
               
           # These are for sparse_distance Cython extension
-          cmdclass = {'build_ext': build_ext},
-          ext_modules = [sparse_distance],
+          ## cmdclass = {'build_ext': build_ext},
+          ## ext_modules = [sparse_distance],
           
           packages = find_packages(),
                      ## ['bayespy',
