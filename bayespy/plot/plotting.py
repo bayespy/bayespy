@@ -123,9 +123,9 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, **kwargs):
         ax.autoscale(enable=True, tight=True)
         ax.set_ylim(auto=True)
 
-        if i < (M-1)*N - 1:
+        if i < (M-1)*N:
             # Remove x tick labels from other than the last row
-            ax.set_xticklabels([])
+            plt.setp(ax.get_xticklabels(), visible=False)
 
         if std is None:
             plt.plot(y[:,i], *args, **kwargs)
