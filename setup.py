@@ -61,11 +61,11 @@ if __name__ == "__main__":
 
     # Setup for BayesPy
     setup(
-          install_requires = ['numpy>=1.7.1', # 1.7.0 contains a memory leak bug fixed in 1.7.1
-                              'scipy>=0.11.0',
+          install_requires = ['numpy>=1.8.0', # 1.8 implements broadcasting in numpy.linalg
+                              'scipy>=0.12.0',
                               #'scikits.sparse>=0.1', # required for sparse GPs only
                               'matplotlib>=1.2.0',
-                              'cython',
+    #'cython',
                               'h5py'],
           ## requires = ['numpy (>=1.7.1)', # 1.7.0 contains a memory leak bug
           ##             'scipy (>=0.11.0)',
