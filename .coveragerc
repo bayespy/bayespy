@@ -1,0 +1,8 @@
+[run]
+source = bayespy
+[report]
+omit =
+    */python?.?/*
+    */site-packages/nose/*
+    *bayespy/demos/*
+    *bayespy/plot/*
