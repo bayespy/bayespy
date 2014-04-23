@@ -23,6 +23,10 @@
 
 """
 Demonstrate linear Gaussian state-space model.
+
+Some of the functions in this module are re-usable: 
+  * ``model`` can be used to construct the classical linear state-space model.
+  * ``run`` can be used to apply linear state-space model to given data.
 """
 
 import numpy as np
@@ -43,7 +47,15 @@ from bayespy.inference.vmp import transformations
 
 import bayespy.plot.plotting as bpplt
 
-def linear_state_space_model(D=3, N=100, M=10):
+
+def model(M=10, N=100, D=3):
+    """
+    Construct linear state-space model.
+
+    See, for instance, the following publication:
+    "Fast variational Bayesian linear state-space model"
+    Luttinen (ECML 2013)
+    """
 
     # Dynamics matrix with ARD
     alpha = Gamma(1e-5,
@@ -74,6 +86,7 @@ def linear_state_space_model(D=3, N=100, M=10):
                     shape=(D,),
                     plates=(M,1),
                     name='C')
+    C.initialize_from_random()
 
     # Observation noise
     tau = Gamma(1e-5,
@@ -83,83 +96,167 @@ def linear_state_space_model(D=3, N=100, M=10):
     # Underlying noiseless function
     F = SumMultiply('i,i', 
                     C, 
-                    X)
+                    X,
+                    name='F')
     
     # Noisy observations
     Y = GaussianARD(F,
                     tau,
                     name='Y')
 
-    return (Y, F, X, tau, C, gamma, A, alpha)
+    Q = VB(Y, F, X, tau, C, gamma, A, alpha)
 
-def run(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=False, precompute=False, plot=True):
+    return Q
+
+
+def run(y, D, 
+        mask=True, 
+        maxiter=100,
+        rotate=True,
+        debug=False,
+        precompute=False,
+        update_hyper=0,
+        start_rotating=0,
+        start_rotating_drift=0,
+        plot_C=True,
+        monitor=True,
+        autosave=None):
+    """
+    Apply linear state-space model for the given data.
+    """
+        
+    (M, N) = np.shape(y)
+
+    # Construct the model
+    Q = model(M, N, D)
+    if not plot_C:
+        Q['C'].set_plotter(None)
+        
+    if autosave is not None:
+        Q.set_autosave(autosave, iterations=10)
+
+    # Observe data
+    Q['Y'].observe(y, mask=mask)
+
+    # Set up rotation speed-up
+    if rotate:
+        
+        # Initial rotate the D-dimensional state space (X, A, C)
+        # Does not update hyperparameters
+        rotA_init = transformations.RotateGaussianARD(Q['A'], 
+                                                      axis=0,
+                                                      precompute=precompute)
+        rotX_init = transformations.RotateGaussianMarkovChain(Q['X'], 
+                                                              rotA_init)
+        rotC_init = transformations.RotateGaussianARD(Q['C'],
+                                                      axis=0,
+                                                      precompute=precompute)
+        R_X_init = transformations.RotationOptimizer(rotX_init, rotC_init, D)
+
+        # Rotate the D-dimensional state space (X, A, C)
+        rotA = transformations.RotateGaussianARD(Q['A'], 
+                                                 Q['alpha'],
+                                                 axis=0,
+                                                 precompute=precompute)
+        rotX = transformations.RotateGaussianMarkovChain(Q['X'], 
+                                                         rotA)
+        rotC = transformations.RotateGaussianARD(Q['C'],
+                                                 Q['gamma'],
+                                                 axis=0,
+                                                 precompute=precompute)
+        R_X = transformations.RotationOptimizer(rotX, rotC, D)
+
+        # Keyword arguments for the rotation
+        if debug:
+            rotate_kwargs = {'maxiter': 10,
+                             'check_bound': True,
+                             'check_gradient': True}
+        else:
+            rotate_kwargs = {'maxiter': 10}
+
+    # Plot initial distributions
+    if monitor:
+        Q.plot()
+
+    # Run inference using rotations
+    for ind in range(maxiter):
+
+        if ind < update_hyper:
+            # It might be a good idea to learn the lower level nodes a bit
+            # before starting to learn the upper level nodes.
+            Q.update('X', 'C', 'A', 'tau', plot=monitor)
+            if rotate and ind >= start_rotating:
+                # Use the rotation which does not update alpha nor beta
+                R_X_init.rotate(**rotate_kwargs)
+        else:
+            Q.update(plot=monitor)
+            if rotate and ind >= start_rotating:
+                # It might be a good idea to not rotate immediately because it
+                # might lead to pruning out components too efficiently before
+                # even estimating them roughly
+                R_X.rotate(**rotate_kwargs)
+
+    # Return the posterior approximation
+    return Q
+
+
+def simulate_data(M, N):
+    """
+    Generate a dataset using linear state-space model.
+
+    The process has two latent oscillation components and one random walk
+    component.
+    """
+    # Simulate some data
+    D = 3
+    c = np.random.randn(M, D)
+    w = 0.3
+    a = np.array([[np.cos(w), -np.sin(w), 0], 
+                  [np.sin(w), np.cos(w),  0], 
+                  [0,         0,          1]])
+    x = np.empty((N,D))
+    f = np.empty((M,N))
+    y = np.empty((M,N))
+    x[0] = 10*np.random.randn(D)
+    f[:,0] = np.dot(c,x[0])
+    y[:,0] = f[:,0] + 3*np.random.randn(M)
+    for n in range(N-1):
+        x[n+1] = np.dot(a,x[n]) + np.random.randn(D)
+        f[:,n+1] = np.dot(c,x[n+1])
+        y[:,n+1] = f[:,n+1] + 3*np.random.randn(M)
+
+    return (y, f)
+
+def demo(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=True,
+         precompute=False, plot=True):
+    """
+    Run the demo for linear state-space model.
+    """
 
     # Use deterministic random numbers
     if seed is not None:
         np.random.seed(seed)
 
-    # Simulate some data
-    K = 3
-    c = np.random.randn(M,K)
-    w = 0.3
-    a = np.array([[np.cos(w), -np.sin(w), 0], 
-                  [np.sin(w), np.cos(w),  0], 
-                  [0,         0,          1]])
-    x = np.empty((N,K))
-    f = np.empty((M,N))
-    y = np.empty((M,N))
-    x[0] = 10*np.random.randn(K)
-    f[:,0] = np.dot(c,x[0])
-    y[:,0] = f[:,0] + 3*np.random.randn(M)
-    for n in range(N-1):
-        x[n+1] = np.dot(a,x[n]) + np.random.randn(K)
-        f[:,n+1] = np.dot(c,x[n+1])
-        y[:,n+1] = f[:,n+1] + 3*np.random.randn(M)
+    # Get data
+    (y, f) = simulate_data(M, N)
 
-    # Create the model
-    (Y, CX, X, tau, C, gamma, A, alpha) = linear_state_space_model(D=D, 
-                                                                   N=N,
-                                                                   M=M)
-    
     # Add missing values randomly
     mask = random.mask(M, N, p=0.3)
     # Add missing values to a period of time
     mask[:,30:80] = False
     y[~mask] = np.nan # BayesPy doesn't require this. Just for plotting.
-    # Observe the data
-    Y.observe(y, mask=mask)
-
-    # Initialize nodes (must use some randomness for C)
-    C.initialize_from_random()
 
     # Run inference
-    Q = VB(Y, X, C, gamma, A, alpha, tau)
-
-    #
-    # Run inference with rotations.
-    #
-    if rotate:
-        rotA = transformations.RotateGaussianARD(A, alpha, precompute=precompute)
-        rotX = transformations.RotateGaussianMarkovChain(X, rotA)
-        rotC = transformations.RotateGaussianARD(C, gamma)
-        R = transformations.RotationOptimizer(rotX, rotC, D)
-
-        for ind in range(maxiter):
-            Q.update()
-            if debug:
-                R.rotate(maxiter=10, 
-                         check_gradient=True,
-                         check_bound=True)
-            else:
-                R.rotate()
-
-    else:
-        Q.update(repeat=maxiter)
+    Q = run(y, D,
+            mask=mask,
+            rotate=rotate,
+            debug=debug,
+            maxiter=maxiter)
 
     if plot:
         # Show results
         plt.figure()
-        bpplt.timeseries_normal(CX, scale=2)
+        bpplt.timeseries_normal(Q['F'], scale=2)
         bpplt.timeseries(f, 'b-')
         bpplt.timeseries(y, 'r.')
         plt.show()
@@ -178,13 +275,13 @@ if __name__ == '__main__':
                                     "debug",
                                     "precompute",
                                     "no-plot",
-                                    "rotate"])
+                                    "no-rotation"])
     except getopt.GetoptError:
         print('python demo_lssm.py <options>')
         print('--m=<INT>        Dimensionality of data vectors')
         print('--n=<INT>        Number of data vectors')
         print('--d=<INT>        Dimensionality of the latent vectors in the model')
-        print('--rotate         Apply speed-up rotations')
+        print('--no-rotation    Do not apply speed-up rotations')
         print('--maxiter=<INT>  Maximum number of VB iterations')
         print('--seed=<INT>     Seed (integer) for the random number generator')
         print('--debug          Check that the rotations are implemented correctly')
@@ -195,8 +292,8 @@ if __name__ == '__main__':
 
     kwargs = {}
     for opt, arg in opts:
-        if opt == "--rotate":
-            kwargs["rotate"] = True
+        if opt == "--no-rotation":
+            kwargs["rotate"] = False
         elif opt == "--maxiter":
             kwargs["maxiter"] = int(arg)
         elif opt == "--debug":
@@ -216,4 +313,4 @@ if __name__ == '__main__':
         else:
             raise ValueError("Unhandled option given")
 
-    run(**kwargs)
+    demo(**kwargs)

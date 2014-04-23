@@ -22,7 +22,15 @@
 ######################################################################
 
 """
-Demonstrate switching linear state-space model
+Demonstrate the linear state-space model with switching dynamics.
+
+The model differs from the classical linear state-space model in that it has a
+set of state dynamics matrices of which one is used at each time instance.  A
+hidden Markov model is used to select the dynamics matrix.
+
+Some functions in this module are re-usable:
+  * ``model`` can be used to construct the LSSM with switching dynamics.
+  * ``run`` can be used to apply the model to given data.
 """
 
 import numpy as np
@@ -42,7 +50,10 @@ from bayespy.inference.vmp import transformations
 import bayespy.plot.plotting as bpplt
 
 
-def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
+def model(M=20, N=100, D=10, K=3):
+    """
+    Construct the linear state-space model with switching dynamics.
+    """
 
     #
     # Switching dynamics (HMM)
@@ -145,13 +156,16 @@ def switching_linear_state_space_model(K=3, D=10, N=100, M=20):
     return Q
 
 
-def run_slssm(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
-              monitor=False, update_hyper=0, autosave=None):
+def run(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
+        monitor=False, update_hyper=0, autosave=None):
+    """
+    Apply LSSM with switching dynamics to the given data.
+    """
     
     (M, N) = np.shape(y)
 
     # Construct model
-    Q = switching_linear_state_space_model(M=M, K=K, N=N, D=D)
+    Q = model(M=M, K=K, N=N, D=D)
 
     if autosave is not None:
         Q.set_autosave(autosave, iterations=10)
@@ -200,130 +214,83 @@ def run_slssm(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
                 R.rotate(**rotate_kwargs)
 
     return Q
+
+
+def simulate_data(N):
+    """
+    Generate time-series data with switching dynamics.
+    """
+
+    # Two states: 1) oscillation, 2) random walk
+    w1 = 0.02 * 2*np.pi
+    A = [ [[np.cos(w1), -np.sin(w1)],
+           [np.sin(w1),  np.cos(w1)]],
+          [[        1.0,         0.0],
+           [        0.0,         0.0]] ]
+    C = [[1.0, 0.0]]
+
+    # State switching probabilities
+    q = 0.993        # probability to stay in the same state
+    r = (1-q)/(2-1)  # probability to switch
+    P = q*np.identity(2) + r*(np.ones((2,2))-np.identity(2))
+
+    X = np.zeros((N, 2))
+    Z = np.zeros(N)
+    Y = np.zeros(N)
+    F = np.zeros(N)
+    z = np.random.randint(2)
+    x = np.random.randn(2)
+    Z[0] = z
+    X[0,:] = x
+    for n in range(1,N):
+        x = np.dot(A[z], x) + np.random.randn(2)
+        f = np.dot(C, x)
+        y = f + 5*np.random.randn()
+        z = np.random.choice(2, p=P[z])
+
+        Z[n] = z
+        X[n,:] = x
+        Y[n] = y
+        F[n] = f
+
+    Y = Y[None,:]
+
+    return (Y, F)
     
 
-def run(N=1000, maxiter=100, D=3, K=2, seed=42, plot=True, debug=False,
+def demo(N=1000, maxiter=100, D=3, K=2, seed=42, plot=True, debug=False,
         rotate=True, monitor=True):
+    """
+    Run the demo for linear state-space model with switching dynamics.
+    """
 
     # Use deterministic random numbers
     if seed is not None:
         np.random.seed(seed)
 
-    #
     # Generate data
-    #
+    (Y, F) = simulate_data(N)
 
-    case = 2
-    if case == 1:
-
-        # Oscillation
-        y0 = 5 * np.sin(0.02*2*np.pi * np.arange(N))
-        # Random walk
-        y1 = np.cumsum(np.random.randn(N))
-        y = [y0, y1]
-
-        # State switching probabilities
-        q = 0.99        # probability to stay in the same state
-        r = (1-q)/(2-1)  # probability to switch
-        P = q*np.identity(2) + r*(np.ones((2,2))-np.identity(2))
-
-        Y = np.zeros(N)
-        z = np.random.randint(2)
-        for n in range(1,N):
-            Y[n] = y[z][n]
-            z = np.random.choice(2, p=P[z])
-        Y = Y[None,:]
-            
-    elif case == 2:
-
-        # Two states: 1) oscillation, 2) random walk
-        w1 = 0.02 * 2*np.pi
-        A = [ [[np.cos(w1), -np.sin(w1)],
-               [np.sin(w1),  np.cos(w1)]],
-              [[        1.0,         0.0],
-               [        0.0,         0.0]] ]
-        C = [[1.0, 0.0]]
-
-        # State switching probabilities
-        q = 0.993        # probability to stay in the same state
-        r = (1-q)/(2-1)  # probability to switch
-        P = q*np.identity(2) + r*(np.ones((2,2))-np.identity(2))
-
-        X = np.zeros((N, 2))
-        Z = np.zeros(N)
-        Y = np.zeros(N)
-        F = np.zeros(N)
-        z = np.random.randint(2)
-        x = np.random.randn(2)
-        Z[0] = z
-        X[0,:] = x
-        for n in range(1,N):
-            x = np.dot(A[z], x) + np.random.randn(2)
-            f = np.dot(C, x)
-            y = f + 5*np.random.randn()
-            z = np.random.choice(2, p=P[z])
-
-            Z[n] = z
-            X[n,:] = x
-            Y[n] = y
-            F[n] = f
-            
-        Y = Y[None,:]
-
-    elif case == 3:
-
-        # This experiment is from "Variational Learning for Switching
-        # State-Space Models" (Ghahramani and Hinton)
-
-        x0 = np.zeros(N)
-        x0[0] = np.random.randn()
-        for n in range(1,N):
-            x0[n] = 0.99*x0[n-1] + np.random.randn()
-
-        x1 = np.zeros(N)
-        x1[0] = 10 * np.random.randn()
-        for n in range(1,N):
-            x1[n] = 0.9*x1[n-1] + np.sqrt(10)*np.random.randn()
-
-        # State switching probabilities
-        q = 0.95        # probability to stay in the same state
-        r = (1-q)/(2-1)  # probability to switch
-        P = 0.9*np.identity(2) + 0.05*np.ones((2,2))
-
-        Y = np.zeros(N)
-        z = np.random.randint(2)
-        x = np.array([x0,x1])
-        for n in range(N):
-            y = x[z,n]
-            z = np.random.choice(2, p=P[z])
-            Y[n] = y
-        Y = Y[None,:]
-        
-
+    # Plot observations
     if plot:
         plt.figure()
         bpplt.timeseries(F, 'b-')
         bpplt.timeseries(Y, 'rx')
 
-    #
-    # Use switching linear state-space model for inference
-    #
+    # Apply the linear state-space model with switching dynamics
+    Q = run(Y, D, K, 
+            debug=debug,
+            maxiter=maxiter,
+            monitor=monitor,
+            rotate=rotate,
+            update_hyper=5)
 
-    Q = run_slssm(Y, D, K, 
-                  debug=debug,
-                  maxiter=maxiter,
-                  monitor=monitor,
-                  rotate=rotate,
-                  update_hyper=5)
-
-    #
     # Show results
-    #
-
     if plot:
         Q.plot()
-        
-    plt.show()
+        plt.show()
+
+    return
     
 
 if __name__ == '__main__':
@@ -338,6 +305,7 @@ if __name__ == '__main__':
                                     "debug",
                                     "no-rotation",
                                     "no-monitor",
+                                    "no-plot",
                                     "maxiter="])
     except getopt.GetoptError:
         print('python demo_lssm.py <options>')
@@ -347,6 +315,7 @@ if __name__ == '__main__':
         print('--maxiter=<INT>  Maximum number of VB iterations')
         print('--seed=<INT>     Seed (integer) for the random number generator')
         print('--no-rotation    Do not peform rotation speed ups')
+        print('--no-plot        Do not plot results')
         print('--no-monitor     Do not plot distributions during VB learning')
         print('--debug          Check that the rotations are implemented correctly')
         sys.exit(2)
@@ -365,6 +334,8 @@ if __name__ == '__main__':
             kwargs["rotate"] = False
         elif opt == "--no-monitor":
             kwargs["monitor"] = False
+        elif opt == "--no-plot":
+            kwargs["plot"] = False
         elif opt == "--debug":
             kwargs["debug"] = True
         elif opt in ("--n",):
@@ -372,4 +343,4 @@ if __name__ == '__main__':
         else:
             raise ValueError("Unhandled option given")
 
-    run(**kwargs)
+    demo(**kwargs)
