@@ -1,5 +1,5 @@
 ..
-   Copyright (C) 2011,2012 Jaakko Luttinen
+   Copyright (C) 2011,2012,2014 Jaakko Luttinen
 
    This file is licensed under Version 3.0 of the GNU General Public
    License. See LICENSE for a text of the license.
@@ -21,16 +21,13 @@
 Installation
 ============
 
-.. 
-    using `NumPy/SciPy <http://www.scipy.org/>`_ and
-    `Matplotlib <http://matplotlib.sourceforge.net/>`_.
-
 BayesPy is a Python 3 package and it can be installed from PyPI or the latest
 development version from GitHub.  The instructions below explain how to set up
 the system by installing required packages, how to install BayesPy and how to
 compile this documentation yourself.  However, if these instructions contain
 errors or some relevant details are missing, please file a bug report at
 https://github.com/bayespy/bayespy/issues.
+
 
 Installing requirements
 -----------------------
@@ -42,12 +39,12 @@ BayesPy requires Python 3.2 (or later) and the following packages:
 * matplotlib (>=1.2)
 * h5py
 
-A proper installation of these packages can be a bit tricky and you may refer to
-http://www.scipy.org/install.html for more detailed instructions about the SciPy
-stack.  If your system has an older version of any of the packages (NumPy, SciPy
-or matplotlib) or it does not provide the packages for Python 3.2, you may set
-up a virtual environment and install the latest versions there.  To create and
-activate a new virtual environment, run
+A proper installation of these packages for Python 3 can be a bit tricky and you
+may refer to http://www.scipy.org/install.html for more detailed instructions
+about the SciPy stack.  If your system has an older version of any of the
+packages (NumPy, SciPy or matplotlib) or it does not provide the packages for
+Python 3, you may set up a virtual environment and install the latest versions
+there.  To create and activate a new virtual environment, run
 
 .. code-block:: console
 
