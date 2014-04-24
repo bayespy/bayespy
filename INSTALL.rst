@@ -61,9 +61,7 @@ for each package as:
     sudo apt-get build-dep python3-numpy
     sudo apt-get build-dep python3-scipy    
     sudo apt-get build-dep python3-matplotlib
-    sudo apt-get build-dep cython
     sudo apt-get build-dep python-h5py
-    # sudo aptitude install python3-tk tk-dev (for matplotlib?)
 
 This guarantees that the required system libraries are installed.  Then
 installation/upgrade from PyPI should work:
@@ -102,12 +100,14 @@ instead:
 
     pip install https://github.com/bayespy/bayespy/archive/master.zip
 
-If you have nose installed in the virtual environment, you can check that
-BayesPy is working:
+It is recommended run the unit tests in order to check that BayesPy is working
+properly.  Thus, install Nose and run the unit tests:
 
 .. code-block:: console
 
+    pip install nose
     nosetests bayespy
+
 
 Compiling documentation
 -----------------------
