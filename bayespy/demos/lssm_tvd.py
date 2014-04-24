@@ -33,7 +33,7 @@ For reference, see the following publication:
 
 Some functions in this module are re-usable:
   * ``model`` can be used to construct the LSSM with switching dynamics.
-  * ``run`` can be used to apply the model to given data.
+  * ``infer`` can be used to apply the model to given data.
 """
 
 import numpy as np
@@ -191,18 +191,18 @@ def model(M, N, D, K):
     return Q
 
 
-def run(y, D, K,
-        mask=True, 
-        maxiter=100,
-        rotate=False, 
-        debug=False, 
-        precompute=False,
-        update_hyper=0,
-        start_rotating=0,
-        start_rotating_drift=0,
-        plot_C=True,
-        monitor=True,
-        autosave=None):
+def infer(y, D, K,
+          mask=True, 
+          maxiter=100,
+          rotate=False, 
+          debug=False, 
+          precompute=False,
+          update_hyper=0,
+          start_rotating=0,
+          start_rotating_drift=0,
+          plot_C=True,
+          monitor=True,
+          autosave=None):
     
     """
     Run VB inference for linear state-space model with drifting dynamics.
@@ -346,15 +346,15 @@ def demo(N=1000, D=5, K=4, seed=42, maxiter=200, rotate=True, debug=False,
     mask_random = mask_random[None,...]
     
     # Run the method
-    Q = run(y, D, K,
-            mask=mask, 
-            maxiter=maxiter,
-            rotate=rotate,
-            debug=debug,
-            precompute=precompute,
-            update_hyper=10,
-            start_rotating_drift=20,
-            monitor=True)
+    Q = infer(y, D, K,
+              mask=mask, 
+              maxiter=maxiter,
+              rotate=rotate,
+              debug=debug,
+              precompute=precompute,
+              update_hyper=10,
+              start_rotating_drift=20,
+              monitor=True)
 
     if plot:
 

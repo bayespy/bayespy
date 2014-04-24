@@ -26,7 +26,7 @@ Demonstrate linear Gaussian state-space model.
 
 Some of the functions in this module are re-usable: 
   * ``model`` can be used to construct the classical linear state-space model.
-  * ``run`` can be used to apply linear state-space model to given data.
+  * ``infer`` can be used to apply linear state-space model to given data.
 """
 
 import numpy as np
@@ -39,7 +39,6 @@ from bayespy.nodes import Gamma
 from bayespy.nodes import SumMultiply
 from bayespy.inference.vmp.nodes.gamma import diagonal
 
-from bayespy.utils import utils
 from bayespy.utils import random
 
 from bayespy.inference.vmp.vmp import VB
@@ -109,18 +108,18 @@ def model(M=10, N=100, D=3):
     return Q
 
 
-def run(y, D, 
-        mask=True, 
-        maxiter=100,
-        rotate=True,
-        debug=False,
-        precompute=False,
-        update_hyper=0,
-        start_rotating=0,
-        start_rotating_drift=0,
-        plot_C=True,
-        monitor=True,
-        autosave=None):
+def infer(y, D, 
+          mask=True, 
+          maxiter=100,
+          rotate=True,
+          debug=False,
+          precompute=False,
+          update_hyper=0,
+          start_rotating=0,
+          start_rotating_drift=0,
+          plot_C=True,
+          monitor=True,
+          autosave=None):
     """
     Apply linear state-space model for the given data.
     """
@@ -247,11 +246,11 @@ def demo(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=True,
     y[~mask] = np.nan # BayesPy doesn't require this. Just for plotting.
 
     # Run inference
-    Q = run(y, D,
-            mask=mask,
-            rotate=rotate,
-            debug=debug,
-            maxiter=maxiter)
+    Q = infer(y, D,
+              mask=mask,
+              rotate=rotate,
+              debug=debug,
+              maxiter=maxiter)
 
     if plot:
         # Show results

@@ -30,7 +30,7 @@ hidden Markov model is used to select the dynamics matrix.
 
 Some functions in this module are re-usable:
   * ``model`` can be used to construct the LSSM with switching dynamics.
-  * ``run`` can be used to apply the model to given data.
+  * ``infer`` can be used to apply the model to given data.
 """
 
 import numpy as np
@@ -156,8 +156,8 @@ def model(M=20, N=100, D=10, K=3):
     return Q
 
 
-def run(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
-        monitor=False, update_hyper=0, autosave=None):
+def infer(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
+          monitor=False, update_hyper=0, autosave=None):
     """
     Apply LSSM with switching dynamics to the given data.
     """
@@ -278,12 +278,12 @@ def demo(N=1000, maxiter=100, D=3, K=2, seed=42, plot=True, debug=False,
         bpplt.timeseries(Y, 'rx')
 
     # Apply the linear state-space model with switching dynamics
-    Q = run(Y, D, K, 
-            debug=debug,
-            maxiter=maxiter,
-            monitor=monitor,
-            rotate=rotate,
-            update_hyper=5)
+    Q = infer(Y, D, K, 
+              debug=debug,
+              maxiter=maxiter,
+              monitor=monitor,
+              rotate=rotate,
+              update_hyper=5)
 
     # Show results
     if plot:
