@@ -1263,7 +1263,7 @@ class RotateGaussianMarkovChain():
         return terms_X
 
     
-class RotateDriftingMarkovChain(RotateGaussianMarkovChain):
+class RotateVaryingMarkovChain(RotateGaussianMarkovChain):
     """
     Assume the following model.
 

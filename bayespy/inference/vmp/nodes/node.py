@@ -81,7 +81,7 @@ class Statistics():
 
       * Conversions can be done easily in both of the above cases if the message
         conversion is defined in the moments class. For instance,
-        GaussianMarkovChain to Gaussian and GaussianDriftingMarkovChain to
+        GaussianMarkovChain to Gaussian and VaryingGaussianMarkovChain to
         Gaussian.
     """
 

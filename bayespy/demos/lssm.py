@@ -116,7 +116,6 @@ def infer(y, D,
           precompute=False,
           update_hyper=0,
           start_rotating=0,
-          start_rotating_drift=0,
           plot_C=True,
           monitor=True,
           autosave=None):
@@ -276,7 +275,7 @@ if __name__ == '__main__':
                                     "no-plot",
                                     "no-rotation"])
     except getopt.GetoptError:
-        print('python demo_lssm.py <options>')
+        print('python lssm.py <options>')
         print('--m=<INT>        Dimensionality of data vectors')
         print('--n=<INT>        Number of data vectors')
         print('--d=<INT>        Dimensionality of the latent vectors in the model')

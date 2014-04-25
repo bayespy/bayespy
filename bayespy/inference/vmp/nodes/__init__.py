@@ -33,6 +33,6 @@ from .categorical import Categorical
 from .dot import Dot, SumMultiply
 from .mixture import Mixture
 from .gaussian_markov_chain import GaussianMarkovChain
-from .gaussian_markov_chain import DriftingGaussianMarkovChain
+from .gaussian_markov_chain import VaryingGaussianMarkovChain
 from .gaussian_markov_chain import SwitchingGaussianMarkovChain
 from .categorical_markov_chain import CategoricalMarkovChain

@@ -41,7 +41,7 @@ import scipy
 import matplotlib.pyplot as plt
 
 from bayespy.nodes import (GaussianMarkovChain,
-                           DriftingGaussianMarkovChain,
+                           VaryingGaussianMarkovChain,
                            GaussianARD,
                            Gamma,
                            SumMultiply)
@@ -132,15 +132,15 @@ def model(M, N, D, K):
 
     # Latent states with dynamics
     # X : () x (N,D)
-    X = DriftingGaussianMarkovChain(np.zeros(D),         # mean of x0
-                                    1e-3*np.identity(D), # prec of x0
-                                    A,                   # dynamics matrices
-                                    S._convert(GaussianStatistics)[1:], # temporal weights
-                                    np.ones(D),          # innovation
-                                    n=N,                 # time instances
-                                    name='X',
-                                    plotter=bpplt.GaussianMarkovChainPlotter(scale=2),
-                                    initialize=False)
+    X = VaryingGaussianMarkovChain(np.zeros(D),         # mean of x0
+                                   1e-3*np.identity(D), # prec of x0
+                                   A,                   # dynamics matrices
+                                   S._convert(GaussianStatistics)[1:], # temporal weights
+                                   np.ones(D),          # innovation
+                                   n=N,                 # time instances
+                                   name='X',
+                                   plotter=bpplt.GaussianMarkovChainPlotter(scale=2),
+                                   initialize=False)
     X.initialize_from_value(np.random.randn(N,D))
 
     #
@@ -199,13 +199,13 @@ def infer(y, D, K,
           precompute=False,
           update_hyper=0,
           start_rotating=0,
-          start_rotating_drift=0,
+          start_rotating_weights=0,
           plot_C=True,
           monitor=True,
           autosave=None):
     
     """
-    Run VB inference for linear state-space model with drifting dynamics.
+    Run VB inference for linear state-space model with time-varying dynamics.
     """
 
     y = utils.atleast_nd(y, 2)
@@ -230,10 +230,10 @@ def infer(y, D, K,
         rotA_init = transformations.RotateGaussianARD(Q['A'], 
                                                       axis=0,
                                                       precompute=precompute)
-        rotX_init = transformations.RotateDriftingMarkovChain(Q['X'], 
-                                                              Q['A'], 
-                                                              Q['S']._convert(GaussianStatistics)[...,1:,None], 
-                                                              rotA_init)
+        rotX_init = transformations.RotateVaryingMarkovChain(Q['X'], 
+                                                             Q['A'], 
+                                                             Q['S']._convert(GaussianStatistics)[...,1:,None], 
+                                                             rotA_init)
         rotC_init = transformations.RotateGaussianARD(Q['C'],
                                                       axis=0,
                                                       precompute=precompute)
@@ -244,10 +244,10 @@ def infer(y, D, K,
                                                  Q['alpha'],
                                                  axis=0,
                                                  precompute=precompute)
-        rotX = transformations.RotateDriftingMarkovChain(Q['X'], 
-                                                         Q['A'], 
-                                                         Q['S']._convert(GaussianStatistics)[...,1:,None], 
-                                                         rotA)
+        rotX = transformations.RotateVaryingMarkovChain(Q['X'], 
+                                                        Q['A'], 
+                                                        Q['S']._convert(GaussianStatistics)[...,1:,None], 
+                                                        rotA)
         rotC = transformations.RotateGaussianARD(Q['C'],
                                                  Q['gamma'],
                                                  axis=0,
@@ -293,7 +293,7 @@ def infer(y, D, K,
                 # might lead to pruning out components too efficiently before
                 # even estimating them roughly
                 R_X.rotate(**rotate_kwargs)
-                if ind >= start_rotating_drift:
+                if ind >= start_rotating_weights:
                     R_S.rotate(**rotate_kwargs)
 
     # Return the posterior approximation
@@ -353,7 +353,7 @@ def demo(N=1000, D=5, K=4, seed=42, maxiter=200, rotate=True, debug=False,
               debug=debug,
               precompute=precompute,
               update_hyper=10,
-              start_rotating_drift=20,
+              start_rotating_weights=20,
               monitor=True)
 
     if plot:
@@ -368,7 +368,7 @@ def demo(N=1000, D=5, K=4, seed=42, maxiter=200, rotate=True, debug=False,
         # Plot latent space
         Q.plot('X')
     
-        # Plot drift space
+        # Plot mixing weight space
         Q.plot('S')
 
     # Compute RMSE
@@ -397,10 +397,10 @@ if __name__ == '__main__':
                                     "no-plot",
                                     "no-rotation"])
     except getopt.GetoptError:
-        print('python demo_lssm_drift.py <options>')
+        print('python lssm_tvd.py <options>')
         print('--n=<INT>        Number of data vectors')
         print('--d=<INT>        Dimensionality of the latent vectors in the model')
-        print('--k=<INT>        Dimensionality of the latent drift space or number of mixtures in switching model')
+        print('--k=<INT>        Dimensionality of the latent mixing weights')
         print('--no-rotation    Do not apply speed-up rotations')
         print('--maxiter=<INT>  Maximum number of VB iterations')
         print('--seed=<INT>     Seed (integer) for the random number generator')

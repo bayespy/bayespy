@@ -308,7 +308,7 @@ if __name__ == '__main__':
                                     "no-plot",
                                     "maxiter="])
     except getopt.GetoptError:
-        print('python demo_lssm.py <options>')
+        print('python lssm_sd.py <options>')
         print('--n=<INT>        Number of data vectors')
         print('--d=<INT>        Latent space dimensionality')
         print('--k=<INT>        Number of mixed models')

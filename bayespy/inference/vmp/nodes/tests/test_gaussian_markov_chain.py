@@ -28,7 +28,7 @@ Unit tests for gaussian_markov_chain module.
 import numpy as np
 
 from ..gaussian_markov_chain import GaussianMarkovChain
-from ..gaussian_markov_chain import DriftingGaussianMarkovChain
+from ..gaussian_markov_chain import VaryingGaussianMarkovChain
 from ..gaussian import Gaussian
 from ..gaussian import GaussianARD
 from ..wishart import Wishart
@@ -474,11 +474,11 @@ class TestGaussianMarkovChain(TestCase):
         self.assertTrue(np.allclose(CovXh_vb, CovXh))
         
 
-class TestDriftingGaussianMarkovChain(TestCase):
+class TestVaryingGaussianMarkovChain(TestCase):
 
     def test_plates_from_parents(self):
         """
-        Test that DriftingGaussianMarkovChain deduces plates correctly
+        Test that VaryingGaussianMarkovChain deduces plates correctly
         """
         def check(plates_X,
                   plates_mu=(),
@@ -506,7 +506,7 @@ class TestDriftingGaussianMarkovChain(TestCase):
                             plates=plates_S+(N,))
             v = Gamma(1+np.random.rand(*(plates_v+(1,D))),
                       1+np.random.rand(*(plates_v+(1,D))))
-            X = DriftingGaussianMarkovChain(mu,
+            X = VaryingGaussianMarkovChain(mu,
                                             Lambda,
                                             B,
                                             S,
@@ -538,11 +538,11 @@ class TestDriftingGaussianMarkovChain(TestCase):
         b = 2.0
         s = [3.0, 8.0]
         v = 5.0
-        X = DriftingGaussianMarkovChain([m],
-                                        [[l]],
-                                        [[[b]]],
-                                        [[s[0]],[s[1]]],
-                                        [v])
+        X = VaryingGaussianMarkovChain([m],
+                                       [[l]],
+                                       [[[b]]],
+                                       [[s[0]],[s[1]]],
+                                       [v])
         (u0, u1, u2) = X._message_to_child()
         C = np.array([[l+b**2*s[0]**2*v,        -b*s[0]*v,         0],
                       [       -b*s[0]*v, v+b**2*s[1]**2*v, -b*s[1]*v],
@@ -566,13 +566,13 @@ class TestDriftingGaussianMarkovChain(TestCase):
                 S = np.random.randn(N-1,K)
             if V is None:
                 V = np.random.rand(D)
-            X = DriftingGaussianMarkovChain(mu,
-                                            Lambda,
-                                            B,
-                                            S,
-                                            V,
-                                            plates=plates,
-                                            n=N)
+            X = VaryingGaussianMarkovChain(mu,
+                                           Lambda,
+                                           B,
+                                           S,
+                                           V,
+                                           plates=plates,
+                                           n=N)
             (u0, u1, u2) = X._message_to_child()
             (mu, mumu) = X.parents[0].get_moments()
             (Lambda, _) = X.parents[1].get_moments()

@@ -612,7 +612,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
     
 
 
-class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
+class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
     """
     Sub-classes implement distribution specific computations.
     """
@@ -887,9 +887,9 @@ class DriftingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistrib
 
 
 
-class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
+class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     r"""
-    VMP node for drifting Gaussian Markov chain.
+    VMP node for Gaussian Markov chain with time-varying dynamics.
 
     Parents are:
     `mu` is the mean of x0 (Gaussian)
@@ -1034,7 +1034,7 @@ class DriftingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
         
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
-        distribution = DriftingGaussianMarkovChainDistribution(M, D)
+        distribution = VaryingGaussianMarkovChainDistribution(M, D)
 
         return (dims,
                 cls._total_plates(plates,

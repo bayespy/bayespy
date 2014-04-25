@@ -41,7 +41,7 @@ from bayespy.utils import optimize
 
 from ..transformations import RotateGaussianARD
 from ..transformations import RotateGaussianMarkovChain
-from ..transformations import RotateDriftingMarkovChain
+from ..transformations import RotateVaryingMarkovChain
 
 from bayespy.utils.utils import TestCase
 
@@ -1001,11 +1001,11 @@ class TestRotateGaussianMarkovChain(TestCase):
 
 
     
-class TestRotateDriftingMarkovChain(TestCase):
+class TestRotateVaryingMarkovChain(TestCase):
 
     def test_cost_function(self):
         """
-        Test the speed-up rotation of drifting Markov chain
+        Test the speed-up rotation of Markov chain with time-varying dynamics
         """
 
         # Use seed for deterministic testing
@@ -1063,7 +1063,7 @@ class TestRotateDriftingMarkovChain(TestCase):
 
             # Construct rotator
             rotB = RotateGaussianARD(B, axis=-2)
-            rotX = RotateDriftingMarkovChain(X, B, S, rotB)
+            rotX = RotateVaryingMarkovChain(X, B, S, rotB)
 
             # Rotation
             true_cost0 = X.lower_bound_contribution()
@@ -1093,7 +1093,7 @@ class TestRotateDriftingMarkovChain(TestCase):
 
     def test_cost_gradient(self):
         """
-        Test the gradient of the speed-up rotation for drifting Markov chain
+        Test the gradient of the rotation for MC with time-varying dynamics
         """
 
         # Use seed for deterministic testing
@@ -1151,7 +1151,7 @@ class TestRotateDriftingMarkovChain(TestCase):
 
             # Construct rotator
             rotB = RotateGaussianARD(B, axis=-2)
-            rotX = RotateDriftingMarkovChain(X, B, S, rotB)
+            rotX = RotateVaryingMarkovChain(X, B, S, rotB)
             rotX.setup()
 
             # Check gradient with respect to R
