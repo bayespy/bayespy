@@ -65,7 +65,11 @@ def model(M=10, N=100, D=3):
                     alpha,
                     shape=(D,),
                     plates=(D,),
+                    plotter=bpplt.GaussianHintonPlotter(rows=0, 
+                                                        cols=1,
+                                                        scale=0),
                     name='A')
+    A.initialize_from_value(np.identity(D))
 
     # Latent states with dynamics
     X = GaussianMarkovChain(np.zeros(D),         # mean of x0
@@ -73,24 +77,31 @@ def model(M=10, N=100, D=3):
                             A,                   # dynamics
                             np.ones(D),          # innovation
                             n=N,                 # time instances
+                            plotter=bpplt.GaussianMarkovChainPlotter(scale=2),
                             name='X')
+    X.initialize_from_value(np.random.randn(N,D))
 
     # Mixing matrix from latent space to observation space using ARD
     gamma = Gamma(1e-5,
                   1e-5,
                   plates=(D,),
                   name='gamma')
+    gamma.initialize_from_value(1e-2*np.ones(D))
     C = GaussianARD(0,
                     gamma,
                     shape=(D,),
                     plates=(M,1),
+                    plotter=bpplt.GaussianHintonPlotter(rows=0,
+                                                        cols=2,
+                                                        scale=0),
                     name='C')
-    C.initialize_from_random()
+    C.initialize_from_value(np.random.randn(M,1,D))
 
     # Observation noise
     tau = Gamma(1e-5,
                 1e-5,
                 name='tau')
+    tau.initialize_from_value(1e2)
 
     # Underlying noiseless function
     F = SumMultiply('i,i', 
@@ -103,7 +114,7 @@ def model(M=10, N=100, D=3):
                     tau,
                     name='Y')
 
-    Q = VB(Y, F, X, tau, C, gamma, A, alpha)
+    Q = VB(Y, F, C, gamma, X, A, alpha, tau, C)
 
     return Q
 
