@@ -157,7 +157,8 @@ def model(M=20, N=100, D=10, K=3):
 
 
 def infer(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
-          monitor=False, update_hyper=0, autosave=None):
+          plot_C=True, monitor=False, update_hyper=0, autosave=None):
+    
     """
     Apply LSSM with switching dynamics to the given data.
     """
@@ -166,6 +167,8 @@ def infer(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
 
     # Construct model
     Q = model(M=M, K=K, N=N, D=D)
+    if not plot_C:
+        Q['C'].set_plotter(None)
 
     if autosave is not None:
         Q.set_autosave(autosave, iterations=10)
