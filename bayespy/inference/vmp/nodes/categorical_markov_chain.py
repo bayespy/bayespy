@@ -27,28 +27,28 @@ from .deterministic import Deterministic
 from .expfamily import ExponentialFamily, \
                        ExponentialFamilyDistribution, \
                        useconstructor
-from .node import Statistics, \
+from .node import Moments, \
                   ensureparents
-from .categorical import CategoricalStatistics
+from .categorical import CategoricalMoments
 from .dirichlet import Dirichlet, \
-                       DirichletStatistics
+                       DirichletMoments
 
 from bayespy.utils import utils, random
 
-class CategoricalMarkovChainStatistics(Statistics):
+class CategoricalMarkovChainMoments(Moments):
 
     ndim_observations = 0
 
     def __init__(self, categories):
         self.D = categories
 
-    def converter(self, statistics_class):
+    def converter(self, moments_class):
         """
-        Returns a node class which converts the node's statistics to another
+        Returns a node class which converts the node's moments to another
         """
-        if statistics_class is CategoricalStatistics:
+        if moments_class is CategoricalMoments:
             return CategoricalMarkovChainToCategorical
-        return super().converter(statistics_class)
+        return super().converter(moments_class)
 
     def compute_fixed_moments(self, x):
         raise NotImplementedError("compute_fixed_moments not implemented for "
@@ -128,8 +128,8 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         
 class CategoricalMarkovChain(ExponentialFamily):
     
-    _parent_statistics = (DirichletStatistics(),
-                          DirichletStatistics())
+    _parent_moments = (DirichletMoments(),
+                       DirichletMoments())
 
     @useconstructor
     def __init__(self, p0, P, states=None, **kwargs):
@@ -171,27 +171,27 @@ class CategoricalMarkovChain(ExponentialFamily):
         dims = ( (D,), (N-1,D,D) )
 
         distribution = CategoricalMarkovChainDistribution(D, N)
-        statistics = CategoricalMarkovChainStatistics(D)
-        parent_statistics = cls._parent_statistics
+        moments = CategoricalMarkovChainMoments(D)
+        parent_moments = cls._parent_moments
 
         return (dims, 
                 cls._total_plates(plates,
                                   distribution.plates_from_parent(0, p0.plates),
                                   distribution.plates_from_parent(1, P.plates)),
                 distribution, 
-                statistics, 
-                parent_statistics)
+                moments, 
+                parent_moments)
 
         
 class CategoricalMarkovChainToCategorical(Deterministic):
     
     def __init__(self, Z, **kwargs):
         # Convert parent to proper type. Z must be a node.
-        Z = Z._convert(CategoricalMarkovChainStatistics)
+        Z = Z._convert(CategoricalMarkovChainMoments)
         K = Z.dims[0][-1]
         dims = ( (K,), )
-        self._statistics = CategoricalStatistics(K)
-        self._parent_statistics = (CategoricalMarkovChainStatistics(K),)
+        self._moments = CategoricalMoments(K)
+        self._parent_moments = (CategoricalMarkovChainMoments(K),)
         super().__init__(Z, dims=dims, **kwargs)
         
     def _compute_moments(self, u_Z):

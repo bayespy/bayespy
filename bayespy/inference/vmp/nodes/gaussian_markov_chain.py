@@ -39,13 +39,13 @@ from .deterministic import Deterministic
 from .expfamily import ExponentialFamily
 from .expfamily import ExponentialFamilyDistribution
 from .expfamily import useconstructor
-from .gaussian import Gaussian, GaussianStatistics
-from .wishart import Wishart, WishartStatistics
-from .gamma import Gamma, GammaStatistics
-from .categorical import CategoricalStatistics
-from .node import Statistics, ensureparents
+from .gaussian import Gaussian, GaussianMoments
+from .wishart import Wishart, WishartMoments
+from .gamma import Gamma, GammaMoments
+from .categorical import CategoricalMoments
+from .node import Moments, ensureparents
 
-class GaussianMarkovChainStatistics(Statistics):
+class GaussianMarkovChainMoments(Moments):
 
     def compute_fixed_moments(self, x):
         u0 = x
@@ -53,10 +53,10 @@ class GaussianMarkovChainStatistics(Statistics):
         u2 = x[...,:-1,:,np.newaxis] * x[...,1:,np.newaxis,:]
         return [u0, u1, u2]
         
-    def converter(self, statistics_class):
-        if statistics_class is GaussianStatistics:
+    def converter(self, moments_class):
+        if moments_class is GaussianMoments:
             return _MarkovChainToGaussian
-        return super().converter(statistics_class)
+        return super().converter(moments_class)
     
 class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
     """
@@ -185,8 +185,7 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
 
     """
 
-    #_statistics_class = GaussianMarkovChainStatistics
-    _statistics = GaussianMarkovChainStatistics()
+    _moments = GaussianMarkovChainMoments()
                                 
 
     # phi[0] is (N,D), phi[1] is (N,D,D), phi[2] is (N-1,D,D)
@@ -497,10 +496,10 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     """
 
-    _parent_statistics = (GaussianStatistics(1),
-                          WishartStatistics(),
-                          GaussianStatistics(1),
-                          GammaStatistics())
+    _parent_moments = (GaussianMoments(1),
+                       WishartMoments(),
+                       GaussianMoments(1),
+                       GammaMoments())
 
     @useconstructor
     def __init__(self, mu, Lambda, A, v, n=None, **kwargs):
@@ -518,7 +517,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
     @ensureparents
     def _constructor(cls, mu, Lambda, A, v, n=None, plates=None, **kwargs):
         """
-        Constructs distribution and statistics objects.
+        Constructs distribution and moments objects.
         
         Compute the dimensions of phi and u.
 
@@ -606,8 +605,8 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
                                    distribution.plates_from_parent(2, A.plates),
                                    distribution.plates_from_parent(3, v.plates)),
                  distribution, 
-                 cls._statistics, 
-                 cls._parent_statistics)
+                 cls._moments, 
+                 cls._parent_moments)
 
     
 
@@ -925,11 +924,11 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     """
 
-    _parent_statistics = (GaussianStatistics(1),
-                          WishartStatistics(),
-                          GaussianStatistics(2),
-                          GaussianStatistics(1),
-                          GammaStatistics())
+    _parent_moments = (GaussianMoments(1),
+                       WishartMoments(),
+                       GaussianMoments(2),
+                       GaussianMoments(1),
+                       GammaMoments())
 
     @useconstructor
     def __init__(self, mu, Lambda, B, S, v, n=None, **kwargs):
@@ -949,7 +948,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     @ensureparents
     def _constructor(cls, mu, Lambda, B, S, v, n=None, plates=None, **kwargs):
         """
-        Constructs distribution and statistics objects.
+        Constructs distribution and moments objects.
         
         Compute the dimensions of phi and u.
 
@@ -1044,8 +1043,8 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                                   distribution.plates_from_parent(3, S.plates),
                                   distribution.plates_from_parent(4, v.plates)),
                 distribution,
-                cls._statistics,
-                cls._parent_statistics)
+                cls._moments,
+                cls._parent_moments)
     
 
 
@@ -1396,7 +1395,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     @classmethod
     def _constructor(cls, mu, Lambda, B, Z, v, n=None, plates=None, **kwargs):
         """
-        Constructs distribution and statistics objects.
+        Constructs distribution and moments objects.
         
         Compute the dimensions of phi and u.
 
@@ -1411,18 +1410,18 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         """
 
         # Infer the number of dynamic matrices
-        B = cls._ensure_statistics(B, GaussianStatistics(2))
+        B = cls._ensure_moments(B, GaussianMoments(2))
         K = B.plates[-2]
 
-        parent_statistics = (GaussianStatistics(1),
-                             WishartStatistics(),
-                             GaussianStatistics(1),
-                             CategoricalStatistics(K),
-                             GammaStatistics())
+        parent_moments = (GaussianMoments(1),
+                          WishartMoments(),
+                          GaussianMoments(1),
+                          CategoricalMoments(K),
+                          GammaMoments())
 
         # Infer the length of the chain
-        Z = cls._ensure_statistics(Z, parent_statistics[3])
-        v = cls._ensure_statistics(v, parent_statistics[4])
+        Z = cls._ensure_moments(Z, parent_moments[3])
+        v = cls._ensure_moments(v, parent_moments[4])
         n_Z = 1
         if len(Z.plates) == 0:
             raise ValueError("Z must have temporal axis on plates")
@@ -1449,7 +1448,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                 % (n, n_Z))
 
                                 
-        mu = cls._ensure_statistics(mu, parent_statistics[0])
+        mu = cls._ensure_moments(mu, parent_moments[0])
         D = mu.dims[0][0]
         K = Z.dims[0][0]
         M = n #N.get_moments()[0]
@@ -1458,7 +1457,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         if mu.dims != ( (D,), (D,D) ):
             raise ValueError("First parent has wrong dimensionality")
         # Check Lambda
-        Lambda = cls._ensure_statistics(Lambda, parent_statistics[1])
+        Lambda = cls._ensure_moments(Lambda, parent_moments[1])
         if Lambda.dims != ( (D,D), () ):
             raise ValueError("Second parent has wrong dimensionality")
         # Check B
@@ -1504,8 +1503,8 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                                   distribution.plates_from_parent(3, Z.plates),
                                   distribution.plates_from_parent(4, v.plates)),
                 distribution,
-                cls._statistics,
-                parent_statistics)
+                cls._moments,
+                parent_moments)
     
 
 
@@ -1518,8 +1517,8 @@ class _MarkovChainToGaussian(Deterministic):
     This node is deterministic.
     """
 
-    _statistics = GaussianStatistics(1)
-    _parent_statistics = (GaussianMarkovChainStatistics(),)
+    _moments = GaussianMoments(1)
+    _parent_moments = (GaussianMarkovChainMoments(),)
 
     def __init__(self, X, **kwargs):
 

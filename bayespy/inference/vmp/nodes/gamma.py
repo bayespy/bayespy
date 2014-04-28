@@ -39,9 +39,9 @@ def diagonal(alpha):
                                    name=alpha.name + " as Wishart")
 
 
-from .node import Statistics
+from .node import Moments
 
-class GammaPriorStatistics(Statistics):
+class GammaPriorMoments(Moments):
     ndim_observations = 0
     def compute_fixed_moments(self, a):
         """ Compute moments for fixed x. """
@@ -53,7 +53,7 @@ class GammaPriorStatistics(Statistics):
         """ Compute the dimensions of phi or u. """
         return [(), ()]
 
-class GammaStatistics(Statistics):
+class GammaMoments(Moments):
     ndim_observations = 0
     def compute_fixed_moments(self, x):
         """ Compute moments for fixed x. """
@@ -113,9 +113,9 @@ class Gamma(ExponentialFamily):
 
     dims = ( (), () )
     _distribution = GammaDistribution()
-    _statistics = GammaStatistics()
-    _parent_statistics = (GammaPriorStatistics(),
-                          GammaStatistics())
+    _moments = GammaMoments()
+    _parent_moments = (GammaPriorMoments(),
+                       GammaMoments())
     
     def __init__(self, a, b, **kwargs):
         super().__init__(a, b, **kwargs)

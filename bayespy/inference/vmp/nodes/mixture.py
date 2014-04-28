@@ -36,7 +36,7 @@ from .expfamily import ExponentialFamily, \
                        useconstructor
                        
 from .categorical import Categorical, \
-                         CategoricalStatistics
+                         CategoricalMoments
 
 class MixtureDistribution(ExponentialFamilyDistribution):
 
@@ -303,13 +303,13 @@ class Mixture(ExponentialFamily):
     @classmethod
     def _constructor(cls, z, node_class, *args, cluster_plate=-1, plates=None, **kwargs):
         """
-        Constructs distribution and statistics objects.
+        Constructs distribution and moments objects.
         """
         if cluster_plate >= 0:
             raise ValueError("Cluster plate axis must be negative")
         
         # Get the stuff for the mixed distribution
-        (dims, mixture_plates, distribution, statistics, parent_statistics) = \
+        (dims, mixture_plates, distribution, moments, parent_moments) = \
           node_class._constructor(*args)
 
         # TODO/FIXME: Constant (non-node, numeric) z is a bit
@@ -328,7 +328,7 @@ class Mixture(ExponentialFamily):
                                       "not yet implemented")
             
         # Convert a node to get the number of clusters
-        z = z._convert(CategoricalStatistics)
+        z = z._convert(CategoricalMoments)
         K = z.dims[0][0]
 
         # Check that at least one of the parents has the cluster plate axis
@@ -346,13 +346,13 @@ class Mixture(ExponentialFamily):
         distribution = MixtureDistribution(distribution, cluster_plate, K)
 
         # Add cluster assignments to parents
-        parent_statistics = (CategoricalStatistics(K),) + parent_statistics
+        parent_moments = (CategoricalMoments(K),) + parent_moments
 
         return (dims,
                 plates,
                 distribution, 
-                statistics, 
-                parent_statistics)
+                moments, 
+                parent_moments)
 
     def integrated_logpdf_from_parents(self, x, index):
 
@@ -372,7 +372,7 @@ class Mixture(ExponentialFamily):
             # Add the cluster axis to x:
             # Shape(x) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
             cluster_axis = self.cluster_plate - \
-                           self._statistics.ndim_observations
+                           self._moments.ndim_observations
             x = np.expand_dims(x, axis=cluster_axis)
 
             u_parents = self._message_from_parents()

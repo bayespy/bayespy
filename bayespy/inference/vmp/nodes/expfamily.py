@@ -80,8 +80,8 @@ def useconstructor(__init__):
     def constructor_decorator(self, *args, **kwargs):
         if (self.dims is None or
             self._distribution is None or
-            self._statistics is None or 
-            self._parent_statistics is None):
+            self._moments is None or 
+            self._parent_moments is None):
 
             (dims, plates, dist, stats, pstats) = \
               self._constructor(*args, **kwargs)
@@ -90,10 +90,10 @@ def useconstructor(__init__):
                 self.dims = dims
             if self._distribution is None:
                 self._distribution = dist
-            if self._statistics is None:
-                self._statistics = stats
-            if self._parent_statistics is None:
-                self._parent_statistics = pstats
+            if self._moments is None:
+                self._moments = stats
+            if self._parent_moments is None:
+                self._parent_moments = pstats
 
         __init__(self, *args, **kwargs)
 
@@ -145,17 +145,17 @@ class ExponentialFamily(Stochastic):
     @classmethod
     def _constructor(cls, *parents, initialize=True, plates=None, **kwargs):
         """
-        Constructs distribution and statistics objects.
+        Constructs distribution and moments objects.
 
         If __init__ uses useconstructor decorator, this method is called to
-        construct distribution and statistics objects.
+        construct distribution and moments objects.
 
         The method is given the same inputs as __init__. For some nodes, some of
         these can't be "static" class attributes, then the node class must
         overwrite this method to construct the objects manually.
 
         The point of distribution class is to move general distribution but
-        not-node specific code. The point of statistics class is to define the
+        not-node specific code. The point of moments class is to define the
         messaging protocols.
         """
         parent_plates = [cls._distribution.plates_from_parent(ind, parent.plates)
@@ -163,8 +163,8 @@ class ExponentialFamily(Stochastic):
         return (cls.dims,
                 cls._total_plates(plates, *parent_plates),
                 cls._distribution, 
-                cls._statistics, 
-                cls._parent_statistics)
+                cls._moments, 
+                cls._parent_moments)
 
     def initialize_from_prior(self):
         if not np.all(self.observed):
@@ -191,7 +191,7 @@ class ExponentialFamily(Stochastic):
         #u_parents = self.compute_fixed_parameter_moments(*args)
         u_parents = list()
         for (ind, x) in enumerate(args):
-            distribution = self._parent_statistics[ind]
+            distribution = self._parent_moments[ind]
             u = distribution.compute_fixed_moments(np.asanyarray(x))
             u_parents.append(u)
         # Update natural parameters
@@ -211,7 +211,7 @@ class ExponentialFamily(Stochastic):
                               np.shape(x),
                               self.plates + self._distribution.shape_of_value(self.dims)))
         mask = np.logical_not(self.observed)
-        u = self._statistics.compute_fixed_moments(x)
+        u = self._moments.compute_fixed_moments(x)
         self._set_moments_and_cgf(u, np.inf, mask=mask)
 
     def initialize_from_random(self):

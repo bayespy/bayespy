@@ -26,12 +26,12 @@ import numpy as np
 from .expfamily import ExponentialFamily
 from .expfamily import ExponentialFamilyDistribution
 from .expfamily import useconstructor
-from .dirichlet import Dirichlet, DirichletStatistics
-from .node import Statistics, ensureparents
+from .dirichlet import Dirichlet, DirichletMoments
+from .node import Moments, ensureparents
 
 from bayespy.utils import random
 
-class CategoricalStatistics(Statistics):
+class CategoricalMoments(Moments):
     ndim_observations = 0
     
     def __init__(self, categories):
@@ -109,7 +109,7 @@ class CategoricalDistribution(ExponentialFamilyDistribution):
 
 class Categorical(ExponentialFamily):
     
-    _parent_statistics = (DirichletStatistics(),)
+    _parent_moments = (DirichletMoments(),)
 
     @useconstructor
     def __init__(self, p, **kwargs):
@@ -120,11 +120,11 @@ class Categorical(ExponentialFamily):
     @ensureparents
     def _constructor(cls, p, plates=None, **kwargs):
         """
-        Constructs distribution and statistics objects.
+        Constructs distribution and moments objects.
 
         This method is called if useconstructor decorator is used for __init__.
         
-        Becase the distribution and statistics object depend on the number of
+        Becase the distribution and moments object depend on the number of
         categories, that is, they depend on the parent node, this method can be
         used to construct those objects.
         """
@@ -132,15 +132,15 @@ class Categorical(ExponentialFamily):
         # Get the number of categories
         D = p.dims[0][0]
 
-        statistics = CategoricalStatistics(D)
+        moments = CategoricalMoments(D)
         distribution = CategoricalDistribution(D)
 
         return (( (D,), ),
                 cls._total_plates(plates, 
                                   distribution.plates_from_parent(0, p.plates)),
                 distribution, 
-                statistics, 
-                cls._parent_statistics)
+                moments, 
+                cls._parent_moments)
 
     def random(self):
         logp = self.phi[0]

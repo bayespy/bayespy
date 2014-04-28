@@ -32,7 +32,7 @@ import scipy
 
 from numpy import testing
 
-from ..node import Node, Statistics
+from ..node import Node, Moments
 from ..deterministic import tile
 
 from bayespy import utils
@@ -43,7 +43,7 @@ class TestTile(unittest.TestCase):
                                   dims=None, plates=None):
         # Set up the dummy model
         class Dummy(Node):
-            _statistics = Statistics()
+            _moments = Moments()
             def get_moments(self):
                 return u_parent
 
@@ -156,7 +156,7 @@ class TestTile(unittest.TestCase):
                                 plates_children=None):
         # Set up the dummy model
         class Dummy(Node):
-            _statistics = Statistics()
+            _moments = Moments()
         X = Dummy(dims=dims, plates=plates_parent)
         Y = tile(X, tiles)
 
@@ -270,7 +270,7 @@ class TestTile(unittest.TestCase):
                              plates_children=None):
         # Set up the dummy model
         class Dummy(Node):
-            _statistics = Statistics()
+            _moments = Moments()
         X = Dummy(dims=[()], plates=plates_parent)
         Y = tile(X, tiles)
 

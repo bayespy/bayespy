@@ -27,7 +27,7 @@ from bayespy.utils import utils
 
 from .node import Node
 from .deterministic import Deterministic
-from .gaussian import Gaussian, GaussianStatistics
+from .gaussian import Gaussian, GaussianMoments
 
 
 class SumMultiply(Deterministic):
@@ -96,8 +96,6 @@ class SumMultiply(Deterministic):
     operation. This same effect applies also to numpy.einsum in general.
     """
 
-    #_statistics_class = GaussianStatistics
-
     def __init__(self, *args, iterator_axis=None, **kwargs):
         """
         SumMultiply(Node1, map1, Node2, map2, ..., NodeN, mapN [, map_out])
@@ -163,17 +161,17 @@ class SumMultiply(Deterministic):
         full_keyset = list(set(full_keyset))
 
         # Input and output messages are Gaussian
-        self._statistics = GaussianStatistics(len(keys_out))
-        self._parent_statistics = [GaussianStatistics(len(keyset))
-                                   for keyset in keysets]
+        self._moments = GaussianMoments(len(keys_out))
+        self._parent_moments = [GaussianMoments(len(keyset))
+                                for keyset in keysets]
         
         #
         # Check the validity of each node
         #
         for n in range(len(nodes)):
             # Convert constant arrays to constant nodes
-            nodes[n] = self._ensure_statistics(nodes[n], 
-                                               self._parent_statistics[n])
+            nodes[n] = self._ensure_moments(nodes[n], 
+                                            self._parent_moments[n])
             # Check that the maps and the size of the variable are consistent
             if len(nodes[n].dims[0]) != len(keysets[n]):
                 raise ValueError("Wrong number of keys (%d) for the node "
@@ -237,9 +235,6 @@ class SumMultiply(Deterministic):
         self.out_keys = [full_keyset.index(key) for key in keys_out]
         self.in_keys = [ [full_keyset.index(key) for key in keyset]
                          for keyset in keysets ]
-
-        #self._parent_statistics_class = len(nodes) * (Gaussian._statistics_class,)
-
 
         super().__init__(*nodes,
                          dims=(tuple(dim0),tuple(dim1)),

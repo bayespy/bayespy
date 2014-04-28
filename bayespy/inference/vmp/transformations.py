@@ -30,7 +30,7 @@ from bayespy.utils.linalg import dot, tracedot
 
 from .nodes import gaussian
 
-from .nodes.categorical import CategoricalStatistics
+from .nodes.categorical import CategoricalMoments
 
 class RotationOptimizer():
 
@@ -1369,7 +1369,7 @@ class RotateSwitchingMarkovChain(RotateGaussianMarkovChain):
     def __init__(self, X, B, Z, B_rotator):
         self.X_node = X
         self.B_node = B
-        self.Z_node = Z._convert(CategoricalStatistics)
+        self.Z_node = Z._convert(CategoricalMoments)
         self.B_rotator = B_rotator
 
         (N,D) = self.X_node.dims[0]

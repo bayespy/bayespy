@@ -51,7 +51,7 @@ from bayespy.utils import random
 
 from bayespy.inference.vmp.vmp import VB
 from bayespy.inference.vmp import transformations
-from bayespy.inference.vmp.nodes.gaussian import GaussianStatistics
+from bayespy.inference.vmp.nodes.gaussian import GaussianMoments
 
 import bayespy.plot.plotting as bpplt
 
@@ -135,7 +135,7 @@ def model(M, N, D, K):
     X = VaryingGaussianMarkovChain(np.zeros(D),         # mean of x0
                                    1e-3*np.identity(D), # prec of x0
                                    A,                   # dynamics matrices
-                                   S._convert(GaussianStatistics)[1:], # temporal weights
+                                   S._convert(GaussianMoments)[1:], # temporal weights
                                    np.ones(D),          # innovation
                                    n=N,                 # time instances
                                    name='X',
@@ -232,7 +232,7 @@ def infer(y, D, K,
                                                       precompute=precompute)
         rotX_init = transformations.RotateVaryingMarkovChain(Q['X'], 
                                                              Q['A'], 
-                                                             Q['S']._convert(GaussianStatistics)[...,1:,None], 
+                                                             Q['S']._convert(GaussianMoments)[...,1:,None], 
                                                              rotA_init)
         rotC_init = transformations.RotateGaussianARD(Q['C'],
                                                       axis=0,
@@ -246,7 +246,7 @@ def infer(y, D, K,
                                                  precompute=precompute)
         rotX = transformations.RotateVaryingMarkovChain(Q['X'], 
                                                         Q['A'], 
-                                                        Q['S']._convert(GaussianStatistics)[...,1:,None], 
+                                                        Q['S']._convert(GaussianMoments)[...,1:,None], 
                                                         rotA)
         rotC = transformations.RotateGaussianARD(Q['C'],
                                                  Q['gamma'],

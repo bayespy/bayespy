@@ -33,7 +33,7 @@ import scipy
 
 from numpy import testing
 
-from ..node import Node, Statistics
+from ..node import Node, Moments
 
 from ...vmp import VB
 
@@ -52,9 +52,9 @@ class TestNode(unittest.TestCase):
 
         # Set up the dummy model
         class Dummy(Node):
-            _statistics = Statistics()
+            _moments = Moments()
             def __init__(self, *args, **kwargs):
-                self._parent_statistics = len(args)*(Statistics(),)
+                self._parent_moments = len(args)*(Moments(),)
                 super().__init__(*args, **kwargs)
             def _get_message_and_mask_to_parent(self, index):
                 return ([msg], mask)
@@ -239,7 +239,7 @@ class TestSlice(utils.TestCase):
         """
 
         class MyNode(Node):
-            _statistics = Statistics()
+            _moments = Moments()
 
         # Integer index
         X = MyNode(plates=(3,4), dims=((),))
@@ -401,8 +401,8 @@ class TestSlice(utils.TestCase):
         """
 
         class DummyNode(Node):
-            _statistics = Statistics()
-            _parent_statistics = (Statistics(),)
+            _moments = Moments()
+            _parent_moments = (Moments(),)
             def __init__(self, u, **kwargs):
                 self.u = u
                 super().__init__(**kwargs)
@@ -564,11 +564,11 @@ class TestSlice(utils.TestCase):
         """
 
         class ParentNode(Node):
-            _statistics = Statistics()
+            _moments = Moments()
             
         class ChildNode(Node):
-            _statistics = Statistics()
-            _parent_statistics = (Statistics(),)
+            _moments = Moments()
+            _parent_moments = (Moments(),)
             def __init__(self, X, m, mask, **kwargs):
                 super().__init__(X, **kwargs)
                 self.m = m

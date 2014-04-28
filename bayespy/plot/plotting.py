@@ -31,8 +31,8 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 #from matplotlib.pyplot import *
 
-from bayespy.inference.vmp.nodes.categorical import CategoricalStatistics
-from bayespy.inference.vmp.nodes.gaussian import GaussianStatistics
+from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
+from bayespy.inference.vmp.nodes.gaussian import GaussianMoments
 
 from bayespy.utils import utils
 
@@ -52,7 +52,7 @@ def timeseries_gaussian(X, axis=-1, scale=2):
     axis : int
         The index of the time axis.
     """
-    X = X._convert(GaussianStatistics)
+    X = X._convert(GaussianMoments)
     u_X = X.get_moments()
     x = u_X[0]
     xx = u_X[1]
@@ -306,7 +306,7 @@ def gaussian_array(X, rows=-2, cols=-1, scale=1):
 def timeseries_categorical_mc(Z):
 
     # Make sure that the node is categorical
-    Z = Z._convert(CategoricalStatistics)
+    Z = Z._convert(CategoricalMoments)
 
     # Get expectations (and broadcast explicitly)
     z = Z._message_to_child()[0] * np.ones(Z.get_shape(0))

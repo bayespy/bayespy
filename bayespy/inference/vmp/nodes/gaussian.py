@@ -30,19 +30,19 @@ from bayespy.utils.linalg import dot, mvdot
 from .expfamily import ExponentialFamily
 from .expfamily import ExponentialFamilyDistribution
 from .expfamily import useconstructor
-from .wishart import Wishart, WishartStatistics
-from .gamma import Gamma, GammaStatistics
+from .wishart import Wishart, WishartMoments
+from .gamma import Gamma, GammaMoments
 from .deterministic import Deterministic
 
-from .node import Statistics, ensureparents
+from .node import Moments, ensureparents
 
-class GaussianStatistics(Statistics):
+class GaussianMoments(Moments):
     def __init__(self, ndim):
         self.ndim = ndim
         self.ndim_observations = ndim
 
     def compute_fixed_moments(self, x):
-        """ Compute Gaussian statistics for fixed x. """
+        """ Compute Gaussian moments for fixed x. """
         x = utils.utils.atleast_nd(x, self.ndim)
         return [x, utils.linalg.outer(x, x, ndim=self.ndim)]
 
@@ -231,9 +231,9 @@ class Gaussian(ExponentialFamily):
     """
 
     _distribution = GaussianDistribution()
-    _statistics = GaussianStatistics(1)
-    _parent_statistics = (GaussianStatistics(1),
-                          WishartStatistics())
+    _moments = GaussianMoments(1)
+    _parent_moments = (GaussianMoments(1),
+                       WishartMoments())
     
     @useconstructor
     def __init__(self, mu, Lambda, **kwargs):
@@ -243,7 +243,7 @@ class Gaussian(ExponentialFamily):
     @ensureparents
     def _constructor(cls, mu, Lambda, plates=None, **kwargs):
         """
-        Constructs distribution and statistics objects.
+        Constructs distribution and moments objects.
         """
         D_mu = mu.dims[0][0]
         D_Lambda = Lambda.dims[0][0]
@@ -265,8 +265,8 @@ class Gaussian(ExponentialFamily):
                                   cls._distribution.plates_from_parent(0, mu.plates),
                                   cls._distribution.plates_from_parent(1, Lambda.plates)),
                 cls._distribution, 
-                cls._statistics, 
-                cls._parent_statistics)
+                cls._moments, 
+                cls._parent_moments)
 
 
     def random(self):
@@ -751,17 +751,17 @@ class GaussianARD(ExponentialFamily):
     @classmethod
     def _constructor(cls, mu, alpha, ndim=None, shape=None, plates=None, **kwargs):
         """
-        Constructs distribution and statistics objects.
+        Constructs distribution and moments objects.
 
         If __init__ uses useconstructor decorator, this method is called to
-        construct distribution and statistics objects.
+        construct distribution and moments objects.
 
         The method is given the same inputs as __init__. For some nodes, some of
         these can't be "static" class attributes, then the node class must
         overwrite this method to construct the objects manually.
 
         The point of distribution class is to move general distribution but
-        not-node specific code. The point of statistics class is to define the
+        not-node specific code. The point of moments class is to define the
         messaging protocols.
         """
         # Check consistency
@@ -819,14 +819,14 @@ class GaussianARD(ExponentialFamily):
             shape_mu = shape
         ndim_mu = len(shape_mu)
     
-        statistics = GaussianStatistics(ndim)
-        parent_statistics = (GaussianStatistics(ndim_mu),
-                             GammaStatistics())
+        moments = GaussianMoments(ndim)
+        parent_moments = (GaussianMoments(ndim_mu),
+                          GammaMoments())
         distribution = GaussianARDDistribution(shape, ndim_mu)
 
         # Convert parents to proper nodes
-        mu = cls._ensure_statistics(mu, parent_statistics[0])
-        alpha = cls._ensure_statistics(alpha, parent_statistics[1])
+        mu = cls._ensure_moments(mu, parent_moments[0])
+        alpha = cls._ensure_moments(alpha, parent_moments[1])
 
         # Check consistency with respect to parent mu
         shape_mean = shape[-ndim_mu:]
@@ -863,7 +863,7 @@ class GaussianARD(ExponentialFamily):
                                    distribution.plates_from_parent(0, mu.plates),
                                    distribution.plates_from_parent(1, alpha.plates))
 
-        return (dims, plates, distribution, statistics, parent_statistics)
+        return (dims, plates, distribution, moments, parent_moments)
         
     def initialize_from_mean_and_covariance(self, mu, Cov):
         ndim = len(self._distribution.shape)

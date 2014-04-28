@@ -27,7 +27,7 @@ import numpy as np
 
 from bayespy.utils import utils
 
-from .node import Node, Statistics
+from .node import Node, Moments
 
 class Deterministic(Node):
     """
@@ -156,10 +156,10 @@ def tile(X, tiles):
     
     class _Tile(Deterministic):
 
-        _parent_statistics = (Statistics(),)
+        _parent_moments = (Moments(),)
         
         def __init__(self, X, **kwargs):
-            self._statistics = X._statistics
+            self._moments = X._moments
             super().__init__(X, dims=X.dims, **kwargs)
     
         def _plates_to_parent(self, index):

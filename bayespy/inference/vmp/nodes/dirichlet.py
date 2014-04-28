@@ -26,10 +26,10 @@ import scipy.special as special
 
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
-from .node import Node, Statistics, ensureparents
+from .node import Node, Moments, ensureparents
 
 
-class DirichletPriorStatistics(Statistics):
+class DirichletPriorMoments(Moments):
     # Number of trailing axes for variable dimensions in
     # observations. The other axes correspond to plates.
     ndim_observations = 1
@@ -46,7 +46,7 @@ class DirichletPriorStatistics(Statistics):
         d = np.shape(alpha)[-1]
         return [(d,), ()]
 
-class DirichletStatistics(Statistics):
+class DirichletMoments(Moments):
 
     ndim_observations = 1
     
@@ -102,8 +102,8 @@ class DirichletDistribution(ExponentialFamilyDistribution):
 
 class Dirichlet(ExponentialFamily):
 
-    _statistics = DirichletStatistics()
-    _parent_statistics = (DirichletPriorStatistics(),)
+    _moments = DirichletMoments()
+    _parent_moments = (DirichletPriorMoments(),)
     _distribution = DirichletDistribution()
     
     def __init__(self, alpha, **kwargs):
@@ -113,7 +113,7 @@ class Dirichlet(ExponentialFamily):
     @ensureparents
     def _constructor(cls, alpha, plates=None, **kwargs):
         """
-        Constructs distribution and statistics objects.
+        Constructs distribution and moments objects.
         """
         # Number of categories
         D = alpha.dims[0][0]
@@ -121,8 +121,8 @@ class Dirichlet(ExponentialFamily):
         return ( ( (D,), ),
                  cls._total_plates(plates, alpha.plates),
                  cls._distribution, 
-                 cls._statistics, 
-                 cls._parent_statistics)
+                 cls._moments, 
+                 cls._parent_moments)
 
     def random(self):
         raise NotImplementedError()

@@ -74,7 +74,7 @@ class TestMixture(TestCase):
         K = 3
 
         #
-        # Estimate statistics from parents only
+        # Estimate moments from parents only
         #
 
         # Simple case
@@ -110,7 +110,7 @@ class TestMixture(TestCase):
                             2**2+1)
 
         #
-        # Estimate statistics with observed children
+        # Estimate moments with observed children
         #
         
         pass

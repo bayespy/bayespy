@@ -31,8 +31,8 @@ from .expfamily import ExponentialFamilyDistribution
 from .expfamily import useconstructor
 from .constant import Constant
 
-from .node import Statistics, Node
-class WishartPriorStatistics(Statistics):
+from .node import Moments, Node
+class WishartPriorMoments(Moments):
     ndim_observations = 0
     def __init__(self, k):
         self.k = k
@@ -48,7 +48,7 @@ class WishartPriorStatistics(Statistics):
         """ Compute the dimensions of phi or u. """
         return ( (), () )
 
-class WishartStatistics(Statistics):
+class WishartMoments(Moments):
     ndim_observations = 2
     def compute_fixed_moments(self, Lambda):
         """ Compute moments for fixed x. """
@@ -122,7 +122,7 @@ class WishartDistribution(ExponentialFamilyDistribution):
 class Wishart(ExponentialFamily):
 
     _distribution = WishartDistribution()
-    _statistics = WishartStatistics()
+    _moments = WishartMoments()
 
     @useconstructor
     def __init__(self, n, V, **kwargs):
@@ -131,29 +131,29 @@ class Wishart(ExponentialFamily):
     @classmethod
     def _constructor(cls, n, V, plates=None, **kwargs):
         """
-        Constructs distribution and statistics objects.
+        Constructs distribution and moments objects.
         """
 
         # Make V a proper parent node and get the dimensionality of the matrix
-        V = cls._ensure_statistics(V, WishartStatistics())
+        V = cls._ensure_moments(V, WishartMoments())
         k = V.dims[0][-1]
 
         # Parent node message types
-        parent_statistics = (WishartPriorStatistics(k), 
-                             WishartStatistics())
+        parent_moments = (WishartPriorMoments(k), 
+                          WishartMoments())
 
         # Dimensionality of the natural parameters
         dims = ( (k,k), () )
 
-        n = cls._ensure_statistics(n, parent_statistics[0])
+        n = cls._ensure_moments(n, parent_moments[0])
         
         return (dims, 
                 cls._total_plates(plates,
                                   cls._distribution.plates_from_parent(0, n.plates),
                                   cls._distribution.plates_from_parent(1, V.plates)),
                 cls._distribution, 
-                cls._statistics, 
-                parent_statistics)
+                cls._moments, 
+                parent_moments)
 
     def show(self):
         print("%s ~ Wishart(n, A)" % self.name)

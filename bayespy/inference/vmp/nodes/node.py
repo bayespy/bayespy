@@ -62,9 +62,9 @@ def message_sum_multiply(plates_parent, dims_parent, *arrays):
     m = utils.squeeze_to_dim(m, len(shape_parent))
     return m
 
-class Statistics():
+class Moments():
     """
-    Base class for defining sufficient statistic for nodes.
+    Base class for defining the expectation of the sufficient statistics.
 
     The benefits:
 
@@ -88,20 +88,20 @@ class Statistics():
     # Overwrite this
     ndim_observations = None
     
-    def converter(self, statistics_class):
+    def converter(self, moments_class):
         """
-        Returns a node class which converts the node's statistics to another
+        Returns a node class which converts the node's moments to another
         """
-        # This method must take statistics object instead of class because, for
+        # This method must take moments object instead of class because, for
         # instance, one could want to convert gamma to wishart with specific
         # ndim? Or maybe that is in any case too complex so it would have to be
         # handled manually.
-        if isinstance(self, statistics_class):
+        if isinstance(self, moments_class):
             return lambda X: X
 
         raise Exception("No conversion defined from %s to %s"
                         % (self.__class__.__name__,
-                           statistics_class.__name__))
+                           moments_class.__name__))
 
     def compute_fixed_moments(self, x):
         # This method can't be static because the computation of the moments may
@@ -122,8 +122,8 @@ def ensureparents(func):
         # Convert parents to proper nodes
         parents = list(parents)
         for (ind, parent) in enumerate(parents):
-            parents[ind] = self._ensure_statistics(parent, 
-                                                   self._parent_statistics[ind])
+            parents[ind] = self._ensure_moments(parent, 
+                                                self._parent_moments[ind])
         # Run the function
         return func(self, *parents, **kwargs)
     
@@ -154,10 +154,10 @@ class Node():
        _plates_from_parent(self, index)
     """
 
-    # These are objects of the _parent_statistics_class. If the default way of
+    # These are objects of the _parent_moments_class. If the default way of
     # creating them is not correct, write your own creation code.
-    _statistics = None
-    _parent_statistics = None
+    _moments = None
+    _parent_moments = None
 
     @ensureparents
     def __init__(self, *parents, dims=None, plates=None, name="", 
@@ -210,14 +210,14 @@ class Node():
         
 
     @staticmethod
-    def _ensure_statistics(node, statistics):
+    def _ensure_moments(node, moments):
         if isinstance(node, Node):
             # Convert to correct type
-            return node._convert(statistics.__class__)
+            return node._convert(moments.__class__)
 
         # Convert to constant node
         from .constant import Constant
-        return Constant(statistics, node)
+        return Constant(moments, node)
 
     def _plates_to_parent(self, index):
         # Sub-classes may want to overwrite this if they manipulate plates
@@ -578,13 +578,11 @@ class Node():
             raise Exception("No plotter defined, can not plot")
         return
 
-    #def _convert(self, node_class):
-    #    return self._statistics._convert_node(node_class)
-    def _convert(self, statistics_class):
-        converter = self._statistics.converter(statistics_class)
+    def _convert(self, moments_class):
+        converter = self._moments.converter(moments_class)
         return converter(self)
     ## def convert(self, node_class):
-    ##     return self._convert(node_class._statistics_class)
+    ##     return self._convert(node_class._moments_class)
     
 
 
@@ -616,13 +614,11 @@ class Slice(Deterministic):
     http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#basic-slicing
     """
 
-    _parent_statistics = (Statistics(),)
-    #_parent_statistics_class = (Statistics,)
+    _parent_moments = (Moments(),)
     
     def __init__(self, X, slices, **kwargs):
 
-        self._statistics = X._statistics
-        #self._statistics_class = X._statistics_class
+        self._moments = X._moments
 
         # Force a list
         if not isinstance(slices, tuple):

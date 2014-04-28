@@ -27,15 +27,15 @@ from .node import Node
 
 class Constant(Node):
 
-    def __init__(self, statistics, x, **kwargs):
-        self._statistics = statistics
+    def __init__(self, moments, x, **kwargs):
+        self._moments = moments
         x = np.asanyarray(x)
         # Compute moments
-        self.u = self._statistics.compute_fixed_moments(x)
+        self.u = self._moments.compute_fixed_moments(x)
         # Dimensions of the moments
-        dims = self._statistics.compute_dims_from_values(x)
+        dims = self._moments.compute_dims_from_values(x)
         # Number of plate axes
-        plates_ndim = np.ndim(x) - self._statistics.ndim_observations
+        plates_ndim = np.ndim(x) - self._moments.ndim_observations
         plates = np.shape(x)[:plates_ndim]
         # Parent constructor
         super().__init__(dims=dims, plates=plates, **kwargs)
