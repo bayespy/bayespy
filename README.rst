@@ -1,15 +1,6 @@
 BayesPy - Bayesian Python
 =========================
 
-.. image:: https://travis-ci.org/bayespy/bayespy.png?branch=master
-   :target: https://travis-ci.org/bayespy/bayespy/
-
-.. image:: https://coveralls.io/repos/bayespy/bayespy/badge.png?branch=master
-   :target: https://coveralls.io/r/bayespy/bayespy?branch=master
-
-.. image:: https://pypip.in/v/bayespy/badge.png
-   :target: https://pypi.python.org/pypi/bayespy
-
 BayesPy provides tools for Bayesian inference with Python.  The user
 constructs a model as a Bayesian network, observes data and runs
 posterior inference.  The goal is to provide a tool which is
@@ -45,6 +36,23 @@ license or visit http://www.gnu.org/copyleft/gpl.html.
 
 * Author: Jaakko Luttinen jaakko.luttinen@iki.fi
 
+* Latest release: 
+
+  .. image:: https://pypip.in/v/bayespy/badge.png
+     :target: https://pypi.python.org/pypi/bayespy
+
+* Build status:
+  
+  .. image:: https://travis-ci.org/bayespy/bayespy.png?branch=master
+     :target: https://travis-ci.org/bayespy/bayespy/
+
+* Unit test coverage:
+
+  .. image:: https://coveralls.io/repos/bayespy/bayespy/badge.png?branch=master
+     :target: https://coveralls.io/r/bayespy/bayespy?branch=master
+
+
+
 Similar projects
 ----------------
 
@@ -73,4 +81,17 @@ It is released under the Academic Free License.
 `OpenBUGS <http://www.openbugs.info>`_ (http://www.openbugs.info) is a
 software package for performing Bayesian inference using Gibbs
 sampling.  It is released under the GNU General Public License.
+
+`Dimple <http://dimple.probprog.org/>`_ (http://dimple.probprog.org/) provides
+Gibbs sampling, belief propagation and a few other inference algorithms for
+Matlab and Java.  It is released under the Apache License.
+
+`Stan <http://mc-stan.org/>`_ (http://mc-stan.org/) provides inference using
+MCMC with an interface for R and Python.  It is released under the New BSD
+License.
+
+`PBNT - Python Bayesian Network Toolbox <http://pbnt.berlios.de/>`_
+(http://pbnt.berlios.de/) is Bayesian network library in Python supporting
+static networks with discrete variables.  There was no information about the
+license.
 
