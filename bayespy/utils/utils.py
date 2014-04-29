@@ -371,8 +371,8 @@ def is_numeric(a):
             isinstance(a, list) or
             isinstance(a, np.ndarray))
 
-def is_integer(x):
-    return isinstance(x, int)
+def isinteger(x):
+    return issubclass(np.asanyarray(x).dtype.type, np.integer)
 
 def is_string(s):
     return isinstance(s, str)

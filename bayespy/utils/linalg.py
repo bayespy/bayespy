@@ -244,7 +244,7 @@ def outer(A, B, ndim=1):
     B have shapes (...,N1,N2,N3) and (...,M1,M2,M3), the result has shape
     (...,N1,M1,N2,M2,N3,M3).
     """
-    if not utils.is_integer(ndim) or ndim < 0:
+    if not isinstance(ndim, int) or ndim < 0:
         raise ValueError('ndim must be non-negative integer')
     if ndim > 0:
         if ndim > np.ndim(A):
