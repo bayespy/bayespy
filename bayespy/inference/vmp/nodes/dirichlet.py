@@ -30,27 +30,49 @@ from .node import Node, Moments, ensureparents
 
 
 class DirichletPriorMoments(Moments):
-    # Number of trailing axes for variable dimensions in
-    # observations. The other axes correspond to plates.
+    """
+    Class for the moments of Dirichlet conjugate-prior variables.
+    """
+
     ndim_observations = 1
 
+    
     def compute_fixed_moments(self, alpha):
-        """ Compute moments for fixed x. """
+        """
+        Compute the moments for a fixed value
+        """
+
+        if np.any(alpha < 0):
+            raise ValueError("The prior sample sizes must be positive")
+        
         gammaln_sum = special.gammaln(np.sum(alpha, axis=-1))
         sum_gammaln = np.sum(special.gammaln(alpha), axis=-1)
         z = gammaln_sum - sum_gammaln
         return [alpha, z]
 
+    
     def compute_dims_from_values(self, alpha):
-        """ Compute the dimensions of phi and u. """
+        """
+        Return the shape of the moments for a fixed value.
+        """
+        if np.ndim(alpha) < 1:
+            raise ValueError("The array must be at least 1-dimensional array.")
         d = np.shape(alpha)[-1]
         return [(d,), ()]
 
+    
 class DirichletMoments(Moments):
+    """
+    Class for the moments of Dirichlet variables.
+    """
 
     ndim_observations = 1
+
     
     def compute_fixed_moments(self, p):
+        """
+        Compute the moments for a fixed value
+        """
         # Check that probabilities are non-negative
         if np.any(np.asanyarray(p)<0):
             raise ValueError("Probabilities may not be negative")
@@ -60,24 +82,43 @@ class DirichletMoments(Moments):
         logp = np.log(p)
         u = [logp]
         return u
+
     
     def compute_dims_from_values(self, x):
+        """
+        Return the shape of the moments for a fixed value.
+        """
         D = np.shape(x)[-1]
         return ( (D,), )
 
 
 class DirichletDistribution(ExponentialFamilyDistribution):
+    """
+    Class for the VMP formulas of Dirichlet variables.
+    """
 
     ndims = (1,)
     ndims_parents = ( (1,), )
 
-    def compute_message_to_parent(self, parent, index, u_self, *u_parents):
+    
+    def compute_message_to_parent(self, parent, index, u_self, u_alpha):
+        """
+        Compute the message to a parent node.
+        """
         raise NotImplementedError()
 
-    def compute_phi_from_parents(self, *u_parents, mask=True):
-        return [u_parents[0][0]]
+    
+    def compute_phi_from_parents(self, u_alpha, mask=True):
+        """
+        Compute the natural parameter vector given parent moments.
+        """
+        return [u_alpha[0]]
 
+    
     def compute_moments_and_cgf(self, phi, mask=True):
+        """
+        Compute the moments and :math:`g(\phi)`.
+        """
         sum_gammaln = np.sum(special.gammaln(phi[0]), axis=-1)
         gammaln_sum = special.gammaln(np.sum(phi[0], axis=-1))
         psi_sum = special.psi(np.sum(phi[0], axis=-1, keepdims=True))
@@ -90,24 +131,37 @@ class DirichletDistribution(ExponentialFamilyDistribution):
 
         return (u, g)
 
-    def compute_cgf_from_parents(self, *u_parents):
-        return u_parents[0][1]
-        
+    
+    def compute_cgf_from_parents(self, u_alpha):
+        """
+        Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
+        """
+        return u_alpha[1]
+
+    
     def compute_fixed_moments_and_f(self, x, mask=True):
+        """
+        Compute the moments and :math:`f(x)` for a fixed value.
+        """
         raise NotImplementedError()
 
+    
     def shape_of_value(self, dims):
+        """
+        Return the shape of realizations
+        """
         return dims[0]
 
 
 class Dirichlet(ExponentialFamily):
+    """
+    Node for Dirichlet random variables.
+    """
 
     _moments = DirichletMoments()
     _parent_moments = (DirichletPriorMoments(),)
     _distribution = DirichletDistribution()
     
-    def __init__(self, alpha, **kwargs):
-        super().__init__(alpha, **kwargs)
 
     @classmethod
     @ensureparents
@@ -124,8 +178,10 @@ class Dirichlet(ExponentialFamily):
                  cls._moments, 
                  cls._parent_moments)
 
+                 
     def random(self):
         raise NotImplementedError()
+        
 
     def show(self):
         alpha = self.phi[0]
