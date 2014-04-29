@@ -158,6 +158,7 @@ class Node():
     # creating them is not correct, write your own creation code.
     _moments = None
     _parent_moments = None
+    plates = None
 
     @ensureparents
     def __init__(self, *parents, dims=None, plates=None, name="", 
@@ -180,7 +181,8 @@ class Node():
             raise ValueError("Method _plates_from_parent returned None")
 
         # Get and validate the plates for this node
-        self.plates = self._total_plates(plates, *parent_plates)
+        if self.plates is None:
+            self.plates = self._total_plates(plates, *parent_plates)
 
         # By default, ignore all plates
         self.mask = np.array(False)

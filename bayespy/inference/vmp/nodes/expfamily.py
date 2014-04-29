@@ -94,6 +94,8 @@ def useconstructor(__init__):
                 self._moments = stats
             if self._parent_moments is None:
                 self._parent_moments = pstats
+            if self.plates is None:
+                self.plates = plates
 
         __init__(self, *args, **kwargs)
 
@@ -244,9 +246,11 @@ class ExponentialFamily(Stochastic):
             # Check that the shape is correct
             if not utils.is_shape_subset(np.shape(self.phi[i]),
                                          self.get_shape(i)):
-                raise ValueError("Incorrect shape in phi[%d]. Shape is %s but "
-                                 "it should be broadcastable to shape %s."
+                raise ValueError("Incorrect shape of phi[%d] in node class %s. "
+                                 "Shape is %s but it should be broadcastable "
+                                 "to shape %s."
                                  % (i,
+                                    self.__class__.__name__,
                                     np.shape(self.phi[i]),
                                     self.get_shape(i)))
 
