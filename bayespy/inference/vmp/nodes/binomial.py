@@ -58,7 +58,8 @@ class BinomialMoments(Moments):
         Compute the moments for a fixed value
         """
         # Make sure the values are integers in valid range
-        x = np.round(x)
+        if not utils.isinteger(x):
+            raise ValueError("Count not integer")
         if np.any(x < 0) or np.any(x >= self.N):
             raise ValueError("Invalid count")
         # Now, the moments are just the counts
