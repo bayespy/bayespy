@@ -25,14 +25,23 @@
 
 from . import *
 
+from .binomial import Binomial
+from .categorical import Categorical
+
+from .beta import Beta
+from .dirichlet import Dirichlet
+
 from .gaussian import Gaussian, GaussianARD
 from .wishart import Wishart
 from .gamma import Gamma
-from .dirichlet import Dirichlet
-from .categorical import Categorical
-from .dot import Dot, SumMultiply
-from .mixture import Mixture
+
 from .gaussian_markov_chain import GaussianMarkovChain
 from .gaussian_markov_chain import VaryingGaussianMarkovChain
 from .gaussian_markov_chain import SwitchingGaussianMarkovChain
+
 from .categorical_markov_chain import CategoricalMarkovChain
+
+from .mixture import Mixture
+
+from .dot import Dot
+from .dot import SumMultiply
