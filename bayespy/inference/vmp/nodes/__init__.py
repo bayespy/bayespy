@@ -25,6 +25,7 @@
 
 from . import *
 
+from .bernoulli import Bernoulli
 from .binomial import Binomial
 from .categorical import Categorical
 
