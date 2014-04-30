@@ -312,34 +312,20 @@ class Mixture(ExponentialFamily):
         (dims, mixture_plates, distribution, moments, parent_moments) = \
           node_class._constructor(*args)
 
-        # TODO/FIXME: Constant (non-node, numeric) z is a bit
-        # non-trivial. Constant z is an array of cluster assignments, e.g.,
-        # [2,0,2,3,1,2]. However, it is not possible to know the number of
-        # clusters from this. It could be 4 but it could be 10 as well.
-        # Thus, we can't create a constant node from z because the number of
-        # clusters is required by constant categorical. It might be possible
-        # to infer the number of clusters from the cluster_plate axis of the
-        # other parameters but that is not trivial. A simple solution is to
-        # require the user to provide the number of clusters when it can't
-        # be inferred otherwise. Anyway, this is left for future work.
-
-        if not hasattr(z, '_convert'):
-            raise NotImplementedError("Constant cluster assignments are "
-                                      "not yet implemented")
-            
-        # Convert a node to get the number of clusters
-        z = z._convert(CategoricalMoments)
-        K = z.dims[0][0]
-
         # Check that at least one of the parents has the cluster plate axis
         if len(mixture_plates) < abs(cluster_plate):
             raise ValueError("The mixed distribution does not have a plates "
                              "axis for the cluster plate axis")
-        if mixture_plates[cluster_plate] != K:
-            raise ValueError("The cluster plate axis of the mixed distribution "
-                             "has incorrect length")
+        
+        # Resolve the number of clusters
         mixture_plates = list(mixture_plates)
-        mixture_plates.pop(cluster_plate)
+        K = mixture_plates.pop(cluster_plate)
+        
+        # Convert a node to get the number of clusters
+        z = cls._ensure_moments(z, CategoricalMoments(K))
+        if z.dims[0][0] != K:
+            raise ValueError("Inconsistent number of clusters")
+
         plates = cls._total_plates(plates, mixture_plates, z.plates)
         
         # Convert the distribution to a mixture
@@ -353,6 +339,7 @@ class Mixture(ExponentialFamily):
                 distribution, 
                 moments, 
                 parent_moments)
+    
 
     def integrated_logpdf_from_parents(self, x, index):
 
