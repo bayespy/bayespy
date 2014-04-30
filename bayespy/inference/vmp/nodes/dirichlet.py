@@ -42,6 +42,8 @@ class DirichletPriorMoments(Moments):
         Compute the moments for a fixed value
         """
 
+        if np.ndim(alpha) < 1:
+            raise ValueError("The prior sample sizes must be a vector")
         if np.any(alpha < 0):
             raise ValueError("The prior sample sizes must be positive")
         
@@ -75,6 +77,8 @@ class DirichletMoments(Moments):
         """
         # Check that probabilities are non-negative
         p = np.asanyarray(p)
+        if np.ndim(p) < 1:
+            raise ValueError("Probabilities must be given as a vector")
         if np.any(p < 0) or np.any(p > 1):
             raise ValueError("Probabilities must be in range [0,1]")
         if not np.allclose(np.sum(p, axis=-1), 1.0):
