@@ -28,6 +28,7 @@ from . import *
 from .bernoulli import Bernoulli
 from .binomial import Binomial
 from .categorical import Categorical
+from .multinomial import Multinomial
 
 from .beta import Beta
 from .dirichlet import Dirichlet
