@@ -182,7 +182,9 @@ class Binomial(ExponentialFamily):
         moments = BinomialMoments(n)
         distribution = BinomialDistribution(n)
         return ( ( (), ),
-                 cls._total_plates(plates, p.plates, np.shape(n)),
+                 cls._total_plates(plates,
+                                   distribution.plates_from_parent(0,p.plates),
+                                   np.shape(n)),
                  distribution, 
                  moments, 
                  cls._parent_moments)
