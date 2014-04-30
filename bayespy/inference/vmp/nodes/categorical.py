@@ -30,6 +30,8 @@ from .dirichlet import Dirichlet, DirichletMoments
 from .node import Moments, ensureparents
 
 from bayespy.utils import random
+from bayespy.utils import utils
+
 
 class CategoricalMoments(Moments):
     ndim_observations = 0
@@ -41,17 +43,20 @@ class CategoricalMoments(Moments):
     def compute_fixed_moments(self, x):
         """ Compute u(x) and f(x) for given x. """
 
-        x = np.array(x, dtype=np.int)
+        x = np.asanyarray(x)
+        if not utils.isinteger(x):
+            raise ValueError("Values must be integers")
+        if np.any(x < 0) or np.any(x >= self.D):
+            raise ValueError("Invalid category index")
 
         u0 = np.zeros((np.size(x), self.D))
-        u0[[np.arange(np.size(x)), x]] = 1
+        u0[[np.arange(np.size(x)), np.ravel(x)]] = 1
         u0 = np.reshape(u0, np.shape(x) + (self.D,))
+
         return [u0]
 
     def compute_dims_from_values(self, x):
-        raise NotImplementedError("compute_dims_from_values not implemented "
-                                  "for %s"
-                                  % (self.__class__.__name__))
+        return ( (self.D,), )
 
 
 class CategoricalDistribution(ExponentialFamilyDistribution):
@@ -96,11 +101,17 @@ class CategoricalDistribution(ExponentialFamilyDistribution):
         """ Compute u(x) and f(x) for given x. """
 
         # TODO: You could check that x has proper dimensions
-        x = np.array(x, dtype=np.int)
+        x = np.asanyarray(x)
+        if not utils.isinteger(x):
+            raise ValueError("Values must be integers")
+        if np.any(x < 0) or np.any(x >= self.D):
+            raise ValueError("Invalid category index")
 
         u0 = np.zeros((np.size(x), self.D))
-        u0[[np.arange(np.size(x)), x]] = 1
+        u0[[np.arange(np.size(x)), np.ravel(x)]] = 1
+        u0 = np.reshape(u0, np.shape(x) + (self.D,))
         f = 0
+
         return ([u0], f)
 
     def shape_of_value(self, dims):
