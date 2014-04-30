@@ -74,8 +74,11 @@ class DirichletMoments(Moments):
         Compute the moments for a fixed value
         """
         # Check that probabilities are non-negative
-        if np.any(np.asanyarray(p)<0):
-            raise ValueError("Probabilities may not be negative")
+        p = np.asanyarray(p)
+        if np.any(p < 0) or np.any(p > 1):
+            raise ValueError("Probabilities must be in range [0,1]")
+        if not np.allclose(np.sum(p, axis=-1), 1.0):
+            raise ValueError("Probabilities must sum to one")
         # Normalize probabilities
         p = p / np.sum(p, axis=-1, keepdims=True)
         # Message is log-probabilities
@@ -88,6 +91,8 @@ class DirichletMoments(Moments):
         """
         Return the shape of the moments for a fixed value.
         """
+        if np.ndim(x) < 1:
+            raise ValueError("Probabilities must be given as a vector")
         D = np.shape(x)[-1]
         return ( (D,), )
 
