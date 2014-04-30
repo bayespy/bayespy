@@ -25,13 +25,18 @@
 
 from . import *
 
+
 from .bernoulli import Bernoulli
 from .binomial import Binomial
 from .categorical import Categorical
 from .multinomial import Multinomial
 
+from .poisson import Poisson
+
 from .beta import Beta
 from .dirichlet import Dirichlet
+
+from .exponential import Exponential
 
 from .gaussian import Gaussian, GaussianARD
 from .wishart import Wishart

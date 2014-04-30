@@ -34,20 +34,20 @@ from .expfamily import (ExponentialFamily,
 
 from .beta import BetaMoments
 
+from .poisson import PoissonMoments
+
 from .node import (Moments,
                    ensureparents)
 
 from bayespy.utils import utils
 
 
-class BinomialMoments(Moments):
+class BinomialMoments(PoissonMoments):
     """
     Class for the moments of binomial variables
     """
 
-    ndim_observations = 0
-
-
+    
     def __init__(self, N):
         self.N = N
         super().__init__()
@@ -59,12 +59,9 @@ class BinomialMoments(Moments):
         """
         # Make sure the values are integers in valid range
         x = np.asanyarray(x)
-        if not utils.isinteger(x):
-            raise ValueError("Count not integer")
-        if np.any(x < 0) or np.any(x >= self.N):
+        if np.any(x >= self.N):
             raise ValueError("Invalid count")
-        # Now, the moments are just the counts
-        return [x]
+        return super().compute_fixed_moments()
 
     
     def compute_dims_from_values(self, x):
@@ -73,7 +70,7 @@ class BinomialMoments(Moments):
 
         The realizations are scalars, thus the shape of the moment is ().
         """
-        return ( (), )
+        return super().compute_dims_from_values()
 
 
 class BinomialDistribution(ExponentialFamilyDistribution):
