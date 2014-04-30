@@ -58,6 +58,7 @@ class BinomialMoments(Moments):
         Compute the moments for a fixed value
         """
         # Make sure the values are integers in valid range
+        x = np.asanyarray(x)
         if not utils.isinteger(x):
             raise ValueError("Count not integer")
         if np.any(x < 0) or np.any(x >= self.N):
@@ -136,6 +137,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         # Make sure the values are integers in valid range
+        x = np.asanyarray(x)
         if not utils.isinteger(x):
             raise ValueError("Counts must be integer")
         if np.any(x < 0) or np.any(x >= self.N):
