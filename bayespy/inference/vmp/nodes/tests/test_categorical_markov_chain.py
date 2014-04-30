@@ -42,20 +42,20 @@ class TestCategoricalMarkovChain(utils.TestCase):
         # Plates
         #
         
-        p0 = np.random.rand(2)
-        P = np.random.rand(3, 2, 2)
+        p0 = np.random.dirichlet([1, 1])
+        P = np.random.dirichlet([1, 1], size=(3,2))
         Z = CategoricalMarkovChain(p0, P)
         self.assertEqual((), Z.plates, msg="Incorrect plates")
         self.assertEqual(((2,),(3,2,2)), Z.dims, msg="Incorrect dimensions")
         
-        p0 = np.random.rand(4, 2)
-        P = np.random.rand(3, 2, 2)
+        p0 = np.random.dirichlet([1, 1], size=(4,))
+        P = np.random.dirichlet([1, 1], size=(3,2))
         Z = CategoricalMarkovChain(p0, P)
         self.assertEqual((4,), Z.plates, msg="Incorrect plates")
         self.assertEqual(((2,),(3,2,2)), Z.dims, msg="Incorrect dimensions")
     
-        p0 = np.random.rand(2)
-        P = np.random.rand(4, 3, 2, 2)
+        p0 = np.random.dirichlet([1, 1])
+        P = np.random.dirichlet([1, 1], size=(4,3,2))
         Z = CategoricalMarkovChain(p0, P)
         self.assertEqual((4,), Z.plates, msg="Incorrect plates")
         self.assertEqual(((2,),(3,2,2)), Z.dims, msg="Incorrect dimensions")
@@ -128,26 +128,6 @@ class TestCategoricalMarkovChain(utils.TestCase):
                                [0.5, 0.0]],
                               [[0.0, 0.5],
                                [0.5, 0.0]] ])
-
-        # Unnormalized probabilities
-        p0 = np.array([2, 2])
-        P = np.array([ [[4, 4],
-                        [4, 4]],
-                       [[8, 8],
-                        [8, 8]],
-                       [[20, 20],
-                        [20, 20]] ])
-        Z = CategoricalMarkovChain(p0, P)
-        u = Z._message_to_child()
-        self.assertAllClose(u[0],
-                            [0.5, 0.5])
-        self.assertAllClose(u[1],
-                            [ [[0.25, 0.25],
-                               [0.25, 0.25]],
-                              [[0.25, 0.25],
-                               [0.25, 0.25]],
-                              [[0.25, 0.25],
-                               [0.25, 0.25]] ])
 
         # Test plates
         p0 = np.array([ [1.0, 0.0],

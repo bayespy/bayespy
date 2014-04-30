@@ -46,7 +46,7 @@ class TestMixture(TestCase):
         """
 
         # Do not accept non-negative cluster plates
-        z = Categorical(np.ones(2))
+        z = Categorical(np.random.dirichlet([1,1]))
         self.assertRaises(ValueError,
                           Mixture,
                           z,
@@ -57,7 +57,7 @@ class TestMixture(TestCase):
         
         # Try constructing a mixture without any of the parents having the
         # cluster plate axis
-        z = Categorical(np.ones(2))
+        z = Categorical(np.random.dirichlet([1,1]))
         self.assertRaises(ValueError,
                           Mixture,
                           z,
@@ -83,7 +83,7 @@ class TestMixture(TestCase):
                          plates=(K,))
         alpha = Gamma(1, 1,
                       plates=(K,))
-        z = Categorical(np.ones(K))
+        z = Categorical(np.ones(K)/K)
         X = Mixture(z, GaussianARD, mu, alpha)
         self.assertEqual(X.plates, ())
         self.assertEqual(X.dims, ( (), () ))
@@ -99,7 +99,7 @@ class TestMixture(TestCase):
                          plates=(K,))
         alpha = Gamma(1, 1,
                       plates=(K,))
-        z = Categorical(np.ones(K))
+        z = Categorical(np.ones(K)/K)
         X = Mixture(z, GaussianARD, mu, alpha)
         self.assertEqual(X.plates, ())
         self.assertEqual(X.dims, ( (), () ))
@@ -130,7 +130,7 @@ class TestMixture(TestCase):
         Alpha = Gamma(3, 1,
                       plates=(K,))
         (alpha, logalpha) = Alpha._message_to_child()
-        z = Categorical(np.ones(K))
+        z = Categorical(np.ones(K)/K)
         X = Mixture(z, GaussianARD, Mu, Alpha)
         tau = 4
         Y = GaussianARD(X, tau)
@@ -158,7 +158,7 @@ class TestMixture(TestCase):
         (mu, mumu) = Mu._message_to_child()
         Alpha = Gamma(3, 1) # Note: no cluster plate axis!
         (alpha, logalpha) = Alpha._message_to_child()
-        z = Categorical(np.ones(K))
+        z = Categorical(np.ones(K)/K)
         X = Mixture(z, GaussianARD, Mu, Alpha)
         tau = 4
         Y = GaussianARD(X, tau)
@@ -188,7 +188,7 @@ class TestMixture(TestCase):
         Alpha = Gamma(3, 1,
                       plates=(K,M))
         (alpha, logalpha) = Alpha._message_to_child()
-        z = Categorical(np.ones(K))
+        z = Categorical(np.ones(K)/K)
         X = Mixture(z, GaussianARD, Mu, Alpha, cluster_plate=-2)
         tau = 4
         Y = GaussianARD(X, tau)
@@ -215,9 +215,12 @@ class TestMixture(TestCase):
         pass
 
     def test_mask_to_parent(self):
+        """
+        Test the mask handling in Mixture node
+        """
 
         K = 3
-        Z = Categorical(np.ones(K),
+        Z = Categorical(np.ones(K)/K,
                         plates=(4,5))
         Mu = GaussianARD(0, 1,
                          shape=(2,),

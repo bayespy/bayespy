@@ -97,13 +97,15 @@ class TestBinomial(TestCase):
         self.assertRaises(ValueError,
                           Binomial,
                           0.5*np.ones(4),
-                          plates=(3,))
+                          plates=(3,),
+                          n=10)
 
         # Explicit plates too small
         self.assertRaises(ValueError,
                           Binomial,
                           0.5*np.ones(4),
-                          plates=(1,))
+                          plates=(1,),
+                          n=10)
 
         pass
 
