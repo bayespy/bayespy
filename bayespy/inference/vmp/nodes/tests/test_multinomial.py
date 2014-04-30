@@ -49,70 +49,64 @@ class TestMultinomial(TestCase):
         """
 
         # Some simple initializations
-        X = Multinomial([0.1, 0.3, 0.6], n=10)
-        X = Multinomial(Dirichlet([5,4,3]), n=10)
+        X = Multinomial(10, [0.1, 0.3, 0.6])
+        X = Multinomial(10, Dirichlet([5,4,3]))
 
         # Check that plates are correct
-        X = Multinomial([0.1, 0.3, 0.6], n=10, plates=(3,4))
+        X = Multinomial(10, [0.1, 0.3, 0.6], plates=(3,4))
         self.assertEqual(X.plates,
                          (3,4))
-        X = Multinomial(0.25*np.ones((2,3,4)), n=10)
+        X = Multinomial(10, 0.25*np.ones((2,3,4)))
         self.assertEqual(X.plates,
                          (2,3))
         n = 10 * np.ones((3,4), dtype=np.int)
-        X = Multinomial([0.1, 0.3, 0.6],
-                        n=n)
+        X = Multinomial(n, [0.1, 0.3, 0.6])
         self.assertEqual(X.plates,
                          (3,4))
-        X = Multinomial(Dirichlet([2,1,9], plates=(3,4)),
-                        n=10)
+        X = Multinomial(n, Dirichlet([2,1,9], plates=(3,4)))
         self.assertEqual(X.plates,
                          (3,4))
         
 
-        # Missing the number of trials
-        self.assertRaises(ValueError,
-                          Multinomial,
-                          [0.1, 0.3, 0.6])
-
         # Probabilities not a vector
         self.assertRaises(ValueError,
                           Multinomial,
+                          10,
                           0.5)
 
         # Invalid probability
         self.assertRaises(ValueError,
                           Multinomial,
-                          [-0.5, 1.5],
-                          n=10)
+                          10,
+                          [-0.5, 1.5])
         self.assertRaises(ValueError,
                           Multinomial,
-                          [0.5, 1.5],
-                          n=10)
+                          10,
+                          [0.5, 1.5])
 
         # Invalid number of trials
         self.assertRaises(ValueError,
                           Multinomial,
-                          [0.5, 0.5],
-                          n=-1)
+                          -1,
+                          [0.5, 0.5])
         self.assertRaises(ValueError,
                           Multinomial,
-                          [0.5, 0.5],
-                          n=8.5)
+                          8.5,
+                          [0.5, 0.5])
 
         # Inconsistent plates
         self.assertRaises(ValueError,
                           Multinomial,
+                          10,
                           0.25*np.ones((2,4)),
-                          plates=(3,),
-                          n=10)
+                          plates=(3,))
 
         # Explicit plates too small
         self.assertRaises(ValueError,
                           Multinomial,
+                          10,
                           0.25*np.ones((2,4)),
-                          plates=(1,),
-                          n=10)
+                          plates=(1,))
 
         pass
 
@@ -123,14 +117,14 @@ class TestMultinomial(TestCase):
         """
 
         # Simple test
-        X = Multinomial([0.7,0.2,0.1], n=1)
+        X = Multinomial(1, [0.7,0.2,0.1])
         u = X._message_to_child()
         self.assertEqual(len(u), 1)
         self.assertAllClose(u[0],
                             [0.7,0.2,0.1])
 
         # Test n
-        X = Multinomial([0.7,0.2,0.1], n=10)
+        X = Multinomial(10, [0.7,0.2,0.1])
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             [7,2,1])
@@ -138,7 +132,7 @@ class TestMultinomial(TestCase):
         # Test plates in p
         n = np.random.randint(1, 10)
         p = np.random.dirichlet([1,1], size=3)
-        X = Multinomial(p, n=n)
+        X = Multinomial(n, p)
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             p*n)
@@ -146,7 +140,7 @@ class TestMultinomial(TestCase):
         # Test plates in n
         n = np.random.randint(1, 10, size=(3,))
         p = np.random.dirichlet([1,1,1,1])
-        X = Multinomial(p, n=n)
+        X = Multinomial(n, p)
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             p*n[:,None])
@@ -154,7 +148,7 @@ class TestMultinomial(TestCase):
         # Test plates in p and n
         n = np.random.randint(1, 10, size=(4,1))
         p = np.random.dirichlet([1,1], size=3)
-        X = Multinomial(p, n=n)
+        X = Multinomial(n, p)
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             p*n[...,None])
@@ -164,7 +158,7 @@ class TestMultinomial(TestCase):
         logp = P._message_to_child()[0]
         p0 = np.exp(logp[0]) / (np.exp(logp[0]) + np.exp(logp[1]))
         p1 = np.exp(logp[1]) / (np.exp(logp[0]) + np.exp(logp[1]))
-        X = Multinomial(P, n=1)
+        X = Multinomial(1, P)
         u = X._message_to_child()
         p = np.array([p0, p1])
         self.assertAllClose(u[0],
@@ -172,7 +166,7 @@ class TestMultinomial(TestCase):
 
         # Test with broadcasted plates
         P = Dirichlet([7, 3], plates=(10,))
-        X = Multinomial(P, n=5)
+        X = Multinomial(5, P)
         u = X._message_to_child()
         self.assertAllClose(u[0] * np.ones(X.get_shape(0)),
                             5*p*np.ones((10,1)))

@@ -176,14 +176,20 @@ class Multinomial(ExponentialFamily):
     _moments = MultinomialMoments()
     _parent_moments = (DirichletMoments(),)
 
+    
     @useconstructor
-    def __init__(self, p, n=None, **kwargs):
+    def __init__(self, n, p, **kwargs):
+        """
+        Create multinomial random variable node
+
+        `n` is the number of trials, not a node but an integer (array)
+        `p` is the probabilities for the categories
+        """
         super().__init__(p, **kwargs)
 
 
     @classmethod
-    @ensureparents
-    def _constructor(cls, p, plates=None, n=None, **kwargs):
+    def _constructor(cls, n, p, plates=None, **kwargs):
         """
         Constructs distribution and moments objects.
 
@@ -195,6 +201,7 @@ class Multinomial(ExponentialFamily):
         """
 
         # Get the number of categories
+        p = cls._ensure_moments(p, cls._parent_moments[0])
         D = p.dims[0][0]
 
         distribution = MultinomialDistribution(n)
@@ -207,12 +214,14 @@ class Multinomial(ExponentialFamily):
                 cls._moments, 
                 cls._parent_moments)
 
+    
     def random(self):
         """
         Draw a random sample from the distribution.
         """
         raise NotImplementedError()
 
+    
     def show(self):
         """
         Print the distribution using standard parameterization.
