@@ -168,22 +168,22 @@ class Binomial(ExponentialFamily):
     _parent_moments = (BetaMoments(),)
 
 
-    @ensureparents
     @useconstructor
-    def __init__(self, p, n=None, **kwargs):
+    def __init__(self, n, p, **kwargs):
         super().__init__(p, **kwargs)
 
         
     @classmethod
-    def _constructor(cls, p, n=None, plates=None, **kwargs):
+    def _constructor(cls, n, p, plates=None, **kwargs):
         """
         Constructs distribution and moments objects.
         """
+        p = cls._ensure_moments(p, cls._parent_moments[0])
         moments = BinomialMoments(n)
         distribution = BinomialDistribution(n)
         return ( ( (), ),
                  cls._total_plates(plates,
-                                   distribution.plates_from_parent(0,p.plates),
+                                   distribution.plates_from_parent(0, p.plates),
                                    np.shape(n)),
                  distribution, 
                  moments, 

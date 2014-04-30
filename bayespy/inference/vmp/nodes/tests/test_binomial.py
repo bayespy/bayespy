@@ -49,63 +49,57 @@ class TestBinomial(TestCase):
         """
 
         # Some simple initializations
-        X = Binomial(0.5, n=10)
-        X = Binomial(Beta([2,3]), n=10)
+        X = Binomial(10, 0.5)
+        X = Binomial(10, Beta([2,3]))
 
         # Check that plates are correct
-        X = Binomial(0.7, n=10, plates=(4,3))
+        X = Binomial(10, 0.7, plates=(4,3))
         self.assertEqual(X.plates,
                          (4,3))
-        X = Binomial(0.7*np.ones((4,3)), n=10)
+        X = Binomial(10, 0.7*np.ones((4,3)))
         self.assertEqual(X.plates,
                          (4,3))
-        X = Binomial(0.7, n=10*np.ones((4,3), dtype=np.int))
+        n = np.ones((4,3), dtype=np.int)
+        X = Binomial(n, 0.7)
         self.assertEqual(X.plates,
                          (4,3))
-        X = Binomial(Beta([4,3], plates=(4,3)),
-                     n=10)
+        X = Binomial(10, Beta([4,3], plates=(4,3)))
         self.assertEqual(X.plates,
                          (4,3))
         
-
-        # Missing the number of trials
-        self.assertRaises(ValueError,
-                          Binomial,
-                          0.5)
-
         # Invalid probability
         self.assertRaises(ValueError,
                           Binomial,
-                          -0.5,
-                          n=10)
+                          10,
+                          -0.5)
         self.assertRaises(ValueError,
                           Binomial,
-                          1.5,
-                          n=10)
+                          10,
+                          1.5)
 
         # Invalid number of trials
         self.assertRaises(ValueError,
                           Binomial,
-                          0.5,
-                          n=-1)
+                          -1,
+                          0.5)
         self.assertRaises(ValueError,
                           Binomial,
-                          0.5,
-                          n=8.5)
+                          8.5,
+                          0.5)
 
         # Inconsistent plates
         self.assertRaises(ValueError,
                           Binomial,
+                          10,
                           0.5*np.ones(4),
-                          plates=(3,),
-                          n=10)
+                          plates=(3,))
 
         # Explicit plates too small
         self.assertRaises(ValueError,
                           Binomial,
+                          10,
                           0.5*np.ones(4),
-                          plates=(1,),
-                          n=10)
+                          plates=(1,))
 
         pass
 
@@ -116,14 +110,14 @@ class TestBinomial(TestCase):
         """
 
         # Simple test
-        X = Binomial(0.7, n=1)
+        X = Binomial(1, 0.7)
         u = X._message_to_child()
         self.assertEqual(len(u), 1)
         self.assertAllClose(u[0],
                             0.7)
 
         # Test n
-        X = Binomial(0.7, n=10)
+        X = Binomial(10, 0.7)
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             10*0.7)
@@ -131,7 +125,7 @@ class TestBinomial(TestCase):
         # Test plates in p
         n = np.random.randint(1, 10)
         p = np.random.rand(3)
-        X = Binomial(p, n=n)
+        X = Binomial(n, p)
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             p*n)
@@ -139,7 +133,7 @@ class TestBinomial(TestCase):
         # Test plates in n
         n = np.random.randint(1, 10, size=(3,))
         p = np.random.rand()
-        X = Binomial(p, n=n)
+        X = Binomial(n, p)
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             p*n)
@@ -147,7 +141,7 @@ class TestBinomial(TestCase):
         # Test plates in p and n
         n = np.random.randint(1, 10, size=(4,1))
         p = np.random.rand(3)
-        X = Binomial(p, n=n)
+        X = Binomial(n, p)
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             p*n)
@@ -156,19 +150,16 @@ class TestBinomial(TestCase):
         P = Beta([7, 3])
         logp = P._message_to_child()[0]
         p0 = np.exp(logp[0]) / (np.exp(logp[0]) + np.exp(logp[1]))
-        X = Binomial(P, n=1)
+        X = Binomial(1, P)
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             p0)
 
         # Test with broadcasted plates
         P = Beta([7, 3], plates=(10,))
-        X = Binomial(P, n=5)
+        X = Binomial(5, P)
         u = X._message_to_child()
         self.assertAllClose(u[0] * np.ones(X.get_shape(0)),
                             5*p0*np.ones(10))
 
         pass
-
-    
-

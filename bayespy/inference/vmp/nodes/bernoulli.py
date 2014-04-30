@@ -62,7 +62,7 @@ class Bernoulli(Binomial):
 
     
     def __init__(self, p, **kwargs):
-        super().__init__(p, n=1, **kwargs)
+        super().__init__(1, p, **kwargs)
 
 
     def show(self):
