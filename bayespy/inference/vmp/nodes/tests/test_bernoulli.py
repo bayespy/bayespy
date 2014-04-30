@@ -45,7 +45,7 @@ class TestBernoulli(TestCase):
     
     def test_init(self):
         """
-        Test the creation of binomial nodes.
+        Test the creation of Bernoulli nodes.
         """
 
         # Some simple initializations
@@ -88,7 +88,7 @@ class TestBernoulli(TestCase):
     
     def test_moments(self):
         """
-        Test the moments of binomial nodes.
+        Test the moments of Bernoulli nodes.
         """
 
         # Simple test
