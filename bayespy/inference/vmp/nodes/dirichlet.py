@@ -21,6 +21,10 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+"""
+Module for the Dirichlet distribution node.
+"""
+
 import numpy as np
 import scipy.special as special
 
