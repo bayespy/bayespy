@@ -25,6 +25,7 @@ import numpy as np
 
 from bayespy.utils import utils
 
+from .node import ensureparents
 from .stochastic import Stochastic, Distribution
 
 class ExponentialFamilyDistribution(Distribution):
@@ -145,6 +146,7 @@ class ExponentialFamily(Stochastic):
 
 
     @classmethod
+    @ensureparents
     def _constructor(cls, *parents, initialize=True, plates=None, **kwargs):
         """
         Constructs distribution and moments objects.
