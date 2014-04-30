@@ -87,16 +87,11 @@ def useconstructor(__init__):
             (dims, plates, dist, stats, pstats) = \
               self._constructor(*args, **kwargs)
             
-            if self.dims is None:
-                self.dims = dims
-            if self._distribution is None:
-                self._distribution = dist
-            if self._moments is None:
-                self._moments = stats
-            if self._parent_moments is None:
-                self._parent_moments = pstats
-            if self.plates is None:
-                self.plates = plates
+            self.dims = dims
+            self._distribution = dist
+            self._moments = stats
+            self._parent_moments = pstats
+            self.plates = plates
 
         __init__(self, *args, **kwargs)
 
