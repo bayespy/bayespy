@@ -49,14 +49,33 @@ class TestPoisson(TestCase):
         """
 
         # Some simple initializations
+        X = Poisson(12.8)
+        X = Poisson(Gamma(43, 24))
 
         # Check that plates are correct
+        X = Poisson(np.ones((2,3)))
+        self.assertEqual(X.plates,
+                         (2,3))
+        X = Poisson(Gamma(1, 1, plates=(2,3)))
+        self.assertEqual(X.plates,
+                         (2,3))
         
         # Invalid rate
+        self.assertRaises(ValueError,
+                          Poisson,
+                          -0.1)
 
         # Inconsistent plates
+        self.assertRaises(ValueError,
+                          Poisson,
+                          np.ones(3),
+                          plates=(2,))
 
         # Explicit plates too small
+        self.assertRaises(ValueError,
+                          Poisson,
+                          np.ones(3),
+                          plates=(1,))
 
         pass
 
@@ -67,11 +86,31 @@ class TestPoisson(TestCase):
         """
 
         # Simple test
+        X = Poisson(12.8)
+        u = X._message_to_child()
+        self.assertEqual(len(u),
+                         1)
+        self.assertAllClose(u[0],
+                            12.8)
 
         # Test plates in rate
+        X = Poisson(12.8*np.ones((2,3)))
+        u = X._message_to_child()
+        self.assertAllClose(u[0],
+                            12.8*np.ones((2,3)))
 
         # Test with gamma prior
+        alpha = Gamma(5, 2)
+        r = np.exp(alpha._message_to_child()[1])
+        X = Poisson(alpha)
+        u = X._message_to_child()
+        self.assertAllClose(u[0],
+                            r)
 
-        # Test with broadcasted plates
+        # Test with broadcasted plates in parents
+        X = Poisson(Gamma(5, 2, plates=(2,3)))
+        u = X._message_to_child()
+        self.assertAllClose(u[0]*np.ones((2,3)),
+                            r*np.ones((2,3)))
 
         pass
