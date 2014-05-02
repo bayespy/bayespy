@@ -160,14 +160,6 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
     
-    def shape_of_value(self, dims):
-        """
-        Return the shape of realizations
-        """
-        D = dims[0][0]
-        return (D,)
-
-
 class Multinomial(ExponentialFamily):
     """
     Node for multinomial random variables.

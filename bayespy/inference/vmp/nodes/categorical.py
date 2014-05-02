@@ -155,13 +155,6 @@ class CategoricalDistribution(MultinomialDistribution):
         return (u, f)
 
     
-    def shape_of_value(self, dims):
-        """
-        Return the shape of realizations
-        """
-        return ()
-
-
 class Categorical(Multinomial):
     """
     Node for categorical random variables.

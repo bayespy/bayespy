@@ -147,15 +147,6 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
     
-    def shape_of_value(self, dims):
-        """
-        Return the shape of realizations
-
-        The realizations are scalars (counts) so the shape is ().
-        """
-        return ()
-
-
 class Binomial(ExponentialFamily):
     """
     Node for binomial random variables.

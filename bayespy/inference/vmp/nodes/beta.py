@@ -109,16 +109,6 @@ class BetaDistribution(DirichletDistribution):
         return super().compute_fixed_moments_and_f(p, mask=mask)
 
 
-    def shape_of_value(self, dims):
-        """
-        Return the shape of realizations.
-
-        In contrast to Dirichlet distribution, the realizations of beta
-        distribution are scalar.
-        """
-        return ()
-
-
 class Beta(Dirichlet):
     """
     Node for beta random variables.

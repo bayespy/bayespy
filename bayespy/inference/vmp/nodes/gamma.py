@@ -161,13 +161,6 @@ class GammaDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
 
-    def shape_of_value(self, dims):
-        """
-        Return the shape of realizations
-        """
-        return ()
-
-
 class Gamma(ExponentialFamily):
     """
     Node for gamma random variables.

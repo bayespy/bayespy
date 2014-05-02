@@ -105,10 +105,6 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         f = -k/2*np.log(2*np.pi)
         return (u, f)
 
-    def shape_of_value(self, dims):
-        # Dimensionality of a realization
-        return dims[0]
-    
 
 class Gaussian(ExponentialFamily):
     r"""
@@ -616,10 +612,6 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
             return plates[:-ndim]
         else:
             return super().plates_from_parent(index, plates)
-
-    def shape_of_value(self, dims):
-        # Dimensionality of a realization
-        return dims[0]
 
 
 class GaussianARD(ExponentialFamily):

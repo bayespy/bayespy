@@ -156,10 +156,6 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
         """
         raise NotImplementedError()
 
-    def shape_of_value(self, dims):
-        # Dimensionality of a realization
-        return dims[0]
-    
 
 
 class _TemplateGaussianMarkovChain(ExponentialFamily):

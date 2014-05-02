@@ -73,9 +73,6 @@ class ExponentialFamilyDistribution(Distribution):
             L = L + np.sum(phi_i * u_i, axis=axis_sum)
         return L
 
-    def shape_of_value(self, dims):
-        raise NotImplementedError()
-
 
 def useconstructor(__init__):
     def constructor_decorator(self, *args, **kwargs):
@@ -201,16 +198,17 @@ class ExponentialFamily(Stochastic):
         (u, g) = self._distribution.compute_moments_and_cgf(self.phi, mask=mask)
         self._set_moments_and_cgf(u, g, mask=mask)
 
-    def initialize_from_value(self, x):
+    def initialize_from_value(self, x, *args):
         # Update moments from value
-        if np.shape(x) != self.plates + self._distribution.shape_of_value(self.dims):
-            raise ValueError("The initial value for node %s has invalid shape "
-                             "%s. The shape should be %s." %
-                             (self.name,
-                              np.shape(x),
-                              self.plates + self._distribution.shape_of_value(self.dims)))
         mask = np.logical_not(self.observed)
-        u = self._moments.compute_fixed_moments(x)
+        u = self._moments.compute_fixed_moments(x, *args)
+        # Check that the shape is correct
+        for i in range(len(u)):
+            ndim = len(self.dims[i])
+            if ndim > 0:
+                if np.shape(u[i])[-ndim:] != self.dims[i]:
+                    raise ValueError("The initial value for node %s has invalid shape %s."
+                                     % (np.shape(x)))
         self._set_moments_and_cgf(u, np.inf, mask=mask)
 
     def initialize_from_random(self):

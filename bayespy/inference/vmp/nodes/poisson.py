@@ -138,13 +138,6 @@ class PoissonDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
     
-    def shape_of_value(self, dims):
-        """
-        Return the shape of realizations
-        """
-        return ()
-
-
 class Poisson(ExponentialFamily):
     """
     Node for Poisson random variables.

@@ -159,13 +159,6 @@ class DirichletDistribution(ExponentialFamilyDistribution):
         raise NotImplementedError()
 
     
-    def shape_of_value(self, dims):
-        """
-        Return the shape of realizations
-        """
-        return dims[0]
-
-
 class Dirichlet(ExponentialFamily):
     """
     Node for Dirichlet random variables.
