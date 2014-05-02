@@ -280,13 +280,13 @@ class ExponentialFamily(Stochastic):
         # ... and store them
         self._set_moments_and_cgf(u, g, mask=update_mask)
             
-    def observe(self, x, mask=True):
+    def observe(self, x, *args, mask=True):
         """
         Fix moments, compute f and propagate mask.
         """
 
         # Compute fixed moments
-        (u, f) = self._distribution.compute_fixed_moments_and_f(np.asanyarray(x),
+        (u, f) = self._distribution.compute_fixed_moments_and_f(x, *args,
                                                                 mask=mask)
 
         # Check the dimensionality of the observations
