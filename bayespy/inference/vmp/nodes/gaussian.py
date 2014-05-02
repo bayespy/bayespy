@@ -231,13 +231,10 @@ class Gaussian(ExponentialFamily):
     _parent_moments = (GaussianMoments(1),
                        WishartMoments())
     
-    @useconstructor
-    def __init__(self, mu, Lambda, **kwargs):
-        super().__init__(mu, Lambda, **kwargs)
 
     @classmethod
     @ensureparents
-    def _constructor(cls, mu, Lambda, plates=None, **kwargs):
+    def _constructor(cls, mu, Lambda, **kwargs):
         """
         Constructs distribution and moments objects.
         """
@@ -254,10 +251,13 @@ class Gaussian(ExponentialFamily):
             raise Exception("First parent has wrong dimensionality")
         if Lambda.dims != ( (D,D), () ):
             raise Exception("Second parent has wrong dimensionality")
-        
+
+        parents = [mu, Lambda]
         dims = ( (D,), (D,D) )
-        return (dims, 
-                cls._total_plates(plates, 
+        return (parents,
+                kwargs,
+                dims, 
+                cls._total_plates(kwargs.get('plates'),
                                   cls._distribution.plates_from_parent(0, mu.plates),
                                   cls._distribution.plates_from_parent(1, Lambda.plates)),
                 cls._distribution, 
@@ -735,13 +735,8 @@ class GaussianARD(ExponentialFamily):
     """
 
 
-    
-    @useconstructor
-    def __init__(self, mu, alpha, ndim=None, shape=None, **kwargs):
-        super().__init__(mu, alpha, **kwargs)
-        
     @classmethod
-    def _constructor(cls, mu, alpha, ndim=None, shape=None, plates=None, **kwargs):
+    def _constructor(cls, mu, alpha, ndim=None, shape=None, **kwargs):
         """
         Constructs distribution and moments objects.
 
@@ -851,11 +846,13 @@ class GaussianARD(ExponentialFamily):
             raise Exception("Second parent has wrong dimensionality")
         
         dims = (shape, shape+shape)
-        plates = cls._total_plates(plates,
+        plates = cls._total_plates(kwargs.get('plates'),
                                    distribution.plates_from_parent(0, mu.plates),
                                    distribution.plates_from_parent(1, alpha.plates))
 
-        return (dims, plates, distribution, moments, parent_moments)
+        parents = [mu, alpha]
+
+        return (parents, kwargs, dims, plates, distribution, moments, parent_moments)
         
     def initialize_from_mean_and_covariance(self, mu, Cov):
         ndim = len(self._distribution.shape)

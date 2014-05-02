@@ -293,13 +293,9 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
 class Mixture(ExponentialFamily):
 
-    @useconstructor
-    def __init__(self, z, node_class, *args, cluster_plate=-1, **kwargs):
-        self.cluster_plate = cluster_plate
-        super().__init__(z, *args, **kwargs)
 
     @classmethod
-    def _constructor(cls, z, node_class, *args, cluster_plate=-1, plates=None, **kwargs):
+    def _constructor(cls, z, node_class, *args, cluster_plate=-1, **kwargs):
         """
         Constructs distribution and moments objects.
         """
@@ -307,7 +303,7 @@ class Mixture(ExponentialFamily):
             raise ValueError("Cluster plate axis must be negative")
         
         # Get the stuff for the mixed distribution
-        (dims, mixture_plates, distribution, moments, parent_moments) = \
+        (parents, _, dims, mixture_plates, distribution, moments, parent_moments) = \
           node_class._constructor(*args)
 
         # Check that at least one of the parents has the cluster plate axis
@@ -324,7 +320,7 @@ class Mixture(ExponentialFamily):
         if z.dims[0][0] != K:
             raise ValueError("Inconsistent number of clusters")
 
-        plates = cls._total_plates(plates, mixture_plates, z.plates)
+        plates = cls._total_plates(kwargs.get('plates'), mixture_plates, z.plates)
         
         # Convert the distribution to a mixture
         distribution = MixtureDistribution(distribution, cluster_plate, K)
@@ -332,7 +328,11 @@ class Mixture(ExponentialFamily):
         # Add cluster assignments to parents
         parent_moments = (CategoricalMoments(K),) + parent_moments
 
-        return (dims,
+        parents = [z] + list(parents)
+
+        return (parents,
+                kwargs,
+                dims,
                 plates,
                 distribution, 
                 moments, 

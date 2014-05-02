@@ -118,19 +118,9 @@ class Beta(Dirichlet):
     _distribution = BetaDistribution()
 
 
-    def __init__(self, alpha, **kwargs):
-        """
-        Constructs a node for beta random variable.
-
-        `alpha` is a 2-element vector containing the shape parameters (e.g., the
-        prior sample sizes).
-        """
-        super().__init__(alpha, **kwargs)
-
-        
     @classmethod
     @ensureparents
-    def _constructor(cls, alpha, plates=None, **kwargs):
+    def _constructor(cls, alpha, **kwargs):
         """
         Constructs distribution and moments objects.
         """
@@ -140,7 +130,7 @@ class Beta(Dirichlet):
             raise ValueError("Parent has wrong dimensionality. Must be a "
                              "two-dimensional vector.")
 
-        return super()._constructor(alpha, plates=plates, **kwargs)
+        return super()._constructor(alpha, **kwargs)
 
     
     def show(self):

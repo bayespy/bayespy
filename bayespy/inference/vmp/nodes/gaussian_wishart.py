@@ -46,7 +46,8 @@ class GaussianGammaMoments(Moments):
     """
     Class for the moments of Gaussian-gamma variables.
     """
-    
+
+    # Observation is a vector (ndim=1) and a matrix (ndim=2)
     ndim_observations = (1, 2)
 
     
@@ -71,7 +72,7 @@ class GaussianGammaMoments(Moments):
         """
 
         raise NotImplementedError()
-        return ( (D,), (D,D), (D,D), () )
+        return ( (D,), (D,D), (), () )
 
 
 class GaussianWishartMoments(Moments):
@@ -79,6 +80,7 @@ class GaussianWishartMoments(Moments):
     Class for the moments of Gaussian-Wishart variables.
     """
     
+    # Observation is a vector (ndim=1) and a matrix (ndim=2)
     ndim_observations = (1, 2)
 
     
@@ -93,8 +95,12 @@ class GaussianWishartMoments(Moments):
         x = np.asanyarray(x)
         Lambda = np.asanyarray(Lambda)
 
-        raise NotImplementedError()
-        return u
+        u0 = np.einsum('...ik,...k->...i', Lambda, x)
+        u1 = np.einsum('...i,...ij,...j->...', x, Lambda, x)
+        u2 = np.copy(Lambda)
+        u3 = linalg.logdet_cov(Lambda)
+
+        return [u0, u1, u2, u3]
     
 
     def compute_dims_from_values(self, x, Lambda):
@@ -102,8 +108,17 @@ class GaussianWishartMoments(Moments):
         Return the shape of the moments for a fixed value.
         """
 
-        raise NotImplementedError()
-        return ( (D,), (D,D), (D,D), () )
+        if np.ndim(x) < 1:
+            raise ValueError("Mean must be a vector")
+        if np.ndim(Lambda) < 2:
+            raise ValueError("Precision must be a matrix")
+
+        D = np.shape(x)[-1]
+        if np.shape(Lambda)[-2:] != (D,D):
+            raise ValueError("Mean vector and precision matrix have "
+                             "inconsistent shapes")
+
+        return ( (D,), (), (D,D), () )
 
 
 class GaussianWishartDistribution(ExponentialFamilyDistribution):
@@ -180,46 +195,47 @@ class GaussianWishart(ExponentialFamily):
     """
     
     _moments = GaussianWishartMoments()
-    _parent_moments = (GaussianMoments(1),
+    _parent_moments = (GaussianGammaMoments(),
                        GammaMoments(),
                        WishartMoments(),
                        WishartPriorMoments())
     _distribution = GaussianWishartDistribution()
-
     
-    @useconstructor
-    def __init__(self, mu, alpha, V, n, plates_lambda=None, plates_x=None, **kwargs):
+
+    @classmethod
+    @ensureparents
+    def _constructor(cls, mu, alpha, V, n, plates_lambda=None, plates_x=None, **kwargs):
         """
-        Create Gaussian-Wishart random variable node
+        Constructs distribution and moments objects.
+
+        This method is called if useconstructor decorator is used for __init__.
 
         `mu` is the mean/location vector
         `alpha` is the scale
         `V` is the scale matrix
         `n` is the degrees of freedom
         """
-        super().__init__(mu, alpha, V, n, **kwargs)
-
-
-    @classmethod
-    @ensureparents
-    def _constructor(cls, mu, alpha, V, n, plates_lambda=None, plates_x=None, plates=None, **kwargs):
-        """
-        Constructs distribution and moments objects.
-
-        This method is called if useconstructor decorator is used for __init__.
-        """
 
         D = mu.dims[0][0]
 
-        # Check shape consistency
-        if V.dims[0][0] != D:
-            raise ValueError("Location and scale matrix have inconsistent "
-                             "dimensionalities")
-        
-        dims = ( (D,), (D,D), (D,D), () )
+        # Check shapes
+        if mu.dims != ( (D,), (D,D), (), () ):
+            raise ValueError("Mean vector has wrong shape")
 
-        return (( (D,), (D,D), (D,D),
-                cls._total_plates(plates,
+        if alpha.dims != ( (), () ):
+            raise ValueError("Scale has wrong shape")
+
+        if V.dims != ( (D,D), () ):
+            raise ValueError("Precision matrix has wrong shape")
+
+        if n.dims != ( (), () ):
+            raise ValueError("Degrees of freedom has wrong shape")
+
+        dims = ( (D,), (), (D,D), () )
+
+        return (dims,
+                kwargs,
+                cls._total_plates(kwargs.get('plates'),
                                   cls._distribution.plates_from_parent(0, mu.plates),
                                   cls._distribution.plates_from_parent(1, alpha.plates),
                                   cls._distribution.plates_from_parent(2, V.plates),

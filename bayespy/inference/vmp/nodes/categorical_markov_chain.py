@@ -128,13 +128,10 @@ class CategoricalMarkovChain(ExponentialFamily):
     _parent_moments = (DirichletMoments(),
                        DirichletMoments())
 
-    @useconstructor
-    def __init__(self, p0, P, states=None, **kwargs):
-        super().__init__(p0, P, **kwargs)
 
     @classmethod
     @ensureparents
-    def _constructor(cls, p0, P, states=None, plates=None, **kwargs):
+    def _constructor(cls, p0, P, states=None, **kwargs):
 
         # Number of categories
         D = p0.dims[0][0]
@@ -167,12 +164,15 @@ class CategoricalMarkovChain(ExponentialFamily):
 
         dims = ( (D,), (N-1,D,D) )
 
+        parents = [p0, P]
         distribution = CategoricalMarkovChainDistribution(D, N)
         moments = CategoricalMarkovChainMoments(D)
         parent_moments = cls._parent_moments
 
-        return (dims, 
-                cls._total_plates(plates,
+        return (parents,
+                kwargs,
+                dims, 
+                cls._total_plates(kwargs.get('plates'),
                                   distribution.plates_from_parent(0, p0.plates),
                                   distribution.plates_from_parent(1, P.plates)),
                 distribution, 

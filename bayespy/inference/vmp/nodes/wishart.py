@@ -122,12 +122,9 @@ class Wishart(ExponentialFamily):
     _distribution = WishartDistribution()
     _moments = WishartMoments()
 
-    @useconstructor
-    def __init__(self, n, V, **kwargs):
-        super().__init__(n, V, **kwargs)
         
     @classmethod
-    def _constructor(cls, n, V, plates=None, **kwargs):
+    def _constructor(cls, n, V, **kwargs):
         """
         Constructs distribution and moments objects.
         """
@@ -144,9 +141,13 @@ class Wishart(ExponentialFamily):
         dims = ( (k,k), () )
 
         n = cls._ensure_moments(n, parent_moments[0])
+
+        parents = [n, V]
         
-        return (dims, 
-                cls._total_plates(plates,
+        return (parents,
+                kwargs,
+                dims, 
+                cls._total_plates(kwargs.get('plates'),
                                   cls._distribution.plates_from_parent(0, n.plates),
                                   cls._distribution.plates_from_parent(1, V.plates)),
                 cls._distribution, 

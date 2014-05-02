@@ -161,17 +161,9 @@ class Categorical(Multinomial):
     """
 
 
-    @useconstructor
-    def __init__(self, p, **kwargs):
-        """
-        Create categorical random variable node
-        """
-        super().__init__(1, p, **kwargs)
-
-
     @classmethod
     @ensureparents
-    def _constructor(cls, p, plates=None, **kwargs):
+    def _constructor(cls, p, **kwargs):
         """
         Constructs distribution and moments objects.
 
@@ -185,11 +177,14 @@ class Categorical(Multinomial):
         # Get the number of categories
         D = p.dims[0][0]
 
+        parents = [p]
         moments = CategoricalMoments(D)
         distribution = CategoricalDistribution(D)
 
-        return (( (D,), ),
-                cls._total_plates(plates, 
+        return (parents,
+                kwargs,
+                ( (D,), ),
+                cls._total_plates(kwargs.get('plates'),
                                   distribution.plates_from_parent(0, p.plates)),
                 distribution, 
                 moments, 

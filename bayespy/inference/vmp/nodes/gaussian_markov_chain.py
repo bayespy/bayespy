@@ -188,12 +188,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
     # Observations are a set of vectors (thus 2-D matrix):
     ndim_observations = 2
     
-    def __init__(self, *parents, n=None, **kwargs):
-        """
-        """
-        # Construct
-        super().__init__(*parents, **kwargs)
-
     def random(self):
         raise NotImplementedError()
 
@@ -497,21 +491,10 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
                        GaussianMoments(1),
                        GammaMoments())
 
-    @useconstructor
-    def __init__(self, mu, Lambda, A, v, n=None, **kwargs):
-        """
-        `mu` is the mean of x_0
-        `Lambda` is the precision of x_0
-        `A` is the dynamic matrix
-        `v` is the diagonal precision of the innovation
-        """
-        
-        # Construct
-        super().__init__(mu, Lambda, A, v, **kwargs)
 
     @classmethod
     @ensureparents
-    def _constructor(cls, mu, Lambda, A, v, n=None, plates=None, **kwargs):
+    def _constructor(cls, mu, Lambda, A, v, n=None, **kwargs):
         """
         Constructs distribution and moments objects.
         
@@ -542,9 +525,9 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         n_A = max(n_v, n_A)
         if n is None:
             if n_A == 1:
-                raise Exception("""The number of time instances could not be determined
-                                 automatically. Give the number of
-                                 time instances.""")
+                raise Exception("The number of time instances could not be "
+                                "determined automatically. Give the number of "
+                                "time instances.")
             n = n_A + 1
         elif n_A != 1 and n_A+1 != n:
             raise Exception("The number of time instances must match "
@@ -594,8 +577,12 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
         distribution = GaussianMarkovChainDistribution(M, D)
 
-        return ( dims,
-                 cls._total_plates(plates,
+        parents = [mu, Lambda, A, v]
+
+        return ( parents,
+                 kwargs,
+                 dims,
+                 cls._total_plates(kwargs.get('plates'),
                                    distribution.plates_from_parent(0, mu.plates),
                                    distribution.plates_from_parent(1, Lambda.plates),
                                    distribution.plates_from_parent(2, A.plates),
@@ -926,23 +913,10 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                        GaussianMoments(1),
                        GammaMoments())
 
-    @useconstructor
-    def __init__(self, mu, Lambda, B, S, v, n=None, **kwargs):
-        """
-        `mu` is the mean of x_0, (...)x(D)
-        `Lambda` is the precision of x_0, (...)x(D,D)
-        `B` is the dynamic matrices, (...,D)x(D,K)
-        `S` is the temporal weights for the dynamic matrices, (...,N)x(K)
-        `v` is the diagonal precision of the innovation, (...,D)x()
-        """
-
-        # Construct
-        super().__init__(mu, Lambda, B, S, v, **kwargs)
-
 
     @classmethod
     @ensureparents
-    def _constructor(cls, mu, Lambda, B, S, v, n=None, plates=None, **kwargs):
+    def _constructor(cls, mu, Lambda, B, S, v, n=None, **kwargs):
         """
         Constructs distribution and moments objects.
         
@@ -1031,8 +1005,12 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
         distribution = VaryingGaussianMarkovChainDistribution(M, D)
 
-        return (dims,
-                cls._total_plates(plates,
+        parents = [mu, Lambda, B, S, v]
+
+        return (parents,
+                kwargs,
+                dims,
+                cls._total_plates(kwargs.get('plates'),
                                   distribution.plates_from_parent(0, mu.plates),
                                   distribution.plates_from_parent(1, Lambda.plates),
                                   distribution.plates_from_parent(2, B.plates),
@@ -1374,22 +1352,9 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     """
 
-    @useconstructor
-    def __init__(self, mu, Lambda, B, Z, v, n=None, **kwargs):
-        """
-        `mu` is the mean of x_0, (...)x(D)
-        `Lambda` is the precision of x_0, (...)x(D,D)
-        `B` is the dynamic matrices, (...,K,D)x(D)
-        `Z` is the temporal selection of the dynamic matrix, (...,N)x(K)
-        `v` is the diagonal precision of the innovation, (...,D)x()
-        """
-
-        # Construct
-        super().__init__(mu, Lambda, B, Z, v, **kwargs)
-
 
     @classmethod
-    def _constructor(cls, mu, Lambda, B, Z, v, n=None, plates=None, **kwargs):
+    def _constructor(cls, mu, Lambda, B, Z, v, n=None, **kwargs):
         """
         Constructs distribution and moments objects.
         
@@ -1492,7 +1457,8 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         distribution = SwitchingGaussianMarkovChainDistribution(M, D, K)
 
         return (dims,
-                cls._total_plates(plates,
+                kwargs,
+                cls._total_plates(kwargs.get('plates'),
                                   distribution.plates_from_parent(0, mu.plates),
                                   distribution.plates_from_parent(1, Lambda.plates),
                                   distribution.plates_from_parent(2, B.plates),

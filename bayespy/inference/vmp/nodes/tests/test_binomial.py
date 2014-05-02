@@ -28,11 +28,13 @@ Unit tests for `binomial` module.
 import numpy as np
 import scipy
 
-from bayespy.nodes import Binomial
-from bayespy.nodes import Beta
+from bayespy.nodes import (Binomial,
+                           Beta,
+                           Mixture)
 
 from bayespy.utils import utils
 from bayespy.utils import random
+
 
 from bayespy.utils.utils import TestCase
 
@@ -161,5 +163,18 @@ class TestBinomial(TestCase):
         u = X._message_to_child()
         self.assertAllClose(u[0] * np.ones(X.get_shape(0)),
                             5*p0*np.ones(10))
+
+        pass
+
+    
+    def test_mixture(self):
+        """
+        Test binomial mixture
+        """
+
+        X = Mixture(2, Binomial, 10, [0.1, 0.2, 0.3, 0.4])
+        u = X._message_to_child()
+        self.assertAllClose(u[0],
+                            3.0)
 
         pass

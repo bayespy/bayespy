@@ -81,7 +81,7 @@ def useconstructor(__init__):
             self._moments is None or 
             self._parent_moments is None):
 
-            (dims, plates, dist, stats, pstats) = \
+            (args, kwargs, dims, plates, dist, stats, pstats) = \
               self._constructor(*args, **kwargs)
             
             self.dims = dims
@@ -139,7 +139,7 @@ class ExponentialFamily(Stochastic):
 
     @classmethod
     @ensureparents
-    def _constructor(cls, *parents, initialize=True, plates=None, **kwargs):
+    def _constructor(cls, *parents, **kwargs):
         """
         Constructs distribution and moments objects.
 
@@ -156,8 +156,10 @@ class ExponentialFamily(Stochastic):
         """
         parent_plates = [cls._distribution.plates_from_parent(ind, parent.plates)
                          for (ind, parent) in enumerate(parents)]
-        return (cls.dims,
-                cls._total_plates(plates, *parent_plates),
+        return (parents,
+                kwargs,
+                cls.dims,
+                cls._total_plates(kwargs.get('plates'), *parent_plates),
                 cls._distribution, 
                 cls._moments, 
                 cls._parent_moments)

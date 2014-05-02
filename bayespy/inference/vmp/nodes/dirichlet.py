@@ -171,15 +171,19 @@ class Dirichlet(ExponentialFamily):
 
     @classmethod
     @ensureparents
-    def _constructor(cls, alpha, plates=None, **kwargs):
+    def _constructor(cls, alpha, **kwargs):
         """
         Constructs distribution and moments objects.
         """
         # Number of categories
         D = alpha.dims[0][0]
+
+        parents = [alpha]
         
-        return ( ( (D,), ),
-                 cls._total_plates(plates, alpha.plates),
+        return ( parents,
+                 kwargs,
+                 ( (D,), ),
+                 cls._total_plates(kwargs.get('plates'), alpha.plates),
                  cls._distribution, 
                  cls._moments, 
                  cls._parent_moments)
