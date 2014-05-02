@@ -181,8 +181,9 @@ class Node():
             raise ValueError("Method _plates_from_parent returned None")
 
         # Get and validate the plates for this node
+        plates = self._total_plates(plates, *parent_plates)
         if self.plates is None:
-            self.plates = self._total_plates(plates, *parent_plates)
+            self.plates = plates
 
         # By default, ignore all plates
         self.mask = np.array(False)
