@@ -67,7 +67,9 @@ def model(M=20, N=100, D=10, K=3):
     V = Dirichlet(1e-3*np.ones(K),
                   plates=(K,),
                   name='V')
-    V.initialize_from_value(10*np.identity(K) + 1*np.ones((K,K)))
+    v = 10*np.identity(K) + 1*np.ones((K,K))
+    v /= np.sum(v, axis=-1, keepdims=True)
+    V.initialize_from_value(v)
 
     # Hidden states (with unknown initial state probabilities and state
     # transition probabilities)
