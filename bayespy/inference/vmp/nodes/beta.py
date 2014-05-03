@@ -64,9 +64,6 @@ class BetaDistribution(DirichletDistribution):
     two-dimensional vector: [log(p), log(1-p)].
     """
 
-    # Moments is a vector
-    ndims = (1,)
-
 
     def compute_message_to_parent(self, parent, index, u_self, u_alpha):
         """

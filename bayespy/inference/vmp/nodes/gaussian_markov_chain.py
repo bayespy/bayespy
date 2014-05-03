@@ -63,7 +63,6 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
     Sub-classes implement distribution specific computations.
     """
 
-    ndims = (2, 3, 3)
     
     def __init__(self, N, D):
         self.N = N

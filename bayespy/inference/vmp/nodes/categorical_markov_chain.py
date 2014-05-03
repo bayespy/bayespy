@@ -62,7 +62,6 @@ class CategoricalMarkovChainMoments(Moments):
 
 class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
 
-    ndims = (1, 3)
 
     def __init__(self, categories, states):
         self.K = categories

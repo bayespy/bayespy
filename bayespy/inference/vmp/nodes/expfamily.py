@@ -56,18 +56,16 @@ class ExponentialFamilyDistribution(Distribution):
     def compute_fixed_moments_and_f(self, x, mask=True):
         raise NotImplementedError()
 
-    def compute_logpdf(self, u, phi, g, f):
+    def compute_logpdf(self, u, phi, g, f, ndims):
         """ Compute E[log p(X)] given E[u], E[phi], E[g] and
         E[f]. Does not sum over plates."""
 
         # TODO/FIXME: Should I take into account what is latent or
         # observed, or what is even totally ignored (by the mask).
         L = g + f
-        for (phi_i, u_i, ndims_i) in zip(phi, u, self.ndims):
-        #for (phi_i, u_i, len_dims_i) in zip(phi, u, len_dims):
+        for (phi_i, u_i, ndims_i) in zip(phi, u, ndims):
             # Axes to sum (dimensions of the variable, not the plates)
             axis_sum = tuple(range(-ndims_i,0))
-            #axis_sum = tuple(range(-len_dims_i,0))
             # Compute the term
             # TODO/FIXME: Use einsum!
             L = L + np.sum(phi_i * u_i, axis=axis_sum)
@@ -231,13 +229,13 @@ class ExponentialFamily(Stochastic):
         # Make sure phi has the correct number of axes. It makes life
         # a bit easier elsewhere.
         for i in range(len(self.phi)):
-            axes = len(self.plates) + self._distribution.ndims[i] - np.ndim(self.phi[i])
+            axes = len(self.plates) + self.ndims[i] - np.ndim(self.phi[i])
             if axes > 0:
                 # Add axes
                 self.phi[i] = utils.add_leading_axes(self.phi[i], axes)
             elif axes < 0:
                 # Remove extra leading axes
-                first = -(len(self.plates)+self._distribution.ndims[i])
+                first = -(len(self.plates)+self.ndims[i])
                 sh = np.shape(self.phi[i])[first:]
                 self.phi[i] = np.reshape(self.phi[i], sh)
             # Check that the shape is correct

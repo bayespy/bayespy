@@ -106,8 +106,6 @@ class DirichletDistribution(ExponentialFamilyDistribution):
     Class for the VMP formulas of Dirichlet variables.
     """
 
-    ndims = (1,)
-
     
     def compute_message_to_parent(self, parent, index, u_self, u_alpha):
         """

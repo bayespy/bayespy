@@ -78,10 +78,6 @@ class BinomialDistribution(ExponentialFamilyDistribution):
     Class for the VMP formulas of binomial variables.
     """
 
-
-    # Only one moment (the counts) and that is a scalar
-    ndims = (0,)
-
     
     def __init__(self, N):
         if not utils.isinteger(N):

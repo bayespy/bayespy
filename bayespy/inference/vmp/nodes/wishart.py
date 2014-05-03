@@ -74,8 +74,6 @@ class WishartDistribution(ExponentialFamilyDistribution):
     Sub-classes implement distribution specific computations.
     """
 
-    ndims = (2, 0)
-
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
         raise NotImplementedError()

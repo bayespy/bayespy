@@ -69,8 +69,6 @@ class PoissonDistribution(ExponentialFamilyDistribution):
     Class for the VMP formulas of Poisson variables.
     """    
 
-    ndims = (0,)
-    
 
     def compute_message_to_parent(self, parent, index, u, u_lambda):
         """

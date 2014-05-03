@@ -35,10 +35,11 @@ from .categorical import Categorical, \
 
 class MixtureDistribution(ExponentialFamilyDistribution):
 
-    def __init__(self, distribution, cluster_plate, n_clusters, ndims_parents):
+    def __init__(self, distribution, cluster_plate, n_clusters, ndims, 
+                 ndims_parents):
         self.distribution = distribution
         self.cluster_plate = cluster_plate
-        self.ndims = distribution.ndims
+        self.ndims = ndims
         self.ndims_parents = ndims_parents
         self.K = n_clusters
 
@@ -65,10 +66,10 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             # Shape(phi)    = [Nn,..,N0,K,Dd,..,D0]
             for ind in range(len(phi)):
                 if self.cluster_plate < 0:
-                    axis_from = self.cluster_plate-self.distribution.ndims[ind]
+                    axis_from = self.cluster_plate-self.ndims[ind]
                 else:
                     raise RuntimeError("Cluster plate axis must be negative")
-                axis_to = -1-self.distribution.ndims[ind]
+                axis_to = -1-self.ndims[ind]
                 if np.ndim(phi[ind]) >= abs(axis_from):
                     # Cluster plate axis exists, move it to the correct position
                     phi[ind] = utils.moveaxis(phi[ind], axis_from, axis_to)
@@ -83,11 +84,11 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             u_self = list()
             for ind in range(len(u)):
                 u_self.append(np.expand_dims(u[ind],
-                                             axis=(-1-self.distribution.ndims[ind])))
+                                             axis=(-1-self.ndims[ind])))
 
             # Compute logpdf:
             # Shape(L)      = [Nn,..,N0,K]
-            L = self.distribution.compute_logpdf(u_self, phi, g, 0)
+            L = self.distribution.compute_logpdf(u_self, phi, g, 0, self.ndims)
 
             # Sum over other than the cluster dimensions? No!
             # Hmm.. I think the message passing method will do
@@ -108,7 +109,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             u_self = list()
             for ind in range(len(u)):
                 if self.cluster_plate < 0:
-                    cluster_axis = self.cluster_plate - self.distribution.ndims[ind]
+                    cluster_axis = self.cluster_plate - self.ndims[ind]
                 else:
                     cluster_axis = self.cluster_plate
                 u_self.append(np.expand_dims(u[ind], axis=cluster_axis))
@@ -199,7 +200,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             # dimensions and/or dimensions that are one.
 
             if self.cluster_plate < 0:
-                cluster_axis = self.cluster_plate - self.distribution.ndims[ind]
+                cluster_axis = self.cluster_plate - self.ndims[ind]
             else:
                 raise RuntimeError("Cluster plate should be negative")
 
@@ -212,10 +213,10 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             # Add axes to p:
             # Shape(p)      = [Nn,..,N0,K,1,..,1]
-            p = utils.add_trailing_axes(P, self.distribution.ndims[ind])
+            p = utils.add_trailing_axes(P, self.ndims[ind])
             # Move cluster axis to the last:
             # Shape(p)      = [Nn,..,N0,1,..,1,K]
-            p = utils.moveaxis(p, -(self.distribution.ndims[ind]+1), -1)
+            p = utils.moveaxis(p, -(self.ndims[ind]+1), -1)
 
             # Now the shapes broadcast perfectly and we can sum
             # p*phi over the last axis:
@@ -337,6 +338,7 @@ class Mixture(ExponentialFamily):
 
         plates = cls._total_plates(kwargs.get('plates'), mixture_plates, z.plates)
 
+        ndims = [len(dim) for dim in dims]
         parents = [cls._ensure_moments(p_i, m_i) 
                    for (p_i, m_i) in zip(parents, parent_moments)]
         ndims_parents = [[len(dims_i) for dims_i in parent.dims]
@@ -347,6 +349,7 @@ class Mixture(ExponentialFamily):
         distribution = MixtureDistribution(distribution, 
                                            cluster_plate,
                                            K,
+                                           ndims,
                                            ndims_parents)
 
         # Add cluster assignments to parents
@@ -393,7 +396,7 @@ class Mixture(ExponentialFamily):
             # Shape(g) = [N1,..,K,..,Nn]
             g = self._distribution.distribution.compute_cgf_from_parents(*(u_parents[1:]))
             # Shape(lpdf) = [M1,..,Mm,N1,..,K,..,Nn]
-            lpdf = self._distribution.distribution.compute_logpdf(u, phi, g, f)
+            lpdf = self._distribution.distribution.compute_logpdf(u, phi, g, f, self.ndims)
 
             # From logpdf to pdf, but avoid over/underflow
             lpdf_max = np.max(lpdf, axis=self.cluster_plate, keepdims=True)

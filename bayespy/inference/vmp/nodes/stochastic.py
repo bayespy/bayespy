@@ -32,9 +32,6 @@ class Distribution():
     Sub-classes implement distribution specific computations.
     """
 
-    # Sub-classes should overwrite these
-    ndims = None
-
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
         raise NotImplementedError()
@@ -78,17 +75,20 @@ class Stochastic(Node):
     # Sub-classes must over-write this
     _distribution = None
 
-    def __init__(self, *args, initialize=True, **kwargs):
+    def __init__(self, *args, initialize=True, dims=None, **kwargs):
 
         super().__init__(*args,
+                         dims=dims,
                          **kwargs)
 
         # Initialize moment array
         axes = len(self.plates)*(1,)
-        self.u = [utils.nans(axes+dim) for dim in self.dims]
+        self.u = [utils.nans(axes+dim) for dim in dims]
 
         # Not observed
         self.observed = False
+
+        self.ndims = [len(dim) for dim in self.dims]
 
         if initialize:
             self.initialize_from_prior()
@@ -128,7 +128,7 @@ class Stochastic(Node):
         for ind in range(len(u)):
             # Add axes to the mask for the variable dimensions (mask
             # contains only axes for the plates).
-            u_mask = utils.add_trailing_axes(mask, self._distribution.ndims[ind])
+            u_mask = utils.add_trailing_axes(mask, self.ndims[ind])
 
             # Enlarge self.u[ind] as necessary so that it can store the
             # broadcasted result.

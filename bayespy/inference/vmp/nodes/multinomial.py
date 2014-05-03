@@ -75,8 +75,6 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
     Class for the VMP formulas of multinomial variables.
     """    
 
-    ndims = (1,)
-
 
     def __init__(self, trials):
         """
