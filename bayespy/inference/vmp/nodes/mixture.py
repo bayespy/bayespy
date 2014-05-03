@@ -303,6 +303,12 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 class Mixture(ExponentialFamily):
 
 
+    @useconstructor
+    def __init__(self, *args, cluster_plate=-1, **kwargs):
+        self.cluster_plate = cluster_plate
+        super().__init__(*args, **kwargs)
+        
+
     @classmethod
     def _constructor(cls, z, node_class, *args, cluster_plate=-1, **kwargs):
         """
@@ -350,10 +356,9 @@ class Mixture(ExponentialFamily):
 
     def integrated_logpdf_from_parents(self, x, index):
 
-        """ Approximates the posterior predictive pdf \int
-        p(x|parents) q(parents) dparents in log-scale as \int
-        q(parents_i) exp( \int q(parents_\i) \log p(x|parents)
-        dparents_\i ) dparents_i."""
+        """ Approximates the posterior predictive pdf \int p(x|parents)
+        q(parents) dparents in log-scale as \int q(parents_i) exp( \int
+        q(parents_\i) \log p(x|parents) dparents_\i ) dparents_i."""
 
         if index == 0:
             # Integrate out the cluster assignments
@@ -363,17 +368,17 @@ class Mixture(ExponentialFamily):
             # compute_logpdf(cls, u, phi, g, f):
 
             # Shape(x) = [M1,..,Mm,N1,..,Nn,D1,..,Dd]
-            # Add the cluster axis to x:
-            # Shape(x) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
-            cluster_axis = self.cluster_plate - \
-                           self._moments.ndim_observations
-            x = np.expand_dims(x, axis=cluster_axis)
 
             u_parents = self._message_from_parents()
 
             # Shape(u) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
             # Shape(f) = [M1,..,Mm,N1,..,1,..,Nn]
             (u, f) = self._distribution.distribution.compute_fixed_moments_and_f(x)
+            f = np.expand_dims(f, axis=self.cluster_plate)
+            for i in range(len(u)):
+                ndim_i = len(self.dims[i])
+                cluster_axis = self.cluster_plate - ndim_i
+                u[i] = np.expand_dims(u[i], axis=cluster_axis)
             # Shape(phi) = [N1,..,K,..,Nn,D1,..,Dd]
             phi = self._distribution.distribution.compute_phi_from_parents(*(u_parents[1:]))
             # Shape(g) = [N1,..,K,..,Nn]
