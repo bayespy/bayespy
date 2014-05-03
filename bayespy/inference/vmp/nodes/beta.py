@@ -66,8 +66,6 @@ class BetaDistribution(DirichletDistribution):
 
     # Moments is a vector
     ndims = (1,)
-    # Parent's moments is a vector
-    ndims_parents = ( (1,), )
 
 
     def compute_message_to_parent(self, parent, index, u_self, u_alpha):

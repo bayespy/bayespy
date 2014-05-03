@@ -76,7 +76,6 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
     """    
 
     ndims = (1,)
-    ndims_parents = ( (1,), )
 
 
     def __init__(self, trials):

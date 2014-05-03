@@ -75,7 +75,7 @@ class WishartDistribution(ExponentialFamilyDistribution):
     """
 
     ndims = (2, 0)
-    ndims_parents = [None, (2, 0)]
+
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
         raise NotImplementedError()

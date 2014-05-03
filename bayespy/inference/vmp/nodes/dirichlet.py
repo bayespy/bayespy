@@ -107,7 +107,6 @@ class DirichletDistribution(ExponentialFamilyDistribution):
     """
 
     ndims = (1,)
-    ndims_parents = ( (1,), )
 
     
     def compute_message_to_parent(self, parent, index, u_self, u_alpha):

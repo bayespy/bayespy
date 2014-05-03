@@ -247,7 +247,6 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
     Sub-classes implement distribution specific computations.
     """
 
-    ndims_parents = [(1, 2), (2, 0), (1, 2), (0, 0)]
 
     def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_A, u_v):
         """
@@ -595,11 +594,6 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
     Sub-classes implement distribution specific computations.
     """
 
-    ndims_parents = ( (1, 2), 
-                      (2, 0),
-                      (2, 4),
-                      (1, 2),
-                      (0, 0) )
 
     def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_B,
                                    u_S, u_v):
@@ -1023,11 +1017,6 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
     Sub-classes implement distribution specific computations.
     """
 
-    ndims_parents = ( (1, 2),   # mu
-                      (2, 0),   # Lambda
-                      (1, 2),   # B
-                      (1,),     # Z
-                      (0, 0) )  # v
 
     def __init__(self, N, D, K):
         self.K = K

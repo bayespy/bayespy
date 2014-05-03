@@ -97,8 +97,6 @@ class GammaDistribution(ExponentialFamilyDistribution):
     """    
     
     ndims = (0, 0)
-    ndims_parents = ( (0,0),
-                      (0,0) )
         
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
@@ -208,8 +206,8 @@ class _GammaToDiagonalWishart(Deterministic):
     """
     
     ndims = (2, 0)
-    ndims_parents = [None, (2, 0)]
 
+    
     def __init__(self, alpha, **kwargs):
 
         # Check for constant

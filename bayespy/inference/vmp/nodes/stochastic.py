@@ -34,7 +34,7 @@ class Distribution():
 
     # Sub-classes should overwrite these
     ndims = None
-    ndims_parents = None
+
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
         raise NotImplementedError()

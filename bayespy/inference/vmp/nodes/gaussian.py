@@ -57,8 +57,8 @@ class GaussianMoments(Moments):
 class GaussianDistribution(ExponentialFamilyDistribution):
 
     ndims = (1, 2)
-    ndims_parents = [(1, 2), (2, 0)]
 
+    
     def compute_message_to_parent(self, parent, index, u, *u_parents):
         if index == 0:
             return [utils.utils.m_dot(u_parents[1][0], u[0]),
@@ -417,8 +417,6 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         self.ndim_mu = ndim_mu
         self.ndim = len(shape)
         self.ndims = (self.ndim, 2*self.ndim)
-        self.ndims_parents = ( (ndim_mu, 2*ndim_mu),
-                               (0, 0) )
         super().__init__()
     
     def compute_message_to_parent(self, parent, index, u, u_mu, u_alpha):

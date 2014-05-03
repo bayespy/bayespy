@@ -964,7 +964,6 @@ def AddPlateAxis(to_plate):
                 # Remove the axis
                 if np.ndim(m[i]) >= abs(to_plate) + len(self.dims[i]):
                     axis = to_plate - len(self.dims[i])
-                    #ndims = np.ndim(m[i]) - len(self.dims[i]) + 1
                     sh_m = list(np.shape(m[i]))
                     sh_m.pop(axis)
                     m[i] = np.reshape(m[i], sh_m)

@@ -81,8 +81,6 @@ class BinomialDistribution(ExponentialFamilyDistribution):
 
     # Only one moment (the counts) and that is a scalar
     ndims = (0,)
-    # Only one moment (the log-probabilities) and that is a vector
-    ndims_parents = ( (1,), )
 
     
     def __init__(self, N):

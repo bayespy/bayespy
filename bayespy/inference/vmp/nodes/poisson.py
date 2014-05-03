@@ -70,7 +70,6 @@ class PoissonDistribution(ExponentialFamilyDistribution):
     """    
 
     ndims = (0,)
-    ndims_parents = ( (0,), )
     
 
     def compute_message_to_parent(self, parent, index, u, u_lambda):

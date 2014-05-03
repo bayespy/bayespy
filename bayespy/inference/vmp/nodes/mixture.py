@@ -35,11 +35,11 @@ from .categorical import Categorical, \
 
 class MixtureDistribution(ExponentialFamilyDistribution):
 
-    def __init__(self, distribution, cluster_plate, n_clusters):
+    def __init__(self, distribution, cluster_plate, n_clusters, ndims_parents):
         self.distribution = distribution
         self.cluster_plate = cluster_plate
         self.ndims = distribution.ndims
-        self.ndims_parents = distribution.ndims_parents
+        self.ndims_parents = ndims_parents
         self.K = n_clusters
 
     def compute_message_to_parent(self, parent, index, u, *u_parents):
@@ -115,9 +115,9 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             # Message from the mixed distribution
             m = self.distribution.compute_message_to_parent(parent,
-                                                        index, 
-                                                        u_self, 
-                                                        *(u_parents[1:]))
+                                                            index, 
+                                                            u_self, 
+                                                            *(u_parents[1:]))
 
             # Weigh the messages with the responsibilities
             for i in range(len(m)):
@@ -128,7 +128,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
                 # Number of axes for the variable dimensions for
                 # the parent message.
-                D = self.distribution.ndims_parents[index][i]
+                D = self.ndims_parents[index][i]
 
                 # Responsibilities for clusters are the first
                 # parent's first moment:
@@ -336,9 +336,18 @@ class Mixture(ExponentialFamily):
             raise ValueError("Inconsistent number of clusters")
 
         plates = cls._total_plates(kwargs.get('plates'), mixture_plates, z.plates)
+
+        parents = [cls._ensure_moments(p_i, m_i) 
+                   for (p_i, m_i) in zip(parents, parent_moments)]
+        ndims_parents = [[len(dims_i) for dims_i in parent.dims]
+                         for parent in parents]
+                          
         
         # Convert the distribution to a mixture
-        distribution = MixtureDistribution(distribution, cluster_plate, K)
+        distribution = MixtureDistribution(distribution, 
+                                           cluster_plate,
+                                           K,
+                                           ndims_parents)
 
         # Add cluster assignments to parents
         parent_moments = (CategoricalMoments(K),) + parent_moments
