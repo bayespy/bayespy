@@ -25,6 +25,8 @@
 Unit tests for `categorical` module.
 """
 
+import warnings
+
 import numpy as np
 import scipy
 
@@ -225,12 +227,13 @@ class TestCategorical(TestCase):
         """
 
         # Test initialization from random
-        Z = Categorical([[0.0, 1.0, 0.0],
-                         [0.0, 0.0, 1.0]])
-        Z.initialize_from_random()
-        u = Z._message_to_child()
-        self.assertAllClose(u[0],
-                            [[0, 1, 0],
-                             [0, 0, 1]])
+        with warnings.catch_warnings(record=True) as w:
+            Z = Categorical([[0.0, 1.0, 0.0],
+                             [0.0, 0.0, 1.0]])
+            Z.initialize_from_random()
+            u = Z._message_to_child()
+            self.assertAllClose(u[0],
+                                [[0, 1, 0],
+                                 [0, 0, 1]])
         
         pass
