@@ -1440,8 +1440,11 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
         distribution = SwitchingGaussianMarkovChainDistribution(M, D, K)
 
-        return (dims,
+        parents = [mu, Lambda, B, Z, v]
+
+        return (parents,
                 kwargs,
+                dims,
                 cls._total_plates(kwargs.get('plates'),
                                   distribution.plates_from_parent(0, mu.plates),
                                   distribution.plates_from_parent(1, Lambda.plates),
