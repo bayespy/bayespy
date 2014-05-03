@@ -34,9 +34,12 @@ class Constant(Node):
         self.u = self._moments.compute_fixed_moments(x)
         # Dimensions of the moments
         dims = self._moments.compute_dims_from_values(x)
-        # Number of plate axes
-        plates_ndim = np.ndim(x) - self._moments.ndim_observations
-        plates = np.shape(x)[:plates_ndim]
+        # Resolve plates
+        D = len(dims[0])
+        if D > 0:
+            plates = np.shape(self.u[0])[:-D]
+        else:
+            plates = np.shape(self.u[0])
         # Parent constructor
         super().__init__(dims=dims, plates=plates, **kwargs)
 
