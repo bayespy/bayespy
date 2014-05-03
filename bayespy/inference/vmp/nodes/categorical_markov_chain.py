@@ -37,7 +37,6 @@ from bayespy.utils import utils, random
 
 class CategoricalMarkovChainMoments(Moments):
 
-    ndim_observations = 0
 
     def __init__(self, categories):
         self.D = categories

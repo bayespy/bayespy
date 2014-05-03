@@ -85,8 +85,6 @@ class Moments():
         Gaussian.
     """
 
-    # Overwrite this
-    ndim_observations = None
     
     def converter(self, moments_class):
         """

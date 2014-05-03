@@ -45,8 +45,6 @@ class CategoricalMoments(MultinomialMoments):
     Class for the moments of categorical variables.
     """
 
-    ndim_observations = 0
-
     
     def __init__(self, categories):
         """

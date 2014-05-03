@@ -40,9 +40,6 @@ class BetaMoments(DirichletMoments):
     Class for the moments of beta variables.
     """
 
-    # Realizations are scalars
-    ndim_observations = 0
-    
 
     def compute_fixed_moments(self, p):
         """

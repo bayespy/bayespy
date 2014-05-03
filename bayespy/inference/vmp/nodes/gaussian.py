@@ -39,7 +39,6 @@ from .node import Moments, ensureparents
 class GaussianMoments(Moments):
     def __init__(self, ndim):
         self.ndim = ndim
-        self.ndim_observations = ndim
 
     def compute_fixed_moments(self, x):
         """ Compute Gaussian moments for fixed x. """

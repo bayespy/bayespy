@@ -183,10 +183,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
 
     _moments = GaussianMarkovChainMoments()
                                 
-
-    # phi[0] is (N,D), phi[1] is (N,D,D), phi[2] is (N-1,D,D)
-    # Observations are a set of vectors (thus 2-D matrix):
-    ndim_observations = 2
     
     def random(self):
         raise NotImplementedError()

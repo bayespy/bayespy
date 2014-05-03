@@ -33,7 +33,7 @@ from .constant import Constant
 
 from .node import Moments, Node
 class WishartPriorMoments(Moments):
-    ndim_observations = 0
+
     def __init__(self, k):
         self.k = k
         return
@@ -49,7 +49,7 @@ class WishartPriorMoments(Moments):
         return ( (), () )
 
 class WishartMoments(Moments):
-    ndim_observations = 2
+
     def compute_fixed_moments(self, Lambda):
         """ Compute moments for fixed x. """
         ldet = utils.m_chol_logdet(utils.m_chol(Lambda))

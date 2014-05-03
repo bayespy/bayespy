@@ -50,8 +50,6 @@ class GammaPriorMoments(Moments):
     Class for the moments of the shape parameter in gamma distributions.
     """
     
-    ndim_observations = 0
-
     
     def compute_fixed_moments(self, a):
         """
@@ -74,8 +72,6 @@ class GammaMoments(Moments):
     Class for the moments of gamma variables.
     """
     
-    ndim_observations = 0
-
     
     def compute_fixed_moments(self, x):
         """

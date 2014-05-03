@@ -38,8 +38,6 @@ class DirichletPriorMoments(Moments):
     Class for the moments of Dirichlet conjugate-prior variables.
     """
 
-    ndim_observations = 1
-
     
     def compute_fixed_moments(self, alpha):
         """
@@ -71,8 +69,6 @@ class DirichletMoments(Moments):
     """
     Class for the moments of Dirichlet variables.
     """
-
-    ndim_observations = 1
 
     
     def compute_fixed_moments(self, p):

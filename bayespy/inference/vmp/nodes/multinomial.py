@@ -42,8 +42,6 @@ class MultinomialMoments(Moments):
     Class for the moments of multinomial variables.
     """
     
-    ndim_observations = 1
-
     
     def compute_fixed_moments(self, x):
         """

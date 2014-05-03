@@ -42,8 +42,6 @@ class PoissonMoments(Moments):
     Class for the moments of Poisson variables
     """
 
-    ndim_observations = 0
-
 
     def compute_fixed_moments(self, x):
         """
