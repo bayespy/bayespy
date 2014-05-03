@@ -27,6 +27,8 @@ Unit tests for bayespy.utils.utils module.
 
 import unittest
 
+import warnings
+
 import numpy as np
 
 from numpy import testing
@@ -358,8 +360,9 @@ class TestLogSumExp(utils.TestCase):
         self.assertAllClose(utils.logsumexp(3),
                             np.log(np.sum(np.exp(3))))
 
-        self.assertAllClose(utils.logsumexp(-np.inf),
-                            -np.inf)
+        with warnings.catch_warnings(record=True) as w:
+            self.assertAllClose(utils.logsumexp(-np.inf),
+                                -np.inf)
 
         self.assertAllClose(utils.logsumexp(np.inf),
                             np.inf)
@@ -398,18 +401,19 @@ class TestMean(utils.TestCase):
 
         self.assertAllClose(utils.mean(3),
                             3)
-        self.assertAllClose(utils.mean(np.nan),
-                            np.nan)
+        with warnings.catch_warnings(record=True) as w:
+            self.assertAllClose(utils.mean(np.nan),
+                                np.nan)
 
-        self.assertAllClose(utils.mean([[2,3],
-                                        [np.nan,np.nan]], 
-                                        axis=-1),
-                            [2.5,np.nan])
-        self.assertAllClose(utils.mean([[2,3],
-                                        [np.nan,np.nan]], 
-                                        axis=-1,
-                                        keepdims=True),
-                            [[2.5],[np.nan]])
+            self.assertAllClose(utils.mean([[2,3],
+                                            [np.nan,np.nan]], 
+                                            axis=-1),
+                                [2.5,np.nan])
+            self.assertAllClose(utils.mean([[2,3],
+                                            [np.nan,np.nan]], 
+                                            axis=-1,
+                                            keepdims=True),
+                                [[2.5],[np.nan]])
         
         self.assertAllClose(utils.mean([[2,3],
                                         [np.nan,np.nan]], 

@@ -28,8 +28,9 @@ Unit tests for `multinomial` module.
 import numpy as np
 import scipy
 
-from bayespy.nodes import Multinomial
-from bayespy.nodes import Dirichlet
+from bayespy.nodes import (Multinomial,
+                           Dirichlet,
+                           Mixture)
 
 from bayespy.utils import utils
 from bayespy.utils import random
@@ -174,4 +175,18 @@ class TestMultinomial(TestCase):
         pass
 
     
+    def test_mixture(self):
+        """
+        Test multinomial mixture
+        """
+
+        p0 = [0.1, 0.5, 0.2, 0.2]
+        p1 = [0.5, 0.1, 0.1, 0.3]
+        p2 = [0.3, 0.2, 0.1, 0.4]
+        X = Mixture(2, Multinomial, 10, [p0, p1, p2])
+        u = X._message_to_child()
+        self.assertAllClose(u[0],
+                            10*np.array(p2))
+
+        pass
 

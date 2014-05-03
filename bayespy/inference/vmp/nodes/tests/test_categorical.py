@@ -159,7 +159,7 @@ class TestCategorical(TestCase):
                              [0,1,0]])
 
         # Several plate axes
-        X = Categorical([0.7,0.2,0.1,0.0], plates=(2,3,))
+        X = Categorical([0.7,0.1,0.1,0.1], plates=(2,3,))
         X.observe([[2,1,1],
                    [0,2,3]])
         u = X._message_to_child()

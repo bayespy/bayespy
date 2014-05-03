@@ -25,6 +25,8 @@
 Unit tests for bayespy.inference.vmp.nodes.categorical_markov_chain module.
 """
 
+import warnings
+
 import numpy as np
 from bayespy.utils import utils
 
@@ -79,23 +81,22 @@ class TestCategoricalMarkovChain(utils.TestCase):
         Test the message of CategoricalMarkovChain to child
         """
 
-        np.seterr(divide='ignore')
-
-        # Deterministic oscillator
-        p0 = np.array([1.0, 0.0])
-        P = np.array(3*[[[0.0, 1.0],
-                         [1.0, 0.0]]])
-        Z = CategoricalMarkovChain(p0, P)
-        u = Z._message_to_child()
-        self.assertAllClose(u[0],
-                            [1.0, 0])
-        self.assertAllClose(u[1],
-                            [ [[0.0, 1.0],
-                               [0.0, 0.0]],
-                              [[0.0, 0.0],
-                               [1.0, 0.0]],
-                              [[0.0, 1.0],
-                               [0.0, 0.0]] ])
+        with warnings.catch_warnings(record=True) as w:
+            # Deterministic oscillator
+            p0 = np.array([1.0, 0.0])
+            P = np.array(3*[[[0.0, 1.0],
+                             [1.0, 0.0]]])
+            Z = CategoricalMarkovChain(p0, P)
+            u = Z._message_to_child()
+            self.assertAllClose(u[0],
+                                [1.0, 0])
+            self.assertAllClose(u[1],
+                                [ [[0.0, 1.0],
+                                   [0.0, 0.0]],
+                                  [[0.0, 0.0],
+                                   [1.0, 0.0]],
+                                  [[0.0, 1.0],
+                                   [0.0, 0.0]] ])
 
         # Maximum randomness
         p0 = np.array([0.5, 0.5])

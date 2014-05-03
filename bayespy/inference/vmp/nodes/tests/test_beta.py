@@ -35,15 +35,15 @@ from bayespy.utils import random
 
 from bayespy.utils.utils import TestCase
 
-class TestBinomial(TestCase):
+class TestBeta(TestCase):
     """
-    Unit tests for Binomial node
+    Unit tests for Beta node
     """
 
     
     def test_init(self):
         """
-        Test the creation of binomial nodes.
+        Test the creation of beta nodes.
         """
 
         # Some simple initializations
@@ -92,7 +92,7 @@ class TestBinomial(TestCase):
     
     def test_moments(self):
         """
-        Test the moments of binomial nodes.
+        Test the moments of beta nodes.
         """
 
         p = Beta([2, 3])

@@ -25,18 +25,22 @@
 Unit tests for mixture module.
 """
 
+import warnings
+
 import numpy as np
 
-from ..gaussian import GaussianARD
-from ..gamma import Gamma
-from ..mixture import Mixture
-from ..categorical import Categorical
+from bayespy.nodes import (GaussianARD,
+                           Gamma,
+                           Mixture,
+                           Categorical,
+                           Multinomial)
 
 from bayespy.utils import random
 from bayespy.utils import linalg
 from bayespy.utils import utils
 
 from bayespy.utils.utils import TestCase
+
 
 class TestMixture(TestCase):
 
@@ -241,3 +245,38 @@ class TestMixture(TestCase):
                               mask[:,None,:,None])
                          
         pass
+
+
+    def test_nans(self):
+        """
+        Test multinomial mixture
+        """
+
+        # The probabilities p1 cause problems
+        p0 = [0.1, 0.9]
+        p1 = [1.0-1e-50, 1e-50]
+        Z = Categorical([1-1e-10, 1e-10])
+        X = Mixture(Z, Multinomial, 10, [p0, p1])
+        u = X._message_to_child()
+        self.assertAllClose(u[0],
+                            [1, 9])
+
+        p0 = [0.1, 0.9]
+        p1 = [1.0-1e-10, 1e-10]
+        Z = Categorical([1-1e-50, 1e-50])
+        X = Mixture(Z, Multinomial, 10, [p0, p1])
+        u = X._message_to_child()
+        self.assertAllClose(u[0],
+                            [1, 9])
+        
+        with warnings.catch_warnings(record=True) as w:
+            p0 = [0.1, 0.9]
+            p1 = [1.0, 0.0]
+            X = Mixture(0, Multinomial, 10, [p0, p1])
+            u = X._message_to_child()
+            self.assertAllClose(u[0],
+                                np.nan*np.ones(2))
+
+        
+        pass
+
