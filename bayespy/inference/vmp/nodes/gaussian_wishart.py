@@ -42,13 +42,10 @@ from bayespy.utils import random
 from bayespy.utils import utils
 
 
-class GaussianGammaMoments(Moments):
+class GaussianGammaISOMoments(Moments):
     """
-    Class for the moments of Gaussian-gamma variables.
+    Class for the moments of Gaussian-gamma-ISO variables.
     """
-
-    # Observation is a vector (ndim=1) and a matrix (ndim=2)
-    ndim_observations = (1, 2)
 
     
     def compute_fixed_moments(self, x, alpha):
@@ -62,7 +59,12 @@ class GaussianGammaMoments(Moments):
         x = np.asanyarray(x)
         alpha = np.asanyarray(alpha)
 
-        raise NotImplementedError()
+        u0 = np.einsum('...,...i->...i', alpha, x)
+        u1 = np.einsum('...,...i,...j->...ij', alpha, x, x)
+        u2 = np.copy(alpha)
+        u3 = np.log(alpha)
+        u = [u0, u1, u2, u3]
+
         return u
     
 
@@ -71,8 +73,64 @@ class GaussianGammaMoments(Moments):
         Return the shape of the moments for a fixed value.
         """
 
-        raise NotImplementedError()
+        if np.ndim(x) < 1:
+            raise ValueError("Mean must be a vector")
+
+        D = np.shape(x)[-1]
+
         return ( (D,), (D,D), (), () )
+
+
+class GaussianGammaARDMoments(Moments):
+    """
+    Class for the moments of Gaussian-gamma-ARD variables.
+    """
+
+    
+    def compute_fixed_moments(self, x, alpha):
+        """
+        Compute the moments for a fixed value
+
+        `x` is a mean vector.
+        `alpha` is a precision scale
+        """
+
+        x = np.asanyarray(x)
+        alpha = np.asanyarray(alpha)
+
+        if np.ndim(x) < 1:
+            raise ValueError("Mean must be a vector")
+        if np.ndim(alpha) < 1:
+            raise ValueError("ARD scales must be a vector")
+
+        if np.shape(x)[-1] != np.shape(alpha)[-1]:
+            raise ValueError("Mean and ARD scales have inconsistent shapes")
+        
+        u0 = np.einsum('...i,...i->...i', alpha, x)
+        u1 = np.einsum('...k,...k,...k->...k', alpha, x, x)
+        u2 = np.copy(alpha)
+        u3 = np.log(alpha)
+        u = [u0, u1, u2, u3]
+
+        return u
+    
+
+    def compute_dims_from_values(self, x, alpha):
+        """
+        Return the shape of the moments for a fixed value.
+        """
+
+        if np.ndim(x) < 1:
+            raise ValueError("Mean must be a vector")
+        if np.ndim(alpha) < 1:
+            raise ValueError("ARD scales must be a vector")
+
+        D = np.shape(x)[-1]
+
+        if np.shape(alpha)[-1] != D:
+            raise ValueError("Mean and ARD scales have inconsistent shapes")
+
+        return ( (D,), (D,), (D,), (D,) )
 
 
 class GaussianWishartMoments(Moments):
@@ -80,9 +138,6 @@ class GaussianWishartMoments(Moments):
     Class for the moments of Gaussian-Wishart variables.
     """
     
-    # Observation is a vector (ndim=1) and a matrix (ndim=2)
-    ndim_observations = (1, 2)
-
     
     def compute_fixed_moments(self, x, Lambda):
         """
@@ -121,13 +176,61 @@ class GaussianWishartMoments(Moments):
         return ( (D,), (), (D,D), () )
 
 
+class GaussianGammaISODistribution(ExponentialFamilyDistribution):
+    """
+    Class for the VMP formulas of Gaussian-Gamma-ISO variables.
+    """    
+
+
+    def compute_message_to_parent(self, parent, index, u, u_mu_Lambda, u_a, u_b):
+        """
+        Compute the message to a parent node.
+        """
+        if index == 0:
+            raise NotImplementedError()
+        elif index == 1:
+            raise NotImplementedError()
+        elif index == 2:
+            raise NotImplementedError()
+        else:
+            raise ValueError("Index out of bounds")
+
+
+    def compute_phi_from_parents(self, u_mu_Lambda, u_a, u_b, mask=True):
+        """
+        Compute the natural parameter vector given parent moments.
+        """
+        raise NotImplementedError()
+
+
+    def compute_moments_and_cgf(self, phi, mask=True):
+        """
+        Compute the moments and :math:`g(\phi)`.
+        """
+        raise NotImplementedError()
+        return (u, g)
+
+    
+    def compute_cgf_from_parents(self, u_mu_Lambda, u_a, u_b):
+        """
+        Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
+        """
+        raise NotImplementedError()
+        return g
+
+    
+    def compute_fixed_moments_and_f(self, x, alpha, mask=True):
+        """
+        Compute the moments and :math:`f(x)` for a fixed value.
+        """
+        raise NotImplementedError()
+        return (u, f)
+
+    
 class GaussianWishartDistribution(ExponentialFamilyDistribution):
     """
     Class for the VMP formulas of Gaussian-Wishart variables.
     """    
-
-    ndims = (1, 2, 2, 0)
-    ndims_parents = ( (1, 2), (2, 0) )
 
 
     def compute_message_to_parent(self, parent, index, u, u_mu, u_alpha, u_V, u_n):
