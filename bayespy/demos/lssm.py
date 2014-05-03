@@ -237,7 +237,7 @@ def simulate_data(M, N):
     return (y, f)
 
 def demo(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=True,
-         precompute=False, plot=True):
+         precompute=False, plot=True, monitor=True):
     """
     Run the demo for linear state-space model.
     """
@@ -260,6 +260,7 @@ def demo(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=True,
               mask=mask,
               rotate=rotate,
               debug=debug,
+              monitor=monitor,
               maxiter=maxiter)
 
     if plot:
@@ -284,6 +285,7 @@ if __name__ == '__main__':
                                     "debug",
                                     "precompute",
                                     "no-plot",
+                                    "no-monitor",
                                     "no-rotation"])
     except getopt.GetoptError:
         print('python lssm.py <options>')
@@ -295,6 +297,7 @@ if __name__ == '__main__':
         print('--seed=<INT>     Seed (integer) for the random number generator')
         print('--debug          Check that the rotations are implemented correctly')
         print('--no-plot        Do not plot the results')
+        print('--no-monitor     Do not plot distributions during learning')
         print('--precompute     Precompute some moments when rotating. May '
               'speed up or slow down.')
         sys.exit(2)
@@ -319,6 +322,8 @@ if __name__ == '__main__':
             kwargs["D"] = int(arg)
         elif opt in ("--no-plot"):
             kwargs["plot"] = False
+        elif opt in ("--no-monitor"):
+            kwargs["monitor"] = False
         else:
             raise ValueError("Unhandled option given")
 
