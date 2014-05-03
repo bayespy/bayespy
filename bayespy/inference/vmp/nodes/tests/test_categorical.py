@@ -217,3 +217,20 @@ class TestCategorical(TestCase):
                              [7, 12]])
 
         pass
+
+
+    def test_initialization(self):
+        """
+        Test initialization of categorical nodes
+        """
+
+        # Test initialization from random
+        Z = Categorical([[0.0, 1.0, 0.0],
+                         [0.0, 0.0, 1.0]])
+        Z.initialize_from_random()
+        u = Z._message_to_child()
+        self.assertAllClose(u[0],
+                            [[0, 1, 0],
+                             [0, 0, 1]])
+        
+        pass
