@@ -275,7 +275,8 @@ def categorical(p, size=None):
         for ind in inds:
             z[ind] = np.searchsorted(P[ind], x[ind])
 
-    return z
+    return z.astype(np.int)
+
 
 def alpha_beta_recursion(logp0, logP):
     """
