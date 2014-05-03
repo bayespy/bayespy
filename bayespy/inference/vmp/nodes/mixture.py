@@ -21,13 +21,8 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
-import itertools
+import warnings
 import numpy as np
-import scipy as sp
-import scipy.linalg.decomp_cholesky as decomp
-import scipy.linalg as linalg
-import scipy.special as special
-import scipy.spatial.distance as distance
 
 from bayespy.utils import utils
 
@@ -188,6 +183,8 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
         phi = list()
 
+        nans = False
+
         for ind in range(len(Phi)):
             # Compute element-wise product and then sum over K clusters.
             # Note that the dimensions aren't perfectly aligned because
@@ -224,7 +221,19 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             # p*phi over the last axis:
             # Shape(result) = [Nn,..,N0,Dd,..,D0]
             phi[ind] = utils.sum_product(p, phi[ind], axes_to_sum=-1)
+            if np.any(np.isnan(phi[ind])):
+                nans = True
 
+        if nans:
+            warnings.warn("The natural parameters of mixture distribution "
+                          "contain nans. This may happen if you use fixed "
+                          "parameters in your model. Technically, one possible "
+                          "reason is that the cluster assignment probability "
+                          "for some element is zero (p=0) and the natural "
+                          "parameter of that cluster is -inf, thus "
+                          "0*(-inf)=nan. Solution: Use parameters that assign "
+                          "non-zero probabilities for the whole domain.")
+            
         return phi
 
     def compute_moments_and_cgf(self, phi, mask=True):
