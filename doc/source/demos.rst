@@ -1,5 +1,5 @@
 ..
-   Copyright (C) 2011,2012 Jaakko Luttinen
+   Copyright (C) 2014 Jaakko Luttinen
 
    This file is licensed under Version 3.0 of the GNU General Public
    License. See LICENSE for a text of the license.
@@ -18,27 +18,10 @@
    You should have received a copy of the GNU General Public License
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
-Documentation for BayesPy -- Bayesian Python
-============================================
 
+Demos
+=====
 
-.. toctree::
-   :maxdepth: 2
-   
-   intro
-   install
-   userguide
-   examples
-   demos
-   devguide
-   nodes
-   vmp
-   api
+.. include:: _notebooks/generated/mog.rst
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+.. include:: _notebooks/generated/pca.rst

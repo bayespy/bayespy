@@ -49,6 +49,11 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 
+notebooks:
+	(cd source/_notebooks/generated && ipython nbconvert --to rst ../*.ipynb)
+	@echo
+	@echo "Build finished. The notebooks have been converted to RST."
+
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
