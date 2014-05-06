@@ -24,7 +24,13 @@ BayesPy including the documentation is licensed under Version 3.0 of
 the GNU General Public License. See LICENSE file for a text of the
 license or visit http://www.gnu.org/copyleft/gpl.html.
 
-* Documentation: http://bayespy.org or at ``doc`` directory
+* Documentation:
+    
+    * http://bayespy.org
+
+    * `PDF file <_static/BayesPy.pdf>`_
+
+    * RST format in ``doc`` directory
 
 * Repository: https://github.com/bayespy/bayespy.git
 

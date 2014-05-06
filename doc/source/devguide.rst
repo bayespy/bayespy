@@ -19,7 +19,7 @@
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
 Developer guide
-===============
+***************
 
 How to document:
 https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
@@ -27,7 +27,7 @@ https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
 How to contribute:
 http://docs.scipy.org/doc/numpy/dev/gitwash/development_workflow.html
 
-Variational message passing
----------------------------
+.. toctree::
 
+    vmp
 

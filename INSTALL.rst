@@ -133,11 +133,62 @@ the development version:
     pip install https://github.com/numpy/numpydoc/archive/master.zip
 
 
-After the requirements have been installed, the documentation can be compiled to
-HTML and PDF by running the following commands in the ``doc`` folder:
+The documentation can be compiled to HTML and PDF by running the following
+commands in the ``doc`` directory:
 
 .. code-block:: console
 
     make html
     make latexpdf
 
+
+Converting notebooks
+--------------------
+
+The documentation uses IPython notebooks for the examples. This is a convenient
+format for sharing Python examples with comments.  The notebooks can be
+converted, for instance, to documentation files or Python scripts. BayesPy
+repository contains those notebook files (.ipynb) and their conversions to RST
+format for the documentation.  If you want to convert the notebooks into RST
+files, Python scripts or some other format yourself, follow these
+instructions. First, the following packages are required:
+
+.. code-block:: console
+
+    pip install ipython pyzwq
+
+You need quite a recent IPython.  You may also need to install Pandoc.  In
+Ubuntu, this can be done as:
+
+.. code-block:: console
+
+    sudo aptitude install pandoc
+
+Now, the notebooks can be converted to RST for the documentation by running the
+following command in the ``doc`` directory:
+
+.. code-block:: console
+
+    make notebooks
+
+Or you can convert the notebooks to RST or Python (or something else) for your
+own use:
+
+.. code-block:: console
+
+    ipython nbconvert --to rst doc/source/_notebooks/*.ipynb
+    ipython nbconvert --to python doc/source/_notebooks/*.ipynb
+    
+The Python scripts can be used to run the examples as such. There are also more
+formats available in case you want the examples in HTML, LaTeX, or some other
+format.
+
+You can also open the notebooks interactively in a web browser by going to the
+notebooks directory and running the IPython notebook:
+
+.. code-block:: console
+
+    cd doc/source/_notebooks
+    ipython notebook
+
+This should run a simple server and open a web browser.

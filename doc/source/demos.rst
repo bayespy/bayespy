@@ -19,9 +19,10 @@
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Demos
-=====
+Examples
+********
 
-.. include:: _notebooks/generated/mog.rst
+.. toctree::
 
-.. include:: _notebooks/generated/pca.rst
+    _notebooks/mog.rst
+    _notebooks/pca.rst
