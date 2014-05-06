@@ -51,13 +51,16 @@ clean:
 
 notebooks:
 	(cd source/_notebooks && \
-	ipython nbconvert --to rst *.ipynb)
+	ipython nbconvert --to rst *.ipynb && \
+	ipython nbconvert --to python *.ipynb)
 	@echo
-	@echo "Build finished. The notebooks have been converted to RST."
+	@echo "Build finished. The notebooks have been converted to RST and Python."
 
 html: latexpdf
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
-	cp $(BUILDDIR)/latex/BayesPy.pdf $(BUILDDIR)/html/_static/ 
+	cp $(BUILDDIR)/latex/BayesPy.pdf $(BUILDDIR)/html/_static/
+	cp source/_notebooks/*.ipynb $(BUILDDIR)/html/_notebooks/
+	cp source/_notebooks/*.py $(BUILDDIR)/html/_notebooks/
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
