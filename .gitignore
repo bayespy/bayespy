@@ -16,7 +16,8 @@ MANIFEST
 *.backup
 *.egg-info
 doc/source/generated
-doc/source/_notebooks/generated
+doc/source/_notebooks/*_files/*
 ENV
 *.hdf5
 .env*
+.ipynb_checkpoints
