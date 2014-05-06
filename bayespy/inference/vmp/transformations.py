@@ -137,7 +137,7 @@ class RotationOptimizer():
         if check_gradient:
             R = np.random.randn(self.D, self.D)
             err = utils.optimize.check_gradient(cost, np.ravel(R), 
-                                                verbose=False)
+                                                verbose=verbose)
             if err > 1e-5:
                 warnings.warn("Rotation gradient has relative error %g" % err)
 
@@ -1047,33 +1047,38 @@ class RotateGaussianMarkovChain():
         # Expectations with respect to A and X
         #
 
+        # TODO: In case A does not depend on time, use a bit more efficient
+        # formulas
+
         # Compute: \sum_n <A_n> <x_{n-1} x_n^T>
-        A_XpXn = (utils.utils.sum_multiply(A[...,:,:,None],
-                                           XpXn[...,None,:,:],
-                                           axis=(-3,-1),
-                                           sumaxis=False) *
-                  self.X_node._plate_multiplier(self.X_node.plates,
-                                                np.shape(A)[:-3],
-                                                np.shape(XpXn)[:-3]))
+        A_XpXn = np.einsum('...nik,...nkj->...ij',
+                           A,
+                           XpXn)
+        A_XpXn = sum_to_plates(A_XpXn,
+                               (),
+                               ndim=2,
+                               plates_from=self.X_node.plates)
 
         # Compute: \sum_n <A_n> <x_{n-1} x_{n-1}^T> <A_n>^T
-        A_XpXp = np.einsum('...ik,...kj->...ij', A, XpXp)
-        A_XpXp_A = (utils.utils.sum_multiply(A_XpXp[...,:,None,:],
-                                             A[...,None,:,:],
-                                             axis=(-3,-2),
-                                             sumaxis=False) *
-                    self.X_node._plate_multiplier(self.X_node.plates,
-                                                  np.shape(A)[:-3],
-                                                  np.shape(A_XpXp)[:-3]))
+        A_XpXp = np.einsum('...nik,...nkj->...nij', 
+                           A,
+                           XpXp)
+        A_XpXp_A = np.einsum('...nik,...njk->...ij', 
+                             A_XpXp,
+                             A)
+        A_XpXp_A = sum_to_plates(A_XpXp_A,
+                                 (),
+                                 ndim=2,
+                                 plates_from=self.X_node.plates)
 
         # Compute: \sum_n tr(CovA_n <x_{n-1} x_{n-1}^T>)
-        CovA_XpXp = (utils.utils.sum_multiply(CovA,
-                                              XpXp[...,None,:,:],
-                                              axis=(-3,),
-                                              sumaxis=False) *
-                     self.X_node._plate_multiplier(self.X_node.plates,
-                                                   np.shape(CovA)[:-4],
-                                                   np.shape(XpXp)[:-3]))
+        CovA_XpXp = np.einsum('...ndij,...nij->...d',
+                              CovA,
+                              XpXp)
+        CovA_XpXp = sum_to_plates(CovA_XpXp,
+                                  (),
+                                  ndim=1,
+                                  plates_from=self.X_node.plates)
         
         return (A_XpXn, A_XpXp_A, CovA_XpXp)
 
@@ -1180,11 +1185,6 @@ class RotateGaussianMarkovChain():
                                               0,
                                               0)
 
-        # Compute dH(X)
-        M = self.N*np.prod(self.X_node.plates) # total number of rotated vectors
-        dlogH_X = utils.random.gaussian_entropy(-2 * M * invR.T,
-                                                0)
-
         # Compute the bound
         if terms:
             bound = {self.X_node: logp_X + logH_X}
@@ -1194,10 +1194,14 @@ class RotateGaussianMarkovChain():
         if not gradient:
             return bound
         
+        # Compute dH(X)
+        dlogH_X = utils.random.gaussian_entropy(-2 * M * invR.T,
+                                                0)
+
         # Compute d<log p(X)>
         dyy = 2 * (R_XnXn + Lambda_R_X0X0)
         dyz = dot(R, self.A_XpXn + self.A_XpXn.T) + self.Lambda_mu_X0
-        dzz = 2 * (RA_XpXp_A + R_CovA_XpXp)
+        dzz = 2 * (RA_XpXp_A + R_CovA_XpXp[None,:])
         dlogp_X = utils.random.gaussian_logpdf(dyy,
                                                dyz,
                                                dzz,
@@ -1207,7 +1211,7 @@ class RotateGaussianMarkovChain():
         if terms:
             d_bound = {self.X_node: dlogp_X + dlogH_X}
         else:
-            d_bound = (0*dlogp_X
+            d_bound = (
                        + dlogp_X
                        + dlogH_X
                        )
