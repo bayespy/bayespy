@@ -50,12 +50,14 @@ clean:
 	rm -rf $(BUILDDIR)/*
 
 notebooks:
-	(cd source/_notebooks/generated && ipython nbconvert --to rst ../*.ipynb)
+	(cd source/_notebooks && \
+	ipython nbconvert --to rst *.ipynb)
 	@echo
 	@echo "Build finished. The notebooks have been converted to RST."
 
-html:
+html: latexpdf
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	cp $(BUILDDIR)/latex/BayesPy.pdf $(BUILDDIR)/html/_static/ 
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
