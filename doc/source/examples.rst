@@ -26,3 +26,4 @@ Examples
 
     _notebooks/mog.rst
     _notebooks/pca.rst
+    _notebooks/lssm.rst
