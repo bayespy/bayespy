@@ -40,6 +40,22 @@ import tempfile as tmp
 import unittest
 from numpy import testing
 
+
+def composite_function(function_list):
+    """
+    Construct a function composition from a list of functions.
+
+    Given a list of functions [f,g,h], constructs a function :math:`h \circ g
+    \circ f`.  That is, returns a function :math:`z`, for which :math:`z(x) =
+    h(g(f(x)))`.
+    """
+    def composite(X):
+        for function in function_list:
+            X = function(X)
+        return X
+    return composite
+
+    
 def ceildiv(a, b):
     """
     Compute a divided by b and rounded up.
