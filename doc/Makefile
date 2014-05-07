@@ -51,7 +51,9 @@ clean:
 
 notebooks:
 	(cd source/_notebooks && \
+	rm *.rst && \
 	ipython nbconvert --to rst *.ipynb && \
+	rm *.py && \
 	ipython nbconvert --to python *.ipynb)
 	@echo
 	@echo "Build finished. The notebooks have been converted to RST and Python."
