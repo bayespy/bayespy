@@ -39,6 +39,65 @@ from ...vmp import VB
 
 from bayespy.utils import utils
 
+
+class TestMoments(unittest.TestCase):
+
+    def test_converter(self):
+        """
+        Tests complex conversions for moment classes
+        """
+        
+        # Simple one step conversions
+        class A(Moments):
+            pass
+        class B(Moments):
+            _converters = {A: lambda x: x+1}
+        f = B().converter(B)
+        self.assertEqual(f(3), 3)
+        f = B().converter(Moments)
+        self.assertEqual(f(3), 3)
+        f = B().converter(A)
+        self.assertEqual(f(3), 4)
+        f = A().converter(A)
+        self.assertEqual(f(3), 3)
+        f = A().converter(Moments)
+        self.assertEqual(f(3), 3)
+        self.assertRaises(ValueError,
+                          A().converter,
+                          B)
+
+        # Convert via parent
+        class C(B):
+            pass
+        f = C().converter(A)
+        self.assertEqual(f(3), 4)
+
+        # Convert via grand parent
+        class D(C):
+            pass
+        class E(D):
+            pass
+        f = E().converter(A)
+        self.assertEqual(f(3), 4)
+
+        # Can't convert to child
+        self.assertRaises(ValueError,
+                          Moments().converter,
+                          A)
+
+        # Convert to grand child
+        class F(Moments):
+            _converters = {E: lambda x: 2*x}
+        f = F().converter(B)
+        self.assertEqual(f(3), 6)
+
+        # Use two conversions
+        f = F().converter(A)
+        self.assertEqual(f(3), 2*3+1)
+        
+        pass
+        
+    
 class TestNode(unittest.TestCase):
 
     def check_message_to_parent(self, plates_child, plates_message,
