@@ -24,6 +24,9 @@ Examples
 
 .. toctree::
 
-    _notebooks/mog.rst
+    _notebooks/gmm.rst
+    _notebooks/bmm.rst
+    _notebooks/hmm.rst
     _notebooks/pca.rst
     _notebooks/lssm.rst
+    _notebooks/lda.rst

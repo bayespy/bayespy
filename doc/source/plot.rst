@@ -1,5 +1,5 @@
 ..
-   Copyright (C) 2011,2012 Jaakko Luttinen
+   Copyright (C) 2014 Jaakko Luttinen
 
    This file is licensed under Version 3.0 of the GNU General Public
    License. See LICENSE for a text of the license.
@@ -18,17 +18,6 @@
    You should have received a copy of the GNU General Public License
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
-Developer guide
-***************
 
-How to document:
-https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
-
-How to contribute:
-http://docs.scipy.org/doc/numpy/dev/gitwash/development_workflow.html
-
-.. toctree::
-
-    vmp
-    writingnodes
-
+Examining results
+=================

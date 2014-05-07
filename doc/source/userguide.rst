@@ -26,4 +26,6 @@ User guide
 
     install
     quickstart
-    nodes
+    modelconstruct
+    inference
+    plot

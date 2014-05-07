@@ -1,6 +1,6 @@
 
-Example: Principal component analysis
-=====================================
+Principal component analysis
+============================
 
 Yeah.
 

@@ -8,9 +8,11 @@
 # In linear state-space models a sequence of $M$-dimensional observations $\mathbf{Y}=(\mathbf{y}_1,\ldots,\mathbf{y}_N)$ is assumed to be generated from latent $D$-dimensional states $\mathbf{X}=(\mathbf{x}_1,\ldots,\mathbf{x}_N)$ which follow a first-order Markov process:
 # 
 # $$
+# \begin{aligned}
 # \mathbf{x}_{n} &= \mathbf{A}\mathbf{x}_{n-1} + \text{noise} \,,
 # \\
 # \mathbf{y}_{n} &= \mathbf{C}\mathbf{x}_{n} + \text{noise} \,,
+# \end{aligned}
 # $$
 # 
 # where the noise is Gaussian, $\mathbf{A}$ is the $D\times D$ state dynamics matrix and $\mathbf{C}$ is the $M\times D$ loading matrix. Usually, the latent space dimensionality $D$ is assumed to be much smaller than the observation space dimensionality $M$ in order to model the dependencies of high-dimensional observations efficiently.
@@ -142,13 +144,13 @@ Q.update(repeat=10)
 # VB inference can converge extremely slowly if the variables are strongly coupled.  Because VMP updates one variable at a time, it may lead to slow zigzagging.  This can be solved by using parameter expansion which reduces the coupling. In state-space models, the states $\mathbf{x}_n$ and the loadings $\mathbf{C}$ are coupled through a dot product $\mathbf{Cx}_n$, which is unaltered if the latent space is rotated arbitrarily:
 # 
 # $$
-# \mathbf{y}_n &= \mathbf{C}\mathbf{x}_n = \mathbf{C}\mathbf{R}^{-1}\mathbf{R}\mathbf{x}_n \,.
+# \mathbf{y}_n = \mathbf{C}\mathbf{x}_n = \mathbf{C}\mathbf{R}^{-1}\mathbf{R}\mathbf{x}_n \,.
 # $$
 # 
 # Thus, one intuitive transformation would be $\mathbf{C}\rightarrow\mathbf{C}\mathbf{R}^{-1}$ and $\mathbf{X}\rightarrow\mathbf{R}\mathbf{X}$.  In order to keep the dynamics of the latent states unaffected by the transformation, the state dynamics matrix $\mathbf{A}$ must be transformed accordingly:
 # 
 # $$
-# \mathbf{R}\mathbf{x}_n &= \mathbf{R}\mathbf{A}\mathbf{R}^{-1} \mathbf{R}\mathbf{x}_{n-1} \,,
+# \mathbf{R}\mathbf{x}_n = \mathbf{R}\mathbf{A}\mathbf{R}^{-1} \mathbf{R}\mathbf{x}_{n-1} \,,
 # $$
 # 
 # resulting in a transformation $\mathbf{A}\rightarrow\mathbf{R}\mathbf{A}\mathbf{R}^{-1}$.  For more details, refer to *Fast Variational Bayesian Linear State-Space Model (Luttinen, 2013).

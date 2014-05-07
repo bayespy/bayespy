@@ -14,9 +14,11 @@ first-order Markov process:
 .. math::
 
 
+   \begin{aligned}
    \mathbf{x}_{n} &= \mathbf{A}\mathbf{x}_{n-1} + \text{noise} \,,
    \\
    \mathbf{y}_{n} &= \mathbf{C}\mathbf{x}_{n} + \text{noise} \,,
+   \end{aligned}
 
 where the noise is Gaussian, :math:`\mathbf{A}` is the :math:`D\times D`
 state dynamics matrix and :math:`\mathbf{C}` is the :math:`M\times D`
@@ -160,7 +162,7 @@ latent space is rotated arbitrarily:
 .. math::
 
 
-   \mathbf{y}_n &= \mathbf{C}\mathbf{x}_n = \mathbf{C}\mathbf{R}^{-1}\mathbf{R}\mathbf{x}_n \,.
+   \mathbf{y}_n = \mathbf{C}\mathbf{x}_n = \mathbf{C}\mathbf{R}^{-1}\mathbf{R}\mathbf{x}_n \,.
 
 Thus, one intuitive transformation would be
 :math:`\mathbf{C}\rightarrow\mathbf{C}\mathbf{R}^{-1}` and
@@ -172,7 +174,7 @@ accordingly:
 .. math::
 
 
-   \mathbf{R}\mathbf{x}_n &= \mathbf{R}\mathbf{A}\mathbf{R}^{-1} \mathbf{R}\mathbf{x}_{n-1} \,,
+   \mathbf{R}\mathbf{x}_n = \mathbf{R}\mathbf{A}\mathbf{R}^{-1} \mathbf{R}\mathbf{x}_{n-1} \,,
 
 resulting in a transformation
 :math:`\mathbf{A}\rightarrow\mathbf{R}\mathbf{A}\mathbf{R}^{-1}`\ . For
