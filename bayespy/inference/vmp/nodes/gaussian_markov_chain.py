@@ -45,7 +45,9 @@ from .gamma import Gamma, GammaMoments
 from .categorical import CategoricalMoments
 from .node import Moments, ensureparents
 
+
 class GaussianMarkovChainMoments(Moments):
+
 
     def compute_fixed_moments(self, x):
         u0 = x
@@ -53,10 +55,6 @@ class GaussianMarkovChainMoments(Moments):
         u2 = x[...,:-1,:,np.newaxis] * x[...,1:,np.newaxis,:]
         return [u0, u1, u2]
         
-    def converter(self, moments_class):
-        if moments_class is GaussianMoments:
-            return _MarkovChainToGaussian
-        return super().converter(moments_class)
     
 class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
     """
@@ -1456,9 +1454,6 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                 parent_moments)
     
 
-
-
-
 class _MarkovChainToGaussian(Deterministic):
     """
     Transform a Gaussian Markov chain node into a Gaussian node.
@@ -1570,3 +1565,7 @@ class _MarkovChainToGaussian(Deterministic):
 
         # Add the third empty message
         return [m_children[0], m_children[1], None]
+
+
+# Make use of the converter
+GaussianMarkovChainMoments._converters[GaussianMoments] = _MarkovChainToGaussian

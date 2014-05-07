@@ -85,21 +85,72 @@ class Moments():
         Gaussian.
     """
 
+    _converters = {}
     
-    def converter(self, moments_class):
+
+    def converter(self, moments_to):
         """
-        Returns a node class which converts the node's moments to another
+        Finds conversion to another moments type if possible.
+
+        Note that a conversion from moments A to moments B may require
+        intermediate conversions.  For instance: A->C->D->B.  In addition, a
+        conversion may be defined from a parent class which means that the same
+        conversion is valid for the child class.  Or a conversion may be defined
+        to a child class of the target, thus it is compatible with the target
+        class.  Thus, the total conversion path can be quite complex in theory.
+        This method finds the path which uses the least amount of conversions
+        and returns that path as a single conversion.
         """
-        # This method must take moments object instead of class because, for
-        # instance, one could want to convert gamma to wishart with specific
-        # ndim? Or maybe that is in any case too complex so it would have to be
-        # handled manually.
-        if isinstance(self, moments_class):
+
+        # Check if there is no need for a conversion
+        if isinstance(self, moments_to):
             return lambda X: X
 
-        raise Exception("No conversion defined from %s to %s"
-                        % (self.__class__.__name__,
-                           moments_class.__name__))
+        # Initialize variables
+        visited = set()
+        visited.add(self.__class__)
+        converted_list = [(self.__class__, [])]
+
+        # Each iteration step consists of two parts:
+        # 1) form a set of the current classes and all their parent classes 
+        #    recursively
+        # 2) from the current set, apply possible conversions to get a new set 
+        #    of classes
+        # Repeat these two steps until in step (1) you hit the target class.
+        
+        while len(converted_list) > 0:
+            # Go through all parents recursively so we can then use all
+            # converters that are available
+            current_list = []
+            for (moments_class, converter_path) in converted_list:
+                if issubclass(moments_class, moments_to):
+                    # Shortest conversion path found, return the resulting total
+                    # conversion function
+                    return utils.composite_function(converter_path)
+                current_list.append((moments_class, converter_path))
+                parents = list(moments_class.__bases__)
+                for parent in parents:
+                    # Recursively add parents
+                    for p in parent.__bases__:
+                        parents.append(p)
+                    # Add un-visited parents
+                    if issubclass(parent, Moments) and parent not in visited:
+                        visited.add(parent)
+                        current_list.append((parent, converter_path))
+
+            # Find all converters and extend the converter paths
+            converted_list = []
+            for (moments_class, converter_path) in current_list:
+                for (conv_mom_cls, conv) in moments_class._converters.items():
+                    if conv_mom_cls not in visited:
+                        visited.add(conv_mom_cls)
+                        converted_list.append((conv_mom_cls,
+                                               converter_path + [conv])) 
+
+        raise ValueError("No conversion defined from %s to %s"
+                         % (self.__class__.__name__,
+                            moments_class.__name__))
+    
 
     def compute_fixed_moments(self, x):
         # This method can't be static because the computation of the moments may

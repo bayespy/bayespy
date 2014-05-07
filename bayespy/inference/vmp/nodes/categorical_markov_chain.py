@@ -41,18 +41,12 @@ class CategoricalMarkovChainMoments(Moments):
     def __init__(self, categories):
         self.D = categories
 
-    def converter(self, moments_class):
-        """
-        Returns a node class which converts the node's moments to another
-        """
-        if moments_class is CategoricalMoments:
-            return CategoricalMarkovChainToCategorical
-        return super().converter(moments_class)
 
     def compute_fixed_moments(self, x):
         raise NotImplementedError("compute_fixed_moments not implemented for "
                                   "%s" 
                                   % (self.__class__.__name__))
+
     
     def compute_dims_from_values(self, x):
         raise NotImplementedError("compute_dims_from_values not implemented "
@@ -230,3 +224,7 @@ class CategoricalMarkovChainToCategorical(Deterministic):
             return self.parents[0].plates + (N+1,)
         else:
             raise ValueError("Parent index out of bounds")
+
+
+# Make use of the conversion node
+CategoricalMarkovChainMoments._converters[CategoricalMoments] = CategoricalMarkovChainToCategorical
