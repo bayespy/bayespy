@@ -84,7 +84,6 @@ class TestMoments(unittest.TestCase):
         self.assertRaises(ValueError,
                           Moments().get_converter,
                           A)
-
         # Convert to grand child
         class F(Moments):
             _converters = {E: lambda x: 2*x}
@@ -95,6 +94,33 @@ class TestMoments(unittest.TestCase):
         f = F().get_converter(A)
         self.assertEqual(f(3), 2*3+1)
         
+        # Can't use child's converter
+        class H(Moments):
+            pass
+        class I(Moments):
+            _converters = {A: lambda x: x+1}
+        self.assertRaises(ValueError,
+                          H().get_converter,
+                          A)
+
+        # Conversion to parent is not success
+        class J(A):
+            pass
+        self.assertRaises(ValueError,
+                          I().get_converter,
+                          J)
+        
+        # Infinite loop
+        class X(Moments):
+            pass
+        class Y(Moments):
+            pass
+        X.add_converter(Y, lambda x: x+1)
+        Y.add_converter(X, lambda x: x+1)
+        self.assertRaises(ValueError,
+                          X().get_converter,
+                          A)
+
         pass
         
     
