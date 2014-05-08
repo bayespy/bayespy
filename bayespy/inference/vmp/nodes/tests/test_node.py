@@ -52,24 +52,24 @@ class TestMoments(unittest.TestCase):
             pass
         class B(Moments):
             _converters = {A: lambda x: x+1}
-        f = B().converter(B)
+        f = B().get_converter(B)
         self.assertEqual(f(3), 3)
-        f = B().converter(Moments)
+        f = B().get_converter(Moments)
         self.assertEqual(f(3), 3)
-        f = B().converter(A)
+        f = B().get_converter(A)
         self.assertEqual(f(3), 4)
-        f = A().converter(A)
+        f = A().get_converter(A)
         self.assertEqual(f(3), 3)
-        f = A().converter(Moments)
+        f = A().get_converter(Moments)
         self.assertEqual(f(3), 3)
         self.assertRaises(ValueError,
-                          A().converter,
+                          A().get_converter,
                           B)
 
         # Convert via parent
         class C(B):
             pass
-        f = C().converter(A)
+        f = C().get_converter(A)
         self.assertEqual(f(3), 4)
 
         # Convert via grand parent
@@ -77,22 +77,22 @@ class TestMoments(unittest.TestCase):
             pass
         class E(D):
             pass
-        f = E().converter(A)
+        f = E().get_converter(A)
         self.assertEqual(f(3), 4)
 
         # Can't convert to child
         self.assertRaises(ValueError,
-                          Moments().converter,
+                          Moments().get_converter,
                           A)
 
         # Convert to grand child
         class F(Moments):
             _converters = {E: lambda x: 2*x}
-        f = F().converter(B)
+        f = F().get_converter(B)
         self.assertEqual(f(3), 6)
 
         # Use two conversions
-        f = F().converter(A)
+        f = F().get_converter(A)
         self.assertEqual(f(3), 2*3+1)
         
         pass

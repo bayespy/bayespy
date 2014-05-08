@@ -227,4 +227,5 @@ class CategoricalMarkovChainToCategorical(Deterministic):
 
 
 # Make use of the conversion node
-CategoricalMarkovChainMoments._converters[CategoricalMoments] = CategoricalMarkovChainToCategorical
+CategoricalMarkovChainMoments.add_converter(CategoricalMoments,
+                                            CategoricalMarkovChainToCategorical)

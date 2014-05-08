@@ -1568,4 +1568,5 @@ class _MarkovChainToGaussian(Deterministic):
 
 
 # Make use of the converter
-GaussianMarkovChainMoments._converters[GaussianMoments] = _MarkovChainToGaussian
+GaussianMarkovChainMoments.add_converter(GaussianMoments,
+                                         _MarkovChainToGaussian)

@@ -86,20 +86,29 @@ class Moments():
     """
 
     _converters = {}
+
+
+    @classmethod
+    def add_converter(cls, moments_to, converter):
+        cls._converters[moments_to] = converter
+        return
     
 
-    def converter(self, moments_to):
+    def get_converter(self, moments_to):
         """
         Finds conversion to another moments type if possible.
 
         Note that a conversion from moments A to moments B may require
-        intermediate conversions.  For instance: A->C->D->B.  In addition, a
-        conversion may be defined from a parent class which means that the same
-        conversion is valid for the child class.  Or a conversion may be defined
-        to a child class of the target, thus it is compatible with the target
-        class.  Thus, the total conversion path can be quite complex in theory.
-        This method finds the path which uses the least amount of conversions
-        and returns that path as a single conversion.
+        intermediate conversions.  For instance: A->C->D->B.  This method finds
+        the path which uses the least amount of conversions and returns that
+        path as a single conversion.  If no conversion path is available, an
+        error is raised.
+
+        The search algorithm starts from the original moments class and applies
+        all possible converters to get a new list of moments classes. Then, all
+        possible converters are applied to this list to get a new list of
+        current moments classes. This is iterated until the algorithm hits the
+        target moments class or its subclass.
         """
 
         # Check if there is no need for a conversion
@@ -111,36 +120,22 @@ class Moments():
         visited.add(self.__class__)
         converted_list = [(self.__class__, [])]
 
-        # Each iteration step consists of two parts:
-        # 1) form a set of the current classes and all their parent classes 
-        #    recursively
-        # 2) from the current set, apply possible conversions to get a new set 
-        #    of classes
-        # Repeat these two steps until in step (1) you hit the target class.
+        # The algorithm: 
+        # Apply all avaible converters to the current list to get a new list.
+        # Iterate this until the list contains the target moments class or its
+        # subclass.
         
         while len(converted_list) > 0:
-            # Go through all parents recursively so we can then use all
-            # converters that are available
-            current_list = []
-            for (moments_class, converter_path) in converted_list:
+            current_list = converted_list
+            converted_list = []
+            # Go through the list of current moments and apply all available
+            # converters to each of them
+            for (moments_class, converter_path) in current_list:
                 if issubclass(moments_class, moments_to):
                     # Shortest conversion path found, return the resulting total
                     # conversion function
                     return utils.composite_function(converter_path)
-                current_list.append((moments_class, converter_path))
-                parents = list(moments_class.__bases__)
-                for parent in parents:
-                    # Recursively add parents
-                    for p in parent.__bases__:
-                        parents.append(p)
-                    # Add un-visited parents
-                    if issubclass(parent, Moments) and parent not in visited:
-                        visited.add(parent)
-                        current_list.append((parent, converter_path))
-
-            # Find all converters and extend the converter paths
-            converted_list = []
-            for (moments_class, converter_path) in current_list:
+                # Apply all converters to the current moment class
                 for (conv_mom_cls, conv) in moments_class._converters.items():
                     if conv_mom_cls not in visited:
                         visited.add(conv_mom_cls)
@@ -631,7 +626,7 @@ class Node():
         return
 
     def _convert(self, moments_class):
-        converter = self._moments.converter(moments_class)
+        converter = self._moments.get_converter(moments_class)
         return converter(self)
     ## def convert(self, node_class):
     ##     return self._convert(node_class._moments_class)
