@@ -59,7 +59,7 @@ class BinomialMoments(PoissonMoments):
         """
         # Make sure the values are integers in valid range
         x = np.asanyarray(x)
-        if np.any(x >= self.N):
+        if np.any(x > self.N):
             raise ValueError("Invalid count")
         return super().compute_fixed_moments()
 
@@ -131,7 +131,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         x = np.asanyarray(x)
         if not utils.isinteger(x):
             raise ValueError("Counts must be integer")
-        if np.any(x < 0) or np.any(x >= self.N):
+        if np.any(x < 0) or np.any(x > self.N):
             raise ValueError("Invalid count")
         # Now, the moments are just the counts
         u = [x]
