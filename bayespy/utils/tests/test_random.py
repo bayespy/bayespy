@@ -75,6 +75,44 @@ class TestCeilDiv(utils.TestCase):
 
         pass
         
+
+
+class TestDirichlet(utils.TestCase):
+    """
+    Unit tests for the Dirichlet random sampling
+    """
+
+    def test(self):
+        """
+        Test random sampling from the Dirichlet distribution.
+        """
+
+        # Test computations
+        p = random.dirichlet([1e-10, 1e-10, 1e10, 1e-10])
+        self.assertAllClose(p,
+                            [0, 0, 1, 0],
+                            atol=1e-5)
+        p = random.dirichlet([1e20, 1e20, 1e20, 5*1e20])
+        self.assertAllClose(p,
+                            [0.125, 0.125, 0.125, 0.625])
+
+        # Test array
+        p = random.dirichlet([ [1e20, 1e-20], [3*1e20, 1e20] ])
+        self.assertAllClose(p,
+                            [[1.0, 0.0], [0.75, 0.25]])
+
+        # Test size argument
+        p = random.dirichlet([ [1e20, 1e-20] ], size=3)
+        self.assertAllClose(p,
+                            [[1, 0], [1, 0], [1, 0]])
+        p = random.dirichlet([ [3*1e20, 1e20] ], size=(2,3))
+        self.assertAllClose(p,
+                            [ [[0.75, 0.25], [0.75, 0.25], [0.75, 0.25]],
+                              [[0.75, 0.25], [0.75, 0.25], [0.75, 0.25]] ])
+        
+        pass
+
+
 class TestAlphaBetaRecursion(utils.TestCase):
     
     def test(self):
