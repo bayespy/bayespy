@@ -237,12 +237,26 @@ def sphere(N=1):
     lat = (np.arccos(np.random.uniform(-1, 1, N)) * 180 / np.pi) - 90
     return (lat, lon)
 
+
+def bernoulli(p, size=None):
+    """
+    Draw random samples from the Bernoulli distribution.
+    """
+    if isinstance(size, int):
+        size = (size,)
+    if size is None:
+        size = np.shape(p)
+    return (np.random.rand(*size) < p)
+
+
 def categorical(p, size=None):
     """
     Draw random samples from a categorical distribution.
     """
     if size is None:
         size = np.shape(p)[:-1]
+    if isinstance(size, int):
+        size = (size,)
 
     if np.any(np.asanyarray(p)<0):
         raise ValueError("Array contains negative probabilities")
