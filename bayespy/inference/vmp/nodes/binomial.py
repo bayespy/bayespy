@@ -84,7 +84,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
             raise ValueError("Number of trials must be integer")
         if np.any(N < 0):
             raise ValueError("Number of trials must be non-negative")
-        self.N = N
+        self.N = np.asanyarray(N)
         super().__init__()
 
 
@@ -92,7 +92,14 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         """
         Compute the message to a parent node.
         """
-        raise NotImplementedError()
+        if index == 0:
+            x = u_self[0][...,None]
+            n = self.N[...,None]
+            m0 = x*[1, -1] + n*[0, 1]
+            m = [m0]
+            return m
+        else:
+            raise ValueError("Incorrect parent index")
 
     
     def compute_phi_from_parents(self, u_p, mask=True):
