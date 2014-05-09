@@ -61,8 +61,21 @@ class Bernoulli(Binomial):
     _distribution = BernoulliDistribution()
 
     
-    def __init__(self, p, **kwargs):
-        super().__init__(1, p, **kwargs)
+    @classmethod
+    def _constructor(cls, p, **kwargs):
+        """
+        Constructs distribution and moments objects.
+        """
+        p = cls._ensure_moments(p, cls._parent_moments[0])
+        parents = [p]
+        return ( parents,
+                 kwargs,
+                 ( (), ),
+                 cls._total_plates(kwargs.get('plates'),
+                                   cls._distribution.plates_from_parent(0, p.plates)),
+                 cls._distribution, 
+                 cls._moments, 
+                 cls._parent_moments)
 
 
     def show(self):
