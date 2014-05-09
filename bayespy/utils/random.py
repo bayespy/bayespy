@@ -292,6 +292,21 @@ def categorical(p, size=None):
     return z.astype(np.int)
 
 
+def dirichlet(alpha, size=None):
+    """
+    Draw random samples from the Dirichlet distribution.
+    """
+    if isinstance(size, int):
+        size = (size,)
+    if size is None:
+        size = np.shape(alpha)
+    else:
+        size = size + np.shape(alpha)[-1:]
+    p = np.random.gamma(alpha, size=size)
+    p /= np.sum(p, axis=-1, keepdims=True)
+    return p
+    
+
 def alpha_beta_recursion(logp0, logP):
     """
     Compute alpha-beta recursion for Markov chain
