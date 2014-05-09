@@ -28,8 +28,9 @@ Unit tests for `bernoulli` module.
 import numpy as np
 import scipy
 
-from bayespy.nodes import Bernoulli
-from bayespy.nodes import Beta
+from bayespy.nodes import (Bernoulli,
+                           Beta,
+                           Mixture)
 
 from bayespy.utils import utils
 from bayespy.utils import random
@@ -123,5 +124,22 @@ class TestBernoulli(TestCase):
 
         pass
 
-    
 
+    def test_mixture(self):
+        """
+        Test mixture of Bernoulli
+        """
+        P = Mixture([2,0,0], Bernoulli, [0.1, 0.2, 0.3])
+        u = P._message_to_child()
+        self.assertEqual(len(u), 1)
+        self.assertAllClose(u[0], [0.3, 0.1, 0.1])
+        pass
+
+
+    def test_observed(self):
+        """
+        Test observation of Bernoulli node
+        """
+        Z = Bernoulli(0.3)
+        Z.observe(2 < 3)
+        pass

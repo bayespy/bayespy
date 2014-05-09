@@ -178,3 +178,21 @@ class TestBinomial(TestCase):
                             3.0)
 
         pass
+
+
+    def test_observed(self):
+        """
+        Test observation of Bernoulli node
+        """
+        Z = Binomial(10, 0.3)
+        Z.observe(10)
+        u = Z._message_to_child()
+        self.assertAllClose(u[0],
+                            10)
+        
+        Z = Binomial(10, 0.9)
+        Z.observe(2)
+        u = Z._message_to_child()
+        self.assertAllClose(u[0],
+                            2)
+        pass
