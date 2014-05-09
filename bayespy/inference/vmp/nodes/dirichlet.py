@@ -28,6 +28,8 @@ Module for the Dirichlet distribution node.
 import numpy as np
 import scipy.special as special
 
+from bayespy.utils import random
+
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
 from .node import Node, Moments, ensureparents
@@ -183,10 +185,16 @@ class Dirichlet(ExponentialFamily):
 
                  
     def random(self):
-        raise NotImplementedError()
+        """
+        Draw a random sample from the distribution.
+        """
+        return random.dirichlet(self.phi[0], size=self.plates)
         
 
     def show(self):
+        """
+        Print the distribution using standard parameterization.
+        """
         alpha = self.phi[0]
         print("%s ~ Dirichlet(alpha)" % self.name)
         print("  alpha = ")

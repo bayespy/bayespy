@@ -125,6 +125,14 @@ class Beta(Dirichlet):
         return super()._constructor(alpha, **kwargs)
 
     
+    def random(self):
+        """
+        Draw a random sample from the distribution.
+        """
+        p = super().random()
+        return p[...,0]
+        
+
     def show(self):
         """
         Print the distribution using standard parameterization.
