@@ -103,4 +103,25 @@ class TestBeta(TestCase):
         pass
 
     
+    def test_random(self):
+        """
+        Test random sampling of beta nodes.
+        """
 
+        p = Beta([1e20, 3e20])
+        x = p.random()
+        self.assertAllClose(x,
+                            0.25)
+
+        p = Beta([[1e20, 3e20],
+                  [1e20, 1e20]])
+        x = p.random()
+        self.assertAllClose(x,
+                            [0.25, 0.5])
+
+        p = Beta([1e20, 3e20], plates=(3,))
+        x = p.random()
+        self.assertAllClose(x,
+                            [0.25, 0.25, 0.25])
+
+        pass
