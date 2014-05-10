@@ -15,6 +15,9 @@ methods such as expectation propagation, Laplace approximations,
 Markov chain Monte Carlo (MCMC) and other methods. Contributions are
 welcome.
 
+*It is recommended to use the latest version from the GitHub master
+branch. The version in PyPI is quite outdated.*
+
 Project information
 -------------------
 
