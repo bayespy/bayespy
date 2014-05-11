@@ -29,21 +29,50 @@ from .node import Node
 
 class Distribution():
     """
+    A base class for the VMP formulas of variables.
+
     Sub-classes implement distribution specific computations.
+
+    If a sub-class maps the plates differently, it needs to overload the
+    following methods:
+
+        * compute_mask_to_parent
+
+        * plates_to_parent
+
+        * plates_from_parent
     """
 
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
+        """
+        Compute the message to a parent node.
+        """
         raise NotImplementedError()
 
     def compute_mask_to_parent(self, index, mask):
+        """
+        Maps the mask to the plates of a parent.
+        """
         # Sub-classes may need to overwrite this method
         return mask
 
     def plates_to_parent(self, index, plates):
+        """
+        Resolves the plate mapping to a parent.
+
+        Given the plates of the node's moments, this method returns the plates
+        that the message to a parent has for the parent's distribution.
+        """
         return plates
 
     def plates_from_parent(self, index, plates):
+        """
+        Resolve the plate mapping from a parent.
+
+        Given the plates of a parent's moments, this method returns the plates
+        that the moments has for this distribution.
+        """
         return plates
 
 class Stochastic(Node):

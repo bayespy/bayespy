@@ -72,11 +72,21 @@ class Deterministic(Node):
                                                         m_children,
                                                         *u_parents)
         
-    
+
     def _compute_moments(self, *u_parents):
-        # Sub-classes should implement this
+        """
+        Compute the moments given the moments of the parents.
+        """
         raise NotImplementedError()
 
+
+    def _compute_message_to_parent(self, index, m_children, *u_parents):
+        """
+        Compute the message to a parent.
+        """
+        raise NotImplementedError()
+
+    
     def _add_child(self, child, index):
         """
         Add a child node.

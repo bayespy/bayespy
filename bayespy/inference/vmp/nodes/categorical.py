@@ -27,14 +27,11 @@ Module for the categorical distribution node.
 
 import numpy as np
 
-#from .expfamily import ExponentialFamily
-#from .expfamily import ExponentialFamilyDistribution
+from .node import ensureparents
 from .expfamily import useconstructor
 from .multinomial import (MultinomialMoments,
                           MultinomialDistribution,
                           Multinomial)
-#from .dirichlet import Dirichlet, DirichletMoments
-from .node import ensureparents
 
 from bayespy.utils import random
 from bayespy.utils import utils
