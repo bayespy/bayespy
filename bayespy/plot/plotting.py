@@ -33,6 +33,7 @@ from matplotlib import animation
 
 from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
 from bayespy.inference.vmp.nodes.gaussian import GaussianMoments
+from bayespy.inference.vmp.nodes.beta import BetaMoments
 
 from bayespy.utils import utils
 
@@ -325,6 +326,26 @@ def timeseries_categorical_mc(Z):
         for j in range(N):
             plt.subplot(M, N, i*N+j+1)
             hinton(z[i,j].T, vmax=1.0, square=False)
+
+
+def beta_hinton(P):
+    """
+    Plot a beta distributed random variable as a Hinton diagram
+    """
+
+    # Make sure that the node is beta
+    P._convert(BetaMoments)
+
+    # Compute exp( <log p> )
+    p = np.exp(P._message_to_child()[0][...,0])
+
+    # Explicit broadcasting
+    p = p * np.ones(P.plates)
+
+    # Plot Hinton diagram
+    hinton(p, vmax=1.0, square=False)
+
+    return
     
 
 class Plotter():
