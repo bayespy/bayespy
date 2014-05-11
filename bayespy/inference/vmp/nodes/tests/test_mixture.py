@@ -33,6 +33,7 @@ from bayespy.nodes import (GaussianARD,
                            Gamma,
                            Mixture,
                            Categorical,
+                           Bernoulli,
                            Multinomial)
 
 from bayespy.utils import random
@@ -216,6 +217,26 @@ class TestMixture(TestCase):
                             -0.5 * 1/K * alpha * np.ones((K,M)))
         
 
+        # Mixed distribution broadcasts g
+        # This tests for a found bug. The bug caused an error.
+        Z = Categorical([0.3, 0.5, 0.2])
+        X = Mixture(Z, Categorical, [[0.2,0.8], [0.1,0.9], [0.3,0.7]])
+        m = X._message_to_parent(0)
+
+        pass
+
+
+    def test_lowerbound(self):
+        """
+        Test log likelihood lower bound for Mixture node
+        """
+
+        # Mixed distribution broadcasts g
+        # This tests for a found bug. The bug caused an error.
+        Z = Categorical([0.3, 0.5, 0.2])
+        X = Mixture(Z, Categorical, [[0.2,0.8], [0.1,0.9], [0.3,0.7]])
+        X.lower_bound_contribution()
+        
         pass
 
     def test_mask_to_parent(self):

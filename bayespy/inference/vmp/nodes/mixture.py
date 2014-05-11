@@ -57,7 +57,12 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             g = self.distribution.compute_cgf_from_parents(*(u_parents[1:]))
             # Reshape(g):
             # Shape(g)      = [Nn,..,N0,K]
-            g = utils.moveaxis(g, self.cluster_plate, -1)
+            if np.ndim(g) < abs(self.cluster_plate):
+                # Not enough axes, just add the cluster plate axis
+                g = np.expand_dims(g, -1)
+            else:
+                # Move the cluster plate axis
+                g = utils.moveaxis(g, self.cluster_plate, -1)
 
             # Compute phi:
             # Shape(phi)    = [Nn,..,K,..,N0,Dd,..,D0]
@@ -238,6 +243,8 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         return phi
 
     def compute_moments_and_cgf(self, phi, mask=True):
+        (u, g) = self.distribution.compute_moments_and_cgf(phi, mask=mask)
+        print("DEBUG IN MIXTURE CGF", np.shape(phi[0]), np.shape(g))
         return self.distribution.compute_moments_and_cgf(phi, mask=mask)
 
     def compute_cgf_from_parents(self, *u_parents):
@@ -254,7 +261,12 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
         # Move cluster axis to last:
         # Shape(g)      = [Nn,..,N0,K]
-        g = utils.moveaxis(g, self.cluster_plate, -1)
+        if np.ndim(g) < abs(self.cluster_plate):
+            # Not enough axes, just add the cluster plate axis
+            g = np.expand_dims(g, -1)
+        else:
+            # Move the cluster plate axis
+            g = utils.moveaxis(g, self.cluster_plate, -1)
 
         # Cluster assignments/contributions/probabilities/weights:
         # Shape(p)      = [Nn,..,N0,K]
@@ -264,6 +276,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         # properly aligned, you can just sum p*g over the last
         # axis and utilize broadcasting:
         # Shape(result) = [Nn,..,N0]
+
         g = utils.sum_product(p, g, axes_to_sum=-1)
 
         return g
