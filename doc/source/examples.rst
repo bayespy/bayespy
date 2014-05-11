@@ -26,6 +26,7 @@ Examples
 
     _notebooks/gmm.rst
     _notebooks/bmm.rst
+    _notebooks/hmm_discrete.rst
     _notebooks/hmm.rst
     _notebooks/pca.rst
     _notebooks/lssm.rst
