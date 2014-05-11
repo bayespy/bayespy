@@ -174,6 +174,19 @@ class TestMultinomial(TestCase):
 
         pass
 
+
+    def test_lower_bound(self):
+        """
+        Test lower bound for multinomial node.
+        """
+
+        # Test for a bug found in multinomial
+        X = Multinomial(10, [0.3, 0.5, 0.2])
+        l = X.lower_bound_contribution()
+        self.assertAllClose(l, 0.0)
+        
+        pass
+
     
     def test_mixture(self):
         """

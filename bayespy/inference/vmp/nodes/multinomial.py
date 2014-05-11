@@ -121,7 +121,7 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         N = np.expand_dims(self.N, -1)
         u0 = N * p / np.sum(p, axis=-1, keepdims=True)
         u = [u0]
-        g = -N * np.squeeze(logsum_p, axis=-1)
+        g = -np.squeeze(N * logsum_p, axis=-1)
         return (u, g)
 
     
