@@ -42,6 +42,10 @@ class VB():
                  autosave_filename=None,
                  callback=None):
 
+        for (ind, node) in enumerate(nodes):
+            if not isinstance(node, Node):
+                raise ValueError("Argument number %d is not a node" % (ind+1))
+            
         # Remove duplicate nodes
         self.model = utils.utils.unique(nodes)
 
