@@ -243,8 +243,6 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         return phi
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        (u, g) = self.distribution.compute_moments_and_cgf(phi, mask=mask)
-        print("DEBUG IN MIXTURE CGF", np.shape(phi[0]), np.shape(g))
         return self.distribution.compute_moments_and_cgf(phi, mask=mask)
 
     def compute_cgf_from_parents(self, *u_parents):
