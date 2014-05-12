@@ -363,7 +363,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         """
         Draw a random sample from the distribution.
         """
-        raise NotImplementedError()
+        return self.distribution.random(*phi, plates=plates)
 
 
 class Mixture(ExponentialFamily):
