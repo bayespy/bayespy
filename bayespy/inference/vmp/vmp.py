@@ -97,6 +97,8 @@ class VB():
         if len(nodes) == 0:
             nodes = self.model
 
+        converged = False
+
         for i in range(repeat):
             t = time.clock()
 
@@ -134,6 +136,7 @@ class VB():
 
                 # Check for convergence
                 if L - self.L[self.iter-1] < 1e-12:
+                    converged = True
                     print("Converged.")
 
             self.L[self.iter] = L
@@ -145,6 +148,9 @@ class VB():
 
                 self.save(self.autosave_filename)
                 print('Auto-saved to %s' % self.autosave_filename)
+
+            if converged:
+                return
 
 
 
