@@ -21,6 +21,10 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+"""
+Module for the mixture distribution node.
+"""
+
 import warnings
 import numpy as np
 
@@ -34,16 +38,27 @@ from .categorical import Categorical, \
                          CategoricalMoments
 
 class MixtureDistribution(ExponentialFamilyDistribution):
+    """
+    Class for the VMP formulas of mixture variables.
+    """
+    
 
     def __init__(self, distribution, cluster_plate, n_clusters, ndims, 
                  ndims_parents):
+        """
+        Create VMP formula node for a mixture variable
+        """
         self.distribution = distribution
         self.cluster_plate = cluster_plate
         self.ndims = ndims
         self.ndims_parents = ndims_parents
         self.K = n_clusters
 
+
     def compute_message_to_parent(self, parent, index, u, *u_parents):
+        """
+        Compute the message to a parent node.
+        """
 
         if index == 0:
 
@@ -168,7 +183,11 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             return m
 
+        
     def compute_mask_to_parent(self, index, mask):
+        """
+        Maps the mask to the plates of a parent.
+        """
         if index == 0:
             return mask
         else:
@@ -178,8 +197,11 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                 mask = np.expand_dims(mask, axis=self.cluster_plate)
             return self.distribution.compute_mask_to_parent(index-1, mask)
 
+        
     def compute_phi_from_parents(self, *u_parents, mask=True):
-
+        """
+        Compute the natural parameter vector given parent moments.
+        """
         # Compute weighted average of the parameters
 
         # Cluster parameters
@@ -242,10 +264,18 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             
         return phi
 
+    
     def compute_moments_and_cgf(self, phi, mask=True):
+        """
+        Compute the moments and :math:`g(\phi)`.
+        """
         return self.distribution.compute_moments_and_cgf(phi, mask=mask)
 
+    
     def compute_cgf_from_parents(self, *u_parents):
+        """
+        Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
+        """
 
         # Compute weighted average of g over the clusters.
 
@@ -278,12 +308,22 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         g = utils.sum_product(p, g, axes_to_sum=-1)
 
         return g
-        
+
+    
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """ Compute u(x) and f(x) for given x. """
+        """
+        Compute the moments and :math:`f(x)` for a fixed value.
+        """
         return self.distribution.compute_fixed_moments_and_f(x, mask=True)
 
+    
     def plates_to_parent(self, index, plates):
+        """
+        Resolves the plate mapping to a parent.
+
+        Given the plates of the node's moments, this method returns the plates
+        that the message to a parent has for the parent's distribution.
+        """
         if index == 0:
             return plates
         else:
@@ -299,7 +339,14 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             return self.distribution.plates_to_parent(index-1, plates)
 
+        
     def plates_from_parent(self, index, plates):
+        """
+        Resolve the plate mapping from a parent.
+
+        Given the plates of a parent's moments, this method returns the plates
+        that the moments has for this distribution.
+        """
         if index == 0:
             return plates
         else:
@@ -310,6 +357,13 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             if len(plates) >= abs(self.cluster_plate):
                 plates.pop(self.cluster_plate)
             return tuple(plates)
+
+
+    def random(self, *phi, plates=None):
+        """
+        Draw a random sample from the distribution.
+        """
+        raise NotImplementedError()
 
 
 class Mixture(ExponentialFamily):
