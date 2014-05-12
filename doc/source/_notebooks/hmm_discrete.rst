@@ -2,6 +2,9 @@
 Discrete hidden Markov model
 ============================
 
+This example is also available as `an IPython
+notebook <hmm_discrete.ipynb>`_ or `a Python script <hmm_discrete.py>`_.
+
 Known parameters
 ----------------
 
@@ -66,7 +69,7 @@ inference, that is, compute our posterior distribution:
 
 .. parsed-literal::
 
-    Iteration 1: loglike=-1.088929e+03 (0.110 seconds)
+    Iteration 1: loglike=-1.091583e+03 (0.090 seconds)
 
 
 In this case, because there is only one unobserved random variable, we
@@ -132,106 +135,26 @@ update the state assignments (``Z``) first.
 
 .. parsed-literal::
 
-    Iteration 1: loglike=-1.109896e+03 (0.100 seconds)
-    Iteration 2: loglike=-1.107351e+03 (0.100 seconds)
-    Iteration 3: loglike=-1.106835e+03 (0.100 seconds)
-    Iteration 4: loglike=-1.106789e+03 (0.100 seconds)
-    Iteration 5: loglike=-1.106778e+03 (0.090 seconds)
-    Iteration 6: loglike=-1.106772e+03 (0.100 seconds)
-    Iteration 7: loglike=-1.106767e+03 (0.100 seconds)
-    Iteration 8: loglike=-1.106763e+03 (0.100 seconds)
-    Iteration 9: loglike=-1.106758e+03 (0.100 seconds)
-    Iteration 10: loglike=-1.106754e+03 (0.090 seconds)
-    Iteration 11: loglike=-1.106750e+03 (0.100 seconds)
-    Iteration 12: loglike=-1.106745e+03 (0.100 seconds)
-    Iteration 13: loglike=-1.106741e+03 (0.100 seconds)
-    Iteration 14: loglike=-1.106736e+03 (0.100 seconds)
-    Iteration 15: loglike=-1.106732e+03 (0.100 seconds)
-    Iteration 16: loglike=-1.106728e+03 (0.090 seconds)
-    Iteration 17: loglike=-1.106724e+03 (0.100 seconds)
-    Iteration 18: loglike=-1.106719e+03 (0.100 seconds)
-    Iteration 19: loglike=-1.106715e+03 (0.100 seconds)
-    Iteration 20: loglike=-1.106711e+03 (0.100 seconds)
-    Iteration 21: loglike=-1.106707e+03 (0.100 seconds)
-    Iteration 22: loglike=-1.106703e+03 (0.090 seconds)
-    Iteration 23: loglike=-1.106699e+03 (0.100 seconds)
-    Iteration 24: loglike=-1.106695e+03 (0.100 seconds)
-    Iteration 25: loglike=-1.106691e+03 (0.100 seconds)
-    Iteration 26: loglike=-1.106687e+03 (0.100 seconds)
-    Iteration 27: loglike=-1.106683e+03 (0.100 seconds)
-    Iteration 28: loglike=-1.106679e+03 (0.100 seconds)
-    Iteration 29: loglike=-1.106675e+03 (0.100 seconds)
-    Iteration 30: loglike=-1.106671e+03 (0.090 seconds)
-    Iteration 31: loglike=-1.106667e+03 (0.100 seconds)
-    Iteration 32: loglike=-1.106663e+03 (0.100 seconds)
-    Iteration 33: loglike=-1.106659e+03 (0.090 seconds)
-    Iteration 34: loglike=-1.106655e+03 (0.100 seconds)
-    Iteration 35: loglike=-1.106651e+03 (0.100 seconds)
-    Iteration 36: loglike=-1.106647e+03 (0.100 seconds)
-    Iteration 37: loglike=-1.106643e+03 (0.100 seconds)
-    Iteration 38: loglike=-1.106639e+03 (0.090 seconds)
-    Iteration 39: loglike=-1.106635e+03 (0.100 seconds)
-    Iteration 40: loglike=-1.106632e+03 (0.100 seconds)
-    Iteration 41: loglike=-1.106628e+03 (0.100 seconds)
-    Iteration 42: loglike=-1.106624e+03 (0.090 seconds)
-    Iteration 43: loglike=-1.106620e+03 (0.090 seconds)
-    Iteration 44: loglike=-1.106616e+03 (0.100 seconds)
-    Iteration 45: loglike=-1.106612e+03 (0.100 seconds)
-    Iteration 46: loglike=-1.106609e+03 (0.100 seconds)
-    Iteration 47: loglike=-1.106605e+03 (0.100 seconds)
-    Iteration 48: loglike=-1.106601e+03 (0.090 seconds)
-    Iteration 49: loglike=-1.106597e+03 (0.100 seconds)
-    Iteration 50: loglike=-1.106593e+03 (0.100 seconds)
-    Iteration 51: loglike=-1.106589e+03 (0.100 seconds)
-    Iteration 52: loglike=-1.106586e+03 (0.100 seconds)
-    Iteration 53: loglike=-1.106582e+03 (0.090 seconds)
-    Iteration 54: loglike=-1.106578e+03 (0.090 seconds)
-    Iteration 55: loglike=-1.106574e+03 (0.100 seconds)
-    Iteration 56: loglike=-1.106570e+03 (0.100 seconds)
-    Iteration 57: loglike=-1.106567e+03 (0.100 seconds)
-    Iteration 58: loglike=-1.106563e+03 (0.100 seconds)
-    Iteration 59: loglike=-1.106559e+03 (0.100 seconds)
-    Iteration 60: loglike=-1.106555e+03 (0.100 seconds)
-    Iteration 61: loglike=-1.106551e+03 (0.100 seconds)
-    Iteration 62: loglike=-1.106547e+03 (0.090 seconds)
-    Iteration 63: loglike=-1.106544e+03 (0.100 seconds)
-    Iteration 64: loglike=-1.106540e+03 (0.100 seconds)
-    Iteration 65: loglike=-1.106536e+03 (0.090 seconds)
-    Iteration 66: loglike=-1.106532e+03 (0.100 seconds)
-    Iteration 67: loglike=-1.106528e+03 (0.100 seconds)
-    Iteration 68: loglike=-1.106524e+03 (0.100 seconds)
-    Iteration 69: loglike=-1.106520e+03 (0.100 seconds)
-    Iteration 70: loglike=-1.106516e+03 (0.100 seconds)
-    Iteration 71: loglike=-1.106512e+03 (0.100 seconds)
-    Iteration 72: loglike=-1.106508e+03 (0.100 seconds)
-    Iteration 73: loglike=-1.106505e+03 (0.090 seconds)
-    Iteration 74: loglike=-1.106501e+03 (0.100 seconds)
-    Iteration 75: loglike=-1.106497e+03 (0.100 seconds)
-    Iteration 76: loglike=-1.106492e+03 (0.090 seconds)
-    Iteration 77: loglike=-1.106488e+03 (0.090 seconds)
-    Iteration 78: loglike=-1.106484e+03 (0.100 seconds)
-    Iteration 79: loglike=-1.106480e+03 (0.100 seconds)
-    Iteration 80: loglike=-1.106476e+03 (0.100 seconds)
-    Iteration 81: loglike=-1.106472e+03 (0.100 seconds)
-    Iteration 82: loglike=-1.106468e+03 (0.090 seconds)
-    Iteration 83: loglike=-1.106464e+03 (0.100 seconds)
-    Iteration 84: loglike=-1.106460e+03 (0.090 seconds)
-    Iteration 85: loglike=-1.106455e+03 (0.100 seconds)
-    Iteration 86: loglike=-1.106451e+03 (0.100 seconds)
-    Iteration 87: loglike=-1.106447e+03 (0.100 seconds)
-    Iteration 88: loglike=-1.106442e+03 (0.090 seconds)
-    Iteration 89: loglike=-1.106438e+03 (0.100 seconds)
-    Iteration 90: loglike=-1.106434e+03 (0.100 seconds)
-    Iteration 91: loglike=-1.106429e+03 (0.100 seconds)
-    Iteration 92: loglike=-1.106425e+03 (0.100 seconds)
-    Iteration 93: loglike=-1.106420e+03 (0.090 seconds)
-    Iteration 94: loglike=-1.106416e+03 (0.100 seconds)
-    Iteration 95: loglike=-1.106411e+03 (0.100 seconds)
-    Iteration 96: loglike=-1.106407e+03 (0.100 seconds)
-    Iteration 97: loglike=-1.106402e+03 (0.100 seconds)
-    Iteration 98: loglike=-1.106397e+03 (0.090 seconds)
-    Iteration 99: loglike=-1.106393e+03 (0.100 seconds)
-    Iteration 100: loglike=-1.106388e+03 (0.090 seconds)
+    Iteration 1: loglike=-1.115941e+03 (0.090 seconds)
+    Iteration 2: loglike=-1.115671e+03 (0.090 seconds)
+    Iteration 3: loglike=-1.115603e+03 (0.100 seconds)
+    Iteration 4: loglike=-1.115574e+03 (0.090 seconds)
+    Iteration 5: loglike=-1.115555e+03 (0.090 seconds)
+    Iteration 6: loglike=-1.115538e+03 (0.100 seconds)
+    Iteration 7: loglike=-1.115521e+03 (0.090 seconds)
+    Iteration 8: loglike=-1.115504e+03 (0.090 seconds)
+    Iteration 9: loglike=-1.115487e+03 (0.090 seconds)
+    Iteration 10: loglike=-1.115469e+03 (0.090 seconds)
+    Iteration 11: loglike=-1.115451e+03 (0.100 seconds)
+    Iteration 12: loglike=-1.115433e+03 (0.090 seconds)
+    Iteration 13: loglike=-1.115413e+03 (0.090 seconds)
+    Iteration 14: loglike=-1.115394e+03 (0.090 seconds)
+    Iteration 15: loglike=-1.115374e+03 (0.090 seconds)
+    Iteration 16: loglike=-1.115354e+03 (0.100 seconds)
+    Iteration 17: loglike=-1.115333e+03 (0.090 seconds)
+    Iteration 18: loglike=-1.115312e+03 (0.090 seconds)
+    Iteration 19: loglike=-1.115290e+03 (0.090 seconds)
+    Iteration 20: loglike=-1.115268e+03 (0.090 seconds)
 
 
 In order to update the variables in that order, one may explicitly give
@@ -253,7 +176,7 @@ Plot the estimated state transition probabilities:
     bpplt.dirichlet_hinton(A)
 
 
-.. image:: hmm_discrete_files/hmm_discrete_28_0.png
+.. image:: hmm_discrete_files/hmm_discrete_29_0.png
 
 
 Plot the estimated emission probabilities:
@@ -263,8 +186,10 @@ Plot the estimated emission probabilities:
     bpplt.dirichlet_hinton(P)
 
 
-.. image:: hmm_discrete_files/hmm_discrete_30_0.png
+.. image:: hmm_discrete_files/hmm_discrete_31_0.png
 
 
 It is interesting that these estimated parameters are very different
 from the true parameters. This happens because of un-identifiability:
+different parameters lead to similar marginal distributions over the
+observed process.

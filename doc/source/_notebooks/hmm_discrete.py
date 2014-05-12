@@ -3,11 +3,13 @@
 
 ## Discrete hidden Markov model
 
+# This example is also available as [an IPython notebook](hmm_discrete.ipynb) or [a Python script](hmm_discrete.py).
+
 ### Known parameters
 
 # This example follows the one presented in [Wikipedia](http://en.wikipedia.org/wiki/Hidden_Markov_model#A_concrete_example). Each day, the state of the weather is either 'rainy' or 'sunny'. The weather follows a first-order discrete Markov process with the following initial state probability and state transition probabilities:
 
-# In[43]:
+# In[1]:
 
 from bayespy.nodes import CategoricalMarkovChain
 # Initial state probabilities
@@ -23,7 +25,7 @@ Z = CategoricalMarkovChain(a0, A, states=N)
 
 # However, instead of observing this process directly, we observe whether Bob is 'walking', 'shopping' or 'cleaning'. The probability of each activity depends on the current weather as follows:
 
-# In[44]:
+# In[2]:
 
 from bayespy.nodes import Categorical, Mixture
 # Emission probabilities
@@ -35,7 +37,7 @@ Y = Mixture(Z, Categorical, P)
 
 # In order to test our method, we'll generate artificial data using this model:
 
-# In[45]:
+# In[3]:
 
 # Draw realization of the weather process
 weather = Z.random()
@@ -45,14 +47,14 @@ activity = Mixture(weather, Categorical, P).random()
 
 # Now, using this data, we set our variable $Y$ to be observed:
 
-# In[46]:
+# In[4]:
 
 Y.observe(activity)
 
 
 # In order to run inference, we construct variational Bayesian inference engine:
 
-# In[47]:
+# In[5]:
 
 from bayespy.inference import VB
 Q = VB(Y, Z)
@@ -60,7 +62,7 @@ Q = VB(Y, Z)
 
 # Note that we need to give all random variables to `VB`. In this case, the only random variables were `Y` and `Z`. Next we run the inference, that is, compute our posterior distribution:
 
-# In[48]:
+# In[6]:
 
 Q.update()
 
@@ -71,7 +73,7 @@ Q.update()
 
 # Next, we consider the case when we do not know the parameters of the weather process (initial state probability and state transition probabilities). We give these parameters quite non-informative priors, but it is possible to provide more informative priors if such information is available. First, the weather process:
 
-# In[49]:
+# In[7]:
 
 from bayespy.nodes import Dirichlet
 # Initial state probabilities
@@ -85,7 +87,7 @@ Z = CategoricalMarkovChain(a0, A, states=N)
 
 # Second, the emission probabilities are also given quite non-informative priors:
 
-# In[50]:
+# In[8]:
 
 # Emission probabilities
 P = Dirichlet([[0.1, 0.1, 0.1],
@@ -96,21 +98,21 @@ Y = Mixture(Z, Categorical, P)
 
 #  We use the same data as before:
 
-# In[51]:
+# In[9]:
 
 Y.observe(activity)
 
 
 # Because `VB` takes all the unknown variables, we need to provide `A`, `a0` and `P` also:
 
-# In[52]:
+# In[10]:
 
 Q = VB(Y, Z, A, a0, P)
 
 
 # If we ran the VB algorithm now, we would get a result where all both states would have identical emission probability distribution. This happens because of a non-random default initialization. `P` is initialized in such a way that both states have the same distribution, and `Z` is initialized in such a way that each state has equal probability. Thus, the VB algorithm won't separate them. In such cases, it is necessary to use a random initialization. In principle, it is possible to use random initialization for either variable and then update the other variable first. In the case of mixture distributions, it might be better to initialize the parameters (`P`) randomly and update the state assignments (`Z`) first.
 
-# In[53]:
+# In[11]:
 
 P.initialize_from_random()
 Q.update(Z, A, a0, P, repeat=20)
@@ -120,7 +122,7 @@ Q.update(Z, A, a0, P, repeat=20)
 
 # Plot the estimated state transition probabilities:
 
-# In[55]:
+# In[12]:
 
 # NOTE: These three lines are just to enable inline plotting in IPython Notebooks.
 import matplotlib.pyplot as plt
@@ -133,9 +135,9 @@ bpplt.dirichlet_hinton(A)
 
 # Plot the estimated emission probabilities:
 
-# In[56]:
+# In[13]:
 
 bpplt.dirichlet_hinton(P)
 
 
-# It is interesting that these estimated parameters are very different from the true parameters. This happens because of un-identifiability: 
+# It is interesting that these estimated parameters are very different from the true parameters. This happens because of un-identifiability: different parameters lead to similar marginal distributions over the observed process.
