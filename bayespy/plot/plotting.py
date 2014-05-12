@@ -34,6 +34,7 @@ from matplotlib import animation
 from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
 from bayespy.inference.vmp.nodes.gaussian import GaussianMoments
 from bayespy.inference.vmp.nodes.beta import BetaMoments
+from bayespy.inference.vmp.nodes.beta import DirichletMoments
 
 from bayespy.utils import utils
 
@@ -348,6 +349,26 @@ def beta_hinton(P):
     return
     
 
+def dirichlet_hinton(P, square=True):
+    """
+    Plot a beta distributed random variable as a Hinton diagram
+    """
+
+    # Make sure that the node is beta
+    P._convert(DirichletMoments)
+
+    # Compute exp( <log p> )
+    p = np.exp(P._message_to_child()[0])
+
+    # Explicit broadcasting
+    p = p * np.ones(P.plates+(1,))
+
+    # Plot Hinton diagram
+    hinton(p, vmax=1.0, square=square)
+
+    return
+
+    
 class Plotter():
     def __init__(self, plotter, **kwargs):
         self._kwargs = kwargs
