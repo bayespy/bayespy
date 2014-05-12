@@ -238,6 +238,52 @@ class CategoricalMarkovChain(ExponentialFamily):
                 parent_moments)
 
         
+    def random(self):
+        """
+        Draw a random sample from the distribution.
+        """
+        # Convert natural parameters to transition probabilities
+        p0 = np.exp(self.phi[0] - utils.logsumexp(self.phi[0], 
+                                                  axis=-1,
+                                                  keepdims=True))
+        P = np.exp(self.phi[1] - utils.logsumexp(self.phi[1],
+                                                 axis=-1,
+                                                 keepdims=True))
+        # Explicit broadcasting
+        P = P * np.ones(self.plates)[...,None,None,None]
+        # Allocate memory
+        N = self._distribution.N
+        Z = np.zeros(self.plates + (N,), dtype=np.int)
+        # Draw initial state
+        Z[...,0] = random.categorical(p0, size=self.plates)
+        # Create [0,1,2,...,len(plate_axis)] indices for each plate axis and
+        # make them broadcast properly
+        nplates = len(self.plates)
+        plates_ind = [np.arange(plate)[(Ellipsis,)+(nplates-i-1)*(None,)]
+                      for (i, plate) in enumerate(self.plates)]
+        plates_ind = tuple(plates_ind)
+        # Draw next states iteratively
+        for n in range(N-1):
+            # Select the transition probabilities for the current state but take
+            # into account the plates.  This leads to complex NumPy
+            # indexing.. :)
+            time_ind = min(n, np.shape(P)[-3]-1)
+            ind = plates_ind + (time_ind, Z[...,n], Ellipsis)
+            p = P[ind]
+            # Draw next state
+            z = random.categorical(P[ind])
+            Z[...,n+1] = z
+            
+        return Z
+
+    
+    def show(self):
+        """
+        Print the distribution using standard parameterization.
+        """
+        raise NotImplementedError()
+
+
 class CategoricalMarkovChainToCategorical(Deterministic):
     """
     A node for converting categorical MC moments to categorical moments.
