@@ -44,8 +44,15 @@ P.initialize_from_random()
 Q.update(repeat=10)
 
 
-# In[2]:
+# In[3]:
 
-from bayespy.plot.plotting as bpplt
-bpplt.
+import bayespy.plot.plotting as bpplt
+bpplt.beta_hinton(P)
+import matplotlib.pyplot as plt
+plt.show()
+
+
+# In[3]:
+
+
 

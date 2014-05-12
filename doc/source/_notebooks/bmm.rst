@@ -42,19 +42,40 @@ blaa blaa blaa
 
 .. parsed-literal::
 
-    Iteration 1: loglike=-7.999065e+02 (0.000 seconds)
-    Iteration 2: loglike=-7.518457e+02 (0.000 seconds)
-    Iteration 3: loglike=-7.234529e+02 (0.000 seconds)
-    Iteration 4: loglike=-7.052385e+02 (0.000 seconds)
-    Iteration 5: loglike=-6.962540e+02 (0.000 seconds)
-    Iteration 6: loglike=-6.863324e+02 (0.010 seconds)
-    Iteration 7: loglike=-6.852803e+02 (0.000 seconds)
-    Iteration 8: loglike=-6.851665e+02 (0.000 seconds)
-    Iteration 9: loglike=-6.851323e+02 (0.000 seconds)
-    Iteration 10: loglike=-6.851190e+02 (0.000 seconds)
+    Iteration 1: loglike=nan (0.005 seconds)
+    Iteration 2: loglike=nan (0.003 seconds)
+    Iteration 3: loglike=nan (0.003 seconds)
+    Iteration 4: loglike=nan (0.003 seconds)
+    Iteration 5: loglike=nan (0.003 seconds)
+    Iteration 6: loglike=nan (0.003 seconds)
+    Iteration 7: loglike=nan (0.003 seconds)
+    Iteration 8: loglike=nan (0.003 seconds)
+    Iteration 9: loglike=nan (0.003 seconds)
+    Iteration 10: loglike=nan (0.003 seconds)
+
+
+.. parsed-literal::
+
+    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/nodes/dirichlet.py:91: RuntimeWarning: divide by zero encountered in log
+      logp = np.log(p)
+    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/nodes/expfamily.py:71: RuntimeWarning: invalid value encountered in multiply
+      L = L + np.sum(phi_i * u_i, axis=axis_sum)
+    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/nodes/expfamily.py:71: RuntimeWarning: invalid value encountered in add
+      L = L + np.sum(phi_i * u_i, axis=axis_sum)
+    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/nodes/mixture.py:229: UserWarning: The natural parameters of mixture distribution contain nans. This may happen if you use fixed parameters in your model. Technically, one possible reason is that the cluster assignment probability for some element is zero (p=0) and the natural parameter of that cluster is -inf, thus 0*(-inf)=nan. Solution: Use parameters that assign non-zero probabilities for the whole domain.
+      warnings.warn("The natural parameters of mixture distribution "
 
 
 .. code:: python
 
-    from bayespy.plot.plotting as bpplt
-    bpplt.
+    import bayespy.plot.plotting as bpplt
+    bpplt.beta_hinton(P)
+    import matplotlib.pyplot as plt
+    plt.show()
+
+.. parsed-literal::
+
+    /home/jluttine/workspace/bayespy/bayespy/plot/plotting.py:204: RuntimeWarning: invalid value encountered in absolute
+      _w = np.abs(w)
+
+
