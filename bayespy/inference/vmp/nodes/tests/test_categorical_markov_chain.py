@@ -166,3 +166,50 @@ class TestCategoricalMarkovChain(utils.TestCase):
 
 
         pass
+
+
+    def test_random(self):
+        """
+        Test random sampling of categorical Markov chain
+        """
+
+        # Simple random sample
+        Z = CategoricalMarkovChain([1, 0], [[0, 1],
+                                            [1, 0]],
+                                   states=3)
+        z = Z.random()
+        self.assertAllClose(z, [0, 1, 0])
+
+        # Draw sample with plates
+        p0 = [ [1,0], [0,1] ]
+        P = [ [ [[0,1],
+                 [1,0]] ],
+              [ [[1,0],
+                 [0,1]] ] ]
+        Z = CategoricalMarkovChain(p0, P,
+                                   states=3)
+        z = Z.random()
+        self.assertAllClose(z, [[0, 1, 0], [1, 1, 1]])
+
+        # Draw sample with plates, parameters broadcasted
+        Z = CategoricalMarkovChain([1, 0], [[0, 1],
+                                            [1, 0]],
+                                   states=3,
+                                   plates=(3,4))
+        z = Z.random()
+        self.assertAllClose(z, np.ones((3,4,1))*[0, 1, 0])
+
+        # Draw sample with time-varying transition matrix
+        p0 = [1, 0]
+        P = [ [[0,1],
+               [1,0]],
+              [[1,0],
+               [0,1]],
+              [[1, 0],
+               [1, 0]] ]
+        Z = CategoricalMarkovChain(p0, P,
+                                   states=4)
+        z = Z.random()
+        self.assertAllClose(z, [0, 1, 1, 0])
+        
+        pass
