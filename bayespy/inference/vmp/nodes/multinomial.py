@@ -155,6 +155,13 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
     
+    def random(self, *phi):
+        """
+        Draw a random sample from the distribution.
+        """
+        raise NotImplementedError()
+
+    
 class Multinomial(ExponentialFamily):
     """
     Node for multinomial random variables.
@@ -193,13 +200,6 @@ class Multinomial(ExponentialFamily):
                 distribution, 
                 cls._moments, 
                 cls._parent_moments)
-
-    
-    def random(self):
-        """
-        Draw a random sample from the distribution.
-        """
-        raise NotImplementedError()
 
     
     def show(self):

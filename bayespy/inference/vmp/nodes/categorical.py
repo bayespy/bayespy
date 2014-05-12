@@ -150,6 +150,16 @@ class CategoricalDistribution(MultinomialDistribution):
         return (u, f)
 
     
+    def random(self, *phi, plates=None):
+        """
+        Draw a random sample from the distribution.
+        """
+        logp = phi[0]
+        logp -= np.amax(logp, axis=-1, keepdims=True)
+        p = np.exp(logp)
+        return random.categorical(p, size=plates)
+
+    
 class Categorical(Multinomial):
     """
     Node for categorical random variables.
@@ -186,16 +196,6 @@ class Categorical(Multinomial):
                 cls._parent_moments)
     
 
-    def random(self):
-        """
-        Draw a random sample from the distribution.
-        """
-        logp = self.phi[0]
-        logp -= np.amax(logp, axis=-1, keepdims=True)
-        p = np.exp(logp)
-        return random.categorical(p, size=self.plates)
-
-    
     def show(self):
         """
         Print the distribution using standard parameterization.

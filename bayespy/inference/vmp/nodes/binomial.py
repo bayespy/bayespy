@@ -148,6 +148,13 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
     
+    def random(self, *phi):
+        """
+        Draw a random sample from the distribution.
+        """
+        raise NotImplementedError()
+
+    
 class Binomial(ExponentialFamily):
     """
     Node for binomial random variables.
@@ -175,13 +182,6 @@ class Binomial(ExponentialFamily):
                  distribution, 
                  moments, 
                  cls._parent_moments)
-
-    
-    def random(self):
-        """
-        Draw a random sample from the distribution.
-        """
-        raise NotImplementedError()
 
     
     def show(self):

@@ -405,4 +405,8 @@ class ExponentialFamily(Stochastic):
         super().load(group)
 
         
-
+    def random(self):
+        """
+        Draw a random sample from the distribution.
+        """
+        return self._distribution.random(*(self.phi), plates=self.plates)

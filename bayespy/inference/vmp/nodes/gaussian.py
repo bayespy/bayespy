@@ -103,6 +103,19 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
 
+    def random(self, *phi, plates=None):
+        # TODO/FIXME: You shouldn't draw random values for
+        # observed/fixed elements!
+
+        # Note that phi[1] is -0.5*inv(Cov)
+        U = utils.utils.m_chol(-2*phi[1])
+        mu = utils.utils.m_chol_solve(U, phi[0])
+        z = np.random.normal(0, 1, plates + np.shape(mu)[-1:])
+        # Compute mu + U'*z
+        z = utils.utils.m_solve_triangular(U, z, trans='T', lower=False)
+        return mu + z
+            
+
 class Gaussian(ExponentialFamily):
     r"""
     VMP node for Gaussian variable.
@@ -261,19 +274,6 @@ class Gaussian(ExponentialFamily):
                 cls._moments, 
                 cls._parent_moments)
 
-
-    def random(self):
-        # TODO/FIXME: You shouldn't draw random values for
-        # observed/fixed elements!
-
-        # Note that phi[1] is -0.5*inv(Cov)
-        U = utils.utils.m_chol(-2*self.phi[1])
-        mu = self.u[0]
-        z = np.random.normal(0, 1, self.get_shape(0))
-        # Compute mu + U'*z
-        z = utils.utils.m_solve_triangular(U, z, trans='T', lower=False)
-        return mu + z
-            
 
     def show(self):
         mu = self.u[0]
@@ -608,6 +608,53 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
             return super().plates_from_parent(index, plates)
 
 
+    def random(self, *phi, plates=None):
+        """
+        Draw a random sample from the Gaussian distribution.
+        """
+        # TODO/FIXME: You shouldn't draw random values for
+        # observed/fixed elements!
+        D = self.ndim
+        if D == 0:
+            dims = ()
+        else:
+            dims = np.shape(phi[0])[-D:]
+            
+        if np.prod(dims) == 1.0:
+            # Scalar Gaussian
+            phi1 = phi[1]
+            if D > 0:
+                # Because the covariance matrix has shape (1,1,...,1,1),
+                # that is 2*D number of ones, remove the extra half of the
+                # shape
+                phi1 = np.reshape(phi1, np.shape(phi1)[:-2*D] + D*(1,))
+
+            var = -0.5 / phi1
+            std = np.sqrt(var)
+            mu = var * phi[0]
+            z = np.random.normal(0, 1, plates + dims)
+            x = mu + std * z
+        else:
+            N = np.prod(dims)
+            dims_cov = dims + dims
+            # Reshape precision matrix
+            plates_cov = np.shape(phi[1])[:-2*D]
+            V = -2 * np.reshape(phi[1], plates_cov + (N,N))
+            # Compute Cholesky
+            U = utils.linalg.chol(V)
+            # Reshape mean vector
+            plates_phi0 = np.shape(phi[0])[:-D]
+            phi0 = np.reshape(phi[0], plates_phi0 + (N,))
+            mu = utils.linalg.chol_solve(U, phi0)
+            # Compute mu + U'*z
+            z = np.random.normal(0, 1, plates + (N,))
+            x = mu + utils.linalg.solve_triangular(U, z,
+                                                   trans='T', 
+                                                   lower=False)
+            x = np.reshape(x, plates + dims)
+        return x
+
+
 class GaussianARD(ExponentialFamily):
     r"""
     VMP node for Gaussian array variable.
@@ -856,45 +903,6 @@ class GaussianARD(ExponentialFamily):
         # Cov. Do it later.
         self._set_moments_and_cgf(u, np.nan, mask=mask)
         return
-
-    def random(self):
-        """
-        Draw a random sample from the Gaussian distribution.
-        """
-        # TODO/FIXME: You shouldn't draw random values for
-        # observed/fixed elements!
-        D = len(self.dims[0])
-        if np.prod(self.dims[1]) == 1.0:
-            # Scalar Gaussian
-            phi1 = self.phi[1]
-            if D > 0:
-                # Because the covariance matrix has shape (1,1,...,1,1),
-                # that is 2*D number of ones, remove the extra half of the
-                # shape
-                phi1 = np.reshape(phi1, np.shape(phi1)[:-2*D] + D*(1,))
-
-            std = np.sqrt(-0.5 / phi1)
-            mu = self.u[0]
-            z = np.random.normal(0, 1, self.get_shape(0))
-            x = mu + std * z
-        else:
-            N = np.prod(self.dims[0])
-            dims_cov = self.dims[1]
-            # Reshape precision matrix
-            plates_cov = np.shape(self.phi[1])[:-2*D]
-            V = -2 * np.reshape(self.phi[1], plates_cov + (N,N))
-            # Reshape mean vector
-            plates_mu = np.shape(self.u[0])[:-D]
-            mu = np.reshape(self.u[0], plates_mu + (N,))
-            # Compute Cholesky
-            U = utils.linalg.chol(V)
-            # Compute mu + U'*z
-            z = np.random.normal(0, 1, self.plates + (N,))
-            x = mu + utils.linalg.solve_triangular(U, z,
-                                                   trans='T', 
-                                                   lower=False)
-            x = np.reshape(x, self.plates + self.dims[0])
-        return x
 
     def show(self):
         raise NotImplementedError()

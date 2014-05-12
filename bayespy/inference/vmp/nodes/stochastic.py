@@ -75,6 +75,14 @@ class Distribution():
         """
         return plates
 
+
+    def random(self, *params, plates=None):
+        """
+        Draw a random sample from the distribution.
+        """
+        raise NotImplementedError()
+
+        
 class Stochastic(Node):
     """
     Base class for nodes that are stochastic.
@@ -255,4 +263,10 @@ class Stochastic(Node):
         # Update masks if necessary
         if np.any(old_observed != self.observed):
             self._update_mask()
+            
 
+    def random(self):
+        """
+        Draw a random sample from the distribution.
+        """
+        raise NotImplementedError()

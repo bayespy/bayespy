@@ -133,6 +133,13 @@ class PoissonDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
     
+    def random(self, *phi):
+        """
+        Draw a random sample from the distribution.
+        """
+        raise NotImplementedError()
+
+    
 class Poisson(ExponentialFamily):
     """
     Node for Poisson random variables.
@@ -151,13 +158,6 @@ class Poisson(ExponentialFamily):
         super().__init__(l, **kwargs)
 
         
-    def random(self):
-        """
-        Draw a random sample from the distribution.
-        """
-        raise NotImplementedError("Poisson random sampling not yet implemented")
-
-    
     def show(self):
         """
         Print the distribution using standard parameterization.

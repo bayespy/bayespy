@@ -154,6 +154,13 @@ class DirichletDistribution(ExponentialFamilyDistribution):
         raise NotImplementedError()
 
     
+    def random(self, *phi, plates=None):
+        """
+        Draw a random sample from the distribution.
+        """
+        return random.dirichlet(phi[0], size=plates)
+        
+
 class Dirichlet(ExponentialFamily):
     """
     Node for Dirichlet random variables.
@@ -184,13 +191,6 @@ class Dirichlet(ExponentialFamily):
                  cls._parent_moments)
 
                  
-    def random(self):
-        """
-        Draw a random sample from the distribution.
-        """
-        return random.dirichlet(self.phi[0], size=self.plates)
-        
-
     def show(self):
         """
         Print the distribution using standard parameterization.

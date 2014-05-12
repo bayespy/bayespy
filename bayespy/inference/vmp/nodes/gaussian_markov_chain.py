@@ -181,9 +181,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
     _moments = GaussianMarkovChainMoments()
                                 
     
-    def random(self):
-        raise NotImplementedError()
-
     def show(self):
         raise NotImplementedError()
 

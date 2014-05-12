@@ -153,6 +153,15 @@ class GammaDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
 
+    def random(self, *phi, plates=None):
+        """
+        Draw a random sample from the distribution.
+        """
+        return np.random.gamma(phi[1],
+                               -1/phi[0],
+                               size=plates)
+
+    
 class Gamma(ExponentialFamily):
     """
     Node for gamma random variables.
@@ -172,15 +181,6 @@ class Gamma(ExponentialFamily):
         super().__init__(a, b, **kwargs)
 
 
-    def random(self):
-        """
-        Draw a random sample from the distribution.
-        """
-        return np.random.gamma(self.phi[1],
-                               -1/self.phi[0],
-                               size=self.plates)
-
-    
     def show(self):
         """
         Print the distribution using standard parameterization.

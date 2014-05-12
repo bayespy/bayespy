@@ -101,6 +101,14 @@ class BetaDistribution(DirichletDistribution):
         return super().compute_fixed_moments_and_f(p, mask=mask)
 
 
+    def random(self, *phi, plates=None):
+        """
+        Draw a random sample from the distribution.
+        """
+        p = super().random(*phi, plates=plates)
+        return p[...,0]
+        
+
 class Beta(Dirichlet):
     """
     Node for beta random variables.
@@ -125,14 +133,6 @@ class Beta(Dirichlet):
         return super()._constructor(alpha, **kwargs)
 
     
-    def random(self):
-        """
-        Draw a random sample from the distribution.
-        """
-        p = super().random()
-        return p[...,0]
-        
-
     def show(self):
         """
         Print the distribution using standard parameterization.
