@@ -301,3 +301,18 @@ class TestMixture(TestCase):
         
         pass
 
+
+    def test_random(self):
+        """
+        Test random sampling of mixture node
+        """
+
+        o = 1e-20
+        X = Mixture([1, 0, 2], Categorical, [ [o, o, o, 1],
+                                              [o, o, 1, o],
+                                              [1, o, o, o] ])
+        x = X.random()
+        self.assertAllClose(x, [2, 3, 0])
+
+        pass
+
