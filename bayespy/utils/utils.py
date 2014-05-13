@@ -550,7 +550,6 @@ def moveaxis(A, axis_from, axis_to):
     axes[axis_from:axis_to:-1] -= 1
     axes[axis_to] = axis_from
     return np.transpose(A, axes=axes)
-    
 
 
 def broadcasted_shape(*shapes):

@@ -49,6 +49,7 @@ from .gaussian_markov_chain import SwitchingGaussianMarkovChain
 from .categorical_markov_chain import CategoricalMarkovChain
 
 from .mixture import Mixture
+from .gate import Gate
 
 from .dot import Dot
 from .dot import SumMultiply
