@@ -257,7 +257,7 @@ def outer(A, B, ndim=1):
         shape_B = np.shape(B)[:-ndim] + (1,)*ndim + np.shape(B)[-ndim:]
         A = np.reshape(A, shape_A)
         B = np.reshape(B, shape_B)
-    return A * B
+    return np.asanyarray(A) * np.asanyarray(B)
 
 def dot(*arrays):
     """
