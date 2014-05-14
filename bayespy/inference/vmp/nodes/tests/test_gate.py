@@ -84,6 +84,13 @@ class TestGate(TestCase):
         self.assertEqual(Y.plates, (4,))
         self.assertEqual(Y.dims, ( (2,), (2,2) ))
 
+        # Plates from Z and X
+        Z = Categorical(np.ones(3)/3, plates=(5,))
+        X = GaussianARD(0, 1, shape=(2,), plates=(4,1,3))
+        Y = Gate(Z, X)
+        self.assertEqual(Y.plates, (4,5))
+        self.assertEqual(Y.dims, ( (2,), (2,2) ))
+
         # Gating non-default plate
         Z = Categorical(np.ones(3)/3)
         X = GaussianARD(0, 1, shape=(), plates=(3,4))
