@@ -26,7 +26,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 import bayespy.plot as myplt
 from bayespy.inference.vmp import nodes
 from bayespy.inference.vmp.vmp import VB
@@ -92,7 +92,7 @@ def run(N=50, K=5, D=2):
     N2 = 400
     x1 = np.linspace(-3, 15, N1)
     x2 = np.linspace(-3, 15, N2)
-    xh = utils.grid(x1, x2)
+    xh = misc.grid(x1, x2)
     lpdf = Yh.integrated_logpdf_from_parents(xh, 0)
     pdf = np.reshape(np.exp(lpdf), (N2,N1))
     plt.clf()

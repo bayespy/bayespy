@@ -24,7 +24,8 @@
 
 import numpy as np
 
-from bayespy import utils
+from bayespy.utils import misc
+from bayespy.utils import linalg
 from bayespy.utils.linalg import dot, mvdot
 
 from .expfamily import ExponentialFamily
@@ -42,11 +43,11 @@ class GaussianMoments(Moments):
 
     def compute_fixed_moments(self, x):
         """ Compute Gaussian moments for fixed x. """
-        x = utils.utils.atleast_nd(x, self.ndim)
-        return [x, utils.linalg.outer(x, x, ndim=self.ndim)]
+        x = misc.atleast_nd(x, self.ndim)
+        return [x, linalg.outer(x, x, ndim=self.ndim)]
 
     def compute_dims_from_values(self, x):
-        x = utils.utils.atleast_nd(x, self.ndim)
+        x = misc.atleast_nd(x, self.ndim)
         if self.ndim == 0:
             dims = ()
         else:
@@ -59,30 +60,30 @@ class GaussianDistribution(ExponentialFamilyDistribution):
     
     def compute_message_to_parent(self, parent, index, u, *u_parents):
         if index == 0:
-            return [utils.utils.m_dot(u_parents[1][0], u[0]),
+            return [misc.m_dot(u_parents[1][0], u[0]),
                     -0.5 * u_parents[1][0]]
         elif index == 1:
-            xmu = utils.utils.m_outer(u[0], u_parents[0][0])
+            xmu = misc.m_outer(u[0], u_parents[0][0])
             return [-0.5 * (u[1] - xmu - xmu.swapaxes(-1,-2) + u_parents[0][1]),
                     0.5]
         else:
             raise ValueError("Index out of bounds")
 
     def compute_phi_from_parents(self, u_mu, u_Lambda, mask=True):
-        return [utils.utils.m_dot(u_Lambda[0], u_mu[0]),
+        return [misc.m_dot(u_Lambda[0], u_mu[0]),
                 -0.5 * u_Lambda[0]]
 
     def compute_moments_and_cgf(self, phi, mask=True):
         # TODO: Compute -2*phi[1] and simplify the formulas
-        L = utils.utils.m_chol(-2*phi[1])
+        L = misc.m_chol(-2*phi[1])
         k = np.shape(phi[0])[-1]
         # Moments
-        u0 = utils.utils.m_chol_solve(L, phi[0])
-        u1 = utils.utils.m_outer(u0, u0) + utils.utils.m_chol_inv(L)
+        u0 = misc.m_chol_solve(L, phi[0])
+        u1 = misc.m_outer(u0, u0) + misc.m_chol_inv(L)
         u = [u0, u1]
         # G
         g = (-0.5 * np.einsum('...i,...i', u[0], phi[0])
-             + 0.5 * utils.utils.m_chol_logdet(L))
+             + 0.5 * misc.m_chol_logdet(L))
              #+ 0.5 * np.log(2) * self.dims[0][0])
         return (u, g)
 
@@ -98,7 +99,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
     def compute_fixed_moments_and_f(self, x, mask=True):
         """ Compute u(x) and f(x) for given x. """
         k = np.shape(x)[-1]
-        u = [x, utils.utils.m_outer(x,x)]
+        u = [x, misc.m_outer(x,x)]
         f = -k/2*np.log(2*np.pi)
         return (u, f)
 
@@ -108,11 +109,11 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         # observed/fixed elements!
 
         # Note that phi[1] is -0.5*inv(Cov)
-        U = utils.utils.m_chol(-2*phi[1])
-        mu = utils.utils.m_chol_solve(U, phi[0])
+        U = misc.m_chol(-2*phi[1])
+        mu = misc.m_chol_solve(U, phi[0])
         z = np.random.normal(0, 1, plates + np.shape(mu)[-1:])
         # Compute mu + U'*z
-        z = utils.utils.m_solve_triangular(U, z, trans='T', lower=False)
+        z = misc.m_solve_triangular(U, z, trans='T', lower=False)
         return mu + z
             
 
@@ -277,7 +278,7 @@ class Gaussian(ExponentialFamily):
 
     def show(self):
         mu = self.u[0]
-        Cov = self.u[1] - utils.utils.m_outer(mu, mu)
+        Cov = self.u[1] - misc.m_outer(mu, mu)
         print("%s ~ Gaussian(mu, Cov)" % self.name)
         print("  mu = ")
         print(mu)
@@ -303,7 +304,6 @@ class Gaussian(ExponentialFamily):
         # Rotate plates, if plate rotation matrix is given. Assume that there's
         # only one plate-axis
 
-        #logdet_old = np.sum(utils.linalg.logdet_cov(-2*self.phi[1]))
         if Q is not None:
             # Rotate moments using Q
             self.u[0] = np.einsum('ik,kj->ij', Q, self.u[0])
@@ -422,20 +422,20 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
             alpha = u_alpha[0]
 
             axes0 = list(range(-self.ndim, -self.ndim_mu))
-            m0 = utils.utils.sum_multiply(alpha, x, axis=axes0)
+            m0 = misc.sum_multiply(alpha, x, axis=axes0)
 
-            Alpha = utils.utils.diag(alpha, ndim=self.ndim)
+            Alpha = misc.diag(alpha, ndim=self.ndim)
             axes1 = [axis+self.ndim for axis in axes0] + axes0
-            m1 = -0.5 * utils.utils.sum_multiply(Alpha, 
-                                                 utils.utils.identity(*self.shape),
-                                                 axis=axes1)
+            m1 = -0.5 * misc.sum_multiply(Alpha, 
+                                          misc.identity(*self.shape),
+                                          axis=axes1)
             return [m0, m1]
 
         elif index == 1:
             x = u[0]
-            x2 = utils.utils.get_diag(u[1], ndim=self.ndim)
+            x2 = misc.get_diag(u[1], ndim=self.ndim)
             mu = u_mu[0]
-            mu2 = utils.utils.get_diag(u_mu[1], ndim=self.ndim_mu)
+            mu2 = misc.get_diag(u_mu[1], ndim=self.ndim_mu)
             if self.ndim_mu == 0:
                 mu_shape = np.shape(mu) + (1,)*self.ndim
             else:
@@ -471,9 +471,9 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         alpha = u_alpha[0]
         if np.ndim(mu) < self.ndim_mu:
             raise ValueError("Moment of mu does not have enough dimensions")
-        mu = utils.utils.add_axes(mu, 
-                                  axis=np.ndim(mu)-self.ndim_mu, 
-                                  num=self.ndim-self.ndim_mu)
+        mu = misc.add_axes(mu, 
+                           axis=np.ndim(mu)-self.ndim_mu, 
+                           num=self.ndim-self.ndim_mu)
         phi0 = alpha * mu
         phi1 = -0.5 * alpha
         if self.ndim > 0:
@@ -484,7 +484,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
             phi1 = ones * phi1
 
         # Make a diagonal matrix
-        phi1 = utils.utils.diag(phi1, ndim=self.ndim)
+        phi1 = misc.diag(phi1, ndim=self.ndim)
         return [phi0, phi1]
 
     def compute_moments_and_cgf(self, phi, mask=True):
@@ -507,14 +507,14 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
             phi1 = np.reshape(phi[1], phi[1].shape[:-2*self.ndim] + (D,D))
 
             # Compute the moments
-            L = utils.linalg.chol(-2*phi1)
-            Cov = utils.linalg.chol_inv(L)
-            u0 = utils.linalg.chol_solve(L, phi0)
-            u1 = utils.linalg.outer(u0, u0) + Cov
+            L = linalg.chol(-2*phi1)
+            Cov = linalg.chol_inv(L)
+            u0 = linalg.chol_solve(L, phi0)
+            u1 = linalg.outer(u0, u0) + Cov
 
             # Compute CGF
             g = (- 0.5 * np.einsum('...i,...i', u0, phi0)
-                 + 0.5 * utils.linalg.chol_logdet(L))
+                 + 0.5 * linalg.chol_logdet(L))
 
             # Reshape to arrays
             u0 = np.reshape(u0, u0.shape[:-1] + self.shape)
@@ -590,7 +590,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         if self.ndim > 0 and np.shape(x)[-self.ndim:] != self.shape:
             raise ValueError("Invalid shape")
         k = np.prod(self.shape)
-        u = [x, utils.linalg.outer(x, x, ndim=self.ndim)]
+        u = [x, linalg.outer(x, x, ndim=self.ndim)]
         f = -k/2*np.log(2*np.pi)
         return (u, f)
 
@@ -641,16 +641,16 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
             plates_cov = np.shape(phi[1])[:-2*D]
             V = -2 * np.reshape(phi[1], plates_cov + (N,N))
             # Compute Cholesky
-            U = utils.linalg.chol(V)
+            U = linalg.chol(V)
             # Reshape mean vector
             plates_phi0 = np.shape(phi[0])[:-D]
             phi0 = np.reshape(phi[0], plates_phi0 + (N,))
-            mu = utils.linalg.chol_solve(U, phi0)
+            mu = linalg.chol_solve(U, phi0)
             # Compute mu + U'*z
             z = np.random.normal(0, 1, plates + (N,))
-            x = mu + utils.linalg.solve_triangular(U, z,
-                                                   trans='T', 
-                                                   lower=False)
+            x = mu + linalg.solve_triangular(U, z,
+                                             trans='T', 
+                                             lower=False)
             x = np.reshape(x, plates + dims)
         return x
 
@@ -834,10 +834,10 @@ class GaussianARD(ExponentialFamily):
             raise ValueError("Parent mu has more axes")
 
         # Infer shape of the node
-        shape_bc = utils.utils.broadcasted_shape(shape_mu, shape_alpha)
+        shape_bc = misc.broadcasted_shape(shape_mu, shape_alpha)
         if shape is None:
             shape = (ndim-len(shape_bc))*(1,) + shape_bc
-        elif not utils.utils.is_shape_subset(shape_bc, shape):
+        elif not misc.is_shape_subset(shape_bc, shape):
             raise ValueError("Broadcasted shape of the parents %s does not "
                              "broadcast to the given shape %s" 
                              % (shape_bc, shape))
@@ -859,7 +859,7 @@ class GaussianARD(ExponentialFamily):
         # Check consistency with respect to parent mu
         shape_mean = shape[-ndim_mu:]
         # Check mean
-        if not utils.utils.is_shape_subset(mu.dims[0], shape_mean):
+        if not misc.is_shape_subset(mu.dims[0], shape_mean):
             raise ValueError("Parent node %s with mean shaped %s does not "
                              "broadcast to the shape %s of this node"
                              % (mu.name,
@@ -867,7 +867,7 @@ class GaussianARD(ExponentialFamily):
                                 shape))
         # Check covariance
         shape_cov = shape[-ndim_mu:] + shape[-ndim_mu:]
-        if not utils.utils.is_shape_subset(mu.dims[1], shape_cov):
+        if not misc.is_shape_subset(mu.dims[1], shape_cov):
             raise ValueError("Parent node %s with covariance shaped %s "
                              "does not broadcast to the shape %s of this "
                              "node"
@@ -880,7 +880,7 @@ class GaussianARD(ExponentialFamily):
             shape_alpha = ()
         else:
             shape_alpha = alpha.plates[-ndim:]
-        if not utils.utils.is_shape_subset(shape_alpha, shape):
+        if not misc.is_shape_subset(shape_alpha, shape):
             raise ValueError("Parent node (precision) does not broadcast "
                              "to the shape of this node")
         if alpha.dims != ( (), () ):
@@ -897,7 +897,7 @@ class GaussianARD(ExponentialFamily):
         
     def initialize_from_mean_and_covariance(self, mu, Cov):
         ndim = len(self._distribution.shape)
-        u = [mu, Cov + utils.linalg.outer(mu, mu, ndim=ndim)]
+        u = [mu, Cov + linalg.outer(mu, mu, ndim=ndim)]
         mask = np.logical_not(self.observed)
         # TODO: You could compute the CGF but it requires Cholesky of
         # Cov. Do it later.
@@ -907,7 +907,7 @@ class GaussianARD(ExponentialFamily):
     def show(self):
         raise NotImplementedError()
         mu = self.u[0]
-        Cov = self.u[1] - utils.utils.m_outer(mu, mu)
+        Cov = self.u[1] - misc.m_outer(mu, mu)
         print("%s ~ Gaussian(mu, Cov)" % self.name)
         print("  mu = ")
         print(mu)
@@ -968,8 +968,8 @@ class GaussianARD(ExponentialFamily):
         u0 = rotate_mean(self.u[0], Q, 
                          ndim=ndim+(-plate_axis),
                          axis=0)
-        sumQ = utils.utils.add_trailing_axes(np.sum(Q, axis=0),
-                                             2*ndim-plate_axis-1)
+        sumQ = misc.add_trailing_axes(np.sum(Q, axis=0),
+                                      2*ndim-plate_axis-1)
         phi1 = sumQ**(-2) * self.phi[1]
         phi0 = -2 * matrix_dot_vector(phi1, u0, ndim=ndim)
 

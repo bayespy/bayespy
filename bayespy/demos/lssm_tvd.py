@@ -46,7 +46,7 @@ from bayespy.nodes import (GaussianMarkovChain,
                            Gamma,
                            SumMultiply)
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 from bayespy.utils import random
 
 from bayespy.inference.vmp.vmp import VB
@@ -208,7 +208,7 @@ def infer(y, D, K,
     Run VB inference for linear state-space model with time-varying dynamics.
     """
 
-    y = utils.atleast_nd(y, 2)
+    y = misc.atleast_nd(y, 2)
     (M, N) = np.shape(y)
 
     # Construct the model
@@ -326,7 +326,7 @@ def demo(N=1000, D=5, K=4, seed=42, maxiter=200, rotate=True, debug=False,
     (y, f) = simulate_data(N)
 
     # Create some gaps
-    mask_gaps = utils.trues(N)
+    mask_gaps = misc.trues(N)
     for m in range(100, N, 140):
         start = m
         end = min(m+15, N-1)
@@ -372,10 +372,10 @@ def demo(N=1000, D=5, K=4, seed=42, maxiter=200, rotate=True, debug=False,
         Q.plot('S')
 
     # Compute RMSE
-    rmse_random = utils.rmse(Q['Y'].get_moments()[0][~mask_random], 
-                             f[~mask_random])
-    rmse_gaps = utils.rmse(Q['Y'].get_moments()[0][~mask_gaps],
-                           f[~mask_gaps])
+    rmse_random = misc.rmse(Q['Y'].get_moments()[0][~mask_random], 
+                            f[~mask_random])
+    rmse_gaps = misc.rmse(Q['Y'].get_moments()[0][~mask_gaps],
+                          f[~mask_gaps])
     print("RMSE for randomly missing values: %f" % rmse_random)
     print("RMSE for gap values: %f" % rmse_gaps)
 

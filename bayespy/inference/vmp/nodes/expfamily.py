@@ -23,7 +23,7 @@
 
 import numpy as np
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 from .node import ensureparents
 from .stochastic import Stochastic, Distribution
@@ -132,7 +132,7 @@ class ExponentialFamily(Stochastic):
 
         if not initialize:
             axes = len(self.plates)*(1,)
-            self.phi = [utils.nans(axes+dim) for dim in self.dims]
+            self.phi = [misc.nans(axes+dim) for dim in self.dims]
 
 
     @classmethod
@@ -232,14 +232,14 @@ class ExponentialFamily(Stochastic):
             axes = len(self.plates) + self.ndims[i] - np.ndim(self.phi[i])
             if axes > 0:
                 # Add axes
-                self.phi[i] = utils.add_leading_axes(self.phi[i], axes)
+                self.phi[i] = misc.add_leading_axes(self.phi[i], axes)
             elif axes < 0:
                 # Remove extra leading axes
                 first = -(len(self.plates)+self.ndims[i])
                 sh = np.shape(self.phi[i])[first:]
                 self.phi[i] = np.reshape(self.phi[i], sh)
             # Check that the shape is correct
-            if not utils.is_shape_subset(np.shape(self.phi[i]),
+            if not misc.is_shape_subset(np.shape(self.phi[i]),
                                          self.get_shape(i)):
                 raise ValueError("Incorrect shape of phi[%d] in node class %s. "
                                  "Shape is %s but it should be broadcastable "
@@ -328,8 +328,8 @@ class ExponentialFamily(Stochastic):
         for (phi_p, phi_q, u_q, dims) in zip(phi, self.phi, self.u, self.dims):
             # Form a mask which puts observed variables to zero and
             # broadcasts properly
-            latent_mask_i = utils.add_trailing_axes(
-                                utils.add_leading_axes(
+            latent_mask_i = misc.add_trailing_axes(
+                                misc.add_leading_axes(
                                     latent_mask,
                                     len(self.plates) - np.ndim(latent_mask)),
                                 len(dims))
@@ -360,7 +360,7 @@ class ExponentialFamily(Stochastic):
             axis_sum = tuple(range(-len(dims),0))
             # TODO/FIXME: Use einsum here?
             Z = Z + np.sum(phi_d * u_d, axis=axis_sum)
-            #Z = Z + utils.sum_multiply(phi_d, u_d, axis=axis_sum)
+            #Z = Z + misc.sum_multiply(phi_d, u_d, axis=axis_sum)
 
         ## print('Z', Z)
         ## print('f', f)
@@ -386,9 +386,9 @@ class ExponentialFamily(Stochastic):
         ## subgroup = group.create_group(name)
         
         for i in range(len(self.phi)):
-            utils.write_to_hdf5(group, self.phi[i], 'phi%d' % i)
-        utils.write_to_hdf5(group, self.f, 'f')
-        utils.write_to_hdf5(group, self.g, 'g')
+            misc.write_to_hdf5(group, self.phi[i], 'phi%d' % i)
+        misc.write_to_hdf5(group, self.f, 'f')
+        misc.write_to_hdf5(group, self.g, 'g')
         super().save(group)
     
     def load(self, group):

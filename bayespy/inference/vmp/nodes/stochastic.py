@@ -23,7 +23,7 @@
 
 import numpy as np
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 from .node import Node
 
@@ -120,7 +120,7 @@ class Stochastic(Node):
 
         # Initialize moment array
         axes = len(self.plates)*(1,)
-        self.u = [utils.nans(axes+dim) for dim in dims]
+        self.u = [misc.nans(axes+dim) for dim in dims]
 
         # Not observed
         self.observed = False
@@ -165,12 +165,12 @@ class Stochastic(Node):
         for ind in range(len(u)):
             # Add axes to the mask for the variable dimensions (mask
             # contains only axes for the plates).
-            u_mask = utils.add_trailing_axes(mask, self.ndims[ind])
+            u_mask = misc.add_trailing_axes(mask, self.ndims[ind])
 
             # Enlarge self.u[ind] as necessary so that it can store the
             # broadcasted result.
-            sh = utils.broadcasted_shape_from_arrays(self.u[ind], u[ind], u_mask)
-            self.u[ind] = utils.repeat_to_shape(self.u[ind], sh)
+            sh = misc.broadcasted_shape_from_arrays(self.u[ind], u[ind], u_mask)
+            self.u[ind] = misc.repeat_to_shape(self.u[ind], sh)
 
             # TODO/FIXME/BUG: The mask of observations is not used, observations
             # may be overwritten!!! ???
@@ -192,7 +192,7 @@ class Stochastic(Node):
             ndim = len(shape)
             ndim_u = np.ndim(self.u[ind])
             if ndim > ndim_u:
-                self.u[ind] = utils.add_leading_axes(u[ind], ndim - ndim_u)
+                self.u[ind] = misc.add_leading_axes(u[ind], ndim - ndim_u)
             elif ndim < ndim_u:
                 raise RuntimeError(
                     "The size of the variable %s's %s-th moment "
@@ -246,8 +246,8 @@ class Stochastic(Node):
         ## subgroup = group.create_group(name)
         
         for i in range(len(self.u)):
-            utils.write_to_hdf5(group, self.u[i], 'u%d' % i)
-        utils.write_to_hdf5(group, self.observed, 'observed')
+            misc.write_to_hdf5(group, self.u[i], 'u%d' % i)
+        misc.write_to_hdf5(group, self.observed, 'observed')
 
     def load(self, group):
         """

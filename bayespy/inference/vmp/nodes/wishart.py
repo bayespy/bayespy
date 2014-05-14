@@ -24,7 +24,7 @@
 import numpy as np
 import scipy.special as special
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 from .expfamily import ExponentialFamily
 from .expfamily import ExponentialFamilyDistribution
@@ -52,7 +52,7 @@ class WishartMoments(Moments):
 
     def compute_fixed_moments(self, Lambda):
         """ Compute moments for fixed x. """
-        ldet = utils.m_chol_logdet(utils.m_chol(Lambda))
+        ldet = misc.m_chol_logdet(misc.m_chol(Lambda))
         u = [Lambda,
              ldet]
         return u
@@ -83,12 +83,12 @@ class WishartDistribution(ExponentialFamilyDistribution):
                 0.5 * u_parents[0][0]]
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        U = utils.m_chol(-phi[0])
+        U = misc.m_chol(-phi[0])
         k = np.shape(phi[0])[-1]
         #k = self.dims[0][0]
-        logdet_phi0 = utils.m_chol_logdet(U)
-        u0 = phi[1][...,np.newaxis,np.newaxis] * utils.m_chol_inv(U)
-        u1 = -logdet_phi0 + utils.m_digamma(phi[1], k)
+        logdet_phi0 = misc.m_chol_logdet(U)
+        u0 = phi[1][...,np.newaxis,np.newaxis] * misc.m_chol_inv(U)
+        u1 = -logdet_phi0 + misc.m_digamma(phi[1], k)
         u = [u0, u1]
         g = phi[1] * logdet_phi0 - special.multigammaln(phi[1], k)
         return (u, g)
@@ -108,7 +108,7 @@ class WishartDistribution(ExponentialFamilyDistribution):
     def compute_fixed_moments_and_f(self, Lambda, mask=True):
         """ Compute u(x) and f(x) for given x. """
         k = np.shape(Lambda)[-1]
-        ldet = utils.m_chol_logdet(utils.m_chol(Lambda))
+        ldet = misc.m_chol_logdet(misc.m_chol(Lambda))
         u = [Lambda,
              ldet]
         f = -(k+1)/2 * ldet

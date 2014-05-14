@@ -27,7 +27,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import bayespy.plot as myplt
 
-from bayespy import utils
+from bayespy.utils import misc
+from bayespy.utils import random
 from bayespy import nodes
 
 from bayespy.inference.vmp.vmp import VB
@@ -81,14 +82,14 @@ def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=False, maxiter=100, debug=False
     # Generate data
     w = np.random.normal(0, 1, size=(M,1,D_y))
     x = np.random.normal(0, 1, size=(1,N,D_y))
-    f = utils.utils.sum_product(w, x, axes_to_sum=[-1])
+    f = misc.sum_product(w, x, axes_to_sum=[-1])
     y = f + np.random.normal(0, 0.2, size=(M,N))
 
     # Construct model
     (Y, F, W, X, tau, alpha) = model(M, N, D)
 
     # Data with missing values
-    mask = utils.random.mask(M, N, p=0.5) # randomly missing
+    mask = random.mask(M, N, p=0.5) # randomly missing
     y[~mask] = np.nan
     Y.observe(y, mask=mask)
 

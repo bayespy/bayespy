@@ -23,7 +23,7 @@
 
 import numpy as np
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 from .node import Node
 from .deterministic import Deterministic
@@ -112,13 +112,13 @@ class SumMultiply(Deterministic):
             raise ValueError("Iterator axis must be integer")
 
         # Two different parsing methods, depends on how the arguments are given
-        if utils.is_string(args[0]):
+        if misc.is_string(args[0]):
             # This is the format:
             # SumMultiply('ik,k,kj->ij', X, Y, Z)
             strings = args[0]
             nodes = args[1:]
             # Remove whitespace
-            strings = utils.remove_whitespace(strings)
+            strings = misc.remove_whitespace(strings)
             # Split on '->' (should contain only one '->' or none)
             strings = strings.split('->')
             if len(strings) > 2:
@@ -266,7 +266,7 @@ class SumMultiply(Deterministic):
                                                      self.in_keys)]
         u0 = [u[0] for u in u_parents]
         
-        args = utils.zipper_merge(u0, in_all_keys) + [out_all_keys]
+        args = misc.zipper_merge(u0, in_all_keys) + [out_all_keys]
         x0 = np.einsum(*args)
 
         #
@@ -281,7 +281,7 @@ class SumMultiply(Deterministic):
                        for (plate_count, node_keys) in zip(plate_counts1, 
                                                            self.in_keys)]
         u1 = [u[1] for u in u_parents]
-        args = utils.zipper_merge(u1, in_all_keys) + [out_all_keys]
+        args = misc.zipper_merge(u1, in_all_keys) + [out_all_keys]
         x1 = np.einsum(*args)
 
         return [x0, x1]
@@ -358,8 +358,8 @@ class SumMultiply(Deterministic):
                                          -1))
             result_num_plates = max(result_num_plates,
                                     mask_num_plates)
-            result_plates = utils.broadcasted_shape(result_plates,
-                                                    mask_plates)
+            result_plates = misc.broadcasted_shape(result_plates,
+                                                   mask_plates)
             args.append(mask)
             args.append(mask_plate_keys)
 
@@ -381,8 +381,8 @@ class SumMultiply(Deterministic):
                     args.append(plate_keys + dim_keys)
 
                     result_num_plates = max(result_num_plates, num_plates)
-                    result_plates = utils.broadcasted_shape(result_plates,
-                                                            plates)
+                    result_plates = misc.broadcasted_shape(result_plates,
+                                                           plates)
 
             # Message and keys from children
             child_num_dims = (ind+1) * len(self.out_keys)
@@ -400,8 +400,8 @@ class SumMultiply(Deterministic):
             args.append(child_plate_keys + child_dim_keys)
 
             result_num_plates = max(result_num_plates, child_num_plates)
-            result_plates = utils.broadcasted_shape(result_plates,
-                                                    child_plates)
+            result_plates = misc.broadcasted_shape(result_plates,
+                                                   child_plates)
 
             # Output keys, that is, the keys of the parent[index]
             parent_keys = parent_plate_keys + parent_dim_keys

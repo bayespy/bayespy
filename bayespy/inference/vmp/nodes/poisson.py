@@ -34,7 +34,7 @@ from .expfamily import ExponentialFamilyDistribution
 from .node import Moments
 from .gamma import GammaMoments
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 
 class PoissonMoments(Moments):
@@ -49,7 +49,7 @@ class PoissonMoments(Moments):
         """
         # Make sure the values are integers in valid range
         x = np.asanyarray(x)
-        if not utils.isinteger(x):
+        if not misc.isinteger(x):
             raise ValueError("Count not integer")
         # Now, the moments are just the counts
         return [x]
@@ -118,7 +118,7 @@ class PoissonDistribution(ExponentialFamilyDistribution):
 
         # Check the validity of x
         x = np.asanyarray(x)
-        if not utils.isinteger(x):
+        if not misc.isinteger(x):
             raise ValueError("Values must be integers")
         if np.any(x < 0):
             raise ValueError("Values must be positive")

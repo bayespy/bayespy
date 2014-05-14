@@ -41,8 +41,7 @@ import scipy.sparse as sparse
 #import numpy.linalg._gufuncs_linalg as gula
 #import numpy.core.gufuncs_linalg as gula
 
-#from .utils import nested_iterator
-from . import utils
+from . import misc
 
 def chol(C):
     if sparse.issparse(C):
@@ -53,7 +52,7 @@ def chol(C):
         # The last two axes of C are considered as the matrix.
         C = np.atleast_2d(C)
         U = np.empty(np.shape(C))
-        for i in utils.nested_iterator(np.shape(U)[:-2]):
+        for i in misc.nested_iterator(np.shape(U)[:-2]):
             try:
                 U[i] = linalg.cho_factor(C[i])[0]
             except np.linalg.linalg.LinAlgError:
@@ -88,10 +87,10 @@ def chol_solve(U, b, out=None, matrix=False):
 
         if out == None:
             # Shape of the result (broadcasting rules)
-            sh = utils.broadcasted_shape(sh_u, sh_b)
+            sh = misc.broadcasted_shape(sh_u, sh_b)
             #out = np.zeros(np.shape(B))
             out = np.zeros(sh + B.shape[-1:])
-        for i in utils.nested_iterator(np.shape(U)[:-2]):
+        for i in misc.nested_iterator(np.shape(U)[:-2]):
 
             # The goal is to run Cholesky solver once for all vectors of B
             # for which the matrices of U are the same (according to the
@@ -140,7 +139,7 @@ def chol_inv(U):
     if isinstance(U, np.ndarray):
         # Allocate memory
         V = np.tile(np.identity(np.shape(U)[-1]), np.shape(U)[:-2]+(1,1))
-        for i in utils.nested_iterator(np.shape(U)[:-2]):
+        for i in misc.nested_iterator(np.shape(U)[:-2]):
             V[i] = linalg.cho_solve((U[i], False),
                                     V[i],
                                     overwrite_b=True) # This would need Fortran order
@@ -193,9 +192,9 @@ def solve_triangular(U, B, **kwargs):
     jnd_b = tuple(i for i in range(-l_min,0) if sh_b[i]==sh_u[i])
 
     # Shape of the result (broadcasting rules)
-    sh = utils.broadcasted_shape(sh_u, sh_b)
+    sh = misc.broadcasted_shape(sh_u, sh_b)
     out = np.zeros(sh + B.shape[-1:])
-    for i in utils.nested_iterator(np.shape(U)[:-2]):
+    for i in misc.nested_iterator(np.shape(U)[:-2]):
 
         # The goal is to run triangular solver once for all vectors of
         # B for which the matrices of U are the same (according to the
@@ -373,10 +372,10 @@ def block_banded_solve(A, B, y):
     if np.shape(B)[-2:] != (D,D):
         raise ValueError("The diagonal blocks have wrong shape")
 
-    plates_VC = utils.broadcasted_shape(np.shape(A)[:-3],
-                                        np.shape(B)[:-3])
-    plates_y = utils.broadcasted_shape(plates_VC,
-                                       np.shape(y)[:-2])
+    plates_VC = misc.broadcasted_shape(np.shape(A)[:-3],
+                                       np.shape(B)[:-3])
+    plates_y = misc.broadcasted_shape(plates_VC,
+                                      np.shape(y)[:-2])
                       
     V = np.empty(plates_VC+(N,D,D))
     C = np.empty(plates_VC+(N-1,D,D))
@@ -398,7 +397,7 @@ def block_banded_solve(A, B, y):
     for n in range(N-1):
         # Compute the solution of the system
         x[...,n+1,:] = (y[...,n+1,:] 
-                        - mvdot(utils.T(B[...,n,:,:]), 
+                        - mvdot(misc.T(B[...,n,:,:]), 
                                 chol_solve(V[...,n,:,:], 
                                            x[...,n,:])))
         # Compute the superdiagonal block of the inverse
@@ -407,9 +406,9 @@ def block_banded_solve(A, B, y):
                                   matrix=True)
         # Compute the diagonal block
         V[...,n+1,:,:] = (A[...,n+1,:,:] 
-                        - mmdot(utils.T(B[...,n,:,:]), C[...,n,:,:]))
+                        - mmdot(misc.T(B[...,n,:,:]), C[...,n,:,:]))
         # Ensure symmetry by 0.5*(V+V.T)
-        V[...,n+1,:,:] = 0.5 * (V[...,n+1,:,:] + utils.T(V[...,n+1,:,:]))
+        V[...,n+1,:,:] = 0.5 * (V[...,n+1,:,:] + misc.T(V[...,n+1,:,:]))
         # Compute and store the Cholesky factor of the diagonal block
         V[...,n+1,:,:] = chol(V[...,n+1,:,:])
         # Compute the log-det term here, too
@@ -429,10 +428,10 @@ def block_banded_solve(A, B, y):
         V[...,n,:,:] = (chol_inv(V[...,n,:,:]) 
                         + mmdot(C[...,n,:,:], 
                                 mmdot(V[...,n+1,:,:], 
-                                utils.T(C[...,n,:,:]))))
+                                misc.T(C[...,n,:,:]))))
         C[...,n,:,:] = - mmdot(C[...,n,:,:], V[...,n+1,:,:])
         # Ensure symmetry by 0.5*(V+V.T)
-        V[...,n,:,:] = 0.5 * (V[...,n,:,:] + utils.T(V[...,n,:,:]))
+        V[...,n,:,:] = 0.5 * (V[...,n,:,:] + misc.T(V[...,n,:,:]))
 
     return (V, C, x, ldet)
     

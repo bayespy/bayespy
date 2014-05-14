@@ -28,12 +28,12 @@ Unit tests for bayespy.inference.vmp.nodes.categorical_markov_chain module.
 import warnings
 
 import numpy as np
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 from bayespy.inference.vmp.nodes import CategoricalMarkovChain, \
                                         Dirichlet
 
-class TestCategoricalMarkovChain(utils.TestCase):
+class TestCategoricalMarkovChain(misc.TestCase):
 
     def test_init(self):
         """

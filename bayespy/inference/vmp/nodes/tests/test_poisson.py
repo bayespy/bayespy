@@ -31,10 +31,9 @@ import scipy
 from bayespy.nodes import Poisson
 from bayespy.nodes import Gamma
 
-from bayespy.utils import utils
 from bayespy.utils import random
 
-from bayespy.utils.utils import TestCase
+from bayespy.utils.misc import TestCase
 
 
 class TestPoisson(TestCase):

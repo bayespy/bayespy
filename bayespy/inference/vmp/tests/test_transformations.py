@@ -34,7 +34,6 @@ from bayespy.inference.vmp.nodes.wishart import Wishart
 from bayespy.inference.vmp.nodes.dot import SumMultiply
 from bayespy.inference.vmp.nodes.gaussian_markov_chain import GaussianMarkovChain
 
-from bayespy.utils import utils
 from bayespy.utils import linalg
 from bayespy.utils import random
 from bayespy.utils import optimize
@@ -43,7 +42,7 @@ from ..transformations import RotateGaussianARD
 from ..transformations import RotateGaussianMarkovChain
 from ..transformations import RotateVaryingMarkovChain
 
-from bayespy.utils.utils import TestCase
+from bayespy.utils.misc import TestCase
 
 class TestRotateGaussianARD(TestCase):
 

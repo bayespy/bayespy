@@ -36,7 +36,18 @@ from bayespy.inference.vmp.nodes.gaussian import GaussianMoments
 from bayespy.inference.vmp.nodes.beta import BetaMoments
 from bayespy.inference.vmp.nodes.beta import DirichletMoments
 
-from bayespy.utils import utils
+from bayespy.utils import misc
+
+
+def pdf(Z, x, y):
+    """
+    Plot probability density function of a scalar variable.
+    """
+    raise NotImplementedError()
+    (X, Y) = np.meshgrid(x, y)
+    XY = np.array([X.ravel(), Y.ravel()])
+    lpdf = Z._logpdf()
+
 
 def timeseries_gaussian_mc(X, scale=2):
     """
@@ -102,7 +113,7 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, **kwargs):
     shape = [s for s in shape if s > 1]
 
     # Calculate number of rows and columns
-    shape = utils.multiply_shapes(shape, (1,1))
+    shape = misc.multiply_shapes(shape, (1,1))
     if len(shape) > 2:
         raise Exception("Can plot only in 2 dimensions (rows and columns)")
     (M, N) = shape
@@ -256,7 +267,7 @@ def gaussian_array(X, rows=-2, cols=-1, scale=1):
     size = len(X.get_shape(0))
 
     # Compute standard deviation
-    xx = utils.get_diag(xx, ndim=ndim)
+    xx = misc.get_diag(xx, ndim=ndim)
     std = np.sqrt(xx - x**2)
 
     # Force explicit elements when broadcasting
@@ -284,8 +295,8 @@ def gaussian_array(X, rows=-2, cols=-1, scale=1):
     std = np.reshape(std, squeezed_shape+np.shape(x)[-2:])
 
     # Make explicit four axes
-    x = utils.atleast_nd(x, 4)
-    std = utils.atleast_nd(std, 4)
+    x = misc.atleast_nd(x, 4)
+    std = misc.atleast_nd(std, 4)
 
     if np.ndim(x) != 4:
         raise ValueError("Can not plot arrays with over 4 axes")
@@ -314,7 +325,7 @@ def timeseries_categorical_mc(Z):
     z = Z._message_to_child()[0] * np.ones(Z.get_shape(0))
 
     # Compute the subplot layout
-    z = utils.atleast_nd(z, 4)
+    z = misc.atleast_nd(z, 4)
     if np.ndim(z) != 4:
         raise ValueError("Can not plot arrays with over 4 axes")
     M = np.shape(z)[0]
@@ -534,7 +545,7 @@ def gaussian_mixture_logpdf(x, w, mu, Sigma):
     D = np.shape(x)[-1]
 
     # Cholesky decomposition of the covariance matrix
-    U = utils.m_chol(Sigma)
+    U = misc.m_chol(Sigma)
 
     # Reshape x:
     # Shape(x)     = (N, 1, D)
@@ -544,15 +555,15 @@ def gaussian_mixture_logpdf(x, w, mu, Sigma):
     # Shape(v)     = (N, K, D)
     # Shape(z)     = (N, K)
     v = x - mu
-    z = np.einsum('...i,...i', v, utils.m_chol_solve(U, v))
+    z = np.einsum('...i,...i', v, misc.m_chol_solve(U, v))
 
     # Log-determinant of Sigma:
     # Shape(ldet)  = (K,)
-    ldet = utils.m_chol_logdet(U)
+    ldet = misc.m_chol_logdet(U)
 
     # Compute log pdf for each cluster:
     # Shape(lpdf)  = (N, K)
-    lpdf = utils.gaussian_logpdf(z, 0, 0, ldet, D)
+    lpdf = misc.gaussian_logpdf(z, 0, 0, ldet, D)
     
     
 

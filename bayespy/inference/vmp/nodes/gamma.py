@@ -34,7 +34,7 @@ from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
 from .node import Moments
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 
 def diagonal(alpha):
@@ -207,7 +207,7 @@ class _GammaToDiagonalWishart(Deterministic):
     def __init__(self, alpha, **kwargs):
 
         # Check for constant
-        if utils.is_numeric(alpha):
+        if misc.is_numeric(alpha):
             alpha = Constant(Gamma)(alpha)
 
         # Remove the last plate...

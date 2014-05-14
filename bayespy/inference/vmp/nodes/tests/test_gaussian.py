@@ -39,11 +39,11 @@ from ..gamma import Gamma
 
 from ...vmp import VB
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 from bayespy.utils import linalg
 from bayespy.utils import random
 
-from bayespy.utils.utils import TestCase
+from bayespy.utils.misc import TestCase
 
 class TestGaussianFunctions(TestCase):
 
@@ -308,7 +308,7 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(u0, 2*np.ones((2,3,4)))
         self.assertAllClose(u1, 
                             2**2 * np.ones((2,3,4,2,3,4))
-                            + 1/3 * utils.identity(2,3,4))
+                            + 1/3 * misc.identity(2,3,4))
                             
 
         # Check the formula for dim-broadcasted mu
@@ -319,7 +319,7 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(u0, 2*np.ones((2,3,4)))
         self.assertAllClose(u1, 
                             2**2 * np.ones((2,3,4,2,3,4))
-                            + 1/3 * utils.identity(2,3,4))
+                            + 1/3 * misc.identity(2,3,4))
                             
         # Check the formula for dim-broadcasted alpha
         X = GaussianARD(2*np.ones((2,3,4)),
@@ -329,7 +329,7 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(u0, 2*np.ones((2,3,4)))
         self.assertAllClose(u1, 
                             2**2 * np.ones((2,3,4,2,3,4))
-                            + 1/3 * utils.identity(2,3,4))
+                            + 1/3 * misc.identity(2,3,4))
                             
         # Check the formula for dim-broadcasted mu and alpha
         X = GaussianARD(2*np.ones((3,1)),
@@ -339,7 +339,7 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(u0, 2*np.ones((2,3,4)))
         self.assertAllClose(u1, 
                             2**2 * np.ones((2,3,4,2,3,4))
-                            + 1/3 * utils.identity(2,3,4))
+                            + 1/3 * misc.identity(2,3,4))
                             
         # Check the formula for dim-broadcasted mu with plates
         mu = GaussianARD(2*np.ones((5,3,4)),
@@ -354,7 +354,7 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(u0, 2*np.ones((5,2,3,4)))
         self.assertAllClose(u1, 
                             2**2 * np.ones((5,2,3,4,2,3,4))
-                            + 1/3 * utils.identity(2,3,4))
+                            + 1/3 * misc.identity(2,3,4))
 
         # Check posterior
         X = GaussianARD(2, 3)
@@ -404,7 +404,7 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(m0,
                             2*3 * 3 * np.ones((2,3)))
         self.assertAllClose(m1,
-                            -0.5 * 3 * 2*utils.identity(2,3))
+                            -0.5 * 3 * 2*misc.identity(2,3))
 
         # Check mu larger than alpha
         X = GaussianARD(np.zeros((3,2,3)),
@@ -414,7 +414,7 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(m0,
                             2 * 3 * np.ones((3,2,3)))
         self.assertAllClose(m1,
-                            -0.5 * 2*utils.identity(3,2,3))
+                            -0.5 * 2*misc.identity(3,2,3))
 
         # Check node larger than mu and alpha
         X = GaussianARD(np.zeros((2,3)),
@@ -425,7 +425,7 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(m0,
                             2*3 * 3*np.ones((2,3)))
         self.assertAllClose(m1,
-                            -0.5 * 2 * 3*utils.identity(2,3))
+                            -0.5 * 2 * 3*misc.identity(2,3))
 
         # Check broadcasting of dimensions
         X = GaussianARD(np.zeros((2,1)),
@@ -436,7 +436,7 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(m0,
                             2*3 * 3*np.ones((2,1)))
         self.assertAllClose(m1,
-                            -0.5 * 2 * 3*utils.identity(2,1))
+                            -0.5 * 2 * 3*misc.identity(2,1))
 
         # Check plates for smaller mu than node
         X = GaussianARD(GaussianARD(0,1, 
@@ -450,7 +450,7 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(m0,
                             2*3 * 5*2*np.ones((4,1,3)))
         self.assertAllClose(m1,
-                            -0.5*2 * 5*2*utils.identity(3))
+                            -0.5*2 * 5*2*misc.identity(3))
 
         # Check mask
         X = GaussianARD(np.zeros((2,1,3)),
@@ -464,7 +464,7 @@ class TestGaussianARD(TestCase):
                             (2*3 * np.ones((2,1,3)) 
                              * np.array([[[3]], [[2]]])))
         self.assertAllClose(m1,
-                            (-0.5*2 * utils.identity(3)
+                            (-0.5*2 * misc.identity(3)
                              * np.ones((2,1,1,1))
                              * np.array([[[[3]]], [[[2]]]])))
 

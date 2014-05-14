@@ -34,7 +34,7 @@ from .multinomial import (MultinomialMoments,
                           Multinomial)
 
 from bayespy.utils import random
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 
 class CategoricalMoments(MultinomialMoments):
@@ -58,7 +58,7 @@ class CategoricalMoments(MultinomialMoments):
 
         # Check that x is valid
         x = np.asanyarray(x)
-        if not utils.isinteger(x):
+        if not misc.isinteger(x):
             raise ValueError("Values must be integers")
         if np.any(x < 0) or np.any(x >= self.D):
             raise ValueError("Invalid category index")
@@ -133,7 +133,7 @@ class CategoricalDistribution(MultinomialDistribution):
 
         # Check the validity of x
         x = np.asanyarray(x)
-        if not utils.isinteger(x):
+        if not misc.isinteger(x):
             raise ValueError("Values must be integers")
         if np.any(x < 0) or np.any(x >= self.D):
             raise ValueError("Invalid category index")

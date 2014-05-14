@@ -35,7 +35,7 @@ from .dirichlet import Dirichlet, DirichletMoments
 from .node import Moments, ensureparents
 
 from bayespy.utils import random
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 class MultinomialMoments(Moments):
     """
@@ -52,7 +52,7 @@ class MultinomialMoments(Moments):
 
         # Check that counts are valid
         x = np.asanyarray(x)
-        if not utils.isinteger(x):
+        if not misc.isinteger(x):
             raise ValueError("Counts must be integer")
         if np.any(x < 0):
             raise ValueError("Counts must be non-negative")
@@ -82,7 +82,7 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
 
         `trials` is the total number of trials.
         """
-        if not utils.isinteger(trials):
+        if not misc.isinteger(trials):
             raise ValueError("Number of trials must be integer")
         if np.any(trials < 0):
             raise ValueError("Number of trials must be non-negative")
@@ -113,7 +113,7 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         Compute the moments and :math:`g(\phi)`.
         """
         # Compute the normalized probabilities in a numerically stable way
-        logsum_p = utils.logsumexp(phi[0], axis=-1, keepdims=True)
+        logsum_p = misc.logsumexp(phi[0], axis=-1, keepdims=True)
         logp = phi[0] - logsum_p
         p = np.exp(logp)
         # Because of small numerical inaccuracy, normalize the probabilities
@@ -139,7 +139,7 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
 
         # Check that counts are valid
         x = np.asanyarray(x)
-        if not utils.isinteger(x):
+        if not misc.isinteger(x):
             raise ValueError("Counts must be integers")
         if np.any(x < 0):
             raise ValueError("Counts must be non-negative")
@@ -206,7 +206,7 @@ class Multinomial(ExponentialFamily):
         """
         Print the distribution using standard parameterization.
         """
-        logsum_p = utils.logsumexp(self.phi[0], axis=-1, keepdims=True)
+        logsum_p = misc.logsumexp(self.phi[0], axis=-1, keepdims=True)
         p = np.exp(self.phi[0] - logsum_p)
         p /= np.sum(p, axis=-1, keepdims=True)
         print("%s ~ Multinomial(p)" % self.name)

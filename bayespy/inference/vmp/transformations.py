@@ -25,7 +25,11 @@ import numpy as np
 import warnings
 import scipy
 
-from bayespy import utils
+from bayespy.utils import optimize
+from bayespy.utils import random
+from bayespy.utils import linalg
+from bayespy.utils import misc
+
 from bayespy.utils.linalg import dot, tracedot
 
 from .nodes import gaussian
@@ -136,7 +140,7 @@ class RotationOptimizer():
         
         if check_gradient:
             R = np.random.randn(self.D, self.D)
-            err = utils.optimize.check_gradient(cost, np.ravel(R), 
+            err = optimize.check_gradient(cost, np.ravel(R), 
                                                 verbose=verbose)
             if err > 1e-5:
                 warnings.warn("Rotation gradient has relative error %g" % err)
@@ -150,7 +154,7 @@ class RotationOptimizer():
             true_bound_terms_begin = get_true_bound_terms()
 
         # Run optimization
-        r = utils.optimize.minimize(cost, r0, maxiter=maxiter, verbose=verbose)
+        r = optimize.minimize(cost, r0, maxiter=maxiter, verbose=verbose)
 
         (cost_end, _) = cost(r)
         if check_bound:
@@ -226,11 +230,11 @@ class RotateGaussian():
         self.N = self.X.plates[0] #np.sum(mask)
 
         # Compute the sum <XX> over plates
-        self.XX = utils.utils.sum_multiply(self.X.get_moments()[1],
-                                           mask,
-                                           axis=(-1,-2),
-                                           sumaxis=False,
-                                           keepdims=False)
+        self.XX = misc.sum_multiply(self.X.get_moments()[1],
+                                    mask,
+                                    axis=(-1,-2),
+                                    sumaxis=False,
+                                    keepdims=False)
         # Parent's moments
         self.Lambda = self.X.parents[1].get_moments()[0]
 
@@ -258,15 +262,15 @@ class RotateGaussian():
         logdet_R = logdet
 
         # Compute entropy H(X)
-        logH_X = utils.random.gaussian_entropy(-2*self.N*logdet_R, 
-                                               0)
+        logH_X = random.gaussian_entropy(-2*self.N*logdet_R, 
+                                         0)
 
         # Compute <log p(X)>
-        logp_X = utils.random.gaussian_logpdf(np.vdot(XX_R, self.Lambda),
-                                              0,
-                                              0,
-                                              0,
-                                              0)
+        logp_X = random.gaussian_logpdf(np.vdot(XX_R, self.Lambda),
+                                        0,
+                                        0,
+                                        0,
+                                        0)
 
         # Compute the bound
         if terms:
@@ -278,16 +282,16 @@ class RotateGaussian():
             return bound
 
         # Compute dH(X)
-        dlogH_X = utils.random.gaussian_entropy(-2*self.N*inv_R.T,
-                                                0)
+        dlogH_X = random.gaussian_entropy(-2*self.N*inv_R.T,
+                                          0)
 
         # Compute d<log p(X)>
         dXX = 2*dot(self.Lambda, R, self.XX)
-        dlogp_X = utils.random.gaussian_logpdf(dXX,
-                                               0,
-                                               0,
-                                               0,
-                                               0)
+        dlogp_X = random.gaussian_logpdf(dXX,
+                                         0,
+                                         0,
+                                         0,
+                                         0)
 
         if terms:
             d_bound = {self.X: dlogp_X + dlogH_X}
@@ -344,7 +348,7 @@ def sum_to_plates(V, plates_to, plates_from=None, ndim=0):
                                                     np.shape(V))
         else:
             r = 1
-        return r * utils.utils.sum_to_shape(V, plates_to)
+        return r * misc.sum_to_shape(V, plates_to)
     else:
         dims_V = np.shape(V)[-ndim:]
         plates_V = np.shape(V)[:-ndim]
@@ -353,7 +357,7 @@ def sum_to_plates(V, plates_to, plates_from=None, ndim=0):
             r = gaussian.Gaussian._plate_multiplier(plates_from, plates_V)
         else:
             r = 1
-        return r * utils.utils.sum_to_shape(V, shape_to)
+        return r * misc.sum_to_shape(V, shape_to)
 
 class RotateGaussianARD():
     """
@@ -467,15 +471,15 @@ class RotateGaussianARD():
                                       covariance_axis=self.axis)
         
         # Move axes of X and mu and compute their outer product
-        X = utils.utils.moveaxis(X, self.axis, -1)
-        mu = utils.utils.moveaxis(mu, self.axis, -1)
-        Xmu = utils.linalg.outer(X, mu, ndim=1)
+        X = misc.moveaxis(X, self.axis, -1)
+        mu = misc.moveaxis(mu, self.axis, -1)
+        Xmu = linalg.outer(X, mu, ndim=1)
         D = np.shape(X)[-1]
         
         # Move axes of alpha related variables
         def safe_move_axis(x):
             if np.ndim(x) >= -self.axis:
-                return utils.utils.moveaxis(x, self.axis, -1)
+                return misc.moveaxis(x, self.axis, -1)
             else:
                 return x[...,np.newaxis]
         if self.update_alpha:
@@ -510,9 +514,9 @@ class RotateGaussianARD():
             # last)
             def safe_move_plate_axis(x, ndim):
                 if np.ndim(x)-ndim >= -plate_axis:
-                    return utils.utils.moveaxis(x, 
-                                                plate_axis-ndim,
-                                                -ndim-1)
+                    return misc.moveaxis(x, 
+                                         plate_axis-ndim,
+                                         -ndim-1)
                 else:
                     inds = (Ellipsis,None) + ndim*(slice(None),)
                     return x[inds]
@@ -535,7 +539,7 @@ class RotateGaussianARD():
                 plate = 1
             plates_alpha = plates_alpha[:-1] + [plate] + plates_alpha[-1:]
 
-            CovX = XX - utils.linalg.outer(X, X)
+            CovX = XX - linalg.outer(X, X)
             self.CovX = sum_to_plates(CovX,
                                       plates_alpha[:-2],
                                       ndim=3,
@@ -626,11 +630,11 @@ class RotateGaussianARD():
                 XX = (sum_to_plates(QCovQ,
                                     plates_alpha[:-1],
                                     ndim=2) +
-                      sum_to_plates(utils.linalg.outer(QX, QX),
+                      sum_to_plates(linalg.outer(QX, QX),
                                     plates_alpha[:-1],
                                     ndim=2,
                                     plates_from=plates_X))
-                Xmu = sum_to_plates(utils.linalg.outer(QX, self.mu),
+                Xmu = sum_to_plates(linalg.outer(QX, self.mu),
                                     plates_alpha[:-1],
                                     ndim=2,
                                     plates_from=plates_X)
@@ -681,7 +685,7 @@ class RotateGaussianARD():
         #
 
         def sum_plates(V, *plates):
-            full_plates = utils.utils.broadcasted_shape(*plates)
+            full_plates = misc.broadcasted_shape(*plates)
             
             r = self.node_X._plate_multiplier(full_plates, np.shape(V))
             return r * np.sum(V)
@@ -696,12 +700,12 @@ class RotateGaussianARD():
             inv_R = inv
 
         # Compute entropy H(X)
-        logH_X = utils.random.gaussian_entropy(-2*sum_plates(logdet_R + logdet_Q,
+        logH_X = random.gaussian_entropy(-2*sum_plates(logdet_R + logdet_Q,
                                                              plates_X),
                                                0)
 
         # Compute <log p(X|alpha)>
-        logp_X = utils.random.gaussian_logpdf(sum_plates(XmuXmu_alpha,
+        logp_X = random.gaussian_logpdf(sum_plates(XmuXmu_alpha,
                                                          plates_alpha[:-1] + [D]),
                                               0,
                                               0,
@@ -716,13 +720,13 @@ class RotateGaussianARD():
             logH_alpha = 0
 
             # Compute <log p(alpha)>
-            logp_alpha = utils.random.gamma_logpdf(sum_plates(b0_alpha,
-                                                              plates_alpha),
-                                                   0,
-                                                   sum_plates(a0_logalpha,
-                                                              plates_alpha),
-                                                   0,
-                                                   0)
+            logp_alpha = random.gamma_logpdf(sum_plates(b0_alpha,
+                                                        plates_alpha),
+                                             0,
+                                             sum_plates(a0_logalpha,
+                                                        plates_alpha),
+                                             0,
+                                             0)
         else:
             logH_alpha = 0
             logp_alpha = 0
@@ -751,10 +755,10 @@ class RotateGaussianARD():
         def sum_plates(V, plates):
             ones = np.ones(np.shape(R))
             r = plate_multiplier(plates, np.shape(V)[:-2])
-            return r * utils.utils.sum_multiply(V, ones,
-                                             axis=(-1,-2),
-                                             sumaxis=False,
-                                             keepdims=False)
+            return r * misc.sum_multiply(V, ones,
+                                         axis=(-1,-2),
+                                         sumaxis=False,
+                                         keepdims=False)
 
         D_XmuXmu = 2*RXX - 2*gaussian.transpose_covariance(Xmu)
 
@@ -790,20 +794,20 @@ class RotateGaussianARD():
         
         
         # Compute dH(X)
-        dlogH_X = utils.random.gaussian_entropy(-2*sum_plates(D_logR,
-                                                              plates_X),
-                                                0)
+        dlogH_X = random.gaussian_entropy(-2*sum_plates(D_logR,
+                                                        plates_X),
+                                          0)
 
         # Compute d<log p(X|alpha)>
-        dlogp_X = utils.random.gaussian_logpdf(sum_plates(D_XmuXmu_alpha,
-                                                          plates_alpha[:-1]),
-                                               0,
-                                               0,
-                                               (sum_plates(D_logalpha,
-                                                           plates_X)
-                                                * plate_multiplier((D,),
-                                                                   plates_alpha[-1:])),
-                                               0)
+        dlogp_X = random.gaussian_logpdf(sum_plates(D_XmuXmu_alpha,
+                                                    plates_alpha[:-1]),
+                                         0,
+                                         0,
+                                         (sum_plates(D_logalpha,
+                                                     plates_X)
+                                          * plate_multiplier((D,),
+                                                             plates_alpha[-1:])),
+                                         0)
 
         if self.update_alpha:
 
@@ -812,13 +816,13 @@ class RotateGaussianARD():
             dlogH_alpha = 0
 
             # Compute d<log p(alpha)>
-            dlogp_alpha = utils.random.gamma_logpdf(sum_plates(D_b0_alpha,
-                                                               plates_alpha[:-1]),
-                                                    0,
-                                                    sum_plates(D_a0_logalpha,
-                                                               plates_alpha[:-1]),
-                                                    0,
-                                                    0)
+            dlogp_alpha = random.gamma_logpdf(sum_plates(D_b0_alpha,
+                                                         plates_alpha[:-1]),
+                                              0,
+                                              sum_plates(D_a0_logalpha,
+                                                         plates_alpha[:-1]),
+                                              0,
+                                              0)
         else:
             dlogH_alpha = 0
             dlogp_alpha = 0
@@ -903,10 +907,10 @@ class RotateGaussianARD():
             r = self.node_X._plate_multiplier(plates,
                                               np.shape(V)[:-2])
 
-            return r * utils.utils.sum_multiply(V, ones,
-                                                axis=(-1,-2),
-                                                sumaxis=False,
-                                                keepdims=False)
+            return r * misc.sum_multiply(V, ones,
+                                         axis=(-1,-2),
+                                         sumaxis=False,
+                                         keepdims=False)
 
         if self.update_alpha:
             D_logb = psi(1/b)
@@ -921,20 +925,20 @@ class RotateGaussianARD():
         N = np.shape(Q)[-1]
 
         # Compute dH(X)
-        dQ_logHX = utils.random.gaussian_entropy(-2*sum_plates(D_logdetQ,
-                                                               plates_X[:-1]),
-                                                 0)
+        dQ_logHX = random.gaussian_entropy(-2*sum_plates(D_logdetQ,
+                                                         plates_X[:-1]),
+                                           0)
 
         # Compute d<log p(X|alpha)>
-        dQ_logpX = utils.random.gaussian_logpdf(sum_plates(D_XX_alpha,
-                                                           plates_alpha[:-2]),
-                                                0,
-                                                0,
-                                                (sum_plates(D_logalpha,
-                                                            plates_X[:-1])
-                                                 * plate_multiplier((N,D),
-                                                                    plates_alpha[-2:])),
-                                                0)
+        dQ_logpX = random.gaussian_logpdf(sum_plates(D_XX_alpha,
+                                                     plates_alpha[:-2]),
+                                          0,
+                                          0,
+                                          (sum_plates(D_logalpha,
+                                                      plates_X[:-1])
+                                           * plate_multiplier((N,D),
+                                                              plates_alpha[-2:])),
+                                          0)
 
         if self.update_alpha:
 
@@ -947,13 +951,13 @@ class RotateGaussianARD():
             dQ_logHalpha = 0
 
             # Compute d<log p(alpha)>
-            dQ_logpalpha = utils.random.gamma_logpdf(sum_plates(D_b0_alpha,
-                                                                plates_alpha[:-2]),
-                                                     0,
-                                                     sum_plates(D_a0_logalpha,
-                                                                plates_alpha[:-2]),
-                                                     0,
-                                                     0)
+            dQ_logpalpha = random.gamma_logpdf(sum_plates(D_b0_alpha,
+                                                          plates_alpha[:-2]),
+                                               0,
+                                               sum_plates(D_a0_logalpha,
+                                                          plates_alpha[:-2]),
+                                               0,
+                                               0)
         else:
 
             dQ_logHalpha = 0
@@ -1039,8 +1043,8 @@ class RotateGaussianMarkovChain():
     def _computations_for_A_and_X(self, XpXn, XpXp):
         # Get moments of A (and make sure they include time axis)
         (A, AA) = self.A_node.get_moments()
-        A = utils.utils.atleast_nd(A, 3)
-        AA = utils.utils.atleast_nd(AA, 4)
+        A = misc.atleast_nd(A, 3)
+        AA = misc.atleast_nd(AA, 4)
         CovA = AA - A[...,:,np.newaxis]*A[...,np.newaxis,:]
 
         #
@@ -1108,10 +1112,10 @@ class RotateGaussianMarkovChain():
         # Get moments of the fixed parameter nodes
         mu = self.X_node.parents[0].get_moments()[0]
         self.Lambda = self.X_node.parents[1].get_moments()[0]
-        self.Lambda_mu_X0 = utils.linalg.outer(np.einsum('...ik,...k->...i',
-                                                         self.Lambda,
-                                                         mu),
-                                               self.X0)
+        self.Lambda_mu_X0 = linalg.outer(np.einsum('...ik,...k->...i',
+                                                   self.Lambda,
+                                                   mu),
+                                         self.X0)
         self.Lambda_mu_X0 = sum_to_plates(self.Lambda_mu_X0,
                                           (),
                                           plates_from=self.X_node.plates,
@@ -1170,8 +1174,8 @@ class RotateGaussianMarkovChain():
 
         # Compute entropy H(X)
         M = self.N*np.prod(self.X_node.plates) # total number of rotated vectors
-        logH_X = utils.random.gaussian_entropy(-2 * M * logdetR, 
-                                               0)
+        logH_X = random.gaussian_entropy(-2 * M * logdetR, 
+                                         0)
 
         # Compute <log p(X)>
         yy = tracedot(R_XnXn, R.T) + tracedot(Lambda_R_X0X0, R.T)
@@ -1179,11 +1183,11 @@ class RotateGaussianMarkovChain():
         zz = tracedot(RA_XpXp_A, R.T) + np.einsum('...k,...k->...',
                                                   R_CovA_XpXp,
                                                   sumr)
-        logp_X = utils.random.gaussian_logpdf(yy,
-                                              yz,
-                                              zz,
-                                              0,
-                                              0)
+        logp_X = random.gaussian_logpdf(yy,
+                                        yz,
+                                        zz,
+                                        0,
+                                        0)
 
         # Compute the bound
         if terms:
@@ -1195,18 +1199,18 @@ class RotateGaussianMarkovChain():
             return bound
         
         # Compute dH(X)
-        dlogH_X = utils.random.gaussian_entropy(-2 * M * invR.T,
-                                                0)
+        dlogH_X = random.gaussian_entropy(-2 * M * invR.T,
+                                          0)
 
         # Compute d<log p(X)>
         dyy = 2 * (R_XnXn + Lambda_R_X0X0)
         dyz = dot(R, self.A_XpXn + self.A_XpXn.T) + self.Lambda_mu_X0
         dzz = 2 * (RA_XpXp_A + R_CovA_XpXp[None,:])
-        dlogp_X = utils.random.gaussian_logpdf(dyy,
-                                               dyz,
-                                               dzz,
-                                               0,
-                                               0)
+        dlogp_X = random.gaussian_logpdf(dyy,
+                                         dyz,
+                                         dzz,
+                                         0,
+                                         0)
 
         if terms:
             d_bound = {self.X_node: dlogp_X + dlogH_X}
@@ -1321,36 +1325,36 @@ class RotateVaryingMarkovChain(RotateGaussianMarkovChain):
         
         # Compute: \sum_n <A_n> <x_{n-1} x_n^T>
         # Axes: (N, D, D, D, K)
-        S_XpXn = utils.utils.sum_multiply(S[...,None,None,:],
-                                          XpXn[...,:,None,:,:,None],
-                                          axis=(-3,-2,-1),
-                                          sumaxis=False)
-        A_XpXn = utils.utils.sum_multiply(B[...,:,:,None,:],
-                                          S_XpXn[...,:,:,:],
-                                          axis=(-4,-2),
-                                          sumaxis=False)
+        S_XpXn = misc.sum_multiply(S[...,None,None,:],
+                                   XpXn[...,:,None,:,:,None],
+                                   axis=(-3,-2,-1),
+                                   sumaxis=False)
+        A_XpXn = misc.sum_multiply(B[...,:,:,None,:],
+                                   S_XpXn[...,:,:,:],
+                                   axis=(-4,-2),
+                                   sumaxis=False)
 
         # Compute: \sum_n <A_n> <x_{n-1} x_{n-1}^T> <A_n>^T
         # Axes: (N, D, D, D, K, D, K)
-        SS_XpXp = utils.utils.sum_multiply(SS[...,None,:,None,:],
-                                           XpXp[...,None,:,None,:,None],
-                                           axis=(-4,-3,-2,-1),
-                                           sumaxis=False)
-        B_SS_XpXp = utils.utils.sum_multiply(B[...,:,:,:,None,None],
-                                             SS_XpXp[...,:,:,:,:],
-                                             axis=(-4,-3),
-                                             sumaxis=True)
-        A_XpXp_A = utils.utils.sum_multiply(B_SS_XpXp[...,:,None,:,:],
-                                            B[...,None,:,:,:],
-                                            axis=(-4,-3),
-                                            sumaxis=False)
+        SS_XpXp = misc.sum_multiply(SS[...,None,:,None,:],
+                                    XpXp[...,None,:,None,:,None],
+                                    axis=(-4,-3,-2,-1),
+                                    sumaxis=False)
+        B_SS_XpXp = misc.sum_multiply(B[...,:,:,:,None,None],
+                                      SS_XpXp[...,:,:,:,:],
+                                      axis=(-4,-3),
+                                      sumaxis=True)
+        A_XpXp_A = misc.sum_multiply(B_SS_XpXp[...,:,None,:,:],
+                                     B[...,None,:,:,:],
+                                     axis=(-4,-3),
+                                     sumaxis=False)
 
         # Compute: \sum_n tr(CovA_n <x_{n-1} x_{n-1}^T>)
         # Axes: (D,D,K,D,K)
-        CovA_XpXp = utils.utils.sum_multiply(CovB,
-                                             SS_XpXp,
-                                             axis=(-5,),
-                                             sumaxis=False)
+        CovA_XpXp = misc.sum_multiply(CovB,
+                                      SS_XpXp,
+                                      axis=(-5,),
+                                      sumaxis=False)
 
         return (A_XpXn, A_XpXp_A, CovA_XpXp)
 

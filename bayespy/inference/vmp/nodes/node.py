@@ -24,7 +24,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 """
 This module contains a sketch of a new implementation of the framework.
@@ -38,10 +38,10 @@ def message_sum_multiply(plates_parent, dims_parent, *arrays):
     """
     # The shape of the full message
     shapes = [np.shape(array) for array in arrays]
-    shape_full = utils.broadcasted_shape(*shapes)
+    shape_full = misc.broadcasted_shape(*shapes)
     # Find axes that should be summed
     shape_parent = plates_parent + dims_parent
-    sum_axes = utils.axes_to_collapse(shape_full, shape_parent)
+    sum_axes = misc.axes_to_collapse(shape_full, shape_parent)
     # Compute the multiplier for cancelling the
     # plate-multiplier.  Because we are summing over the
     # dimensions already in this function (for efficiency), we
@@ -54,12 +54,12 @@ def message_sum_multiply(plates_parent, dims_parent, *arrays):
         elif j < 0 and j < -len(dims_parent):
             r *= shape_full[j]
     # Compute the sum-product
-    m = utils.sum_multiply(*arrays,
-                           axis=sum_axes,
-                           sumaxis=True,
-                           keepdims=True) / r
+    m = misc.sum_multiply(*arrays,
+                          axis=sum_axes,
+                          sumaxis=True,
+                          keepdims=True) / r
     # Remove extra axes
-    m = utils.squeeze_to_dim(m, len(shape_parent))
+    m = misc.squeeze_to_dim(m, len(shape_parent))
     return m
 
 class Moments():
@@ -134,7 +134,7 @@ class Moments():
                 if issubclass(moments_class, moments_to):
                     # Shortest conversion path found, return the resulting total
                     # conversion function
-                    return utils.composite_function(converter_path)
+                    return misc.composite_function(converter_path)
                 # Apply all converters to the current moment class
                 for (conv_mom_cls, conv) in moments_class._converters.items():
                     if conv_mom_cls not in visited:
@@ -241,13 +241,13 @@ class Node():
             # By default, use the minimum number of plates determined
             # from the parent nodes
             try:
-                return utils.broadcasted_shape(*parent_plates)
+                return misc.broadcasted_shape(*parent_plates)
             except ValueError:
                 raise ValueError("The plates of the parents do not broadcast.")
         else:
             # Check that the parent_plates are a subset of plates.
             for (ind, p) in enumerate(parent_plates):
-                if not utils.is_shape_subset(p, plates):
+                if not misc.is_shape_subset(p, plates):
                     raise ValueError("The plates %s of the parents "
                                      "are not broadcastable to the given "
                                      "plates %s."
@@ -315,7 +315,7 @@ class Node():
             mask = np.logical_or(mask, child._mask_to_parent(index))
         # Set the mask of this node
         self._set_mask(mask)
-        if not utils.is_shape_subset(np.shape(self.mask), self.plates):
+        if not misc.is_shape_subset(np.shape(self.mask), self.plates):
 
             raise ValueError("The mask of the node %s has updated "
                              "incorrectly. The plates in the mask %s are not a "
@@ -360,7 +360,7 @@ class Node():
 
         # Check the shape of the mask
         plates_to_parent = self._plates_to_parent(index)
-        if not utils.is_shape_subset(np.shape(mask), plates_to_parent):
+        if not misc.is_shape_subset(np.shape(mask), plates_to_parent):
             raise ValueError("In node %s, the mask being sent to "
                              "parent[%d] (%s) has invalid shape: The shape of "
                              "the mask %s is not a sub-shape of the plates of "
@@ -378,9 +378,9 @@ class Node():
         # "Sum" (i.e., logical or) over the plates that have unit length in 
         # the parent node.
         parent_plates = self.parents[index].plates
-        s = utils.axes_to_collapse(np.shape(mask), parent_plates)
+        s = misc.axes_to_collapse(np.shape(mask), parent_plates)
         mask = np.any(mask, axis=s, keepdims=True)
-        mask = utils.squeeze_to_dim(mask, len(parent_plates))
+        mask = misc.squeeze_to_dim(mask, len(parent_plates))
         return mask
     #return self._compute_mask_to_parent(index, self.get_mask())
 
@@ -404,8 +404,8 @@ class Node():
                            np.shape(ui)[-ndim:],
                            dim,
                            self.name))
-                if not utils.is_shape_subset(np.shape(ui)[:-ndim],
-                                             self.plates):
+                if not misc.is_shape_subset(np.shape(ui)[:-ndim],
+                                            self.plates):
                     raise RuntimeError(
                         "A bug found by _message_to_child for %s: "
                         "The plate axes of the moments %s are not a subset of "
@@ -415,7 +415,7 @@ class Node():
                            self.plates,
                            self.name))
             else:
-                if not utils.is_shape_subset(np.shape(ui), self.plates):
+                if not misc.is_shape_subset(np.shape(ui), self.plates):
                     raise RuntimeError(
                         "A bug found by _message_to_child for %s: "
                         "The plate axes of the moments %s are not a subset of "
@@ -434,7 +434,7 @@ class Node():
 
         # Compute the message and mask
         (m, mask) = self._get_message_and_mask_to_parent(index)
-        mask = utils.squeeze(mask)
+        mask = misc.squeeze(mask)
 
         # Plates in the mask
         plates_mask = np.shape(mask)
@@ -492,20 +492,20 @@ class Node():
 
                 # Sum over plates that are not in the message nor in the parent
                 shape_parent = parent.get_shape(i)
-                shape_msg = utils.broadcasted_shape(shape_m, shape_parent)
-                axes_mask = utils.axes_to_collapse(shape_mask, shape_msg)
+                shape_msg = misc.broadcasted_shape(shape_m, shape_parent)
+                axes_mask = misc.axes_to_collapse(shape_mask, shape_msg)
                 mask_i = np.sum(mask_i, axis=axes_mask, keepdims=True)
 
                 # Compute the masked message and sum over the plates that the
                 # parent does not have.
-                axes_msg = utils.axes_to_collapse(shape_msg, shape_parent)
-                m[i] = utils.sum_multiply(mask_i, m[i], r, 
-                                          axis=axes_msg, 
-                                          keepdims=True)
+                axes_msg = misc.axes_to_collapse(shape_msg, shape_parent)
+                m[i] = misc.sum_multiply(mask_i, m[i], r, 
+                                         axis=axes_msg, 
+                                         keepdims=True)
 
                 # Remove leading singular plates if the parent does not have
                 # those plate axes.
-                m[i] = utils.squeeze_to_dim(m[i], len(shape_parent))
+                m[i] = misc.squeeze_to_dim(m[i], len(shape_parent))
 
         return m
 
@@ -517,7 +517,7 @@ class Node():
             for i in range(len(self.dims)):
                 if m[i] is not None:
                     # Check broadcasting shapes
-                    sh = utils.broadcasted_shape(self.get_shape(i), np.shape(m[i]))
+                    sh = misc.broadcasted_shape(self.get_shape(i), np.shape(m[i]))
                     try:
                         # Try exploiting broadcasting rules
                         msg[i] += m[i]
@@ -567,11 +567,11 @@ class Node():
         
         # Check broadcasting of the shapes
         for arg in args:
-            utils.broadcasted_shape(plates, arg)
+            misc.broadcasted_shape(plates, arg)
 
         # Check that each arg-plates are a subset of plates?
         for arg in args:
-            if not utils.is_shape_subset(arg, plates):
+            if not misc.is_shape_subset(arg, plates):
                 raise ValueError("The shapes in args are not a sub-shape of "
                                  "plates.")
             
@@ -639,7 +639,7 @@ from .deterministic import Deterministic
 def slicelen(s, length=None):
     if length is not None:
         s = slice(*(s.indices(length)))
-    return max(0, utils.ceildiv(s.stop - s.start, s.step))
+    return max(0, misc.ceildiv(s.stop - s.start, s.step))
 
 class Slice(Deterministic):
 
@@ -1006,7 +1006,7 @@ def AddPlateAxis(to_plate):
             for i in range(len(m)):
                 # Make sure the message has all the axes
                 #diff = len(self.plates) + len(self.dims[i]) - np.ndim(m[i])
-                #m[i] = utils.add_leading_axes(m[i], diff)
+                #m[i] = misc.add_leading_axes(m[i], diff)
                 # Remove the axis
                 if np.ndim(m[i]) >= abs(to_plate) + len(self.dims[i]):
                     axis = to_plate - len(self.dims[i])
@@ -1031,7 +1031,7 @@ def AddPlateAxis(to_plate):
             for i in range(len(u)):
                 # Make sure the moments have all the axes
                 #diff = len(self.plates) + len(self.dims[i]) - np.ndim(u[i]) - 1
-                #u[i] = utils.add_leading_axes(u[i], diff)
+                #u[i] = misc.add_leading_axes(u[i], diff)
                 
                 # The location of the new axis/plate:
                 axis = np.ndim(u[i]) - abs(to_plate) - len(self.dims[i]) + 1

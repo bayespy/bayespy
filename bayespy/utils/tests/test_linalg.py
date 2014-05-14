@@ -22,17 +22,15 @@
 ######################################################################
 
 """
-Unit tests for bayespy.utils.utils module.
+Unit tests for bayespy.utils.linalg module.
 """
 
 import numpy as np
 
-from ..utils import TestCase
-
-from .. import utils
+from .. import misc
 from .. import linalg
 
-class TestDot(TestCase):
+class TestDot(misc.TestCase):
 
     def test_dot(self):
         """
@@ -127,7 +125,7 @@ class TestDot(TestCase):
                           [[1,2,3],
                            [4,5,6]])
 
-class TestBandedSolve(TestCase):
+class TestBandedSolve(misc.TestCase):
 
     def test_block_banded_solve(self):
         """
@@ -155,7 +153,7 @@ class TestBandedSolve(TestCase):
         # The superdiagonal blocks (cross-covariances)
         B = [np.dot(W[i][:,-1:], W[i+1][:,:1].T) for i in range(N-1)]
 
-        C = utils.block_banded(A, B)
+        C = misc.block_banded(A, B)
 
         # Create the system to be solved: y=C*x
         x_true = np.random.randn(np.sum(D))

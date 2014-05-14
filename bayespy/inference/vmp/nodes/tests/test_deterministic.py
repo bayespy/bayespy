@@ -35,7 +35,6 @@ from numpy import testing
 from ..node import Node, Moments
 from ..deterministic import tile
 
-from bayespy import utils
 
 class TestTile(unittest.TestCase):
 

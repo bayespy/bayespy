@@ -39,7 +39,6 @@ from .node import (Moments,
                    ensureparents)
 
 from bayespy.utils import random
-from bayespy.utils import utils
 
 
 class GaussianGammaISOMoments(Moments):

@@ -37,7 +37,7 @@ from .categorical import CategoricalMoments
 from .dirichlet import (Dirichlet,
                         DirichletMoments)
 
-from bayespy.utils import utils, random
+from bayespy.utils import misc, random
 
 class CategoricalMarkovChainMoments(Moments):
     """
@@ -174,12 +174,12 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         Draw a random sample from the distribution.
         """
         # Convert natural parameters to transition probabilities
-        p0 = np.exp(phi[0] - utils.logsumexp(phi[0], 
-                                             axis=-1,
-                                             keepdims=True))
-        P = np.exp(phi[1] - utils.logsumexp(phi[1],
+        p0 = np.exp(phi[0] - misc.logsumexp(phi[0], 
                                             axis=-1,
                                             keepdims=True))
+        P = np.exp(phi[1] - misc.logsumexp(phi[1],
+                                           axis=-1,
+                                           keepdims=True))
         # Explicit broadcasting
         P = P * np.ones(plates)[...,None,None,None]
         # Allocate memory
@@ -314,7 +314,7 @@ class CategoricalMarkovChainToCategorical(Deterministic):
         # Broadcast p0 and p to same shape, except the time axis
         plates_p0 = np.shape(p0)[:-2]
         plates_p = np.shape(p)[:-2]
-        shape = utils.broadcasted_shape(plates_p0, plates_p) + (1,1)
+        shape = misc.broadcasted_shape(plates_p0, plates_p) + (1,1)
         p0 = p0 * np.ones(shape)
         p = p * np.ones(shape)
 

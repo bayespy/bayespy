@@ -40,9 +40,8 @@ from bayespy.inference.vmp.nodes.gaussian import GaussianMoments
 
 from bayespy.utils import random
 from bayespy.utils import linalg
-from bayespy.utils import utils
 
-from bayespy.utils.utils import TestCase
+from bayespy.utils.misc import TestCase
 
 
 class TestGate(TestCase):

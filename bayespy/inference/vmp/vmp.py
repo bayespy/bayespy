@@ -29,7 +29,7 @@ import h5py
 import datetime
 import tempfile
 
-from bayespy import utils
+from bayespy.utils import misc
 
 from bayespy.inference.vmp.nodes.node import Node
 
@@ -47,7 +47,7 @@ class VB():
                 raise ValueError("Argument number %d is not a node" % (ind+1))
             
         # Remove duplicate nodes
-        self.model = utils.utils.unique(nodes)
+        self.model = misc.unique(nodes)
 
         self._figures = {}
         
@@ -89,9 +89,9 @@ class VB():
         # should be from down to bottom. Or something similar..
 
         # Append the cost arrays
-        self.L = np.append(self.L, utils.utils.nans(repeat))
+        self.L = np.append(self.L, misc.nans(repeat))
         for (node, l) in self.l.items():
-            self.l[node] = np.append(l, utils.utils.nans(repeat))
+            self.l[node] = np.append(l, misc.nans(repeat))
 
         # By default, update all nodes
         if len(nodes) == 0:
@@ -135,7 +135,7 @@ class VB():
                                   "numerical inaccuracy?" % L_diff)
 
                 # Check for convergence
-                div = 0.5 * abs(L + self.L[self.iter-1])
+                div = 0.5 * (abs(L) + abs(self.L[self.iter-1]))
                 if (L - self.L[self.iter-1]) / div < 1e-5:
                     converged = True
                     print("Converged.")
@@ -231,15 +231,15 @@ class VB():
                 if hasattr(node, 'save') and callable(node.save):
                     node.save(nodegroup.create_group(node.name))
             # Write iteration statistics
-            utils.utils.write_to_hdf5(h5f, self.L, 'L')
-            utils.utils.write_to_hdf5(h5f, self.iter, 'iter')
+            misc.write_to_hdf5(h5f, self.L, 'L')
+            misc.write_to_hdf5(h5f, self.iter, 'iter')
             if self.callback_output is not None:
-                utils.utils.write_to_hdf5(h5f, 
+                misc.write_to_hdf5(h5f, 
                                           self.callback_output,
                                           'callback_output')
             boundgroup = h5f.create_group('boundterms')
             for node in self.model:
-                utils.utils.write_to_hdf5(boundgroup, self.l[node], node.name)
+                misc.write_to_hdf5(boundgroup, self.l[node], node.name)
         finally:
             # Close file
             h5f.close()

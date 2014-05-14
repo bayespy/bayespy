@@ -28,7 +28,7 @@ This module contains VMP nodes for Gaussian Markov chains.
 import numpy as np
 import scipy
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 from bayespy.utils import linalg
 
 from .node import Node, message_sum_multiply
@@ -339,13 +339,13 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         v = u_v[0]           # (..., N-1, D)
 
         # Allocate memory (take into account effective plates)
-        plates_phi0 = utils.broadcasted_shape(np.shape(mu)[:-1],
-                                              np.shape(Lambda)[:-2])
-        plates_phi1 = utils.broadcasted_shape(np.shape(Lambda)[:-2],
-                                              np.shape(v)[:-2],
-                                              np.shape(AA)[:-4])
-        plates_phi2 = utils.broadcasted_shape(np.shape(v)[:-2],
-                                              np.shape(A)[:-3])
+        plates_phi0 = misc.broadcasted_shape(np.shape(mu)[:-1],
+                                             np.shape(Lambda)[:-2])
+        plates_phi1 = misc.broadcasted_shape(np.shape(Lambda)[:-2],
+                                             np.shape(v)[:-2],
+                                             np.shape(AA)[:-4])
+        plates_phi2 = misc.broadcasted_shape(np.shape(v)[:-2],
+                                             np.shape(A)[:-3])
         
         phi0 = np.zeros(plates_phi0+(N,D))
         phi1 = np.zeros(plates_phi1+(N,D,D))
@@ -616,9 +616,9 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
         elif index == 2: # B, (...,D)x(D,K)
             XnXn = u[1] # (...,N,D,D)
             XpXn = u[2] # (...,N,D,D)
-            S = utils.atleast_nd(u_S[0], 2)  # (...,N,K)
-            SS = utils.atleast_nd(u_S[1], 3) # (...,N,K,K)
-            v = utils.atleast_nd(u_v[0], 2)  # (...,N,D)
+            S = misc.atleast_nd(u_S[0], 2)  # (...,N,K)
+            SS = misc.atleast_nd(u_S[1], 3) # (...,N,K,K)
+            v = misc.atleast_nd(u_v[0], 2)  # (...,N,D)
 
             # m0: (...,D,D,K)
             m0 = np.einsum('...nji,...nk,...ni->...ijk',
@@ -723,15 +723,15 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
         v = u_v[0]           # (..., N-1, D) or (..., 1, D)
 
         # TODO/FIXME: Take into account plates!
-        plates_phi0 = utils.broadcasted_shape(np.shape(mu)[:-1],
-                                              np.shape(Lambda)[:-2])
-        plates_phi1 = utils.broadcasted_shape(np.shape(Lambda)[:-2],
-                                              np.shape(v)[:-2],
-                                              np.shape(BB)[:-5],
-                                              np.shape(SS)[:-3])
-        plates_phi2 = utils.broadcasted_shape(np.shape(B)[:-3],
-                                              np.shape(S)[:-2],
-                                              np.shape(v)[:-2])
+        plates_phi0 = misc.broadcasted_shape(np.shape(mu)[:-1],
+                                             np.shape(Lambda)[:-2])
+        plates_phi1 = misc.broadcasted_shape(np.shape(Lambda)[:-2],
+                                             np.shape(v)[:-2],
+                                             np.shape(BB)[:-5],
+                                             np.shape(SS)[:-3])
+        plates_phi2 = misc.broadcasted_shape(np.shape(B)[:-3],
+                                             np.shape(S)[:-2],
+                                             np.shape(v)[:-2])
         phi0 = np.zeros(plates_phi0 + (N,D))
         phi1 = np.zeros(plates_phi1 + (N,D,D))
         phi2 = np.zeros(plates_phi2 + (N-1,D,D))
@@ -1046,7 +1046,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
             XnXn = u[1]                   # (...,N,D,D)
             XpXn = u[2]                   # (...,N-1,D,D)
             Z = u_Z[0]                    # (...,N-1,K)
-            v = utils.atleast_nd(u_v[0], 2)  # (...,N-1,D)
+            v = misc.atleast_nd(u_v[0], 2)  # (...,N-1,D)
 
             # Check that there is no time-dependency in v and remove the axis
             if np.ndim(v) >= 2 and np.shape(v)[-2] > 1:
@@ -1076,8 +1076,8 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
             XpXn = u[2]                     # (...,N-1,D,D)
             B = u_B[0]                      # (...,K,D,D)
             BB = u_B[1]                     # (...,K,D,D,D)
-            v = utils.atleast_nd(u_v[0], 2)    # (...,N-1,D)
-            logv = utils.atleast_nd(u_v[1], 2) # (...,N-1,D)
+            v = misc.atleast_nd(u_v[0], 2)    # (...,N-1,D)
+            logv = misc.atleast_nd(u_v[1], 2) # (...,N-1,D)
 
             # Check that there is no time-dependency in v and remove the axis
             if np.ndim(v) >= 2 and np.shape(v)[-2] > 1:
@@ -1163,18 +1163,18 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
         B = u_B[0]                      # (..., K, D, D)
         BB = u_B[1]                     # (..., K, D, D, D)
         Z = u_Z[0]                      # (..., N-1, K)
-        v = utils.atleast_nd(u_v[0], 2) # (..., N-1, D) or (..., 1, D)
+        v = misc.atleast_nd(u_v[0], 2) # (..., N-1, D) or (..., 1, D)
 
         # TODO/FIXME: Take into account plates!
-        plates_phi0 = utils.broadcasted_shape(np.shape(mu)[:-1],
-                                              np.shape(Lambda)[:-2])
-        plates_phi1 = utils.broadcasted_shape(np.shape(Lambda)[:-2],
-                                              np.shape(v)[:-2],
-                                              np.shape(BB)[:-4],
-                                              np.shape(Z)[:-2])
-        plates_phi2 = utils.broadcasted_shape(np.shape(B)[:-3],
-                                              np.shape(Z)[:-2],
-                                              np.shape(v)[:-2])
+        plates_phi0 = misc.broadcasted_shape(np.shape(mu)[:-1],
+                                             np.shape(Lambda)[:-2])
+        plates_phi1 = misc.broadcasted_shape(np.shape(Lambda)[:-2],
+                                             np.shape(v)[:-2],
+                                             np.shape(BB)[:-4],
+                                             np.shape(Z)[:-2])
+        plates_phi2 = misc.broadcasted_shape(np.shape(B)[:-3],
+                                             np.shape(Z)[:-2],
+                                             np.shape(v)[:-2])
         phi0 = np.zeros(plates_phi0 + (N,D))
         phi1 = np.zeros(plates_phi1 + (N,D,D))
         phi2 = np.zeros(plates_phi2 + (N-1,D,D))
@@ -1461,7 +1461,7 @@ class _MarkovChainToGaussian(Deterministic):
     def __init__(self, X, **kwargs):
 
         # Check for constant n
-        if utils.is_numeric(X):
+        if misc.is_numeric(X):
             X = Constant(GaussianMarkovChain)(X)
 
         # Make the time dimension a plate dimension...

@@ -28,7 +28,7 @@ Module for the mixture distribution node.
 import warnings
 import numpy as np
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 from .expfamily import ExponentialFamily, \
                        ExponentialFamilyDistribution, \
@@ -77,7 +77,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                 g = np.expand_dims(g, -1)
             else:
                 # Move the cluster plate axis
-                g = utils.moveaxis(g, self.cluster_plate, -1)
+                g = misc.moveaxis(g, self.cluster_plate, -1)
 
             # Compute phi:
             # Shape(phi)    = [Nn,..,K,..,N0,Dd,..,D0]
@@ -92,7 +92,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                 axis_to = -1-self.ndims[ind]
                 if np.ndim(phi[ind]) >= abs(axis_from):
                     # Cluster plate axis exists, move it to the correct position
-                    phi[ind] = utils.moveaxis(phi[ind], axis_from, axis_to)
+                    phi[ind] = misc.moveaxis(phi[ind], axis_from, axis_to)
                 else:
                     # No cluster plate axis, just add a new axis to the correct
                     # position, if phi has something on that axis
@@ -157,11 +157,11 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                 p = u_parents[0][0]
                 # Move the cluster axis to the proper place:
                 # Shape(p)      = [Nn,..,K,..,N0]
-                p = utils.atleast_nd(p, abs(self.cluster_plate))
-                p = utils.moveaxis(p, -1, self.cluster_plate)
+                p = misc.atleast_nd(p, abs(self.cluster_plate))
+                p = misc.moveaxis(p, -1, self.cluster_plate)
                 # Add axes for variable dimensions to the contributions
                 # Shape(p)      = [Nn,..,K,..,N0,1,..,1]
-                p = utils.add_trailing_axes(p, D)
+                p = misc.add_trailing_axes(p, D)
 
                 if self.cluster_plate < 0:
                     # Add the variable dimensions
@@ -234,21 +234,21 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             # Move cluster axis to the last:
             # Shape(phi)    = [Nn,..,N0,Dd,..,D0,K]
             if np.ndim(Phi[ind]) >= abs(cluster_axis):
-                phi.append(utils.moveaxis(Phi[ind], cluster_axis, -1))
+                phi.append(misc.moveaxis(Phi[ind], cluster_axis, -1))
             else:
                 phi.append(Phi[ind][...,None])
 
             # Add axes to p:
             # Shape(p)      = [Nn,..,N0,K,1,..,1]
-            p = utils.add_trailing_axes(P, self.ndims[ind])
+            p = misc.add_trailing_axes(P, self.ndims[ind])
             # Move cluster axis to the last:
             # Shape(p)      = [Nn,..,N0,1,..,1,K]
-            p = utils.moveaxis(p, -(self.ndims[ind]+1), -1)
+            p = misc.moveaxis(p, -(self.ndims[ind]+1), -1)
 
             # Now the shapes broadcast perfectly and we can sum
             # p*phi over the last axis:
             # Shape(result) = [Nn,..,N0,Dd,..,D0]
-            phi[ind] = utils.sum_product(p, phi[ind], axes_to_sum=-1)
+            phi[ind] = misc.sum_product(p, phi[ind], axes_to_sum=-1)
             if np.any(np.isnan(phi[ind])):
                 nans = True
 
@@ -294,7 +294,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             g = np.expand_dims(g, -1)
         else:
             # Move the cluster plate axis
-            g = utils.moveaxis(g, self.cluster_plate, -1)
+            g = misc.moveaxis(g, self.cluster_plate, -1)
 
         # Cluster assignments/contributions/probabilities/weights:
         # Shape(p)      = [Nn,..,N0,K]
@@ -305,7 +305,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         # axis and utilize broadcasting:
         # Shape(result) = [Nn,..,N0]
 
-        g = utils.sum_product(p, g, axes_to_sum=-1)
+        g = misc.sum_product(p, g, axes_to_sum=-1)
 
         return g
 
@@ -469,7 +469,7 @@ class Mixture(ExponentialFamily):
 
             # Move cluster axis to be the last:
             # Shape(pdf) = [M1,..,Mm,N1,..,Nn,K]
-            pdf = utils.moveaxis(pdf, self.cluster_plate, -1)
+            pdf = misc.moveaxis(pdf, self.cluster_plate, -1)
 
             # Cluster assignments/probabilities/weights
             # Shape(p) = [N1,..,Nn,K]

@@ -25,7 +25,7 @@ import functools
 
 import numpy as np
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 from .node import Node, Moments
 
@@ -179,8 +179,8 @@ def tile(X, tiles):
             return tuple(plates)
 
         def _plates_from_parent(self, index):
-            return tuple(utils.multiply_shapes(self.parents[index].plates,
-                                               tiles))
+            return tuple(misc.multiply_shapes(self.parents[index].plates,
+                                              tiles))
 
         def _compute_mask_to_parent(self, index, mask):
             # Idea: Reshape the message array such that every other axis
@@ -189,9 +189,9 @@ def tile(X, tiles):
             # Make plates equal length
             plates = self._plates_to_parent(index)
             shape_m = np.shape(mask)
-            (plates, tiles_m, shape_m) = utils.make_equal_length(plates, 
-                                                                 tiles,
-                                                                 shape_m)
+            (plates, tiles_m, shape_m) = misc.make_equal_length(plates, 
+                                                                tiles,
+                                                                shape_m)
             
             # Handle broadcasting rules for axes that have unit length in
             # the message (although the plate may be non-unit length). Also,
@@ -217,7 +217,7 @@ def tile(X, tiles):
 
             # Remove extra leading axes
             ndim_parent = len(self.parents[index].plates)
-            mask = utils.squeeze_to_dim(mask, ndim_parent)
+            mask = misc.squeeze_to_dim(mask, ndim_parent)
 
             return mask
 
@@ -235,9 +235,9 @@ def tile(X, tiles):
 
                 # Make shape tuples equal length
                 shape_m = np.shape(m[ind])
-                (tiles_ind, shape, shape_m) = utils.make_equal_length(tiles_ind,
-                                                                      shape_ind,
-                                                                      shape_m)
+                (tiles_ind, shape, shape_m) = misc.make_equal_length(tiles_ind,
+                                                                     shape_ind,
+                                                                     shape_m)
 
                 # Handle broadcasting rules for axes that have unit length in
                 # the message (although the plate may be non-unit length). Also,
@@ -265,7 +265,7 @@ def tile(X, tiles):
 
                 # Remove extra leading axes
                 ndim_parent = len(self.parents[index].get_shape(ind))
-                m[ind] = utils.squeeze_to_dim(m[ind], ndim_parent)
+                m[ind] = misc.squeeze_to_dim(m[ind], ndim_parent)
             
             return m
 
@@ -286,8 +286,8 @@ def tile(X, tiles):
                     nd = min(len(tiles_ind), np.ndim(ui))
                     tiles_ind = tiles_ind[(-nd):]
                     # For simplicity, make tiles and shape equal length
-                    (tiles_ind, shape_u) = utils.make_equal_length(tiles_ind,
-                                                                   shape_u)
+                    (tiles_ind, shape_u) = misc.make_equal_length(tiles_ind,
+                                                                  shape_u)
                     # Utilize broadcasting: Use tiling only if the parent's
                     # moment has non-unit axis length.
                     tiles_ind = [tile if sh > 1 else 1

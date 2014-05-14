@@ -26,7 +26,7 @@
 
 import numpy as np
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 from .node import Node, Moments
 from .deterministic import Deterministic
@@ -91,14 +91,14 @@ class Gate(Deterministic):
             # to be the last axis in the moments, then sum-product over that
             # axis
             ndim = len(self.dims[i])
-            z = utils.add_trailing_axes(u_Z[0], ndim)
-            z = utils.moveaxis(z, -ndim-1, -1)
+            z = misc.add_trailing_axes(u_Z[0], ndim)
+            z = misc.moveaxis(z, -ndim-1, -1)
             gated_axis = self.gated_plate - ndim
             if np.ndim(u_X[i]) < abs(gated_axis):
-                x = utils.add_trailing_axes(u_X[i], 1)
+                x = misc.add_trailing_axes(u_X[i], 1)
             else:
-                x = utils.moveaxis(u_X[i], gated_axis, -1)
-            ui = utils.sum_product(z, x, axes_to_sum=-1)
+                x = misc.moveaxis(u_X[i], gated_axis, -1)
+            ui = misc.sum_product(z, x, axes_to_sum=-1)
             u.append(ui)
         return u
     
@@ -114,15 +114,15 @@ class Gate(Deterministic):
             for i in range(len(m_child)):
                 ndim = len(self.dims[i])
                 c = m_child[i][...,None]
-                c = utils.moveaxis(c, -1, -ndim-1)
+                c = misc.moveaxis(c, -1, -ndim-1)
                 gated_axis = self.gated_plate - ndim
                 x = u_X[i]
                 if np.ndim(x) < abs(gated_axis):
                     x = np.expand_dims(x, -ndim-1)
                 else:
-                    x = utils.moveaxis(x, gated_axis, -ndim-1)
+                    x = misc.moveaxis(x, gated_axis, -ndim-1)
                 axes = tuple(range(-ndim, 0))
-                m0 = m0 + utils.sum_product(c, x, axes_to_sum=axes)
+                m0 = m0 + misc.sum_product(c, x, axes_to_sum=axes)
 
             # Make sure the variable axis does not use broadcasting
             m0 = m0 * np.ones(self.K)
@@ -141,20 +141,20 @@ class Gate(Deterministic):
 
                 # Add variable axes to Z moments
                 ndim = len(self.dims[i])
-                z = utils.add_trailing_axes(u_Z[0], ndim)
-                z = utils.moveaxis(z, -ndim-1, -1)
+                z = misc.add_trailing_axes(u_Z[0], ndim)
+                z = misc.moveaxis(z, -ndim-1, -1)
                 # Axis index of the gated plate
                 gated_axis = self.gated_plate - ndim
                 # Add the gate axis to the message from the children
-                c = utils.add_trailing_axes(m_child[i], 1)
+                c = misc.add_trailing_axes(m_child[i], 1)
                 # Compute the message to parent
                 mi = z * c
                 # Add extra axes if necessary
                 if np.ndim(mi) < abs(gated_axis):
-                    mi = utils.add_leading_axes(mi,
+                    mi = misc.add_leading_axes(mi,
                                                 abs(gated_axis) - np.ndim(mi))
                 # Move the axis to the correct position
-                mi = utils.moveaxis(mi, -1, gated_axis)
+                mi = misc.moveaxis(mi, -1, gated_axis)
                 m.append(mi)
                 
             return m

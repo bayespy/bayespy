@@ -28,7 +28,7 @@ General functions random sampling and distributions.
 import numpy as np
 
 from . import linalg
-from . import utils
+from . import misc
 
 def intervals(N, length, amount=1, gap=0):
     """
@@ -261,7 +261,7 @@ def categorical(p, size=None):
     if np.any(np.asanyarray(p)<0):
         raise ValueError("Array contains negative probabilities")
 
-    if not utils.is_shape_subset(np.shape(p)[:-1], size):
+    if not misc.is_shape_subset(np.shape(p)[:-1], size):
         raise ValueError("Probability array shape and requested size are "
                          "inconsistent")
 
@@ -285,7 +285,7 @@ def categorical(p, size=None):
     else:
         # Seach the indices
         z = np.zeros(size)
-        inds = utils.nested_iterator(size)
+        inds = misc.nested_iterator(size)
         for ind in inds:
             z[ind] = np.searchsorted(P[ind], x[ind])
 
@@ -319,12 +319,12 @@ def alpha_beta_recursion(logp0, logP):
     logP[...,n,:,:] = log P(z_{n+1}|z_n) + log P(y_{n+1}|z_{n+1})
     """
 
-    logp0 = utils.atleast_nd(logp0, 1)
-    logP = utils.atleast_nd(logP, 3)
+    logp0 = misc.atleast_nd(logp0, 1)
+    logP = misc.atleast_nd(logP, 3)
     
     D = np.shape(logp0)[-1]
     N = np.shape(logP)[-3]
-    plates = utils.broadcasted_shape(np.shape(logp0)[:-1], np.shape(logP)[:-3])
+    plates = misc.broadcasted_shape(np.shape(logp0)[:-1], np.shape(logP)[:-3])
 
     if np.shape(logP)[-2:] != (D,D):
         raise ValueError("Dimension mismatch %s != %s"
@@ -345,24 +345,24 @@ def alpha_beta_recursion(logp0, logP):
     for n in range(1,N):
         # Compute: P(z_{n-1},z_n|x_1,...,x_n)
         v = logalpha[...,n-1,:,None] + logP[...,n-1,:,:]
-        c = utils.logsumexp(v, axis=(-1,-2))
+        c = misc.logsumexp(v, axis=(-1,-2))
         # Sum over z_{n-1} to get: log P(z_n|x_1,...,x_n)
-        logalpha[...,n,:] = utils.logsumexp(v - c[...,None,None], axis=-2)
+        logalpha[...,n,:] = misc.logsumexp(v - c[...,None,None], axis=-2)
         g -= c
 
     # Compute the normalization of the last term
     v = logalpha[...,N-1,:,None] + logP[...,N-1,:,:]
-    g -= utils.logsumexp(v, axis=(-1,-2))
+    g -= misc.logsumexp(v, axis=(-1,-2))
 
     # Backward recursion 
     logbeta[...,N-1,:] = 0
     for n in reversed(range(N-1)):
         v = logbeta[...,n+1,None,:] + logP[...,n+1,:,:]
-        c = utils.logsumexp(v, axis=(-1,-2))
-        logbeta[...,n,:] = utils.logsumexp(v - c[...,None,None], axis=-1)
+        c = misc.logsumexp(v, axis=(-1,-2))
+        logbeta[...,n,:] = misc.logsumexp(v - c[...,None,None], axis=-1)
 
     v = logalpha[...,:,:,None] + logbeta[...,:,None,:] + logP[...,:,:,:]
-    c = utils.logsumexp(v, axis=(-1,-2))
+    c = misc.logsumexp(v, axis=(-1,-2))
     zz = np.exp(v - c[...,None,None])
 
     # The logsumexp normalization is not numerically accurate, so do

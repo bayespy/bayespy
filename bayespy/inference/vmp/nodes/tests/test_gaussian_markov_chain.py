@@ -36,9 +36,9 @@ from ..gamma import Gamma
 
 from bayespy.utils import random
 from bayespy.utils import linalg
-from bayespy.utils import utils
+from bayespy.utils import misc
 
-from bayespy.utils.utils import TestCase
+from bayespy.utils.misc import TestCase
 
 class TestGaussianMarkovChain(TestCase):
 
@@ -107,7 +107,7 @@ class TestGaussianMarkovChain(TestCase):
         Z = np.einsum('...kij,...kk->...ij', aa, icov_x)
         U_diag = [icov0+Z] + (N-2)*[icov_x+Z] + [icov_x]
         U_super = (N-1) * [-np.dot(a.T, icov_x)]
-        U = utils.block_banded(U_diag, U_super)
+        U = misc.block_banded(U_diag, U_super)
         # Prior mean
         mu_prior = np.zeros(D*N)
         mu_prior[:D] = np.dot(icov0,mu0)
@@ -464,8 +464,8 @@ class TestGaussianMarkovChain(TestCase):
         V = N*(V,)
         UY = Y
         U = N*(C,)
-        (Xh, CovXh) = utils.kalman_filter(UY, U, A, V, np.zeros(D), np.identity(D))
-        (Xh, CovXh) = utils.rts_smoother(Xh, CovXh, A, V)
+        (Xh, CovXh) = misc.kalman_filter(UY, U, A, V, np.zeros(D), np.identity(D))
+        (Xh, CovXh) = misc.rts_smoother(Xh, CovXh, A, V)
 
         #
         # Check results

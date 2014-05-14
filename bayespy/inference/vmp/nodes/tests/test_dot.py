@@ -38,11 +38,11 @@ from ..gaussian import Gaussian, GaussianARD
 
 from ...vmp import VB
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 from bayespy.utils import linalg
 from bayespy.utils import random
 
-from bayespy.utils.utils import TestCase
+from bayespy.utils.misc import TestCase
 
 class TestSumMultiply(TestCase):
 
@@ -522,7 +522,7 @@ class TestSumMultiply(TestCase):
                          np.random.rand(2,3))
         y2 = Y2.get_moments()
         m0 = tau * data * y2[0].T
-        m1 = -0.5 * tau * np.einsum('ijlk->jikl', y2[1] * utils.identity(2,3))
+        m1 = -0.5 * tau * np.einsum('ijlk->jikl', y2[1] * misc.identity(2,3))
         check_message(m0, m1, 0,
                       'ij,ji->ij',
                       Y1,
@@ -534,7 +534,7 @@ class TestSumMultiply(TestCase):
                       ['j','i'],
                       ['i','j'])
         m0 = tau * data * y1[0].T
-        m1 = -0.5 * tau * np.einsum('ijlk->jikl', y1[1] * utils.identity(3,2))
+        m1 = -0.5 * tau * np.einsum('ijlk->jikl', y1[1] * misc.identity(3,2))
         check_message(m0, m1, 1,
                       'ij,ji->ij',
                       Y1,
@@ -558,7 +558,7 @@ class TestSumMultiply(TestCase):
                          plates=(5,))
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(np.ones((5,3)) * x2[0], axis=-1)
-        m1 = -0.5 * tau * np.sum(x2[1] * utils.identity(3), axis=(-1,-2))
+        m1 = -0.5 * tau * np.sum(x2[1] * misc.identity(3), axis=(-1,-2))
         check_message(m0, m1, 0,
                       ',i->i',
                       X1,
@@ -570,7 +570,7 @@ class TestSumMultiply(TestCase):
                       ['i'],
                       ['i'])
         m0 = tau * data * x1[0][:,np.newaxis] * np.ones((5,3))
-        m1 = -0.5 * tau * x1[1][:,np.newaxis,np.newaxis] * utils.identity(3)
+        m1 = -0.5 * tau * x1[1][:,np.newaxis,np.newaxis] * misc.identity(3)
         check_message(m0, m1, 1,
                       ',i->i',
                       X1,
@@ -595,7 +595,7 @@ class TestSumMultiply(TestCase):
                          plates=(5,4))
         x2 = X2.get_moments()
         m0 = tau * data * np.ones((5,4,3)) * x2[0]
-        m1 = -0.5 * tau * x2[1] * utils.identity(3)
+        m1 = -0.5 * tau * x2[1] * misc.identity(3)
         check_message(m0, m1, 0,
                       'i,i->i',
                       X1,
@@ -621,7 +621,7 @@ class TestSumMultiply(TestCase):
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(np.ones((5,4,3)) * x2[0], axis=(0,1))
         m1 = -0.5 * tau * np.sum(np.ones((5,4,1,1))
-                                 * utils.identity(3)
+                                 * misc.identity(3)
                                  * x2[1], 
                                  axis=(0,1))
         check_message(m0, m1, 0,
@@ -649,7 +649,7 @@ class TestSumMultiply(TestCase):
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(np.ones((5,4,3)) * x2[0], axis=(0,1), keepdims=True)
         m1 = -0.5 * tau * np.sum(np.ones((5,4,1,1))
-                                 * utils.identity(3)
+                                 * misc.identity(3)
                                  * x2[1], 
                                  axis=(0,1),
                                  keepdims=True)
@@ -673,7 +673,7 @@ class TestSumMultiply(TestCase):
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(np.ones((3,2)) * x2[0], 
                                  keepdims=True)
-        m1 = -0.5 * tau * np.sum(utils.identity(3,2) * x2[1], 
+        m1 = -0.5 * tau * np.sum(misc.identity(3,2) * x2[1], 
                                  keepdims=True)
         check_message(m0, m1, 0,
                       'ij,ij->ij',
@@ -686,7 +686,7 @@ class TestSumMultiply(TestCase):
                       [0,1],
                       [0,1])
         m0 = tau * data * np.ones((3,2)) * x1[0]
-        m1 = -0.5 * tau * utils.identity(3,2) * x1[1]
+        m1 = -0.5 * tau * misc.identity(3,2) * x1[1]
         check_message(m0, m1, 1,
                       'ij,ij->ij',
                       X1,

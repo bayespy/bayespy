@@ -39,7 +39,7 @@ from .poisson import PoissonMoments
 from .node import (Moments,
                    ensureparents)
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 
 
 class BinomialMoments(PoissonMoments):
@@ -80,7 +80,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
 
     
     def __init__(self, N):
-        if not utils.isinteger(N):
+        if not misc.isinteger(N):
             raise ValueError("Number of trials must be integer")
         if np.any(N < 0):
             raise ValueError("Number of trials must be non-negative")
@@ -136,7 +136,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         """
         # Make sure the values are integers in valid range
         x = np.asanyarray(x)
-        if not utils.isinteger(x):
+        if not misc.isinteger(x):
             raise ValueError("Counts must be integer")
         if np.any(x < 0) or np.any(x > self.N):
             raise ValueError("Invalid count")

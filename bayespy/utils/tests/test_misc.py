@@ -22,7 +22,7 @@
 ######################################################################
 
 """
-Unit tests for bayespy.utils.utils module.
+Unit tests for bayespy.utils.misc module.
 """
 
 import unittest
@@ -33,59 +33,59 @@ import numpy as np
 
 from numpy import testing
 
-from .. import utils
+from .. import misc
 
-class TestCeilDiv(utils.TestCase):
+class TestCeilDiv(misc.TestCase):
 
     def test_ceildiv(self):
         """
         Test the ceil division
         """
 
-        self.assertEqual(utils.ceildiv(3, 1),
+        self.assertEqual(misc.ceildiv(3, 1),
                          3)
         
-        self.assertEqual(utils.ceildiv(6, 3),
+        self.assertEqual(misc.ceildiv(6, 3),
                          2)
         
-        self.assertEqual(utils.ceildiv(7, 3),
+        self.assertEqual(misc.ceildiv(7, 3),
                          3)
         
-        self.assertEqual(utils.ceildiv(8, 3),
+        self.assertEqual(misc.ceildiv(8, 3),
                          3)
         
-        self.assertEqual(utils.ceildiv(-6, 3),
+        self.assertEqual(misc.ceildiv(-6, 3),
                          -2)
         
-        self.assertEqual(utils.ceildiv(-7, 3),
+        self.assertEqual(misc.ceildiv(-7, 3),
                          -2)
         
-        self.assertEqual(utils.ceildiv(-8, 3),
+        self.assertEqual(misc.ceildiv(-8, 3),
                          -2)
         
-        self.assertEqual(utils.ceildiv(-9, 3),
+        self.assertEqual(misc.ceildiv(-9, 3),
                          -3)
         
-        self.assertEqual(utils.ceildiv(6, -3),
+        self.assertEqual(misc.ceildiv(6, -3),
                          -2)
         
-        self.assertEqual(utils.ceildiv(7, -3),
+        self.assertEqual(misc.ceildiv(7, -3),
                          -2)
         
-        self.assertEqual(utils.ceildiv(8, -3),
+        self.assertEqual(misc.ceildiv(8, -3),
                          -2)
         
-        self.assertEqual(utils.ceildiv(9, -3),
+        self.assertEqual(misc.ceildiv(9, -3),
                          -3)
         
 
-class TestAddAxes(utils.TestCase):
+class TestAddAxes(misc.TestCase):
 
     def test_add_axes(self):
         """
         Test the add_axes method.
         """
-        f = lambda X, **kwargs: np.shape(utils.add_axes(X, **kwargs))
+        f = lambda X, **kwargs: np.shape(misc.add_axes(X, **kwargs))
 
         # By default, add one leading axis
         self.assertEqual(f(np.ones((3,))),
@@ -119,7 +119,7 @@ class TestAddAxes(utils.TestCase):
 class TestBroadcasting(unittest.TestCase):
 
     def test_is_shape_subset(self):
-        f = utils.is_shape_subset
+        f = misc.is_shape_subset
         self.assertTrue(f( (), () ))
         self.assertTrue(f( (), (3,) ))
         self.assertTrue(f( (1,), (1,) ))
@@ -141,7 +141,7 @@ class TestBroadcasting(unittest.TestCase):
 class TestMultiplyShapes(unittest.TestCase):
 
     def test_multiply_shapes(self):
-        f = lambda *shapes: tuple(utils.multiply_shapes(*shapes))
+        f = lambda *shapes: tuple(misc.multiply_shapes(*shapes))
 
         # Basic test
         self.assertEqual(f((2,),
@@ -175,8 +175,8 @@ class TestSumMultiply(unittest.TestCase):
             x += [np.random.randn(*shape)]
 
         # Result from the function
-        yh = utils.sum_multiply(*x,
-                                **kwargs)
+        yh = misc.sum_multiply(*x,
+                               **kwargs)
 
         axis = kwargs.get('axis', None)
         sumaxis = kwargs.get('sumaxis', True)
@@ -213,7 +213,7 @@ class TestSumMultiply(unittest.TestCase):
 
     def test_sum_multiply(self):
         """
-        Test utils.sum_multiply.
+        Test misc.sum_multiply.
         """
         # Check empty list returns error
         self.assertRaises(ValueError, 
@@ -350,91 +350,91 @@ class TestSumMultiply(unittest.TestCase):
                           sumaxis=False,
                           axis=(1,-1))
 
-class TestLogSumExp(utils.TestCase):
+class TestLogSumExp(misc.TestCase):
 
     def test_logsumexp(self):
         """
         Test the ceil division
         """
 
-        self.assertAllClose(utils.logsumexp(3),
+        self.assertAllClose(misc.logsumexp(3),
                             np.log(np.sum(np.exp(3))))
 
         with warnings.catch_warnings(record=True) as w:
-            self.assertAllClose(utils.logsumexp(-np.inf),
+            self.assertAllClose(misc.logsumexp(-np.inf),
                                 -np.inf)
 
-        self.assertAllClose(utils.logsumexp(np.inf),
+        self.assertAllClose(misc.logsumexp(np.inf),
                             np.inf)
 
-        self.assertAllClose(utils.logsumexp(np.nan),
+        self.assertAllClose(misc.logsumexp(np.nan),
                             np.nan)
 
-        self.assertAllClose(utils.logsumexp([-np.inf, -np.inf]),
+        self.assertAllClose(misc.logsumexp([-np.inf, -np.inf]),
                             -np.inf)
 
-        self.assertAllClose(utils.logsumexp([[1e10,  1e-10],
+        self.assertAllClose(misc.logsumexp([[1e10,  1e-10],
                                              [-1e10, -np.inf]], axis=-1),
                             [1e10, -1e10])
 
         # Test keeping dimensions
-        self.assertAllClose(utils.logsumexp([[1e10,  1e-10],
+        self.assertAllClose(misc.logsumexp([[1e10,  1e-10],
                                              [-1e10, -np.inf]], 
                                             axis=-1,
                                             keepdims=True),
                             [[1e10], [-1e10]])
 
         # Test multiple axes
-        self.assertAllClose(utils.logsumexp([[1e10,  1e-10],
+        self.assertAllClose(misc.logsumexp([[1e10,  1e-10],
                                              [-1e10, -np.inf]], 
                                             axis=(-1,-2)),
                             1e10)
 
         pass
 
-class TestMean(utils.TestCase):
+class TestMean(misc.TestCase):
 
     def test_mean(self):
         """
         Test the ceil division
         """
 
-        self.assertAllClose(utils.mean(3),
+        self.assertAllClose(misc.mean(3),
                             3)
         with warnings.catch_warnings(record=True) as w:
-            self.assertAllClose(utils.mean(np.nan),
+            self.assertAllClose(misc.mean(np.nan),
                                 np.nan)
 
-            self.assertAllClose(utils.mean([[2,3],
-                                            [np.nan,np.nan]], 
-                                            axis=-1),
+            self.assertAllClose(misc.mean([[2,3],
+                                           [np.nan,np.nan]], 
+                                           axis=-1),
                                 [2.5,np.nan])
-            self.assertAllClose(utils.mean([[2,3],
-                                            [np.nan,np.nan]], 
-                                            axis=-1,
-                                            keepdims=True),
+            self.assertAllClose(misc.mean([[2,3],
+                                           [np.nan,np.nan]], 
+                                           axis=-1,
+                                           keepdims=True),
                                 [[2.5],[np.nan]])
         
-        self.assertAllClose(utils.mean([[2,3],
-                                        [np.nan,np.nan]], 
-                                        axis=-2),
+        self.assertAllClose(misc.mean([[2,3],
+                                       [np.nan,np.nan]], 
+                                       axis=-2),
                             [2,3])
-        self.assertAllClose(utils.mean([[2,3],
-                                        [np.nan,np.nan]], 
-                                        axis=-2,
-                                        keepdims=True),
+        self.assertAllClose(misc.mean([[2,3],
+                                       [np.nan,np.nan]], 
+                                       axis=-2,
+                                       keepdims=True),
                             [[2,3]])
 
-        self.assertAllClose(utils.mean([[2,3],
-                                        [np.nan,np.nan]]),
+        self.assertAllClose(misc.mean([[2,3],
+                                       [np.nan,np.nan]]),
                             2.5)
-        self.assertAllClose(utils.mean([[2,3],
-                                        [np.nan,np.nan]],
-                                        axis=(-1,-2)),
+        self.assertAllClose(misc.mean([[2,3],
+                                       [np.nan,np.nan]],
+                                       axis=(-1,-2)),
                             2.5)
-        self.assertAllClose(utils.mean([[2,3],
-                                        [np.nan,np.nan]], 
-                                        keepdims=True),
+        self.assertAllClose(misc.mean([[2,3],
+                                       [np.nan,np.nan]], 
+                                       keepdims=True),
                             [[2.5]])
         
         pass

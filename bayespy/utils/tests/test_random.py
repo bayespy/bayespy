@@ -27,10 +27,10 @@ Unit tests for bayespy.utils.random module.
 
 import numpy as np
 
-from .. import utils
+from .. import misc
 from .. import random
 
-class TestCeilDiv(utils.TestCase):
+class TestCeilDiv(misc.TestCase):
 
     def test_categorical(self):
 
@@ -77,7 +77,7 @@ class TestCeilDiv(utils.TestCase):
         
 
 
-class TestDirichlet(utils.TestCase):
+class TestDirichlet(misc.TestCase):
     """
     Unit tests for the Dirichlet random sampling
     """
@@ -113,7 +113,7 @@ class TestDirichlet(utils.TestCase):
         pass
 
 
-class TestAlphaBetaRecursion(utils.TestCase):
+class TestAlphaBetaRecursion(misc.TestCase):
     
     def test(self):
         """
