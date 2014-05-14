@@ -27,7 +27,7 @@ import numpy as np
 import scipy.sparse as sp # prefer CSC format
 #import scipy.spatial.distance as dist
 
-from bayespy.utils import utils
+from bayespy.utils import misc
 from bayespy.utils.covfunc import distance
 
 import imp
@@ -238,7 +238,7 @@ def covfunc_zeros(x1, x2=None, gradient=False):
 def covfunc_delta(amplitude, x1, x2=None, gradient=False):
 
     # Make sure that amplitude is a scalar, not an array object
-    amplitude = utils.array_to_scalar(amplitude)
+    amplitude = misc.array_to_scalar(amplitude)
 
     ## if gradient:
     ##     gradient_amplitude = gradient[0]
@@ -295,8 +295,8 @@ def covfunc_delta(amplitude, x1, x2=None, gradient=False):
 def covfunc_pp2(amplitude, lengthscale, x1, x2=None, gradient=False):
 
     # Make sure that hyperparameters are scalars, not an array objects
-    amplitude = utils.array_to_scalar(amplitude)
-    lengthscale = utils.array_to_scalar(lengthscale)
+    amplitude = misc.array_to_scalar(amplitude)
+    lengthscale = misc.array_to_scalar(lengthscale)
     #amplitude = theta[0]
     #lengthscale = theta[1]
 
@@ -373,8 +373,8 @@ def covfunc_pp2(amplitude, lengthscale, x1, x2=None, gradient=False):
 def covfunc_se(amplitude, lengthscale, x1, x2=None, gradient=False):
 
     # Make sure that hyperparameters are scalars, not an array objects
-    amplitude = utils.array_to_scalar(amplitude)
-    lengthscale = utils.array_to_scalar(lengthscale)
+    amplitude = misc.array_to_scalar(amplitude)
+    lengthscale = misc.array_to_scalar(lengthscale)
 
     # Compute covariance matrix
     if x2 is None:
