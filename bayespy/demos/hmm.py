@@ -36,7 +36,7 @@ from bayespy.nodes import Gaussian, \
 
 from bayespy.inference.vmp.vmp import VB
 
-import bayespy.plot.plotting as bpplt
+import bayespy.plot as bpplt
 
 def hidden_markov_model(distribution, *args, K=3, N=100):
 

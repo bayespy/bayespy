@@ -28,9 +28,6 @@ This module contains VMP nodes for Gaussian Markov chains.
 import numpy as np
 import scipy
 
-import matplotlib.pyplot as plt
-import bayespy.plot.plotting as bpplt
-
 from bayespy.utils import utils
 from bayespy.utils import linalg
 

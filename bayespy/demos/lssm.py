@@ -44,7 +44,7 @@ from bayespy.utils import random
 from bayespy.inference.vmp.vmp import VB
 from bayespy.inference.vmp import transformations
 
-import bayespy.plot.plotting as bpplt
+import bayespy.plot as bpplt
 
 
 def model(M=10, N=100, D=3):

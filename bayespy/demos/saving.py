@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import h5py
 import tempfile
 
-from bayespy.plot import plotting as myplt
+import bayespy.plot as myplt
 
 from bayespy import utils
 from bayespy.inference.vmp import nodes

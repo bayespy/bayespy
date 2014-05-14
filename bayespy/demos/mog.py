@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 import time
 
 from bayespy.utils import utils
-import bayespy.plot.plotting as myplt
+import bayespy.plot as myplt
 from bayespy.inference.vmp import nodes
 from bayespy.inference.vmp.vmp import VB
 
