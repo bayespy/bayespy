@@ -135,7 +135,7 @@ class VB():
                                   "numerical inaccuracy?" % L_diff)
 
                 # Check for convergence
-                div = 0.5 * (L + self.L[self.iter-1])
+                div = 0.5 * abs(L + self.L[self.iter-1])
                 if (L - self.L[self.iter-1]) / div < 1e-5:
                     converged = True
                     print("Converged.")
