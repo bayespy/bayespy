@@ -35,29 +35,50 @@ from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
 from bayespy.inference.vmp.nodes.gaussian import GaussianMoments
 from bayespy.inference.vmp.nodes.beta import BetaMoments
 from bayespy.inference.vmp.nodes.beta import DirichletMoments
+from bayespy.inference.vmp.nodes.node import Node
 
 from bayespy.utils import misc
 
 
-def pdf(Z, x, y):
+# Users can use pyplot via this module
+pyplot = plt
+
+
+def pdf(Z, x, *args, **kwargs):
     """
     Plot probability density function of a scalar variable.
     """
-    raise NotImplementedError()
-    (X, Y) = np.meshgrid(x, y)
-    XY = np.array([X.ravel(), Y.ravel()])
-    lpdf = Z._logpdf()
+    p = np.exp(Z.logpdf(x))
+    return plt.plot(x, p, *args, **kwargs)
 
 
-def timeseries_gaussian_mc(X, scale=2):
+def contour(Z, x, y, n=None, **kwargs):
+    """
+    Plot 2-D probability density function of a 2-D variable.
+    """
+    XY = misc.grid(x, y)
+    p = np.exp(Z.logpdf(XY))
+    shape = (np.size(x), np.size(y))
+    X = np.reshape(XY[:,0], shape)
+    Y = np.reshape(XY[:,1], shape)
+    P = np.reshape(p, shape)
+    if n is not None:
+        return plt.contour(X, Y, P, n, **kwargs)
+    else:
+        return plt.contour(X, Y, P, **kwargs)
+        
+
+
+def plot_gaussian_mc(X, scale=2, **kwargs):
     """
     Parameters:
     X : node
         Node with Gaussian Markov chain moments.
     """
-    timeseries_gaussian(X, axis=-2, scale=scale)
-    
-def timeseries_gaussian(X, axis=-1, scale=2):
+    timeseries_gaussian(X, axis=-2, scale=scale, **kwargs)
+
+
+def plot_gaussian(X, axis=-1, scale=2, **kwargs):
     """
     Parameters:
     X : node
@@ -68,33 +89,46 @@ def timeseries_gaussian(X, axis=-1, scale=2):
     X = X._convert(GaussianMoments)
     u_X = X.get_moments()
     x = u_X[0]
-    xx = u_X[1]
-    std = scale * np.sqrt(np.einsum('...ii->...i', xx) - x**2)
-    
-    _timeseries_mean_and_error(x, std, axis=axis)
-    
-def timeseries_normal(X, axis=-1, scale=2):
-    """
-    Parameters:
-    X : node
-        Node with Gaussian moments.
-    axis : int
-        The index of the time axis.
-    """
-    u_X = X.get_moments()
-    x = u_X[0]
-    xx = u_X[1]
+    xx = misc.get_diag(u_X[1], ndim=len(X.dims[0]))
     std = scale * np.sqrt(xx - x**2)
-    _timeseries_mean_and_error(x, std, axis=axis)
+    #std = scale * np.sqrt(np.einsum('...ii->...i', xx) - x**2)
+    
+    return _timeseries_mean_and_error(x, std, axis=axis, **kwargs)
 
 
-def timeseries(x, *args, axis=-1, **kwargs):
-    return _timeseries_mean_and_error(x, None, *args, axis=axis, **kwargs)
+def plot(Y, axis=-1, scale=2, center=False, **kwargs):
+    """
+    Plot a variable or an array as 1-D function with errors
+    """
+    if misc.is_numeric(Y):
+        return _timeseries_mean_and_error(Y, None, axis=axis, center=center, **kwargs)
+
+    if isinstance(Y, Node):
+        try:
+            Y = Y._convert(GaussianMoments)
+        except ValueError:
+            pass
+        else:
+            return timeseries_gaussian(Y, axis=axis, scale=scale, center=center, **kwargs)
+
+    raise ValueError("No timeseries plotting defined for the given input type.")
+
+
+# Some backward compatibility
+def timeseries_gaussian_mc(*args, center=True, **kwargs):
+    return plot_gaussian_mc(*args, center=center, **kwargs)
+def timeseries_gaussian(*args, center=True, **kwargs):
+    return plot_gaussian(*args, center=center, **kwargs)
+timeseries_normal = timeseries_gaussian
+def timeseries(*args, center=True, **kwargs):
+    return plot(*args, center=center, **kwargs)
+
 
 def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, **kwargs):
     # TODO/FIXME: You must multiply by ones(plates) in order to plot
     # broadcasted plates properly
-    
+
+    y = np.atleast_1d(y)
     shape = list(np.shape(y))
 
     # Get and remove the length of the time axis
@@ -141,7 +175,8 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, **kwargs):
             plt.setp(ax.get_xticklabels(), visible=False)
 
         if std is None:
-            plt.plot(y[:,i], *args, **kwargs)
+            #plt.plot(y[:,i], *args, **kwargs)
+            errorplot(y=y[:,i], **kwargs)
         else:
             if len(args) > 0:
                 raise Exception("Can't handle extra arguments")
@@ -588,7 +623,8 @@ def contourplot(x1, x2, y, colorbar=False, filled=True):
         plt.colorbar()
         
 
-def errorplot(y=None, error=None, x=None, lower=None, upper=None):
+def errorplot(y=None, error=None, x=None, lower=None, upper=None,
+              color=(0,0,0,1), **kwargs):
 
     # Default inputs
     if x is None:
@@ -620,7 +656,7 @@ def errorplot(y=None, error=None, x=None, lower=None, upper=None):
                          linewidth=0,
                          interpolate=True)
     # Plot function
-    plt.plot(x, y, color=(0,0,0,1))
+    plt.plot(x, y, color=color, **kwargs)
 
 #def multiplot(plot_function, *args, **kwargs):
     
