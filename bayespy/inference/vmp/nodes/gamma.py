@@ -64,7 +64,7 @@ class GammaPriorMoments(Moments):
         """
         Return the shape of the moments for a fixed value.
         """
-        return [(), ()]
+        return ( (), () )
     
 
 class GammaMoments(Moments):
