@@ -81,7 +81,7 @@ class VB():
         if iterations is not None:
             self.autosave_iterations = iterations
 
-    def update(self, *nodes, repeat=1, plot=False):
+    def update(self, *nodes, repeat=1, plot=False, tol=1e-6):
 
         # TODO/FIXME:
         #
@@ -136,7 +136,7 @@ class VB():
 
                 # Check for convergence
                 div = 0.5 * (abs(L) + abs(self.L[self.iter-1]))
-                if (L - self.L[self.iter-1]) / div < 1e-5:
+                if (L - self.L[self.iter-1]) / div < tol:
                     converged = True
                     print("Converged.")
 
