@@ -148,8 +148,9 @@ class GammaDistribution(ExponentialFamilyDistribution):
         """
         if np.any(x < 0):
             raise ValueError("Values must be positive")
-        u = [x, np.log(x)]
-        f = 0
+        logx = np.log(x)
+        u = [x, logx]
+        f = -logx
         return (u, f)
 
 
