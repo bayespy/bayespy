@@ -230,6 +230,15 @@ def solve_triangular(U, B, **kwargs):
 
     
 
+def inner(*args, ndim=1):
+    """
+    Compute inner product.
+
+    The number of arrays is arbitrary.  The number of dimensions is arbitrary.
+    """
+    axes = tuple(range(ndim))
+    return misc.sum_product(*args, axes_to_sum=axes)
+
 
 def outer(A, B, ndim=1):
     """
