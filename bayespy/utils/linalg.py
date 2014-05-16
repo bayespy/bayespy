@@ -295,12 +295,24 @@ def tracedot(A, B):
     """
     return np.einsum('...ij,...ji->...', A, B)
 
-def inv(A):
-    if np.ndim(A) == 2:
+
+def inv(A, ndim=1):
+    """
+    General array inversion.
+
+    Supports broadcasting and inversion of multidimensional arrays.  For
+    instance, an array with shape (4,3,2,3,2) could mean that there are four
+    (3*2) x (3*2) matrices to be inverted. This can be done by inv(A, ndim=2).
+    For inverting scalars, ndim=0. For inverting matrices, ndim=1.
+    """
+    A = np.asanyarray(A)
+    if ndim == 0:
+        return 1 / A
+    elif ndim == 1:
         return np.linalg.inv(A)
     else:
         raise NotImplementedError()
-    # return gula.inv(A)
+
 
 def mvdot(A, b):
     """
