@@ -236,7 +236,7 @@ def inner(*args, ndim=1):
 
     The number of arrays is arbitrary.  The number of dimensions is arbitrary.
     """
-    axes = tuple(range(ndim))
+    axes = tuple(range(-ndim,0))
     return misc.sum_product(*args, axes_to_sum=axes)
 
 
