@@ -427,6 +427,18 @@ def make_equal_length(*shapes):
 
     return shapes
 
+
+def make_equal_ndim(*arrays):
+    """
+    Add trailing unit axes so that arrays have equal ndim
+    """
+    shapes = [np.shape(array) for array in arrays]
+    shapes = make_equal_length(*shapes)
+    arrays = [np.reshape(array, shape)
+              for (array, shape) in zip(arrays, shapes)]
+    return arrays
+
+
 def sum_to_dim(A, dim):
     """
     Sum leading axes of A such that A has dim dimensions.
