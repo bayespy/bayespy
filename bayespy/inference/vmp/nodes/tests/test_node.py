@@ -124,7 +124,7 @@ class TestMoments(unittest.TestCase):
         pass
         
     
-class TestNode(unittest.TestCase):
+class TestNode(misc.TestCase):
 
     def check_message_to_parent(self, plates_child, plates_message,
                                 plates_mask, plates_parent, dims=(2,)):
@@ -315,6 +315,101 @@ class TestNode(unittest.TestCase):
                           (4,),
                           (4,),
                           (1,))
+
+
+    def test_compute_message(self):
+        """
+        Test the general sum-multiply function for message computations
+        """
+
+        self.assertAllClose(Node._compute_message(3,
+                                                  plates_from=(),
+                                                  plates_to=(),
+                                                  ndim=0),
+                            3)
+
+        # Sum over one array
+        self.assertAllClose(Node._compute_message([1, 2, 3],
+                                                  plates_from=(3,),
+                                                  plates_to=(),
+                                                  ndim=0),
+                            6)
+
+        # Sum plates
+        self.assertAllClose(Node._compute_message([1, 2, 3],
+                                                  [4, 4, 4],
+                                                  [5, 5, 5],
+                                                  plates_from=(3,),
+                                                  plates_to=(),
+                                                  ndim=0),
+                            20+40+60)
+
+        # Do not sum plates
+        self.assertAllClose(Node._compute_message([1, 2, 3],
+                                                  [4, 4, 4],
+                                                  [5, 5, 5],
+                                                  plates_from=(3,),
+                                                  plates_to=(3,),
+                                                  ndim=0),
+                            [20, 40, 60])
+
+        # Give ndim
+        self.assertAllClose(Node._compute_message([1, 2, 3],
+                                                  [4, 4, 4],
+                                                  [5, 5, 5],
+                                                  plates_from=(),
+                                                  plates_to=(),
+                                                  ndim=1),
+                            [20, 40, 60])
+
+        # Broadcast plates_from
+        self.assertAllClose(Node._compute_message(3,
+                                                  4,
+                                                  5,
+                                                  plates_from=(3,),
+                                                  plates_to=(),
+                                                  ndim=0),
+                            3 * (3*4*5))
+
+        # Broadcast plates_to
+        self.assertAllClose(Node._compute_message(3,
+                                                  4,
+                                                  5,
+                                                  plates_from=(3,),
+                                                  plates_to=(3,),
+                                                  ndim=0),
+                            3*4*5)
+
+        # Different ndims
+        self.assertAllClose(Node._compute_message([1, 2, 3],
+                                                  [4],
+                                                  5,
+                                                  plates_from=(3,),
+                                                  plates_to=(3,),
+                                                  ndim=0),
+                            [1*4*5, 2*4*5, 3*4*5])
+
+        # Broadcasting dims for some arrays
+        self.assertAllClose(Node._compute_message([1, 2, 3],
+                                                  [4],
+                                                  5,
+                                                  plates_from=(),
+                                                  plates_to=(),
+                                                  ndim=1),
+                            [1*4*5, 2*4*5, 3*4*5])
+
+        # Complex example
+        x1 = np.random.randn(5,4,1,2,1)
+        x2 = np.random.randn(    1,2,1)
+        x3 = np.random.randn(5,1,1,1,1)
+        self.assertAllClose(Node._compute_message(x1, x2, x3,
+                                                  plates_from=(6,5,4,3),
+                                                  plates_to=(5,1,3),
+                                                  ndim=2),
+                            6*np.sum(x1*x2*x3, axis=(-4,), keepdims=True))
+
+        pass
+
 
 class TestSlice(misc.TestCase):
 
