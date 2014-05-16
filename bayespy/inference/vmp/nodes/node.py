@@ -90,6 +90,7 @@ class Moments():
 
     @classmethod
     def add_converter(cls, moments_to, converter):
+        cls._converters = cls._converters.copy()
         cls._converters[moments_to] = converter
         return
     
@@ -105,10 +106,11 @@ class Moments():
         error is raised.
 
         The search algorithm starts from the original moments class and applies
-        all possible converters to get a new list of moments classes. Then, all
-        possible converters are applied to this list to get a new list of
-        current moments classes. This is iterated until the algorithm hits the
-        target moments class or its subclass.
+        all possible converters to get a new list of moments classes. This list
+        is extended by adding recursively all parent classes because their
+        converters are applicable. Then, all possible converters are applied to
+        this list to get a new list of current moments classes. This is iterated
+        until the algorithm hits the target moments class or its subclass.
         """
 
         # Check if there is no need for a conversion
@@ -120,22 +122,37 @@ class Moments():
         visited.add(self.__class__)
         converted_list = [(self.__class__, [])]
 
-        # The algorithm: 
-        # Apply all avaible converters to the current list to get a new list.
-        # Iterate this until the list contains the target moments class or its
-        # subclass.
+        # Each iteration step consists of two parts:
+        # 1) form a set of the current classes and all their parent classes 
+        #    recursively
+        # 2) from the current set, apply possible conversions to get a new set 
+        #    of classes
+        # Repeat these two steps until in step (1) you hit the target class.
         
         while len(converted_list) > 0:
-            current_list = converted_list
-            converted_list = []
-            # Go through the list of current moments and apply all available
-            # converters to each of them
-            for (moments_class, converter_path) in current_list:
+            # Go through all parents recursively so we can then use all
+            # converters that are available
+            current_list = []
+            for (moments_class, converter_path) in converted_list:
                 if issubclass(moments_class, moments_to):
                     # Shortest conversion path found, return the resulting total
                     # conversion function
                     return misc.composite_function(converter_path)
-                # Apply all converters to the current moment class
+                current_list.append((moments_class, converter_path))
+                parents = list(moments_class.__bases__)
+                for parent in parents:
+                    # Recursively add parents
+                    for p in parent.__bases__:
+                        if isinstance(p, Moments):
+                            parents.append(p)
+                    # Add un-visited parents
+                    if issubclass(parent, Moments) and parent not in visited:
+                        visited.add(parent)
+                        current_list.append((parent, converter_path))
+
+            # Find all converters and extend the converter paths
+            converted_list = []
+            for (moments_class, converter_path) in current_list:
                 for (conv_mom_cls, conv) in moments_class._converters.items():
                     if conv_mom_cls not in visited:
                         visited.add(conv_mom_cls)
@@ -144,7 +161,7 @@ class Moments():
 
         raise ValueError("No conversion defined from %s to %s"
                          % (self.__class__.__name__,
-                            moments_class.__name__))
+                            moments_to.__name__))
     
 
     def compute_fixed_moments(self, x):
