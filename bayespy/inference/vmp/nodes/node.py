@@ -630,6 +630,75 @@ class Node():
         return converter(self)
     ## def convert(self, node_class):
     ##     return self._convert(node_class._moments_class)
+
+
+    @staticmethod
+    def _compute_message(*arrays, plates_from=(), plates_to=(), ndim=0):
+        """
+        A general function for computing messages by sum-multiply
+
+        The function computes the product of the input arrays and then sums to
+        the requested plates.
+        """
+
+        # Check that the plates broadcast properly
+        if not misc.is_shape_subset(plates_to, plates_from):
+            raise ValueError("plates_to must be broadcastable to plates_from")
+
+        # Compute the explicit shape of the product
+        shapes = [np.shape(array) for array in arrays]
+        arrays_shape = misc.broadcasted_shape(*shapes)
+
+        # Compute plates and dims that are present
+        if ndim == 0:
+            arrays_plates = arrays_shape
+            dims = ()
+        else:
+            arrays_plates = arrays_shape[:-ndim]
+            dims = arrays_shape[-ndim:]
+
+        # Compute the correction term.  If some of the plates that should be
+        # summed are actually broadcasted, one must multiply by the size of the
+        # corresponding plate
+        r = Node._plate_multiplier(plates_from, arrays_plates, plates_to)
+
+        # For simplicity, make the arrays equal ndim
+        print(arrays)
+        arrays = misc.make_equal_ndim(*arrays)
+        print(arrays)
+        
+        # Keys for the input plates: (N-1, N-2, ..., 0)
+        nplates = len(arrays_plates)
+        in_plate_keys = list(range(nplates))
+
+        # Keys for the output plates
+        out_plate_keys = [key 
+                          for key in in_plate_keys
+                          if key < len(plates_to) and plates_to[-key-1] != 1]
+
+        # Keys for the dims
+        dim_keys = list(range(nplates, nplates+ndim))
+
+        # Total input and output keys
+        in_keys = len(arrays) * [in_plate_keys + dim_keys]
+        out_keys = out_plate_keys + dim_keys
+
+        # Compute the sum-product with correction
+        einsum_args = misc.zipper_merge(arrays, in_keys) + [out_keys]
+        print("DEBUG IN NODE COMP MSG")
+        print(einsum_args)
+        y = r * np.einsum(*einsum_args)
+
+        # Reshape the result and apply correction
+        nplates_result = min(len(plates_to), len(arrays_plates))
+        if nplates_result == 0:
+            plates_result = []
+        else:
+            plates_result = [min(plates_to[ind], arrays_plates[ind])
+                             for ind in range(-nplates_result, 0)]
+        y = np.reshape(y, plates_result + list(dims))
+
+        return y
     
 
 
