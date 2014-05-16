@@ -121,6 +121,33 @@ class TestMoments(unittest.TestCase):
                           X().get_converter,
                           A)
 
+        # Test that add_converter function does not change the converters of
+        # parent classes
+        class Z(Moments):
+            pass
+        class W(Z):
+            pass
+        W.add_converter(Y, lambda x: x)
+        self.assertRaises(ValueError,
+                          Z().get_converter,
+                          Y)
+
+        # Test that after using add_converter for a child class and then for the
+        # parent class, the child class is still able to use the parent's
+        # converters
+        class X(Moments):
+            pass
+        class Y(Moments):
+            pass
+        class A(Moments):
+            pass
+        class B(A):
+            pass
+        B.add_converter(Y, lambda x: x+1)
+        A.add_converter(X, lambda x: 2*x)
+        f = B().get_converter(X)
+        self.assertEqual(f(3), 6)
+
         pass
         
     
