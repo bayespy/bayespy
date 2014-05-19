@@ -42,9 +42,9 @@ from .gaussian import Gaussian, GaussianARD
 from .wishart import Wishart
 from .gamma import Gamma
 
-from .gaussian_wishart import (GaussianGammaISO,
-                               GaussianGammaARD,
-                               GaussianWishart)
+from .gaussian import (GaussianGammaISO,
+                       GaussianGammaARD,
+                       GaussianWishart)
 
 from .gaussian_markov_chain import GaussianMarkovChain
 from .gaussian_markov_chain import VaryingGaussianMarkovChain
