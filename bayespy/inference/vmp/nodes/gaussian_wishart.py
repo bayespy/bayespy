@@ -50,6 +50,19 @@ class GaussianGammaISOMoments(Moments):
     Class for the moments of Gaussian-gamma-ISO variables.
     """
 
+
+    def __init__(self, ndim):
+        """
+        Create moments object for Gaussian-gamma isotropic variables
+
+        ndim=0: scalar
+        ndim=1: vector
+        ndim=2: matrix
+        ...
+        """
+        self.ndim = ndim
+        super().__init__()
+
     
     def compute_fixed_moments(self, x, alpha):
         """
@@ -62,8 +75,9 @@ class GaussianGammaISOMoments(Moments):
         x = np.asanyarray(x)
         alpha = np.asanyarray(alpha)
 
-        u0 = np.einsum('...,...i->...i', alpha, x)
-        u1 = np.einsum('...,...i,...j->...ij', alpha, x, x)
+        u0 = x * misc.add_trailing_axes(alpha, self.ndim)
+        u1 = (linalg.outer(x, x, ndim=self.ndim) 
+              * misc.addtrailing_axes(alpha, 2*self.ndim))
         u2 = np.copy(alpha)
         u3 = np.log(alpha)
         u = [u0, u1, u2, u3]
@@ -79,9 +93,12 @@ class GaussianGammaISOMoments(Moments):
         if np.ndim(x) < 1:
             raise ValueError("Mean must be a vector")
 
-        D = np.shape(x)[-1]
+        if ndim == 0:
+            return ( (), (), (), () )
+        
+        dims = np.shape(x)[-ndim:]
 
-        return ( (D,), (D,D), (), () )
+        return ( dims, 2*dims, (), () )
 
 
 class GaussianGammaARDMoments(Moments):
@@ -182,6 +199,8 @@ class GaussianWishartMoments(Moments):
 class GaussianGammaISODistribution(ExponentialFamilyDistribution):
     """
     Class for the VMP formulas of Gaussian-Gamma-ISO variables.
+
+    Currently, supports only vector variables.
     """    
 
 
@@ -288,6 +307,8 @@ class GaussianGammaARDDistribution(ExponentialFamilyDistribution):
 class GaussianWishartDistribution(ExponentialFamilyDistribution):
     """
     Class for the VMP formulas of Gaussian-Wishart variables.
+
+    Currently, supports only vector variables.
     """    
 
 
@@ -359,9 +380,11 @@ class GaussianGammaISO(ExponentialFamily):
 
     The posterior approximation :math:`q(x, \alpha)` has the same Gaussian-gamma
     form.
+
+    Currently, supports only vector variables.
     """
     
-    _moments = GaussianGammaISOMoments()
+    _moments = GaussianGammaISOMoments(1)
     _parent_moments = (GaussianWishartMoments(),
                        GammaPriorMoments(),
                        GammaMoments())
@@ -447,6 +470,8 @@ class GaussianWishart(ExponentialFamily):
         p(\Lambda|V, n) = \mathcal(W)(\Lambda | n, V)
 
     The posterior approximation :math:`q(x, \Lambda)` has the same Gaussian-Wishart form.
+
+    Currently, supports only vector variables.
     """
     
     _moments = GaussianWishartMoments()
@@ -470,7 +495,7 @@ class GaussianWishart(ExponentialFamily):
         mu_alpha = WrapToGaussianGammaISO(mu, alpha)
         D = mu_alpha.dims[0][0]
         
-        parent_moments = (GaussianGammaISOMoments(),
+        parent_moments = (GaussianGammaISOMoments(1),
                           WishartMoments(),
                           WishartPriorMoments(D))
         n = cls._ensure_moments(n, parent_moments[1])
@@ -523,16 +548,17 @@ class GaussianToGaussianGammaISO(Deterministic):
     """
 
 
-    _moments = GaussianGammaISOMoments()
-    _parent_moments = [GaussianMoments(1)]
-    
 
-    @ensureparents
     def __init__(self, X, **kwargs):
         """
         """
-        D = X.dims[0][0]
-        dims = ( (D,), (D,D), (), () )
+        self.ndim = X._moments.ndim
+        
+        self._moments = GaussianGammaISOMoments(self.ndim)
+        self._parent_moments = [GaussianMoments(self.ndim)]
+    
+        shape = X.dims[0]
+        dims = ( shape, 2*shape, (), () )
         super().__init__(X, dims=dims, **kwargs)
             
 
@@ -616,8 +642,8 @@ class WrapToGaussianGammaISO(Deterministic):
     """
 
 
-    _moments = GaussianGammaISOMoments()
-    _parent_moments = [GaussianGammaISOMoments(),
+    _moments = GaussianGammaISOMoments(1)
+    _parent_moments = [GaussianGammaISOMoments(1),
                        GammaMoments()]
     
 
@@ -715,7 +741,7 @@ class WrapToGaussianWishart(Deterministic):
 
         try:
             # Try combo Gaussian-Gamma and Wishart
-            X = self._ensure_moments(X, GaussianGammaISOMoments())
+            X = self._ensure_moments(X, GaussianGammaISOMoments(1))
         except ValueError:
             # Have to use Gaussian-Wishart and Gamma
             self._parent_moments = [GaussianWishartMoments(),
@@ -723,7 +749,7 @@ class WrapToGaussianWishart(Deterministic):
             X = self._ensure_moments(X, GaussianWishartMoments())
             self.wishart = False
         else:
-            self._parent_moments = [GaussianGammaISOMoments(),
+            self._parent_moments = [GaussianGammaISOMoments(1),
                                     WishartMoments()]
             self.wishart = True
 
@@ -750,6 +776,7 @@ class WrapToGaussianWishart(Deterministic):
             u2 = Lambda * misc.add_trailing_axes(alpha, 2)
             u3 = logdet_Lambda + D * log_alpha
             u = [u0, u1, u2, u3]
+
             return u
         else:
             raise NotImplementedError()
