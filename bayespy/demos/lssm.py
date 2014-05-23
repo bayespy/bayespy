@@ -267,8 +267,8 @@ def demo(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=True,
         # Show results
         plt.figure()
         bpplt.timeseries_normal(Q['F'], scale=2)
-        bpplt.timeseries(f, 'b-')
-        bpplt.timeseries(y, 'r.')
+        bpplt.timeseries(f, linestyle='-', color='b')
+        bpplt.timeseries(y, linestyle='None', color='r', marker='.')
         plt.show()
     
 

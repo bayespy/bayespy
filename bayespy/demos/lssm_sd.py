@@ -279,8 +279,8 @@ def demo(N=1000, maxiter=100, D=3, K=2, seed=42, plot=True, debug=False,
     # Plot observations
     if plot:
         plt.figure()
-        bpplt.timeseries(F, 'b-')
-        bpplt.timeseries(Y, 'rx')
+        bpplt.timeseries(F, linestyle='-', color='b')
+        bpplt.timeseries(Y, linestyle='None', color='r', marker='x')
 
     # Apply the linear state-space model with switching dynamics
     Q = infer(Y, D, K, 

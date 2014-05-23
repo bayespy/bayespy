@@ -361,8 +361,8 @@ def demo(N=1000, D=5, K=4, seed=42, maxiter=200, rotate=True, debug=False,
         # Plot observations
         plt.figure()
         bpplt.timeseries_normal(Q['F'], scale=2)
-        bpplt.timeseries(f, 'b-')
-        bpplt.timeseries(y, 'r.')
+        bpplt.timeseries(f, linestyle='-', color='b')
+        bpplt.timeseries(y, linestyle='None', color='r', marker='.')
         plt.ylim([-2, 2])
     
         # Plot latent space
