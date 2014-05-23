@@ -88,6 +88,10 @@ class Moments():
     _converters = {}
 
 
+    class NoConverterError(Exception):
+        pass
+
+
     @classmethod
     def add_converter(cls, moments_to, converter):
         cls._converters = cls._converters.copy()
@@ -159,9 +163,9 @@ class Moments():
                         converted_list.append((conv_mom_cls,
                                                converter_path + [conv])) 
 
-        raise ValueError("No conversion defined from %s to %s"
-                         % (self.__class__.__name__,
-                            moments_to.__name__))
+        raise self.NoConverterError("No conversion defined from %s to %s"
+                                    % (self.__class__.__name__,
+                                       moments_to.__name__))
     
 
     def compute_fixed_moments(self, x):
@@ -680,9 +684,7 @@ class Node():
         r = Node._plate_multiplier(plates_from, arrays_plates, plates_to)
 
         # For simplicity, make the arrays equal ndim
-        print(arrays)
         arrays = misc.make_equal_ndim(*arrays)
-        print(arrays)
         
         # Keys for the input plates: (N-1, N-2, ..., 0)
         nplates = len(arrays_plates)
@@ -702,8 +704,6 @@ class Node():
 
         # Compute the sum-product with correction
         einsum_args = misc.zipper_merge(arrays, in_keys) + [out_keys]
-        print("DEBUG IN NODE COMP MSG")
-        print(einsum_args)
         y = r * np.einsum(*einsum_args)
 
         # Reshape the result and apply correction
