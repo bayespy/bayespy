@@ -418,7 +418,7 @@ class Mixture(ExponentialFamily):
                                            ndims_parents)
 
         # Add cluster assignments to parents
-        parent_moments = (CategoricalMoments(K),) + parent_moments
+        parent_moments = [CategoricalMoments(K)] + list(parent_moments)
 
         parents = [z] + list(parents)
 
