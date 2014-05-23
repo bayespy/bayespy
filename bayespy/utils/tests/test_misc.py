@@ -102,14 +102,18 @@ class TestAddAxes(misc.TestCase):
         # Add axes to the beginning
         self.assertEqual(f(np.ones((2,3,4,)), axis=0, num=3),
                          (1,1,1,2,3,4))
-        self.assertEqual(f(np.ones((2,3,4,)), axis=-3, num=3),
-                         (1,1,1,2,3,4))
         
         # Add axes to the middle
         self.assertEqual(f(np.ones((2,3,4,)), axis=1, num=3),
                          (2,1,1,1,3,4))
+
+        # Test negative axis index
+        self.assertEqual(f(np.ones((2,3,4,)), axis=-4, num=3),
+                         (1,1,1,2,3,4))
+        self.assertEqual(f(np.ones((2,3,4,)), axis=-1, num=1),
+                         (2,3,4,1))
         self.assertEqual(f(np.ones((2,3,4,)), axis=-2, num=3),
-                         (2,1,1,1,3,4))
+                         (2,3,1,1,1,4))
                          
         # Add axes to the end
         self.assertEqual(f(np.ones((2,3,4,)), axis=3, num=3),

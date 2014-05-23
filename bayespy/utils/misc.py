@@ -609,19 +609,22 @@ def is_shape_subset(sub_shape, full_shape):
     return True
 
 
-def add_leading_axes(x, n):
-    shape = (1,)*n + np.shape(x)
-    return np.reshape(x, shape)
-    
-def add_trailing_axes(x, n):
-    shape = np.shape(x) + (1,)*n
-    return np.reshape(x, shape)
-
-def add_axes(X, axis=0, num=1):
+def add_axes(X, num=1, axis=0):
+    for i in range(num):
+        X = np.expand_dims(X, axis=axis)
+    return X
     shape = np.shape(X)[:axis] + num*(1,) + np.shape(X)[axis:]
     return np.reshape(X, shape)
 
     
+def add_leading_axes(x, n):
+    return add_axes(x, axis=0, num=n)
+    
+
+def add_trailing_axes(x, n):
+    return add_axes(x, axis=-1, num=n)
+
+
 ## def add_axes(x, lead, trail):
 ##     shape = (1,)*lead + np.shape(x) + (1,)*trail
 ##     return np.reshape(x, shape)
