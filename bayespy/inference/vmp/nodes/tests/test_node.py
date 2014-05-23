@@ -62,7 +62,7 @@ class TestMoments(unittest.TestCase):
         self.assertEqual(f(3), 3)
         f = A().get_converter(Moments)
         self.assertEqual(f(3), 3)
-        self.assertRaises(ValueError,
+        self.assertRaises(Moments.NoConverterError,
                           A().get_converter,
                           B)
 
@@ -81,7 +81,7 @@ class TestMoments(unittest.TestCase):
         self.assertEqual(f(3), 4)
 
         # Can't convert to child
-        self.assertRaises(ValueError,
+        self.assertRaises(Moments.NoConverterError,
                           Moments().get_converter,
                           A)
         # Convert to grand child
@@ -99,14 +99,14 @@ class TestMoments(unittest.TestCase):
             pass
         class I(Moments):
             _converters = {A: lambda x: x+1}
-        self.assertRaises(ValueError,
+        self.assertRaises(Moments.NoConverterError,
                           H().get_converter,
                           A)
 
         # Conversion to parent is not success
         class J(A):
             pass
-        self.assertRaises(ValueError,
+        self.assertRaises(Moments.NoConverterError,
                           I().get_converter,
                           J)
         
@@ -117,7 +117,7 @@ class TestMoments(unittest.TestCase):
             pass
         X.add_converter(Y, lambda x: x+1)
         Y.add_converter(X, lambda x: x+1)
-        self.assertRaises(ValueError,
+        self.assertRaises(Moments.NoConverterError,
                           X().get_converter,
                           A)
 
@@ -128,7 +128,7 @@ class TestMoments(unittest.TestCase):
         class W(Z):
             pass
         W.add_converter(Y, lambda x: x)
-        self.assertRaises(ValueError,
+        self.assertRaises(Moments.NoConverterError,
                           Z().get_converter,
                           Y)
 
