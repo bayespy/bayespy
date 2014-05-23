@@ -35,6 +35,7 @@ from numpy import testing
 
 from ..dot import Dot, SumMultiply
 from ..gaussian import Gaussian, GaussianARD
+from bayespy.nodes import GaussianGammaISO
 
 from ...vmp import VB
 
@@ -74,6 +75,19 @@ class TestSumMultiply(TestCase):
         self.assertEqual(A.dims, ((), ()))
         A = SumMultiply(',i,i->', V, X, Y)
         self.assertEqual(A.dims, ((), ()))
+
+        # Gaussian-gamma parents
+        C = GaussianGammaISO(np.ones(3), np.identity(3), 1, 1)
+        A = SumMultiply(Y, ['i'], C, ['i'], ['i'])
+        self.assertEqual(A.dims, ((3,), (3,3), (), ()))
+        A = SumMultiply('i,i->i', Y, C)
+        self.assertEqual(A.dims, ((3,), (3,3), (), ()))
+
+        C = GaussianGammaISO(np.ones(3), np.identity(3), 1, 1)
+        A = SumMultiply(Y, ['i'], C, ['i'], [])
+        self.assertEqual(A.dims, ((), (), (), ()))
+        A = SumMultiply('i,i->', Y, C)
+        self.assertEqual(A.dims, ((), (), (), ()))
 
         # Error: not enough inputs
         self.assertRaises(ValueError,
@@ -407,7 +421,32 @@ class TestSumMultiply(TestCase):
                         ['j','i','k'],
                         ['k'])
 
+        #
+        # Gaussian-gamma parents
+        #
+
+        # Outer product of vectors
+        X1 = GaussianARD(np.random.randn(2),
+                         np.random.rand(2),
+                         shape=(2,))
+        x1 = X1.get_moments()
+        X2 = GaussianGammaISO(np.random.randn(6,1,2),
+                              random.covariance(2),
+                              np.random.rand(6,1),
+                              np.random.rand(6,1),
+                              plates=(6,1))
+        x2 = X2.get_moments()
+        Y = SumMultiply('i,j->ij', X1, X2)
+        u = Y._message_to_child()
+        y = np.einsum('...i,...j->...ij', x1[0], x2[0])
+        yy = np.einsum('...ik,...jl->...ijkl', x1[1], x2[1])
+        self.assertAllClose(u[0], y)
+        self.assertAllClose(u[1], yy)
+        self.assertAllClose(u[2], x2[2])
+        self.assertAllClose(u[3], x2[3])
+
         pass
+    
 
     def test_message_to_parent(self):
         """
@@ -431,10 +470,12 @@ class TestSumMultiply(TestCase):
 
         # Check: different message to each of multiple parents
         X1 = GaussianARD(np.random.randn(2),
-                         np.random.rand(2))
+                         np.random.rand(2),
+                         ndim=1)
         x1 = X1.get_moments()
         X2 = GaussianARD(np.random.randn(2),
-                         np.random.rand(2))
+                         np.random.rand(2),
+                         ndim=1)
         x2 = X2.get_moments()
         m0 = tau * data * x2[0]
         m1 = -0.5 * tau * x2[1] * np.identity(2)
@@ -463,7 +504,8 @@ class TestSumMultiply(TestCase):
         
         # Check: key not in output
         X1 = GaussianARD(np.random.randn(2),
-                         np.random.rand(2))
+                         np.random.rand(2),
+                         ndim=1)
         x1 = X1.get_moments()
         m0 = tau * data * np.ones(2)
         m1 = -0.5 * tau * np.ones((2,2))
@@ -486,7 +528,8 @@ class TestSumMultiply(TestCase):
                          np.random.rand())
         x1 = X1.get_moments()
         X2 = GaussianARD(np.random.randn(2),
-                         np.random.rand(2))
+                         np.random.rand(2),
+                         ndim=1)
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(x2[0], axis=-1)
         m1 = -0.5 * tau * np.sum(x2[1] * np.identity(2),
@@ -516,10 +559,12 @@ class TestSumMultiply(TestCase):
 
         # Check: keys in different order
         Y1 = GaussianARD(np.random.randn(3,2),
-                         np.random.rand(3,2))
+                         np.random.rand(3,2),
+                         ndim=2)
         y1 = Y1.get_moments()
         Y2 = GaussianARD(np.random.randn(2,3),
-                         np.random.rand(2,3))
+                         np.random.rand(2,3),
+                         ndim=2)
         y2 = Y2.get_moments()
         m0 = tau * data * y2[0].T
         m1 = -0.5 * tau * np.einsum('ijlk->jikl', y2[1] * misc.identity(2,3))
@@ -666,10 +711,12 @@ class TestSumMultiply(TestCase):
         
         # Check: broadcasted dimensions
         X1 = GaussianARD(np.random.randn(1,1),
-                         np.random.rand(1,1))
+                         np.random.rand(1,1),
+                         ndim=2)
         x1 = X1.get_moments()
         X2 = GaussianARD(np.random.randn(3,2),
-                         np.random.rand(3,2))
+                         np.random.rand(3,2),
+                         ndim=2)
         x2 = X2.get_moments()
         m0 = tau * data * np.sum(np.ones((3,2)) * x2[0], 
                                  keepdims=True)
@@ -700,7 +747,8 @@ class TestSumMultiply(TestCase):
 
         # Check: non-ARD observations
         X1 = GaussianARD(np.random.randn(2),
-                         np.random.rand(2))
+                         np.random.rand(2),
+                         ndim=1)
         x1 = X1.get_moments()
         Lambda = np.array([[2, 1.5], [1.5, 2]])
         F = SumMultiply('i->i', X1)
@@ -778,10 +826,12 @@ class TestSumMultiply(TestCase):
         # Check: mask for broadcasted plate
         X1 = GaussianARD(np.random.randn(2),
                          np.random.rand(2),
+                         ndim=1,
                          plates=(1,))
         x1 = X1.get_moments()
         X2 = GaussianARD(np.random.randn(2),
                          np.random.rand(2),
+                         ndim=1,
                          plates=(3,))
         x2 = X2.get_moments()
         mask = np.array([True, False, True])
@@ -806,6 +856,32 @@ class TestSumMultiply(TestCase):
                       ['i'],
                       ['i'],
                       F=F)
+
+        # Check: Gaussian-gamma parents
+        X1 = GaussianGammaISO(np.random.randn(2),
+                              random.covariance(2),
+                              np.random.rand(),
+                              np.random.rand())
+        x1 = X1.get_moments()
+        X2 = GaussianGammaISO(np.random.randn(2),
+                              random.covariance(2),
+                              np.random.rand(),
+                              np.random.rand())
+        x2 = X2.get_moments()
+        F = SumMultiply('i,i->i', X1, X2)
+        V = random.covariance(2)
+        y = np.random.randn(2)
+        Y = Gaussian(F, V)
+        Y.observe(y)
+        m0 = np.dot(V, y) * x2[0]
+        m1 = -0.5 * V * x2[1]
+        m2 = -0.5 * np.einsum('i,ij,j', y, V, y) * x2[2]#linalg.inner(V, x2[2], ndim=2)
+        m3 = 0.5 * 2 #linalg.chol_logdet(linalg.chol(V)) + 2*x2[3]
+        m = F._message_to_parent(0)
+        self.assertAllClose(m[0], m0)
+        self.assertAllClose(m[1], m1)
+        self.assertAllClose(m[2], m2)
+        self.assertAllClose(m[3], m3)
 
         pass
 

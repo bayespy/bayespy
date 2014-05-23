@@ -28,6 +28,7 @@ from bayespy.utils import misc
 from .node import Node
 from .deterministic import Deterministic
 from .gaussian import Gaussian, GaussianMoments
+from .gaussian import GaussianGammaISOMoments
 
 
 class SumMultiply(Deterministic):
@@ -58,7 +59,10 @@ class SumMultiply(Deterministic):
 
     The keys must refer to variable dimension axes only, not plate axes.
 
-    The convenient string notation of numpy.einsum is not yet implemented.
+    The input nodes may be Gaussian-gamma (isotropic) nodes.
+
+    The output message is Gaussian-gamma (isotropic) if any of the input nodes
+    is Gaussian-gamma.
 
     Examples
     --------
@@ -160,18 +164,34 @@ class SumMultiply(Deterministic):
             #full_keyset += list(keyset.keys())
         full_keyset = list(set(full_keyset))
 
-        # Input and output messages are Gaussian
+        # Input and output messages are Gaussian unless there is at least one
+        # Gaussian-gamma message from the parents
         self._moments = GaussianMoments(len(keys_out))
         self._parent_moments = [GaussianMoments(len(keyset))
                                 for keyset in keysets]
-        
+        self.gaussian_gamma = False
+        for n in range(len(nodes)):
+            try:
+                # Try to convert into Gaussian moments
+                nodes[n] = self._ensure_moments(nodes[n], 
+                                                self._parent_moments[n])
+            except GaussianMoments.NoConverterError:
+                # Failure. It is probably a Gaussian-gamma node
+                self.gaussian_gamma = True
+
+        if self.gaussian_gamma:
+            self._moments = GaussianGammaISOMoments(len(keys_out))
+            self._parent_moments = [GaussianGammaISOMoments(len(keyset))
+                                    for keyset in keysets]
+            for n in range(len(nodes)):
+                # Convert into Gaussian-gamma nodes
+                nodes[n] = self._ensure_moments(nodes[n], 
+                                                self._parent_moments[n])
+
         #
         # Check the validity of each node
         #
         for n in range(len(nodes)):
-            # Convert constant arrays to constant nodes
-            nodes[n] = self._ensure_moments(nodes[n], 
-                                            self._parent_moments[n])
             # Check that the maps and the size of the variable are consistent
             if len(nodes[n].dims[0]) != len(keysets[n]):
                 raise ValueError("Wrong number of keys (%d) for the node "
@@ -183,11 +203,6 @@ class SumMultiply(Deterministic):
             if len(set(keysets[n])) != len(keysets[n]):
                 raise ValueError("Axis keys for node number %d are not unique"
                                  % n)
-            # Check that the dims are proper Gaussians
-            if len(nodes[n].dims) != 2:
-                raise ValueError("Node %d is not Gaussian" % n)
-            if nodes[n].dims[0] + nodes[n].dims[0] != nodes[n].dims[1]:
-                raise ValueError("Node %d is not Gaussian" % n)
 
         # Check the validity of output keys: each output key must be included in
         # the input keys
@@ -229,6 +244,9 @@ class SumMultiply(Deterministic):
         # Compute the shape of the output
         dim0 = [broadcasted_size[key] for key in keys_out]
         dim1 = dim0 + dim0
+        dims = ( tuple(dim0), tuple(dim1) )
+        if self.gaussian_gamma:
+            dims = dims + ( (), () )
 
         # Rename the keys to [0,1,...,N-1] where N is the total number of keys
         self.N_keys = len(full_keyset)
@@ -237,10 +255,9 @@ class SumMultiply(Deterministic):
                          for keyset in keysets ]
 
         super().__init__(*nodes,
-                         dims=(tuple(dim0),tuple(dim1)),
+                         dims=dims,
                          **kwargs)
 
-            
 
     def _compute_moments(self, *u_parents):
 
@@ -284,7 +301,17 @@ class SumMultiply(Deterministic):
         args = misc.zipper_merge(u1, in_all_keys) + [out_all_keys]
         x1 = np.einsum(*args)
 
-        return [x0, x1]
+        if not self.gaussian_gamma:
+            return [x0, x1]
+
+        # Compute Gaussian-gamma specific moments
+        x2 = 1
+        x3 = 0
+        for i in range(len(u_parents)):
+            x2 = x2 * u_parents[i][2]
+            x3 = x3 + u_parents[i][3]
+
+        return [x0, x1, x2, x3]
 
 
     def get_parameters(self):
@@ -453,8 +480,25 @@ class SumMultiply(Deterministic):
                                        parent.plates)
             if r != 1:
                 msg[ind] *= r
-        
+
+        if self.gaussian_gamma:
+            alphas = [u_parents[i][2] 
+                      for i in range(len(u_parents)) if i != index]
+            ## logalphas = [u_parents[i][3]
+            ##              for i in range(len(u_parents)) if i != index]
+            m2 = self._compute_message(mask, m[2], *alphas,
+                                       ndim=0,
+                                       plates_from=self.plates,
+                                       plates_to=parent.plates)
+            m3 = self._compute_message(mask, m[3],#*logalphas,
+                                       ndim=0,
+                                       plates_from=self.plates,
+                                       plates_to=parent.plates)
+
+            msg = msg + [m2, m3]
+            
         return msg
+
 
 def Dot(*args, **kwargs):
     """
