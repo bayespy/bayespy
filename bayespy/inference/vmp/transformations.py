@@ -387,17 +387,16 @@ class RotateGaussianARD():
         
         self.precompute = precompute
         
+        self.node_parent = X.parents[0]
         if len(alpha) == 0:
-            alpha = X.parents[1]
             self.update_alpha = False
         elif len(alpha) == 1:
-            alpha = alpha[0]
+            self.node_alpha = alpha[0]
             self.update_alpha = True
         else:
             raise ValueError("Too many arguments")
         self.node_X = X
-        self.node_alpha = alpha
-        self.node_mu = X.parents[0]
+        #self.node_mu = X.parents[0]
         self.ndim = len(X.dims[0])
 
         # Force negative rotation axis indexing
@@ -451,13 +450,18 @@ class RotateGaussianARD():
                 raise ValueError("Axis out of bounds")
             plate_axis -= self.ndim - 1 # Why -1? Because one axis is preserved!
                 
-        # Get the mean parameter. It will not be rotated.
-        (mu, mumu) = self.node_mu.get_moments()
+        # Get the mean parameter. It will not be rotated. This assumes that mu
+        # and alpha are really independent.
+        (alpha_mu, alpha_mu2, alpha, _) = self.node_parent.get_moments()
+        mu = alpha_mu / alpha
+        mu2 = alpha_mu2 / alpha
         # For simplicity, force mu to have the same shape as X
-        (mu, mumu) = gaussian.reshape_gaussian_array(self.node_mu.dims[0],
-                                                     self.node_X.dims[0],
-                                                     mu,
-                                                     mumu)
+        mu = mu * np.ones(self.node_X.dims[0])
+        mu2 = mu2 * np.ones(self.node_X.dims[0])
+        ## (mu, mumu) = gaussian.reshape_gaussian_array(self.node_mu.dims[0],
+        ##                                              self.node_X.dims[0],
+        ##                                              mu,
+        ##                                              mumu)
 
         (X, XX) = self.node_X.get_moments()
 
@@ -466,13 +470,14 @@ class RotateGaussianARD():
         XX = covariance_to_variance(XX,
                                     ndim=self.ndim,
                                     covariance_axis=self.axis)
-        mumu = covariance_to_variance(mumu,
-                                      ndim=self.ndim, 
-                                      covariance_axis=self.axis)
+        ## mumu = covariance_to_variance(mumu,
+        ##                               ndim=self.ndim, 
+        ##                               covariance_axis=self.axis)
         
         # Move axes of X and mu and compute their outer product
         X = misc.moveaxis(X, self.axis, -1)
         mu = misc.moveaxis(mu, self.axis, -1)
+        mu2 = misc.moveaxis(mu2, self.axis, -1)
         Xmu = linalg.outer(X, mu, ndim=1)
         D = np.shape(X)[-1]
         
@@ -486,11 +491,12 @@ class RotateGaussianARD():
             a = safe_move_axis(self.node_alpha.phi[1])
             a0 = safe_move_axis(self.node_alpha.parents[0].get_moments()[0])
             b0 = safe_move_axis(self.node_alpha.parents[1].get_moments()[0])
+            plates_alpha = list(self.node_alpha.plates)
         else:
-            alpha = safe_move_axis(self.node_alpha.get_moments()[0])
+            alpha = safe_move_axis(self.node_parent.get_moments()[2])
+            plates_alpha = list(self.node_parent.get_shape(2))
 
         # Move plates of alpha for R
-        plates_alpha = list(self.node_alpha.plates)
         if len(plates_alpha) >= -self.axis:
             plate = plates_alpha.pop(self.axis)
             plates_alpha.append(plate)
@@ -500,13 +506,13 @@ class RotateGaussianARD():
         plates_X = list(self.node_X.get_shape(0))
         plates_X.pop(self.axis)
 
-        def sum_to_alpha(V):
+        def sum_to_alpha(V, ndim=2):
             # TODO/FIXME: This could be improved so that it is not required to
             # explicitly repeat to alpha plates. Multiplying by ones was just a
             # simple bug fix.
-            return sum_to_plates(V * np.ones(plates_alpha[:-1]+[1,1]),
+            return sum_to_plates(V * np.ones(plates_alpha[:-1]+ndim*[1]),
                                  plates_alpha[:-1],
-                                 ndim=2,
+                                 ndim=ndim,
                                  plates_from=plates_X)
         
         if plate_axis is not None:
@@ -523,7 +529,7 @@ class RotateGaussianARD():
             X = safe_move_plate_axis(X, 1)
             mu = safe_move_plate_axis(mu, 1)
             XX = safe_move_plate_axis(XX, 2)
-            mumu = safe_move_plate_axis(mumu, 2)
+            mu2 = safe_move_plate_axis(mu2, 1)
             if self.update_alpha:
                 a = safe_move_plate_axis(a, 1)
                 a0 = safe_move_plate_axis(a0, 1)
@@ -545,8 +551,9 @@ class RotateGaussianARD():
                                       ndim=3,
                                       plates_from=plates_X[:-1])
             # Broadcast mumu to ensure shape
-            mumu = np.ones(np.shape(XX)[-3:]) * mumu
-            self.mumu = sum_to_alpha(mumu)
+            #mumu = np.ones(np.shape(XX)[-3:]) * mumu
+            mu2 = mu2 * np.ones(np.shape(X)[-2:])
+            self.mu2 = sum_to_alpha(mu2, ndim=1)
 
             if self.precompute:
                 # Precompute some stuff for the gradient of plate rotation
@@ -570,7 +577,7 @@ class RotateGaussianARD():
         else:
             # Sum axes that are not in the plates of alpha
             self.XX = sum_to_alpha(XX)
-            self.mumu = sum_to_alpha(mumu)
+            self.mu2 = sum_to_alpha(mu2, ndim=1)
             self.Xmu = sum_to_alpha(Xmu)
             
         
@@ -639,24 +646,24 @@ class RotateGaussianARD():
                                     ndim=2,
                                     plates_from=plates_X)
 
-            mumu = self.mumu
+            mu2 = self.mu2
             D = np.shape(XX)[-1]
             logdet_Q = D * np.log(np.abs(sumQ))
 
         else:
             XX = self.XX
-            mumu = self.mumu
+            mu2 = self.mu2
             Xmu = self.Xmu
             logdet_Q = 0
 
         # Compute transformed moments
-        mumu = np.einsum('...ii->...i', mumu)
+        #mu2 = np.einsum('...ii->...i', mu2)
         RXmu = np.einsum('...ik,...ki->...i', R, Xmu)
         RXX = np.einsum('...ik,...kj->...ij', R, XX)
         RXXR = np.einsum('...ik,...ik->...i', RXX, R)
 
         # <(X-mu) * (X-mu)'>_R
-        XmuXmu = (RXXR - 2*RXmu + mumu)
+        XmuXmu = (RXXR - 2*RXmu + mu2)
 
         D = np.shape(R)[0]
 

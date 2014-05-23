@@ -178,15 +178,15 @@ class TestRotateGaussianARD(TestCase):
         test( (2,3,4), (5,6,7), axis=-2,
               mu=GaussianARD(3, 1,
                              shape=(3,1),
-                             plates=(6,1)))
+                             plates=(6,1,1)))
         test( (2,3,4), (5,6,7), axis=-3,
               mu=GaussianARD(3, 1,
                              shape=(3,1),
-                             plates=(6,1)))
+                             plates=(6,1,1)))
         test( (2,3,4), (5,6,7), axis=-2, alpha_plates=(5,1,7,2,1,1),
               mu=GaussianARD(3, 1,
                              shape=(3,1),
-                             plates=(6,1)))
+                             plates=(6,1,1)))
 
         # Plate rotation
         test( (3,), (5,), axis=-1, plate_axis=-1)
@@ -202,15 +202,15 @@ class TestRotateGaussianARD(TestCase):
         test( (2,3,4), (5,6,7), axis=-2, plate_axis=-2,
               mu=GaussianARD(3, 1,
                              shape=(3,1),
-                             plates=(6,1)))
+                             plates=(6,1,1)))
         test( (2,3,4), (5,6,7), axis=-3, plate_axis=-2,
               mu=GaussianARD(3, 1,
                              shape=(3,1),
-                             plates=(6,1)))
+                             plates=(6,1,1)))
         test( (2,3,4), (5,6,7), axis=-2, alpha_plates=(5,1,7,2,1,1), plate_axis=-2,
               mu=GaussianARD(3, 1,
                              shape=(3,1),
-                             plates=(6,1)))
+                             plates=(6,1,1)))
 
         #
         # Plate rotation with mu and alpha
@@ -259,7 +259,7 @@ class TestRotateGaussianARD(TestCase):
               alpha_plates=(2,3,1,5),
               mu=GaussianARD(3, 1,
                              shape=(4,1),
-                             plates=(2,)))
+                             plates=(2,1)))
         # Several plate dimensions
         test( (5,), (2,3,4), axis=-1, plate_axis=-2,
               alpha_plates=(2,3,4,5),

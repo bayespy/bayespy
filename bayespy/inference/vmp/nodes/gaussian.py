@@ -52,23 +52,95 @@ from .node import (Moments,
 # MOMENTS
 #
 
+## class GaussianISOMoments(Moments):
+##     """
+##     Class for the moments of Gaussian ISO variables.
+##     """
+
+    
+##     def __init__(self, ndim):
+##         self.ndim = ndim
+##         super().__init__()
+
+
+##     def compute_fixed_moments(self, x):
+##         """
+##         Compute the moments for a fixed value
+##         """
+##         if np.ndim(x) < self.ndim:
+##             raise ValueError("Not enough dimensions in x")
+##         u0 = x
+##         u1 = linalg.sum_multiply(x, x, axis=tuple(range(-self.ndim,0)))
+##         u = [u0, u1]
+##         return u
+
+##     def compute_dims_from_values(self, x):
+##         """
+##         Return the shape of the moments for a fixed value.
+##         """
+##         x = misc.atleast_nd(x, self.ndim)
+##         if self.ndim == 0:
+##             shape = ()
+##         else:
+##             shape = np.shape(x)[-self.ndim:]
+##         return (shape, ())
+        
+
+## class GaussianARDMoments(Moments):
+##     """
+##     Class for the moments of Gaussian ARD variables.
+##     """
+
+    
+##     def __init__(self):
+##         super().__init__()
+
+
+##     def compute_fixed_moments(self, x):
+##         """
+##         Compute the moments for a fixed value
+##         """
+##         u0 = x
+##         u1 = x**2
+##         u = [u0, u1]
+##         return u
+
+    
+##     def compute_dims_from_values(self, x):
+##         """
+##         Return the shape of the moments for a fixed value.
+##         """
+##         return ((), ())
+        
+
 class GaussianMoments(Moments):
+    """
+    Class for the moments of Gaussian variables.
+    """
+
+    
     def __init__(self, ndim):
         self.ndim = ndim
+        super().__init__()
+
 
     def compute_fixed_moments(self, x):
-        """ Compute Gaussian moments for fixed x. """
+        """
+        Compute the moments for a fixed value
+        """
         x = misc.atleast_nd(x, self.ndim)
         return [x, linalg.outer(x, x, ndim=self.ndim)]
 
     def compute_dims_from_values(self, x):
+        """
+        Return the shape of the moments for a fixed value.
+        """
         x = misc.atleast_nd(x, self.ndim)
         if self.ndim == 0:
-            dims = ()
+            shape = ()
         else:
-            dims = np.shape(x)[-self.ndim:]
-        return (dims, dims+dims)
-        
+            shape = np.shape(x)[-self.ndim:]
+        return (shape, shape+shape)
 
 
 class GaussianGammaISOMoments(Moments):
@@ -133,6 +205,19 @@ class GaussianGammaARDMoments(Moments):
     """
 
     
+    def __init__(self, ndim):
+        """
+        Create moments object for Gaussian-gamma isotropic variables
+
+        ndim=0: scalar
+        ndim=1: vector
+        ndim=2: matrix
+        ...
+        """
+        self.ndim = ndim
+        super().__init__()
+
+    
     def compute_fixed_moments(self, x, alpha):
         """
         Compute the moments for a fixed value
@@ -144,18 +229,18 @@ class GaussianGammaARDMoments(Moments):
         x = np.asanyarray(x)
         alpha = np.asanyarray(alpha)
 
-        if np.ndim(x) < 1:
-            raise ValueError("Mean must be a vector")
-        if np.ndim(alpha) < 1:
-            raise ValueError("ARD scales must be a vector")
-
-        if np.shape(x)[-1] != np.shape(alpha)[-1]:
+        if np.ndim(x) < self.ndim:
+            raise ValueError("Not enough dimensions in x")
+        if np.ndim(alpha) < self.ndim:
+            raise ValueError("Not enough dimensions in alpha")
+        if np.shape(x) != np.shape(alpha):
             raise ValueError("Mean and ARD scales have inconsistent shapes")
-        
-        u0 = np.einsum('...i,...i->...i', alpha, x)
-        u1 = np.einsum('...k,...k,...k->...k', alpha, x, x)
+
+        u0 = alpha * x
+        u1 = u0 * x
         u2 = np.copy(alpha)
         u3 = np.log(alpha)
+        
         u = [u0, u1, u2, u3]
 
         return u
@@ -166,17 +251,19 @@ class GaussianGammaARDMoments(Moments):
         Return the shape of the moments for a fixed value.
         """
 
-        if np.ndim(x) < 1:
-            raise ValueError("Mean must be a vector")
-        if np.ndim(alpha) < 1:
-            raise ValueError("ARD scales must be a vector")
-
-        D = np.shape(x)[-1]
-
-        if np.shape(alpha)[-1] != D:
+        if np.ndim(x) < self.ndim:
+            raise ValueError("Not enough dimensions in x")
+        if np.ndim(alpha) < self.ndim:
+            raise ValueError("Not enough dimensions in alpha")
+        if np.shape(x) != np.shape(alpha):
             raise ValueError("Mean and ARD scales have inconsistent shapes")
 
-        return ( (D,), (D,), (D,), (D,) )
+        if ndim > 0:
+           shape = np.shape(x)[-self.ndim:]
+        else:
+            shape = ()
+
+        return ( shape, shape, shape, shape )
 
 
 class GaussianWishartMoments(Moments):
@@ -229,24 +316,41 @@ class GaussianWishartMoments(Moments):
 
 
 class GaussianDistribution(ExponentialFamilyDistribution):
+    """
+    Class for the VMP formulas of Gaussian variables.
+
+    Currently, supports only vector variables.
+    """    
 
     
-    def compute_message_to_parent(self, parent, index, u, *u_parents):
+    def compute_message_to_parent(self, parent, index, u, u_mu_Lambda):
+        """
+        Compute the message to a parent node.
+        """
         if index == 0:
-            return [misc.m_dot(u_parents[1][0], u[0]),
-                    -0.5 * u_parents[1][0]]
-        elif index == 1:
-            xmu = misc.m_outer(u[0], u_parents[0][0])
-            return [-0.5 * (u[1] - xmu - xmu.swapaxes(-1,-2) + u_parents[0][1]),
-                    0.5]
+            x = u[0]
+            xx = u[1]
+            m0 = x
+            m1 = -0.5
+            m2 = -0.5*xx
+            m3 = 0.5
+            return [m0, m1, m2, m3]
         else:
             raise ValueError("Index out of bounds")
 
-    def compute_phi_from_parents(self, u_mu, u_Lambda, mask=True):
-        return [misc.m_dot(u_Lambda[0], u_mu[0]),
-                -0.5 * u_Lambda[0]]
+    def compute_phi_from_parents(self, u_mu_Lambda, mask=True):
+        """
+        Compute the natural parameter vector given parent moments.
+        """
+        Lambda_mu = u_mu_Lambda[0]
+        Lambda = u_mu_Lambda[2]
+        return [Lambda_mu,
+                -0.5 * Lambda]
 
     def compute_moments_and_cgf(self, phi, mask=True):
+        """
+        Compute the moments and :math:`g(\phi)`.
+        """
         # TODO: Compute -2*phi[1] and simplify the formulas
         L = misc.m_chol(-2*phi[1])
         k = np.shape(phi[0])[-1]
@@ -260,17 +364,19 @@ class GaussianDistribution(ExponentialFamilyDistribution):
              #+ 0.5 * np.log(2) * self.dims[0][0])
         return (u, g)
 
-    def compute_cgf_from_parents(self, u_mu, u_Lambda):
-        mu = u_mu[0]
-        mumu = u_mu[1]
-        Lambda = u_Lambda[0]
-        logdet_Lambda = u_Lambda[1]
-        g = (-0.5 * np.einsum('...ij,...ij',mumu,Lambda)
-             + 0.5 * logdet_Lambda)
+    def compute_cgf_from_parents(self, u_mu_Lambda):
+        """
+        Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
+        """
+        mu_Lambda_mu = u_mu_Lambda[1]
+        logdet_Lambda = u_mu_Lambda[3]
+        g = -0.5*mu_Lambda_mu + 0.5*logdet_Lambda
         return g
 
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """ Compute u(x) and f(x) for given x. """
+        """
+        Compute the moments and :math:`f(x)` for a fixed value.
+        """
         k = np.shape(x)[-1]
         u = [x, misc.m_outer(x,x)]
         f = -k/2*np.log(2*np.pi)
@@ -278,6 +384,9 @@ class GaussianDistribution(ExponentialFamilyDistribution):
 
 
     def random(self, *phi, plates=None):
+        """
+        Draw a random sample from the distribution.
+        """
         # TODO/FIXME: You shouldn't draw random values for
         # observed/fixed elements!
 
@@ -291,6 +400,31 @@ class GaussianDistribution(ExponentialFamilyDistribution):
             
 
 class GaussianARDDistribution(ExponentialFamilyDistribution):
+    """
+    ...
+
+    Log probability density function:
+
+    .. math::
+
+        \log p(x|\mu, \alpha) = -\frac{1}{2} x^T \mathrm{diag}(\alpha) x + x^T
+        \mathrm{diag}(\alpha) \mu - \frac{1}{2} \mu^T \mathrm{diag}(\alpha) \mu
+        + \frac{1}{2} \sum_i \log \alpha_i - \frac{D}{2} \log(2\pi)
+        
+    Parent has moments:
+
+    .. math::
+
+        \begin{bmatrix}
+            \alpha \circ \mu
+            \\
+            \alpha \circ \mu \circ \mu
+            \\
+            \alpha
+            \\
+            \log(\alpha)
+        \end{bmatrix}
+    """
 
     def __init__(self, shape, ndim_mu):
         self.shape = shape
@@ -298,65 +432,97 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         self.ndim = len(shape)
         super().__init__()
     
-    def compute_message_to_parent(self, parent, index, u, u_mu, u_alpha):
+    def compute_message_to_parent(self, parent, index, u, u_mu_alpha):
+        """
+        ...
+
+
+        .. math::
+
+            m = 
+            \begin{bmatrix}
+                x
+                \\
+                [-\frac{1}{2}, \ldots, -\frac{1}{2}]
+                \\
+                -\frac{1}{2} \mathrm{diag}(xx^T)
+                \\
+                [\frac{1}{2}, \ldots, \frac{1}{2}]
+            \end{bmatrix}
+        """
         if index == 0:
             x = u[0]
-            alpha = u_alpha[0]
-
-            axes0 = list(range(-self.ndim, -self.ndim_mu))
-            m0 = misc.sum_multiply(alpha, x, axis=axes0)
-
-            Alpha = misc.diag(alpha, ndim=self.ndim)
-            axes1 = [axis+self.ndim for axis in axes0] + axes0
-            m1 = -0.5 * misc.sum_multiply(Alpha, 
-                                          misc.identity(*self.shape),
-                                          axis=axes1)
-            return [m0, m1]
-
-        elif index == 1:
-            x = u[0]
             x2 = misc.get_diag(u[1], ndim=self.ndim)
-            mu = u_mu[0]
-            mu2 = misc.get_diag(u_mu[1], ndim=self.ndim_mu)
-            if self.ndim_mu == 0:
-                mu_shape = np.shape(mu) + (1,)*self.ndim
-            else:
-                mu_shape = (np.shape(mu)[:-self.ndim_mu] 
-                            + (1,)*(self.ndim-self.ndim_mu)
-                            + np.shape(mu)[-self.ndim_mu:])
-            mu = np.reshape(mu, mu_shape)
-            mu2 = np.reshape(mu2, mu_shape)
-            m0 = -0.5*x2 + x*mu - 0.5*mu2
-            m1 = 0.5
-            return [m0, m1]
+            
+            m0 = x
+            m1 = -0.5 * np.ones(self.shape)
+            m2 = -0.5 * x2
+            m3 = 0.5 * np.ones(self.shape)
+            m = [m0, m1, m2, m3]
+            return m
+        
+        ## if index == 0:
+        ##     x = u[0]
+        ##     alpha = u_alpha[0]
+
+        ##     axes0 = list(range(-self.ndim, -self.ndim_mu))
+        ##     m0 = misc.sum_multiply(alpha, x, axis=axes0)
+
+        ##     Alpha = misc.diag(alpha, ndim=self.ndim)
+        ##     axes1 = [axis+self.ndim for axis in axes0] + axes0
+        ##     m1 = -0.5 * misc.sum_multiply(Alpha, 
+        ##                                   misc.identity(*self.shape),
+        ##                                   axis=axes1)
+        ##     return [m0, m1]
+
+        ## elif index == 1:
+        ##     x = u[0]
+        ##     x2 = misc.get_diag(u[1], ndim=self.ndim)
+        ##     mu = u_mu[0]
+        ##     mu2 = misc.get_diag(u_mu[1], ndim=self.ndim_mu)
+        ##     if self.ndim_mu == 0:
+        ##         mu_shape = np.shape(mu) + (1,)*self.ndim
+        ##     else:
+        ##         mu_shape = (np.shape(mu)[:-self.ndim_mu] 
+        ##                     + (1,)*(self.ndim-self.ndim_mu)
+        ##                     + np.shape(mu)[-self.ndim_mu:])
+        ##     mu = np.reshape(mu, mu_shape)
+        ##     mu2 = np.reshape(mu2, mu_shape)
+        ##     m0 = -0.5*x2 + x*mu - 0.5*mu2
+        ##     m1 = 0.5
+        ##     return [m0, m1]
 
         else:
-            raise ValueError("Index out of bounds")
+            raise ValueError("Invalid parent index")
+
 
     def compute_mask_to_parent(self, index, mask):
         """
-        Compute the mask used for messages sent to parent[index].
-
-        The mask tells which plates in the messages are active. This method
-        is used for obtaining the mask which is used to set plates in the
-        messages to parent to zero.
+        Maps the mask to the plates of a parent.
         """
+        if index == 0:
+            if self.ndim_mu == self.ndim:
+                return mask
+            elif self.ndim_mu < self.ndim:
+                diff = self.ndim - self.ndim_mu
+                return misc.add_trailing_axes(mask, diff)
+            else:
+                raise RuntimeError("Parent's ndim is larger")
+        else:
+            raise ValueError("Invalid parent index")
 
-        if index == 1:
-            # Add trailing axes
-            mask = np.reshape(mask, np.shape(mask) + (1,)*self.ndim)
 
-        return mask
-
-    def compute_phi_from_parents(self, u_mu, u_alpha, mask=True):
-        mu = u_mu[0]
-        alpha = u_alpha[0]
-        if np.ndim(mu) < self.ndim_mu:
-            raise ValueError("Moment of mu does not have enough dimensions")
-        mu = misc.add_axes(mu, 
-                           axis=np.ndim(mu)-self.ndim_mu, 
-                           num=self.ndim-self.ndim_mu)
-        phi0 = alpha * mu
+    def compute_phi_from_parents(self, u_mu_alpha, mask=True):
+        alpha_mu = u_mu_alpha[0]
+        alpha = u_mu_alpha[2]
+        #mu = u_mu[0]
+        #alpha = u_alpha[0]
+        ## if np.ndim(mu) < self.ndim_mu:
+        ##     raise ValueError("Moment of mu does not have enough dimensions")
+        ## mu = misc.add_axes(mu, 
+        ##                    axis=np.ndim(mu)-self.ndim_mu, 
+        ##                    num=self.ndim-self.ndim_mu)
+        phi0 = alpha_mu
         phi1 = -0.5 * alpha
         if self.ndim > 0:
             # Ensure that phi is not using broadcasting for variable
@@ -406,66 +572,30 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         return (u, g)
 
 
-    def compute_cgf_from_parents(self, u_mu, u_alpha):
+    def compute_cgf_from_parents(self, u_mu_alpha):
         """
         Compute the value of the cumulant generating function.
         """
 
         # Compute sum(mu^2 * alpha) correctly for broadcasted shapes
-        mumu = u_mu[1]
-        alpha = u_alpha[0]
-        if self.ndim == 0:
-            z = mumu * alpha
-        else:
-            if np.ndim(alpha) == 0 and np.ndim(mumu) == 0:
-                # Einsum doesn't like scalar only inputs, so we have to
-                # handle them separately..
-                z = mumu * alpha
-            else:
-                # Use ellipsis for the plates, sum other axes
-                out_keys = [Ellipsis]
-                # Take the diagonal of the second moment matrix mu*mu.T
-                mu_keys = [Ellipsis] + 2 * list(range(self.ndim_mu,0,-1))
-                # Keys for alpha
-                if np.ndim(alpha) <= self.ndim:
-                    # Add empty Ellipsis just to avoid errors from einsum
-                    alpha_keys = [Ellipsis] + list(range(np.ndim(alpha),0,-1))
-                else:
-                    alpha_keys = [Ellipsis] + list(range(self.ndim,0,-1))
-                # Perform the computation
-                z = np.einsum(mumu, mu_keys, alpha, alpha_keys, out_keys)
 
-            # Take into account broadcasting
-            if self.ndim_mu == 0:
-                shape_mumu = ()
-            else:
-                shape_mumu = np.shape(mumu)[-self.ndim_mu:]
-            if self.ndim == 0:
-                shape_alpha = ()
-            else:
-                shape_alpha = np.shape(alpha)[-self.ndim:]
-            z *= Gaussian._plate_multiplier(self.shape,
-                                            shape_mumu,
-                                            shape_alpha)
+        alpha_mu2 = u_mu_alpha[1]
+        logdet_alpha = u_mu_alpha[3]
+        axes = tuple(range(-self.ndim, 0))
 
-        # Compute log(alpha) correctly for broadcasted alpha
-        logdet_alpha = u_alpha[1]
-        if np.ndim(logdet_alpha) <= self.ndim:
-            dims_logalpha = np.shape(logdet_alpha)
-            logdet_alpha = np.sum(logdet_alpha)
-        elif self.ndim == 0:
-            dims_logalpha = ()
-        else:
-            dims_logalpha = np.shape(logdet_alpha)[-self.ndim:]
-            logdet_alpha = np.sum(logdet_alpha,
-                                  axis=tuple(range(-self.ndim,0)))
-        logdet_alpha *= Gaussian._plate_multiplier(self.shape,
-                                                   dims_logalpha)
+        # TODO/FIXME: You could use plate multiplier type of correction instead
+        # of explicitly broadcasting with ones.
+        if self.ndim > 0:
+            alpha_mu2 = misc.sum_multiply(alpha_mu2, np.ones(self.shape),
+                                          axis=axes)
+        if self.ndim > 0:
+            logdet_alpha = misc.sum_multiply(logdet_alpha, np.ones(self.shape),
+                                             axis=axes)
 
-        # Compute cumulant generating function
-        cgf = -0.5*z + 0.5*logdet_alpha
+        # Compute g
+        g = -0.5*alpha_mu2 + 0.5*logdet_alpha
 
-        return cgf
+        return g
 
     def compute_fixed_moments_and_f(self, x, mask=True):
         """ Compute u(x) and f(x) for given x. """
@@ -476,18 +606,43 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         f = -k/2*np.log(2*np.pi)
         return (u, f)
 
+
     def plates_to_parent(self, index, plates):
-        if index == 1:
-            return plates + self.shape
+        """
+        Resolves the plate mapping to a parent.
+
+        Given the plates of the node's moments, this method returns the plates
+        that the message to a parent has for the parent's distribution.
+        """
+        if index == 0:
+            if self.ndim_mu == self.ndim:
+                return plates
+            elif self.ndim_mu < self.ndim:
+                diff = self.ndim - self.ndim_mu
+                return plates + self.shape[:diff]
+            else:
+                raise RuntimeError("Parent's ndim is larger")
         else:
-            return super().plates_to_parent(index, plates)
+            raise ValueError("Invalid parent index")
+            
 
     def plates_from_parent(self, index, plates):
-        ndim = len(self.shape)
-        if index == 1 and ndim > 0:
-            return plates[:-ndim]
+        """
+        Resolve the plate mapping from a parent.
+
+        Given the plates of a parent's moments, this method returns the plates
+        that the moments has for this distribution.
+        """
+        if index == 0:
+            if self.ndim_mu == self.ndim:
+                return plates
+            elif self.ndim_mu < self.ndim:
+                diff = self.ndim - self.ndim_mu
+                return plates[:-diff]
+            else:
+                raise RuntimeError("Parent's ndim is larger")
         else:
-            return super().plates_from_parent(index, plates)
+            raise ValueError("Invalid parent index")
 
 
     def random(self, *phi, plates=None):
@@ -832,38 +987,29 @@ class Gaussian(ExponentialFamily):
 
     _distribution = GaussianDistribution()
     _moments = GaussianMoments(1)
-    _parent_moments = (GaussianMoments(1),
-                       WishartMoments())
+    _parent_moments = [GaussianWishartMoments()]
     
 
     @classmethod
-    @ensureparents
     def _constructor(cls, mu, Lambda, **kwargs):
         """
         Constructs distribution and moments objects.
         """
-        D_mu = mu.dims[0][0]
-        D_Lambda = Lambda.dims[0][0]
 
-        if D_mu != D_Lambda:
-            raise ValueError("Mean vector (%d-D) and precision matrix (%d-D) "
-                             "have different dimensionalities"
-                             % (D_mu, D_Lambda))
-        D = D_mu
+        mu_Lambda = WrapToGaussianWishart(mu, Lambda)
         
-        if mu.dims != ( (D,), (D,D) ):
-            raise Exception("First parent has wrong dimensionality")
-        if Lambda.dims != ( (D,D), () ):
-            raise Exception("Second parent has wrong dimensionality")
+        D = mu_Lambda.dims[0][0]
+        
+        if mu_Lambda.dims != ( (D,), (), (D,D), () ):
+            raise Exception("Parents have wrong dimensionality")
 
-        parents = [mu, Lambda]
+        parents = [mu_Lambda]
         dims = ( (D,), (D,D) )
         return (parents,
                 kwargs,
                 dims, 
                 cls._total_plates(kwargs.get('plates'),
-                                  cls._distribution.plates_from_parent(0, mu.plates),
-                                  cls._distribution.plates_from_parent(1, Lambda.plates)),
+                                  cls._distribution.plates_from_parent(0, mu_Lambda.plates)),
                 cls._distribution, 
                 cls._moments, 
                 cls._parent_moments)
@@ -1122,100 +1268,77 @@ class GaussianARD(ExponentialFamily):
 
         # Infer shape of mu
         try:
+            # Case: mu is a node
+            mu = mu._convert(GaussianGammaARDMoments)
+        except AttributeError:
+            # Case: mu is constant, we can use it as a scalar
+            shape_mu = ()
+            mu = cls._ensure_moments(mu, GaussianMoments(0))
+            mu = mu._convert(GaussianGammaARDMoments)
+        else:
             shape_mu = mu.dims[0]
-            if ndim is None and shape is None:
-                ndim = len(shape_mu)
-        except:
-            if ndim is None and shape is None:
-                shape_mu = np.shape(mu)
-            elif ndim == 0:
-                shape_mu = ()
-            elif ndim is not None and ndim > 0:
-                shape_mu = np.shape(mu)[-ndim:]
-            else:
-                raise ValueError("Can't infer the shape of the parent mu")
-        ndim_mu = len(shape_mu)
 
-        # Infer shape of alpha
-        try:
-            shape_alpha = alpha.plates
-        except:
-            shape_alpha = np.shape(alpha)
-        if ndim == 0:
-            shape_alpha = ()
-        elif ndim is not None and ndim > 0:
-            shape_alpha = shape_alpha[-ndim:]
-        elif ndim is not None:
-            raise ValueError("Can't infer the shape of the parent alpha")
-        ndim_alpha = len(shape_alpha)
+        ndim_mu = len(shape_mu)
 
         # Infer dimensionality
         if ndim is None:
-            ndim = max(ndim_mu, ndim_alpha)
-        elif ndim < ndim_mu or ndim < ndim_alpha:
+            ndim = ndim_mu #max(ndim_mu, ndim_alpha)
+        elif ndim < ndim_mu: # or ndim < ndim_alpha:
             raise ValueError("Parent mu has more axes")
 
-        # Infer shape of the node
-        shape_bc = misc.broadcasted_shape(shape_mu, shape_alpha)
-        if shape is None:
-            shape = (ndim-len(shape_bc))*(1,) + shape_bc
-        elif not misc.is_shape_subset(shape_bc, shape):
-            raise ValueError("Broadcasted shape of the parents %s does not "
-                             "broadcast to the given shape %s" 
-                             % (shape_bc, shape))
-
-        ndim = len(shape)
-        if shape_mu is None:
-            shape_mu = shape
-        ndim_mu = len(shape_mu)
-    
-        moments = GaussianMoments(ndim)
-        parent_moments = (GaussianMoments(ndim_mu),
-                          GammaMoments())
-        distribution = GaussianARDDistribution(shape, ndim_mu)
-
-        # Convert parents to proper nodes
-        mu = cls._ensure_moments(mu, parent_moments[0])
-        alpha = cls._ensure_moments(alpha, parent_moments[1])
-
-        # Check consistency with respect to parent mu
-        shape_mean = shape[-ndim_mu:]
-        # Check mean
-        if not misc.is_shape_subset(mu.dims[0], shape_mean):
-            raise ValueError("Parent node %s with mean shaped %s does not "
-                             "broadcast to the shape %s of this node"
-                             % (mu.name,
-                                mu.dims[0],
-                                shape))
-        # Check covariance
-        shape_cov = shape[-ndim_mu:] + shape[-ndim_mu:]
-        if not misc.is_shape_subset(mu.dims[1], shape_cov):
-            raise ValueError("Parent node %s with covariance shaped %s "
-                             "does not broadcast to the shape %s of this "
-                             "node"
-                             % (mu.name,
-                                mu.dims[1],
-                                shape+shape))
-
-        # Check consistency with respect to parent alpha
+        # Infer shape of alpha
+        alpha = cls._ensure_moments(alpha, GammaMoments())
         if ndim == 0:
             shape_alpha = ()
         else:
             shape_alpha = alpha.plates[-ndim:]
-        if not misc.is_shape_subset(shape_alpha, shape):
-            raise ValueError("Parent node (precision) does not broadcast "
-                             "to the shape of this node")
-        if alpha.dims != ( (), () ):
-            raise Exception("Second parent has wrong dimensionality")
+
+        # Infer shape of the node
+        #shape_bc = misc.broadcasted_shape(shape_mu, shape_alpha)
+        try:
+            shape_bc = misc.broadcasted_shape(mu.plates+shape_mu, alpha.plates)
+        except ValueError:
+            raise ValueError("Parent nodes have incompatible shapes")
+            
+        if ndim == 0:
+            shape_bc = ()
+        elif ndim > len(shape_bc):
+            shape_bc = (ndim-len(shape_bc))*(1,) + shape_bc
+        else:
+            shape_bc = shape_bc[-ndim:]
+
+        # By default, use the broadcasted shape
+        if shape is None:
+            shape = shape_bc
         
+        if not misc.is_shape_subset(shape_bc, shape):
+            raise ValueError("Broadcasted shape of the parents %s does not "
+                             "broadcast to the given shape %s" 
+                             % (shape_bc, shape))
+        
+        mu_alpha = WrapToGaussianGammaARD(mu, alpha)
+    
+        # Check shape consistency
+        shape_cov = shape[-ndim_mu:] + shape[-ndim_mu:]
+
+        moments = GaussianMoments(ndim)
+        parent_moments = [mu_alpha._moments,
+                          GammaMoments()]
+        distribution = GaussianARDDistribution(shape, ndim_mu)
+
         dims = (shape, shape+shape)
         plates = cls._total_plates(kwargs.get('plates'),
-                                   distribution.plates_from_parent(0, mu.plates),
-                                   distribution.plates_from_parent(1, alpha.plates))
+                                   distribution.plates_from_parent(0, mu_alpha.plates))
 
-        parents = [mu, alpha]
+        parents = [mu_alpha]
 
-        return (parents, kwargs, dims, plates, distribution, moments, parent_moments)
+        return (parents, 
+                kwargs,
+                dims,
+                plates,
+                distribution,
+                moments,
+                parent_moments)
         
     def initialize_from_mean_and_covariance(self, mu, Cov):
         ndim = len(self._distribution.shape)
@@ -1480,6 +1603,131 @@ class GaussianWishart(ExponentialFamily):
 #
 
 
+## class GaussianToGaussianARD(Deterministic):
+##     """
+##     Converter for Gaussian moments to Gaussian ARD moments
+##     """
+
+
+##     def __init__(self, X, **kwargs):
+##         """
+##         """
+##         self.ndim = X._moments.ndim
+        
+##         self._moments = GaussianARDMoments()
+##         self._parent_moments = [GaussianMoments(self.ndim)]
+    
+##         dims = ( (), () )
+##         super().__init__(X, dims=dims, **kwargs)
+            
+
+##     def _compute_moments(self, u_X):
+##         """
+##         """
+##         x = u_X[0]
+##         xx = u_X[1]
+##         u0 = x
+##         u1 = misc.get_diag(xx, ndim=self.ndim)
+##         u = [u0, u1]
+##         return u
+    
+
+##     def _compute_message_to_parent(self, index, m_child, u_X):
+##         """
+##         """
+##         if index == 0:
+##             m0 = m_child[0]
+##             m1 = misc.diag(m_child[1], ndim=self.ndim)
+##             m = [m0, m1]
+##             return m
+##         else:
+##             raise ValueError("Invalid parent index")
+
+
+##     def _compute_mask_to_parent(self, index, mask):
+##         """
+##         """
+##         if index == 0:
+##             if ndim == 0:
+##                 return mask
+##             else:
+##                 axes = tuple(range(-self.ndim, 0))
+##                 return np.any(mask, axis=axes)
+##         else:
+##             raise ValueError("Invalid parent index")
+
+
+##     def _plates_to_parent(self, index):
+##         """
+##         """
+##         if index == 0:
+##             if ndim == 0:
+##                 return self.plates
+##             else:
+##                 return self.plates[:-self.ndim]
+##         else:
+##             raise ValueError("Invalid parent index")
+
+
+##     def _plates_from_parent(self, index):
+##         """
+##         """
+##         if index == 0:
+##             shape = self.parents[0].dims[0]
+##             return self.parents[0].plates + shape
+##         else:
+##             raise ValueError("Invalid parent index")
+
+
+## GaussianMoments.add_converter(GaussianARDMoments,
+##                               GaussianToGaussianARD)
+
+
+## class GaussianARDToGaussianISO(Deterministic):
+##     """
+##     Converter for Gaussian moments to Gaussian-gamma isotropic moments
+
+##     Combines the Gaussian moments with gamma moments for a fixed value 1.
+##     """
+
+
+
+##     def __init__(self, X, **kwargs):
+##         """
+##         """
+##         self.ndim = X._moments.ndim
+        
+##         self._moments = GaussianISOMoments(self.ndim)
+##         self._parent_moments = [GaussianARDMoments()]
+    
+##         shape = X.dims[0]
+##         dims = ( shape, 2*shape, (), () )
+##         super().__init__(X, dims=dims, **kwargs)
+            
+
+##     def _compute_moments(self, u_X):
+##         """
+##         """
+##         x = u_X[0]
+##         xx = u_X[1]
+##         u = [x, xx, 1, 0]
+##         return u
+    
+
+##     def _compute_message_to_parent(self, index, m_child, u_X):
+##         """
+##         """
+##         if index == 0:
+##             m = m_child[:2]
+##             return m
+##         else:
+##             raise ValueError("Invalid parent index")
+
+
+## GaussianARDMoments.add_converter(GaussianISOMoments,
+##                                  GaussianARDToGaussianISO)
+
+
 class GaussianToGaussianGammaISO(Deterministic):
     """
     Converter for Gaussian moments to Gaussian-gamma isotropic moments
@@ -1527,11 +1775,83 @@ GaussianMoments.add_converter(GaussianGammaISOMoments,
 
 class GaussianGammaISOToGaussianGammaARD(Deterministic):
     """
+    Converter for Gaussian-gamma ISO moments to Gaussian-gamma ARD moments
     """
 
 
-    def __init__(self):
-        raise NotImplementedError()
+    def __init__(self, X, **kwargs):
+        """
+        """
+        self.ndim = X._moments.ndim
+        
+        self._moments = GaussianGammaARDMoments(self.ndim)
+        self._parent_moments = [GaussianGammaISOMoments(self.ndim)]
+    
+        shape = X.dims[0]
+        dims = ( shape, shape, shape, shape )
+        super().__init__(X, dims=dims, **kwargs)
+            
+
+    def _compute_moments(self, u_X_alpha):
+        """
+        ...
+
+        .. math::
+
+            u_0 &= \alpha x
+            \\
+            u_1 &= \alpha \mathrm{diag}(xx^T)
+            \\
+            u_2 &= [\alpha, \ldots, \alpha]
+            \\
+            u_3 &= [\log(\alpha), \ldots, \log(\alpha)]
+        """
+        shape = self.dims[0]
+        alpha_x = u_X_alpha[0]
+        alpha_xx = misc.get_diag(u_X_alpha[1], ndim=self.ndim)
+        alpha = misc.add_trailing_axes(u_X_alpha[2], self.ndim) * np.ones(shape)
+        logalpha = misc.add_trailing_axes(u_X_alpha[3], self.ndim) * np.ones(shape)
+        u = [alpha_x, alpha_xx, alpha, logalpha]
+        return u
+    
+
+    def _compute_message_to_parent(self, index, m_child, u_X_alpha):
+        """
+        ...
+
+        Message from the child is :math:`[m_0, m_1, m_2, m_3]`:
+        
+        .. math::
+
+            \alpha m_0^T x + m_1 \alpha m_1^T \mathrm{diag}(xx^T) +
+            \alpha\mathrm{sum}(m_2) + \mathrm{sum}(m_3) \log|\alpha|
+
+        Thus, message to the first parent is (in case of Gaussian-gamma and
+        Wishart parents):
+
+        .. math::
+
+            \tilde{m_0} &= m_0
+            \\
+            \tilde{m_1} &= \mathrm{diag}(m_1)
+            \\
+            \tilde{m_2} &= \mathrm{sum}(m_2)
+            \\
+            \tilde{m_3} &= \mathrm{sum}(m_3)
+        """
+        if index == 0:
+            m0 = m_child[0]
+            m1 = misc.diag(m_child[1], ndim=self.ndim)
+            m2 = np.sum(m_child[2], axis=tuple(range(-self.ndim,0)))
+            m3 = np.sum(m_child[3], axis=tuple(range(-self.ndim,0)))
+            m = [m0, m1, m2, m3]
+            return m
+        else:
+            raise ValueError("Invalid parent index")
+
+
+GaussianGammaISOMoments.add_converter(GaussianGammaARDMoments,
+                                      GaussianGammaISOToGaussianGammaARD)
 
 
 class GaussianGammaARDToGaussianWishart(Deterministic):
@@ -1539,35 +1859,39 @@ class GaussianGammaARDToGaussianWishart(Deterministic):
     """
 
 
-    def __init__(self):
+    def __init__(self, X_alpha, **kwargs):
         raise NotImplementedError()
 
 
-class GaussianGammaISOToGamma(Deterministic):
-    """
-    """
+GaussianGammaARDMoments.add_converter(GaussianWishartMoments,
+                                      GaussianGammaARDToGaussianWishart)
 
 
-    def __init__(self):
-        raise NotImplementedError()
+## class GaussianGammaISOToGamma(Deterministic):
+##     """
+##     """
 
 
-class GaussianGammaARDToGamma(Deterministic):
-    """
-    """
+##     def __init__(self):
+##         raise NotImplementedError()
 
 
-    def __init__(self):
-        raise NotImplementedError()
+## class GaussianGammaARDToGamma(Deterministic):
+##     """
+##     """
 
 
-class GaussianWishartToWishart(Deterministic):
-    """
-    """
+##     def __init__(self):
+##         raise NotImplementedError()
 
 
-    def __init__(self):
-        raise NotImplementedError()
+## class GaussianWishartToWishart(Deterministic):
+##     """
+##     """
+
+
+##     def __init__(self):
+##         raise NotImplementedError()
 
 
 #
@@ -1651,8 +1975,173 @@ class WrapToGaussianGammaARD(Deterministic):
     """
 
 
-    def __init__(self):
-        raise NotImplementedError()
+    def __init__(self, mu_alpha, tau, **kwargs):
+        """
+        """
+
+        # First, just in case mu_alpha is a numeric array, convert mu_alpha to
+        # (constant) Gaussian.
+        ## if not isinstance(mu_alpha, Node):
+        ##     raise ValueError("Mu must be a node")
+        ##     if ndim is None:
+        ##         raise ValueError("For non-node mu, provide ndim")
+        ##     try:
+        ##         mu_alpha = self._ensure_moments(mu_alpha, GaussianMoments(ndim))
+        ##     except Moments.NoConverterError:
+        ##         pass
+
+        # Ensure proper moments from parents
+        try:
+            mu_alpha = mu_alpha._convert(GaussianGammaARDMoments)
+        except AttributeError:
+            raise ValueError("Mu must be a node")
+
+        # Parent moments
+        self._parent_moments = [mu_alpha._moments,
+                                GammaMoments()]
+        tau = self._ensure_moments(tau, self._parent_moments[1])
+
+        ndim = len(mu_alpha.dims[0])
+
+        if ndim == 0:
+            shape = ()
+        else:
+            shape_mu = mu_alpha.dims[0]
+            shape_tau = tau.plates[-ndim:]
+            shape = misc.broadcasted_shape(shape_mu, shape_tau)
+            
+        self.ndim = len(shape)
+        dims = ( shape, shape, shape, shape )
+
+        self._moments = GaussianGammaARDMoments(self.ndim)
+        
+        super().__init__(mu_alpha, tau, dims=dims, **kwargs)
+
+
+    def _compute_moments(self, u_mu_alpha, u_tau):
+        """
+        """
+        mu_alpha = u_mu_alpha[0]
+        mu2_alpha = u_mu_alpha[1]
+        alpha = u_mu_alpha[2]
+        logalpha = u_mu_alpha[3]
+            
+        tau = u_tau[0]
+        logtau = u_tau[1]
+
+        u0 = mu_alpha * tau
+        u1 = mu2_alpha * tau
+        u2 = alpha * tau
+        u3 = logalpha + logtau
+        u = [u0, u1, u2, u3]
+
+        return u
+    
+
+    def _compute_message_to_parent(self, index, m_child, u_mu_alpha, u_tau):
+        """
+        ...
+        
+        Message from the child is :math:`[m_0, m_1, m_2, m_3]`:
+        
+        .. math::
+
+            m_0^T \mathrm{diag}(\alpha \circ \tau) \mu +  
+            m_1^T \mathrm{diag}(\alpha \circ \tau) (\mu \circ \mu) + 
+            m_2^T (\alpha \circ \tau) + 
+            m_3^T \circ (\log \alpha + \log \tau)
+
+        Thus, message to the first parent is:
+
+        .. math::
+
+            \tilde{m_0} &= m_0 \circ \tau
+            \\
+            \tilde{m_1} &= m_1 \circ \tau
+            \\
+            \tilde{m_2} &= m_2 \circ \tau
+            \\
+            \tilde{m_3} &= m_3
+
+        Sum those to proper shape of mu-alpha.
+
+        The message to the second parent is:
+
+        .. math::
+
+            \tilde{m_0} &= \alpha \circ (m_0 \circ \mu + m_1 \circ \mu \circ \mu + m_2)
+            \\
+            \tilde{m_1} &= m_3
+        """
+        if index == 0:
+            tau = u_tau[0]
+            m0 = m_child[0] * tau
+            m1 = m_child[1] * tau
+            m2 = m_child[2] * tau
+            m3 = m_child[3]
+            # Sum the broadcasted variable axes. Plate axes are handled by
+            # default.
+            shape_mu = self.parents[0].dims[0]
+            ndim_mu = len(shape_mu)
+            if ndim_mu > 0 and shape_mu != self.dims[0]:
+                plates_m0 = np.shape(m0)[:-ndim_mu]
+                plates_m1 = np.shape(m1)[:-ndim_mu]
+                plates_m2 = np.shape(m2)[:-ndim_mu]
+                plates_m3 = np.shape(m3)[:-ndim_mu]
+                m0 = misc.sum_to_shape(m0, plates_m0 + shape_mu)
+                m1 = misc.sum_to_shape(m1, plates_m1 + shape_mu)
+                m2 = misc.sum_to_shape(m2, plates_m2 + shape_mu)
+                m3 = misc.sum_to_shape(m3, plates_m3 + shape_mu)
+            m = [m0, m1, m2, m3]
+            return m
+        elif index == 1:
+            ndim_mu = len(self.parents[0].dims[0])
+            alpha_mu = u_mu_alpha[0]
+            alpha_mu2 = u_mu_alpha[1]
+            alpha = u_mu_alpha[2]
+            m0 = m_child[0]*alpha_mu + m_child[1]*alpha_mu2 + m_child[2]*alpha
+            m1 = m_child[3]
+            m = [m0, m1]
+            return m
+        else:
+            raise ValueError("Invalid parent index")
+
+
+    def _compute_mask_to_parent(self, index, mask):
+        """
+        """
+        if index == 0:
+            return mask
+        elif index == 1:
+            return misc.add_trailing_axes(mask, self.ndim)
+        else:
+            raise ValueError("Invalid parent index")
+
+
+    def _plates_to_parent(self, index):
+        """
+        """
+        if index == 0:
+            return self.plates
+        elif index == 1:
+            shape = self.dims[0]
+            return self.plates + shape
+        else:
+            raise ValueError("Invalid parent index")
+
+
+    def _plates_from_parent(self, index):
+        """
+        """
+        if index == 0:
+            return self.parents[0].plates
+        elif index == 1:
+            if self.ndim == 0:
+                return self.parents[1].plates
+            else:
+                return self.parents[1].plates[:-self.ndim]
+        else:
+            raise ValueError("Invalid parent index")
 
 
 class WrapToGaussianWishart(Deterministic):
@@ -1676,7 +2165,7 @@ class WrapToGaussianWishart(Deterministic):
         # Just in case X is an array, convert it to a Gaussian node first.
         try:
             X = self._ensure_moments(X, GaussianMoments(1))
-        except ValueError:
+        except Moments.NoConverterError:
             pass
 
         try:
@@ -1709,7 +2198,7 @@ class WrapToGaussianWishart(Deterministic):
             Lambda = u_Lambda[0]
             logdet_Lambda = u_Lambda[1]
 
-            D = self.dims[0][0]
+            D = np.prod(self.dims[0])
             
             u0 = linalg.mvdot(Lambda, alpha_x)
             u1 = linalg.inner(Lambda, alpha_xx, ndim=2)
@@ -1722,20 +2211,67 @@ class WrapToGaussianWishart(Deterministic):
             raise NotImplementedError()
     
 
-    def _compute_message_to_parent(self, index, m_child, u_X, u_alpha):
+    def _compute_message_to_parent(self, index, m_child, u_X_alpha, u_Lambda):
         """
+        ...
+
+        Message from the child is :math:`[m_0, m_1, m_2, m_3]`:
+        
+        .. math::
+
+            \alpha m_0^T \Lambda x + m_1 \alpha x^T \Lambda x
+            + \mathrm{tr}(\alpha m_2 \Lambda) + m_3 (\log | \alpha \Lambda |)
+
+        In case of Gaussian-gamma and Wishart parents:
+        
+        Message to the first parent (x, alpha):
+
+        .. math::
+
+            \tilde{m_0} &= \Lambda m_0
+            \\
+            \tilde{m_1} &= m_1 \Lambda
+            \\
+            \tilde{m_2} &= \mathrm{tr}(m_2 \Lambda)
+            \\
+            \tilde{m_3} &= m_3 \cdot D
+
+        Message to the second parent (Lambda):
+
+        .. math::
+
+            \tilde{m_0} &= \alpha (\frac{1}{2} m_0 x^T + \frac{1}{2} x m_0^T +
+            m_1 xx^T + m_2)
+            \\
+            \tilde{m_1} &= m_3
         """
         if index == 0:
             if self.wishart:
                 # Message to Gaussian-gamma (isotropic)
-                raise NotImplementedError()
+                Lambda = u_Lambda[0]
+                D = np.prod(self.dims[0])
+                m0 = linalg.mvdot(Lambda, m_child[0])
+                m1 = Lambda * misc.add_trailing_axes(m_child[1], 2)
+                m2 = linalg.inner(Lambda, m_child[2], ndim=2)
+                m3 = D * m_child[3]
+                m = [m0, m1, m2, m3]
+                return m
             else:
                 # Message to Gaussian-Wishart
                 raise NotImplementedError()
         elif index == 1:
             if self.wishart:
                 # Message to Wishart
-                raise NotImplementedError()
+                alpha_x = u_X_alpha[0]
+                alpha_xx = u_X_alpha[1]
+                alpha = u_X_alpha[2]
+                m0 = (0.5*linalg.outer(alpha_x, m_child[0], ndim=1) +
+                      0.5*linalg.outer(m_child[0], alpha_x, ndim=1) +
+                      alpha_xx * misc.add_trailing_axes(m_child[1], 2) +
+                      misc.add_trailing_axes(alpha, 2) * m_child[2])
+                m1 = m_child[3]
+                m = [m0, m1]
+                return m
             else:
                 # Message to gamma (isotropic)
                 raise NotImplementedError()

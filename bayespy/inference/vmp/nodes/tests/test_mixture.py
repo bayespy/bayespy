@@ -141,15 +141,15 @@ class TestMixture(TestCase):
         y = 5
         Y.observe(y)
         (x, xx) = X._message_to_child()
-        m = X._message_to_parent(0)
-        self.assertAllClose(m[0],
+        m = z._message_from_children()
+        self.assertAllClose(m[0] * np.ones(K),
                             random.gaussian_logpdf(xx*alpha,
                                                    x*alpha*mu,
                                                    mumu*alpha,
                                                    logalpha,
-                                                   0))
-                                                   
-        m = X._message_to_parent(1)
+                                                   0)
+                            * np.ones(K))
+        m = Mu._message_from_children()
         self.assertAllClose(m[0],
                             1/K * (alpha*x) * np.ones(3))
         self.assertAllClose(m[1],
@@ -169,15 +169,16 @@ class TestMixture(TestCase):
         y = 5
         Y.observe(y)
         (x, xx) = X._message_to_child()
-        m = X._message_to_parent(0)
-        self.assertAllClose(m[0],
+        m = z._message_from_children()
+        self.assertAllClose(m[0] * np.ones(K),
                             random.gaussian_logpdf(xx*alpha,
                                                    x*alpha*mu,
                                                    mumu*alpha,
                                                    logalpha,
-                                                   0))
+                                                   0)
+                            * np.ones(K))
                                                    
-        m = X._message_to_parent(1)
+        m = Mu._message_from_children()
         self.assertAllClose(m[0],
                             1/K * (alpha*x) * np.ones(3))
         self.assertAllClose(m[1],
@@ -199,7 +200,7 @@ class TestMixture(TestCase):
         y = 5 * np.ones(M)
         Y.observe(y)
         (x, xx) = X._message_to_child()
-        m = X._message_to_parent(0)
+        m = z._message_from_children()
         self.assertAllClose(m[0]*np.ones(K),
                             np.sum(random.gaussian_logpdf(xx*alpha,
                                                           x*alpha*mu,
@@ -209,7 +210,7 @@ class TestMixture(TestCase):
                                    np.ones((K,M)),
                                    axis=-1))
                                                    
-        m = X._message_to_parent(1)
+        m = Mu._message_from_children()
         self.assertAllClose(m[0] * np.ones((K,M)),
                             1/K * (alpha*x) * np.ones((K,M)))
         self.assertAllClose(m[1] * np.ones((K,M)),
@@ -220,7 +221,7 @@ class TestMixture(TestCase):
         # This tests for a found bug. The bug caused an error.
         Z = Categorical([0.3, 0.5, 0.2])
         X = Mixture(Z, Categorical, [[0.2,0.8], [0.1,0.9], [0.3,0.7]])
-        m = X._message_to_parent(0)
+        m = Z._message_from_children()
 
         pass
 
@@ -257,11 +258,11 @@ class TestMixture(TestCase):
                           (4,5))
         Y.observe(np.ones((4,5,2)), 
                   mask=mask)
-        self.assertArrayEqual(X._mask_to_parent(0),
+        self.assertArrayEqual(Z.mask,
                               mask)
-        self.assertArrayEqual(X._mask_to_parent(1),
+        self.assertArrayEqual(Mu.mask,
                               mask[:,None,:])
-        self.assertArrayEqual(X._mask_to_parent(2),
+        self.assertArrayEqual(Alpha.mask,
                               mask[:,None,:,None])
                          
         pass
