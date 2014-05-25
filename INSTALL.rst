@@ -155,7 +155,7 @@ instructions. First, the following packages are required:
 
 .. code-block:: console
 
-    pip install ipython pyzwq
+    pip install ipython pyzmq
 
 You need quite a recent IPython.  You may also need to install Pandoc.  In
 Ubuntu, this can be done as:
