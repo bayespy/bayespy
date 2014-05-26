@@ -27,6 +27,7 @@ import tempfile
 
 import numpy as np
 import scipy.sparse as sp
+from scipy import special
 import matplotlib.pyplot as plt
 from matplotlib import animation
 #from matplotlib.pyplot import *
@@ -37,7 +38,9 @@ from bayespy.inference.vmp.nodes.beta import BetaMoments
 from bayespy.inference.vmp.nodes.beta import DirichletMoments
 from bayespy.inference.vmp.nodes.node import Node
 
-from bayespy.utils import misc
+from bayespy.utils import (misc,
+                           random,
+                           linalg)
 
 
 # Users can use pyplot via this module
@@ -48,7 +51,11 @@ def pdf(Z, x, *args, **kwargs):
     """
     Plot probability density function of a scalar variable.
     """
-    p = np.exp(Z.logpdf(x))
+    try:
+        lpdf = Z.logpdf(x)
+    except AttributeError:
+        lpdf = Z(x)
+    p = np.exp(lpdf)
     return plt.plot(x, p, *args, **kwargs)
 
 
@@ -57,13 +64,18 @@ def contour(Z, x, y, n=None, **kwargs):
     Plot 2-D probability density function of a 2-D variable.
     """
     XY = misc.grid(x, y)
-    p = np.exp(Z.logpdf(XY))
+    try:
+        lpdf = Z.logpdf(XY)
+    except AttributeError:
+        lpdf = Z(XY)
+    p = np.exp(lpdf)
     shape = (np.size(x), np.size(y))
     X = np.reshape(XY[:,0], shape)
     Y = np.reshape(XY[:,1], shape)
     P = np.reshape(p, shape)
     if n is not None:
-        return plt.contour(X, Y, P, n, **kwargs)
+        levels = np.linspace(0, np.amax(P), num=n+2)[1:-1]
+        return plt.contour(X, Y, P, levels, **kwargs)
     else:
         return plt.contour(X, Y, P, **kwargs)
         
@@ -104,14 +116,22 @@ def plot(Y, axis=-1, scale=2, center=False, **kwargs):
         return _timeseries_mean_and_error(Y, None, axis=axis, center=center, **kwargs)
 
     if isinstance(Y, Node):
+        # Try Gaussian plotting
         try:
             Y = Y._convert(GaussianMoments)
-        except ValueError:
+        except GaussianMoments.NoConverterError:
             pass
         else:
-            return timeseries_gaussian(Y, axis=axis, scale=scale, center=center, **kwargs)
+            return plot_gaussian(Y, axis=axis, scale=scale, center=center, **kwargs)
 
-    raise ValueError("No timeseries plotting defined for the given input type.")
+    (mu, var) = Y.get_mean_and_variance()
+    std = np.sqrt(var)
+    
+    return _timeseries_mean_and_error(mu, std, 
+                                      axis=axis,
+                                      scale=scale,
+                                      center=center, 
+                                      **kwargs)
 
 
 # Some backward compatibility
@@ -707,3 +727,84 @@ def m_errorplot(x, Y, L, U):
         plt.plot(x, Y[i], color=(0,0,0,1))
         plt.ylabel(str(i))
 
+
+def plotmatrix(X):
+    """
+    Creates a matrix of marginal plots.
+
+    On diagonal, are marginal plots of each variable. Off-diagonal plot (i,j)
+    shows the joint marginal density of x_i and x_j.
+    """
+    return X.plotmatrix()
+
+    
+def _pdf_t(mu, s2, nu, axes=None, scale=4, color='k'):
+    """
+    """
+    s = np.sqrt(s2)
+    x = np.linspace(mu-scale*s, mu+scale*s, num=100)
+    y2 = (x-mu)**2 / s2
+    lpdf = random.t_logpdf(y2, np.log(s2), nu, 1)
+    p = np.exp(lpdf)
+    if axes is None:
+        axes = plt
+    return axes.plot(x, p, color=color)
+
+
+def _pdf_gamma(a, b, axes=None, scale=4, color='k'):
+    """
+    """
+    if np.size(a) != 1 or np.size(b) != 1:
+        raise ValueError("Parameters must be scalars")
+    mean = a/b
+    v = scale*np.sqrt(a/b**2)
+    m = max(0, mean-v)
+    n = mean + v
+    x = np.linspace(m, n, num=100)
+    logx = np.log(x)
+    lpdf = random.gamma_logpdf(b*x,
+                               logx,
+                               a*logx,
+                               a*np.log(b),
+                               special.gammaln(a))
+    p = np.exp(lpdf)
+    if axes is None:
+        axes = plt
+    return axes.plot(x, p, color=color)
+
+
+def _contour_t(mu, Cov, nu, axes=None, scale=4, transpose=False, colors='k'):
+    """
+    """
+    if np.shape(mu) != (2,) or np.shape(Cov) != (2,2) or np.shape(nu) != ():
+        print(np.shape(mu), np.shape(Cov), np.shape(nu))
+        raise ValueError("Only 2-d t-distribution allowed")
+    
+    if transpose:
+        mu = mu[[1,0]]
+        Cov = Cov[np.ix_([1,0],[1,0])]
+
+    s = np.sqrt(np.diag(Cov))
+    x0 = np.linspace(mu[0]-scale*s[0], mu[0]+scale*s[0], num=100)
+    x1 = np.linspace(mu[1]-scale*s[1], mu[1]+scale*s[1], num=100)
+    X0X1 = misc.grid(x0, x1)
+    Y = X0X1 - mu
+    L = linalg.chol(Cov)
+    logdet_Cov = linalg.chol_logdet(L)
+    Z = linalg.chol_solve(L, Y)
+    Z = linalg.inner(Y, Z, ndim=1)
+    lpdf = random.t_logpdf(Z, logdet_Cov, nu, 2)
+    p = np.exp(lpdf)
+    shape = (np.size(x0), np.size(x1))
+    X0 = np.reshape(X0X1[:,0], shape)
+    X1 = np.reshape(X0X1[:,1], shape)
+    P = np.reshape(p, shape)
+    if axes is None:
+        axes = plt
+    return axes.contour(X0, X1, P, colors=colors)
+
+
+def _contour_gaussian_gamma(mu, s2, a, b, axes=None, transpose=False):
+    """
+    """
+    pass
