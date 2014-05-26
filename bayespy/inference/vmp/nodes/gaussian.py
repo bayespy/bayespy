@@ -1506,6 +1506,185 @@ class GaussianGammaISO(ExponentialFamily):
         raise NotImplementedError()
 
 
+    def plotmatrix(self):
+        """
+        Creates a matrix of marginal plots.
+
+        On diagonal, are marginal plots of each variable. Off-diagonal plot
+        (i,j) shows the joint marginal density of x_i and x_j.
+        """
+        import bayespy.plot as bpplt
+        
+        if np.prod(self.plates) != 1:
+            raise ValueError("Currently, does not support plates in the node.")
+
+        if len(self.dims[0]) != 1:
+            raise ValueError("Currently, supports only vector variables")
+
+        # Dimensionality of the Gaussian
+        D = self.dims[0][0]
+
+        # Compute standard parameters
+        tau = self.u[2]
+        mu = self.u[0]
+        mu = mu / misc.add_trailing_axes(tau, 1)
+        Cov = self.u[1] - linalg.outer(self.u[0], mu, ndim=1)
+        Cov = Cov / misc.add_trailing_axes(tau, 2)
+        a = self.phi[3]
+        b = -self.phi[2] - 0.5*linalg.inner(self.phi[0], mu, ndim=1)
+
+        # Create subplots
+        (fig, axes) = bpplt.pyplot.subplots(D+1, D+1)
+
+        # Plot marginal Student t distributions
+        for i in range(D):
+            for j in range(i+1):
+                if i == j:
+                    bpplt._pdf_t(*(random.gaussian_gamma_to_t(mu[i],
+                                                              Cov[i,i],
+                                                              a,
+                                                              b,
+                                                              ndim=0)),
+                                 axes=axes[i,i])
+                else:
+                    S = Cov[np.ix_([i,j],[i,j])]
+                    (m, S, nu) = random.gaussian_gamma_to_t(mu[[i,j]],
+                                                            S,
+                                                            a,
+                                                            b)
+                    bpplt._contour_t(m, S, nu, axes=axes[i,j])
+                    bpplt._contour_t(m, S, nu, axes=axes[j,i], transpose=True)
+
+        # Plot Gaussian-gamma marginal distributions
+        for k in range(D):
+            bpplt._contour_gaussian_gamma(mu[k], Cov[k,k], a, b, 
+                                          axes=axes[D,k])
+            bpplt._contour_gaussian_gamma(mu[k], Cov[k,k], a, b, 
+                                          axes=axes[k,D],
+                                          transpose=True)
+
+        # Plot gamma marginal distribution
+        bpplt._pdf_gamma(a, b, axes=axes[D,D])
+        return axes
+
+
+    def get_gaussian_mean_and_variance(self):
+        """
+        Return the mean and variance of the distribution
+        """
+        a = self.phi[3]
+        nu = 2*a
+        
+        if nu <= 1:
+            raise ValueError("Mean not defined for degrees of freedom <= 1")
+        if nu <= 2:
+            raise ValueError("Variance not defined if degrees of freedom <= 2")
+
+        tau = self.u[2]
+        tau_mu = self.u[0]
+        mu = tau_mu / misc.add_trailing_axes(tau, 1)
+        var = misc.get_diag(self.u[1], ndim=1) - tau_mu*mu
+        var = var / misc.add_trailing_axes(tau, 1)
+
+        var = nu / (nu-2) * var
+
+        return (mu, var)
+
+
+    def get_marginal_logpdf(self, gaussian=None, gamma=None):
+        """
+        Get the (marginal) log pdf of a subset of the variables
+
+        Parameters
+        ----------
+        gaussian : list or None
+            Indices of the Gaussian variables to keep or None
+        gamma : bool or None
+            True if keep the gamma variable, otherwise False or None
+
+        Returns
+        -------
+        function
+            A function which computes log-pdf
+        """
+        if gaussian is None and not gamma:
+            raise ValueError("Must give some variables")
+
+        # Compute standard parameters
+        tau = self.u[2]
+        mu = self.u[0]
+        mu = mu / misc.add_trailing_axes(tau, 1)
+        Cov = np.linalg.inv(-2*self.phi[1]) 
+        if not np.allclose(Cov,
+                           self.u[1] - linalg.outer(self.u[0], mu, ndim=1)):
+            raise Exception("WAAAT")
+        #Cov = Cov / misc.add_trailing_axes(tau, 2)
+        a = self.phi[3]
+        b = -self.phi[2] - 0.5*linalg.inner(self.phi[0], mu, ndim=1)
+
+        if not gamma:
+            # Student t distributions
+            inds = list(gaussian)
+            mu = mu[inds]
+            Cov = Cov[np.ix_(inds, inds)]
+            (mu, Cov, nu) = random.gaussian_gamma_to_t(mu,
+                                                       Cov,
+                                                       a,
+                                                       b,
+                                                       ndim=1)
+            L = linalg.chol(Cov)
+            logdet_Cov = linalg.chol_logdet(L)
+            D = len(inds)
+            def logpdf(x):
+                y = x - mu
+                v = linalg.chol_solve(L, y)
+                z2 = linalg.inner(y, v, ndim=1)
+                return random.t_logpdf(z2, logdet_Cov, nu, D)
+            return logpdf
+                
+        elif gaussian is None:
+            # Gamma distribution
+            def logpdf(x):
+                logx = np.log(x)
+                return random.gamma_logpdf(b*x, 
+                                           logx,
+                                           a*logx,
+                                           a*np.log(b),
+                                           special.gammaln(a))
+            return logpdf
+        else:
+            # Gaussian-gamma distribution
+            inds = list(gaussian)
+            mu = mu[inds]
+            Cov = Cov[np.ix_(inds, inds)]
+            D = len(inds)
+
+            L = linalg.chol(Cov)
+            logdet_Cov = linalg.chol_logdet(L)
+            
+            def logpdf(x):
+                tau = x[...,-1]
+                logtau = np.log(tau)
+                x = x[...,:-1]
+
+                y = x - mu
+                v = linalg.chol_solve(L, y) * tau[...,None]
+                z2 = linalg.inner(y, v, ndim=1)
+
+                return (random.gaussian_logpdf(z2, 
+                                               0,
+                                               0,
+                                               logdet_Cov + D*logtau, 
+                                               D) +
+                        random.gamma_logpdf(b*tau,
+                                            logtau,
+                                            a*logtau, 
+                                            a*np.log(b), 
+                                            special.gammaln(a)))
+
+            return logpdf
+
+
 class GaussianGammaARD(ExponentialFamily):
     """
     """
