@@ -24,6 +24,7 @@ Examples
 
 .. toctree::
 
+    _notebooks/regression.rst
     _notebooks/gmm.rst
     _notebooks/bmm.rst
     _notebooks/hmm_discrete.rst
