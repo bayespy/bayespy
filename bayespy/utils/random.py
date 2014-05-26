@@ -26,9 +26,11 @@ General functions random sampling and distributions.
 """
 
 import numpy as np
+from scipy import special
 
 from . import linalg
 from . import misc
+
 
 def intervals(N, length, amount=1, gap=0):
     """
@@ -372,3 +374,23 @@ def alpha_beta_recursion(logp0, logP):
     z0 = np.sum(zz[...,0,:,:], axis=-1)
 
     return (z0, zz, g)
+
+
+def gaussian_gamma_to_t(mu, Cov, a, b, ndim=1):
+    """
+    Integrates gamma distribution to obtain parameters of t distribution
+    """
+    alpha = a/b
+    nu = 2*a
+    S = Cov / misc.add_trailing_axes(alpha, 2*ndim)
+    return (mu, S, nu)
+
+
+def t_logpdf(z2, logdet_cov, nu, D):
+    """
+    """
+    return (special.gammaln((nu+D)/2)
+            - special.gammaln(nu/2)
+            - 0.5 * D * np.log(nu*np.pi)
+            - 0.5 * logdet_cov
+            - 0.5 * (nu+D) * np.log(1 + z2/nu))
