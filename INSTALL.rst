@@ -132,6 +132,12 @@ the development version:
 
     pip install https://github.com/numpy/numpydoc/archive/master.zip
 
+In order to visualize graphical models in HTML, you need to have ``pnmcrop``.
+On Ubuntu, it can be installed as
+
+.. code-block:: console
+
+    sudo apt-get install netpbm
 
 The documentation can be compiled to HTML and PDF by running the following
 commands in the ``doc`` directory:
