@@ -166,6 +166,17 @@ class GammaDistribution(ExponentialFamilyDistribution):
 class Gamma(ExponentialFamily):
     """
     Node for gamma random variables.
+
+    Parameters
+    ----------
+    
+    a : scalar or array
+    
+        Shape parameter
+        
+    b : gamma-like node or scalar or array
+    
+        Rate parameter
     """
 
     dims = ( (), () )

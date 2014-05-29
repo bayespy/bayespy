@@ -367,12 +367,80 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
 
 class Mixture(ExponentialFamily):
+    r"""
+    Node for exponential family mixture variables.
+
+    The node represents a random variable which is sampled from a
+    mixture distribution. It is possible to mix any exponential family
+    distribution. The probability density function is
+
+    .. math::
+
+        p(x|z=k,\boldsymbol{\theta}_0,\ldots,\boldsymbol{\theta}_{K-1})
+        = \phi(x|\boldsymbol{\theta}_k),
+
+    where :math:`\phi` is the probability density function of the mixed
+    exponential family distribution and :math:`\boldsymbol{\theta}_0,
+    \ldots, \boldsymbol{\theta}_{K-1}` are the parameters of each
+    cluster.  For instance, :math:`\phi` could be the Gaussian
+    probability density function :math:`\mathcal{N}` and
+    :math:`\boldsymbol{\theta}_k = \{\boldsymbol{\mu}_k,
+    \mathbf{\Lambda}_k\}` where :math:`\boldsymbol{\mu}_k` and
+    :math:`\mathbf{\Lambda}_k` are the mean vector and precision matrix
+    for cluster :math:`k`.
+
+    Parameters
+    ----------
+
+    z : categorical-like node or array
+        :math:`z`, cluster assignment
+
+    node_class : stochastic exponential family node class
+        Mixed distribution
+
+    params : types specified by the mixed distribution
+    
+        Parameters of the mixed distribution.  If some parameters should
+        vary between clusters, those parameters' plate axis
+        `cluster_plate` should have a size which equals the number of
+        clusters. For parameters with shared values, that plate axis
+        should have length 1. At least one parameter should vary between
+        clusters.
+
+    cluster_plate : int, optional
+    
+        Negative integer defining which plate axis is used for the
+        clusters in the parameters. That plate axis is ignored from the
+        parameters when considering the plates for this node. By
+        default, mix over the last plate axis.
+
+    See also
+    --------
+
+    Categorical, CategoricalMarkovChain
+
+    Examples
+    --------
+
+    A simple 2-dimensional Gaussian mixture model with three clusters
+    for 100 samples can be constructed, for instance, as:
+
+    .. code-block:: python
+
+        from bayespy.nodes import (Dirichlet, Categorical, Mixture,
+                                   Gaussian, Wishart)
+        alpha = Dirichlet([1e-3, 1e-3, 1e-3])
+        Z = Categorical(alpha, plates=(100,))
+        mu = Gaussian(np.zeros(2), 1e-6*np.identity(2), plates=(3,))
+        Lambda = Wishart(2, 1e-6*np.identity(2), plates=(3,))
+        X = Mixture(Z, Gaussian, mu, Lambda)
+    """
 
 
-    @useconstructor
-    def __init__(self, *args, cluster_plate=-1, **kwargs):
+    def __init__(self, z, node_class, *params, cluster_plate=-1, **kwargs):
         self.cluster_plate = cluster_plate
-        super().__init__(*args, **kwargs)
+        super().__init__(z, node_class, *params, cluster_plate=cluster_plate,
+                         **kwargs)
         
 
     @classmethod

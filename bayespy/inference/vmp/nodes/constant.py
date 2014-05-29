@@ -26,6 +26,11 @@ import numpy as np
 from .node import Node
 
 class Constant(Node):
+    r"""
+    Node for presenting constant values.
+
+    The node wraps arrays into proper node type.
+    """
 
     def __init__(self, moments, x, **kwargs):
         self._moments = moments

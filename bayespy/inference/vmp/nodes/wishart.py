@@ -116,9 +116,38 @@ class WishartDistribution(ExponentialFamilyDistribution):
 
 
 class Wishart(ExponentialFamily):
+    r"""
+    Node for Wishart random variables.
+
+    The random variable :math:`\mathbf{\Lambda}` is a :math:`D\times{}D`
+    positive-definite symmetric matrix.
+
+    .. math::
+
+        p(\mathbf{\Lambda}) = \mathrm{Wishart}(\mathbf{\Lambda} | N,
+        \mathbf{V})
+
+    Parameters
+    ----------
+
+    n : scalar or array
+
+        :math:`N`, degrees of freedom, :math:`N>D-1`.
+
+    V : Wishart-like node or (...,D,D)-array
+
+        :math:`\mathbf{V}`, scale matrix.
+    """
 
     _distribution = WishartDistribution()
     _moments = WishartMoments()
+
+
+    def __init__(self, n, V, **kwargs):
+        """
+        Create Wishart node.
+        """
+        super().__init__(n, V, **kwargs)
 
         
     @classmethod

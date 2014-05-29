@@ -32,17 +32,28 @@ from .gaussian import GaussianGammaISOMoments
 
 
 class SumMultiply(Deterministic):
-    """
-    Compute the sum-product of Gaussian nodes similarly to numpy.einsum.
+    r"""
+    Node for computing general products and sums of Gaussian nodes.
+    
+    The node is similar to `numpy.einsum`, which is a very general
+    function for computing dot products, sums, products and other sums
+    of products of arrays.
     
     For instance, the equivalent of
+
+    .. code-block:: python
     
         np.einsum('abc,bd,ca->da', X, Y, Z)
         
     would be given as
+
+    .. code-block:: python
     
         SumMultiply('abc,bd,ca->da', X, Y, Z)
     or
+
+    .. code-block:: python
+    
         SumMultiply(X, [0,1,2], Y, [1,3], Z, [2,0], [3,0])
         
     which is similar to the other syntax of numpy.einsum.
@@ -85,16 +96,18 @@ class SumMultiply(Deterministic):
     Vector-matrix-vector product:
     'i,ij,j'
 
-    Note
-    ----
+    Notes
+    -----
 
     This operation can be extremely slow if not used wisely. For large and
     complex operations, it is sometimes more efficient to split the operation
     into multiple nodes. For instance, the example above could probably be
     computed faster by
 
+    .. code-block:: python
+    
         XZ = SumMultiply(X, [0,1,2], Z, [2,0], [0,1])
-        SumMultiply(XZ, [0,1], Y, [1,2], [2,0])
+        F = SumMultiply(XZ, [0,1], Y, [1,2], [2,0])
 
     because the third axis ('c') could be summed out already in the first
     operation. This same effect applies also to numpy.einsum in general.

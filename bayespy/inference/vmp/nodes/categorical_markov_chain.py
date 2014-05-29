@@ -208,12 +208,87 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
 
     
 class CategoricalMarkovChain(ExponentialFamily):
-    """
+    r"""
     Node for categorical Markov chain random variables.
+    
+    The node models a Markov chain which has a discrete set of K possible states
+    and the next state depends only on the previous state and the state
+    transition probabilities.  The graphical model is shown below:
+
+    .. bayesnet::
+
+       \tikzstyle{latent} += [minimum size=30pt];
+       
+       \node[latent] (x0) {$x_0$};
+       \node[latent, right=of x0] (x1) {$x_1$};
+       \node[right=of x1] (dots) {$\cdots$};
+       \node[latent, right=of dots] (xn) {$x_{N-1}$};
+       \edge {x0}{x1};
+       \edge {x1}{dots};
+       \edge {dots}{xn};
+
+       \node[latent, above=of x0] (pi) {$\boldsymbol{\pi}$};
+       \node[latent, above=of dots] (A) {$\mathbf{A}$};
+       \edge {pi} {x0};
+       \edge {A} {x1,dots,xn};
+
+    where :math:`\boldsymbol{\pi}` contains the probabilities for the initial
+    state and :math:`\mathbf{A}` is the state transition probability matrix.  It
+    is possible to have :math:`\mathbf{A}` varying in time.
+
+    .. math::
+
+        p(x_0, \ldots, x_{N-1}) &= p(x_0) \prod^{N-1}_{n=1} p(x_n|x_{n-1}),
+
+    where
+    
+    .. math::
+
+        p(x_0=k) &= \pi_k, \quad \text{for } k \in \{0,\ldots,K-1\},
+        \\
+        p(x_n=j|x_{n-1}=i) &= a_{ij}^{(n-1)} \quad \text{for } n=1,\ldots,N-1,\,
+        i\in\{1,\ldots,K-1\},\, j\in\{1,\ldots,K-1\}
+        \\
+        a_{ij}^{(n)} &= [\mathbf{A}_n]_{ij}
+
+    This node can be used to construct hidden Markov models by using
+    :class:`Mixture` for the emission distribution.
+
+    Parameters
+    ----------
+    
+    pi : Dirichlet-like node or (...,K)-array
+    
+        :math:`\boldsymbol{\pi}`, probabilities for the first
+        state. :math:`K`-dimensional Dirichlet.
+        
+    A : Dirichlet-like node or (K,K)-array or (...,1,K,K)-array or (...,N-1,K,K)-array
+    
+        :math:`\mathbf{A}`, probabilities for state
+        transitions. :math:`K`-dimensional Dirichlet with plates (K,) or
+        (...,1,K) or (...,N-1,K).
+        
+    states : int, optional
+    
+        :math:`N`, the length of the chain.
+
+    See also
+    --------
+    
+    Categorical, Dirichlet, GaussianMarkovChain, Mixture,
+    SwitchingGaussianMarkovChain
     """
+
     
     _parent_moments = (DirichletMoments(),
                        DirichletMoments())
+
+
+    def __init__(self, pi, A, states=None, **kwargs):
+        """
+        Create categorical Markov chain
+        """
+        super().__init__(pi, A, states=states, **kwargs)
 
 
     @classmethod

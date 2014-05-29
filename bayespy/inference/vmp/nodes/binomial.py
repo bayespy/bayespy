@@ -156,12 +156,56 @@ class BinomialDistribution(ExponentialFamilyDistribution):
 
     
 class Binomial(ExponentialFamily):
-    """
+    r"""
     Node for binomial random variables.
+
+    The node models the number of successes :math:`x \in \{0, \ldots, n\}` in
+    :math:`n` trials with probability :math:`p` for success:
+
+    .. math::
+
+        x \sim \mathrm{Binomial}(n, p).
+
+    Parameters
+    ----------
+
+    n : scalar or array
+    
+        Number of trials
+        
+    p : beta-like node or scalar or array
+    
+        Probability of a success in a trial
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        from bayespy.nodes import Binomial, Beta
+        p = Beta([1e-3, 1e-3])
+        x = Binomial(10, p)
+        x.observe(7)
+        p.update()
+        import bayespy.plot as bpplt
+        import numpy as np
+        bpplt.pdf(p, np.linspace(0, 1, num=100))
+
+    See also
+    --------
+
+    Bernoulli, Multinomial, Beta
     """
 
     
     _parent_moments = (BetaMoments(),)
+
+
+    def __init__(self, n, p, **kwargs):
+        """
+        Create binomial node
+        """
+        super().__init__(n, p, **kwargs)
 
 
     @classmethod

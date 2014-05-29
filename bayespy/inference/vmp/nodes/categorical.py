@@ -28,10 +28,12 @@ Module for the categorical distribution node.
 import numpy as np
 
 from .node import ensureparents
-from .expfamily import useconstructor
+from .expfamily import (ExponentialFamily,
+                        useconstructor)
 from .multinomial import (MultinomialMoments,
                           MultinomialDistribution,
                           Multinomial)
+from .dirichlet import DirichletMoments
 
 from bayespy.utils import random
 from bayespy.utils import misc
@@ -160,10 +162,38 @@ class CategoricalDistribution(MultinomialDistribution):
         return random.categorical(p, size=plates)
 
     
-class Categorical(Multinomial):
-    """
+class Categorical(ExponentialFamily):
+    r"""
     Node for categorical random variables.
+    
+    The node models a categorical random variable :math:`x \in \{0,\ldots,K-1\}`
+    with prior probabilities :math:`\{p_0, \ldots, p_{K-1}\}` for each category:
+    
+    .. math::
+
+        p(x=k) = p_k \quad \text{for } k\in \{0,\ldots,K-1\}.
+
+    Parameters
+    ----------
+    
+    p : Dirichlet-like node or (...,K)-array
+    
+        Probabilities for each category
+
+    See also
+    --------
+    Bernoulli, Multinomial, Dirichlet
     """
+
+
+    _parent_moments = [DirichletMoments()]
+
+
+    def __init__(self, p, **kwargs):
+        """
+        Create Categorical node.
+        """
+        super().__init__(p, **kwargs)
 
 
     @classmethod

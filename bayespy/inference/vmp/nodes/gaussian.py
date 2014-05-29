@@ -320,6 +320,94 @@ class GaussianDistribution(ExponentialFamilyDistribution):
     Class for the VMP formulas of Gaussian variables.
 
     Currently, supports only vector variables.
+
+    Notes
+    -----
+
+    Message passing equations:
+
+    .. math::
+
+       \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu}, \mathbf{\Lambda}),
+
+    .. math::
+
+       \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
+       \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
+       \quad \mathbf{\Lambda} \text{ symmetric positive definite}
+
+    .. math::
+
+       \log\mathcal{N}( \mathbf{x} | \boldsymbol{\mu}, \mathbf{\Lambda} )
+       &= 
+       - \frac{1}{2} \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \mathbf{x}
+       + \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \boldsymbol{\mu}
+       - \frac{1}{2} \boldsymbol{\mu}^{\mathrm{T}} \mathbf{\Lambda}
+         \boldsymbol{\mu}
+       + \frac{1}{2} \log |\mathbf{\Lambda}|
+       - \frac{D}{2} \log (2\pi)
+
+    .. math::
+
+       \mathbf{u} (\mathbf{x})
+       &=
+       \left[ \begin{matrix}
+         \mathbf{x}
+         \\
+         \mathbf{xx}^{\mathrm{T}}
+       \end{matrix} \right]
+       \\
+       \boldsymbol{\phi} (\boldsymbol{\mu}, \mathbf{\Lambda})
+       &=
+       \left[ \begin{matrix}
+         \mathbf{\Lambda} \boldsymbol{\mu} 
+         \\
+         - \frac{1}{2} \mathbf{\Lambda}
+       \end{matrix} \right]
+       \\
+       \boldsymbol{\phi}_{\boldsymbol{\mu}} (\mathbf{x}, \mathbf{\Lambda})
+       &=
+       \left[ \begin{matrix}
+         \mathbf{\Lambda} \mathbf{x} 
+         \\
+         - \frac{1}{2} \mathbf{\Lambda}
+       \end{matrix} \right]
+       \\
+       \boldsymbol{\phi}_{\mathbf{\Lambda}} (\mathbf{x}, \boldsymbol{\mu})
+       &=
+       \left[ \begin{matrix}
+         - \frac{1}{2} \mathbf{xx}^{\mathrm{T}}
+         + \frac{1}{2} \mathbf{x}\boldsymbol{\mu}^{\mathrm{T}}
+         + \frac{1}{2} \boldsymbol{\mu}\mathbf{x}^{\mathrm{T}}
+         - \frac{1}{2} \boldsymbol{\mu\mu}^{\mathrm{T}}
+         \\
+         \frac{1}{2}
+       \end{matrix} \right]
+       \\
+       g (\boldsymbol{\mu}, \mathbf{\Lambda})
+       &=
+       - \frac{1}{2} \operatorname{tr}(\boldsymbol{\mu\mu}^{\mathrm{T}}
+                                       \mathbf{\Lambda} )
+       + \frac{1}{2} \log |\mathbf{\Lambda}|
+       \\
+       g_{\boldsymbol{\phi}} (\boldsymbol{\phi})
+       &=
+       \frac{1}{4} \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
+       \boldsymbol{\phi}_1
+       + \frac{1}{2} \log | -2 \boldsymbol{\phi}_2 |
+       \\
+       f(\mathbf{x})
+       &= - \frac{D}{2} \log(2\pi)
+       \\
+       \overline{\mathbf{u}}  (\boldsymbol{\phi})
+       &=
+       \left[ \begin{matrix}
+         - \frac{1}{2} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
+         \\
+         \frac{1}{4} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
+         \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
+         - \frac{1}{2} \boldsymbol{\phi}^{-1}_2
+       \end{matrix} \right]
     """    
 
     
@@ -867,127 +955,51 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
 
 class Gaussian(ExponentialFamily):
     r"""
-    VMP node for Gaussian variable.
+    Node for Gaussian variables.
 
-    The node represents a :math:`D`-dimensional vector from the
-    Gaussian distribution:
+    The node represents a :math:`D`-dimensional vector from the Gaussian
+    distribution:
     
-    .. math::
-
-       \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu},
-       \mathbf{\Lambda}),
-
-    where :math:`\boldsymbol{\mu}` is the mean vector and
-    :math:`\mathbf{\Lambda}` is the precision matrix (i.e., inverse of
-    the covariance matrix).
-    
-    .. math::
-
-       \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
-       \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
-       \quad \mathbf{\Lambda} \text{ symmetric positive definite}
-
-    Plates!
-
-    Parent nodes? Child nodes?
-
-    See also
-    --------
-    Wishart
-    
-    Notes
-    -----
-
-    Message passing equations:
-
     .. math::
 
        \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu}, \mathbf{\Lambda}),
 
+    where :math:`\boldsymbol{\mu}` is the mean vector and
+    :math:`\mathbf{\Lambda}` is the precision matrix (i.e., inverse of the
+    covariance matrix).
+    
     .. math::
 
        \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
        \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
        \quad \mathbf{\Lambda} \text{ symmetric positive definite}
 
-    .. math::
+    Parameters
+    ----------
 
-       \log\mathcal{N}( \mathbf{x} | \boldsymbol{\mu}, \mathbf{\Lambda} )
-       &= 
-       - \frac{1}{2} \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \mathbf{x}
-       + \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \boldsymbol{\mu}
-       - \frac{1}{2} \boldsymbol{\mu}^{\mathrm{T}} \mathbf{\Lambda}
-         \boldsymbol{\mu}
-       + \frac{1}{2} \log |\mathbf{\Lambda}|
-       - \frac{D}{2} \log (2\pi)
+    mu : Gaussian-like node or GaussianGammaISO-like node or GaussianWishart-like node or array
+        Mean vector
 
-    .. math::
+    Lambda : Wishart-like node or array
+        Precision matrix
 
-       \mathbf{u} (\mathbf{x})
-       &=
-       \left[ \begin{matrix}
-         \mathbf{x}
-         \\
-         \mathbf{xx}^{\mathrm{T}}
-       \end{matrix} \right]
-       \\
-       \boldsymbol{\phi} (\boldsymbol{\mu}, \mathbf{\Lambda})
-       &=
-       \left[ \begin{matrix}
-         \mathbf{\Lambda} \boldsymbol{\mu} 
-         \\
-         - \frac{1}{2} \mathbf{\Lambda}
-       \end{matrix} \right]
-       \\
-       \boldsymbol{\phi}_{\boldsymbol{\mu}} (\mathbf{x}, \mathbf{\Lambda})
-       &=
-       \left[ \begin{matrix}
-         \mathbf{\Lambda} \mathbf{x} 
-         \\
-         - \frac{1}{2} \mathbf{\Lambda}
-       \end{matrix} \right]
-       \\
-       \boldsymbol{\phi}_{\mathbf{\Lambda}} (\mathbf{x}, \boldsymbol{\mu})
-       &=
-       \left[ \begin{matrix}
-         - \frac{1}{2} \mathbf{xx}^{\mathrm{T}}
-         + \frac{1}{2} \mathbf{x}\boldsymbol{\mu}^{\mathrm{T}}
-         + \frac{1}{2} \boldsymbol{\mu}\mathbf{x}^{\mathrm{T}}
-         - \frac{1}{2} \boldsymbol{\mu\mu}^{\mathrm{T}}
-         \\
-         \frac{1}{2}
-       \end{matrix} \right]
-       \\
-       g (\boldsymbol{\mu}, \mathbf{\Lambda})
-       &=
-       - \frac{1}{2} \operatorname{tr}(\boldsymbol{\mu\mu}^{\mathrm{T}}
-                                       \mathbf{\Lambda} )
-       + \frac{1}{2} \log |\mathbf{\Lambda}|
-       \\
-       g_{\boldsymbol{\phi}} (\boldsymbol{\phi})
-       &=
-       \frac{1}{4} \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
-       \boldsymbol{\phi}_1
-       + \frac{1}{2} \log | -2 \boldsymbol{\phi}_2 |
-       \\
-       f(\mathbf{x})
-       &= - \frac{D}{2} \log(2\pi)
-       \\
-       \overline{\mathbf{u}}  (\boldsymbol{\phi})
-       &=
-       \left[ \begin{matrix}
-         - \frac{1}{2} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
-         \\
-         \frac{1}{4} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
-         \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
-         - \frac{1}{2} \boldsymbol{\phi}^{-1}_2
-       \end{matrix} \right]
-
+    See also
+    --------
+    
+    Wishart, GaussianARD, GaussianWishart, GaussianGammaARD, GaussianGammaISO
+    
     """
 
     _distribution = GaussianDistribution()
     _moments = GaussianMoments(1)
     _parent_moments = [GaussianWishartMoments()]
+
+
+    def __init__(self, mu, Lambda, **kwargs):
+        """
+        Create Gaussian node
+        """
+        super().__init__(mu, Lambda, **kwargs)
     
 
     @classmethod
@@ -1125,123 +1137,48 @@ class Gaussian(ExponentialFamily):
 
 class GaussianARD(ExponentialFamily):
     r"""
-    VMP node for Gaussian array variable.
+    Node for Gaussian variables with ARD prior.
 
-    The node represents a :math:`(D0,D1,...,DN)`-dimensional vector from the
-    Gaussian distribution:
-
+    The node represents a :math:`D`-dimensional vector from the Gaussian
+    distribution:
+    
     .. math::
 
-       \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu},
-       \mathbf{\Lambda}),
+       \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu}, \mathrm{diag}(\boldsymbol{\alpha})),
 
     where :math:`\boldsymbol{\mu}` is the mean vector and
-    :math:`\mathbf{\Lambda}` is the precision matrix (i.e., inverse of
-    the covariance matrix).
-
+    :math:`\mathrm{diag}(\boldsymbol{\alpha})` is the diagonal precision matrix
+    (i.e., inverse of the covariance matrix).
+    
     .. math::
 
-       \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
-       \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
-       \quad \mathbf{\Lambda} \text{ symmetric positive definite}
+       \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, \quad \alpha_d > 0 \text{
+       for } d=0,\ldots,D-1
 
-    Plates!
+    *Note:*  The form of the posterior approximation is a Gaussian distribution with full
+    covariance matrix instead of a diagonal matrix.
 
-    Parent nodes? Child nodes?
+    Parameters
+    ----------
+
+    mu : Gaussian-like node or GaussianGammaISO-like node or GaussianGammaARD-like node or array
+        Mean vector
+
+    alpha : gamma-like node or array
+        Diagonal elements of the precision matrix
 
     See also
     --------
-    Wishart
-
-    Notes
-    -----
-
-    Message passing equations:
-
-    .. math::
-
-       \mathbf{x} &\sim \mathcal{N}(\boldsymbol{\mu}, \mathbf{\Lambda}),
-
-    .. math::
-
-       \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
-       \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
-       \quad \mathbf{\Lambda} \text{ symmetric positive definite}
-
-    .. math::
-
-       \log\mathcal{N}( \mathbf{x} | \boldsymbol{\mu}, \mathbf{\Lambda} )
-       &= 
-       - \frac{1}{2} \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \mathbf{x}
-       + \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \boldsymbol{\mu}
-       - \frac{1}{2} \boldsymbol{\mu}^{\mathrm{T}} \mathbf{\Lambda}
-         \boldsymbol{\mu}
-       + \frac{1}{2} \log |\mathbf{\Lambda}|
-       - \frac{D}{2} \log (2\pi)
-
-    .. math::
-
-       \mathbf{u} (\mathbf{x})
-       &=
-       \left[ \begin{matrix}
-         \mathbf{x}
-         \\
-         \mathbf{xx}^{\mathrm{T}}
-       \end{matrix} \right]
-       \\
-       \boldsymbol{\phi} (\boldsymbol{\mu}, \mathbf{\Lambda})
-       &=
-       \left[ \begin{matrix}
-         \mathbf{\Lambda} \boldsymbol{\mu} 
-         \\
-         - \frac{1}{2} \mathbf{\Lambda}
-       \end{matrix} \right]
-       \\
-       \boldsymbol{\phi}_{\boldsymbol{\mu}} (\mathbf{x}, \mathbf{\Lambda})
-       &=
-       \left[ \begin{matrix}
-         \mathbf{\Lambda} \mathbf{x} 
-         \\
-         - \frac{1}{2} \mathbf{\Lambda}
-       \end{matrix} \right]
-       \\
-       \boldsymbol{\phi}_{\mathbf{\Lambda}} (\mathbf{x}, \boldsymbol{\mu})
-       &=
-       \left[ \begin{matrix}
-         - \frac{1}{2} \mathbf{xx}^{\mathrm{T}}
-         + \frac{1}{2} \mathbf{x}\boldsymbol{\mu}^{\mathrm{T}}
-         + \frac{1}{2} \boldsymbol{\mu}\mathbf{x}^{\mathrm{T}}
-         - \frac{1}{2} \boldsymbol{\mu\mu}^{\mathrm{T}}
-         \\
-         \frac{1}{2}
-       \end{matrix} \right]
-       \\
-       g (\boldsymbol{\mu}, \mathbf{\Lambda})
-       &=
-       - \frac{1}{2} \operatorname{tr}(\boldsymbol{\mu\mu}^{\mathrm{T}}
-                                       \mathbf{\Lambda} )
-       + \frac{1}{2} \log |\mathbf{\Lambda}|
-       \\
-       g_{\boldsymbol{\phi}} (\boldsymbol{\phi})
-       &=
-       \frac{1}{4} \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
-       \boldsymbol{\phi}_1
-       + \frac{1}{2} \log | -2 \boldsymbol{\phi}_2 |
-       \\
-       f(\mathbf{x})
-       &= - \frac{D}{2} \log(2\pi)
-       \\
-       \overline{\mathbf{u}}  (\boldsymbol{\phi})
-       &=
-       \left[ \begin{matrix}
-         - \frac{1}{2} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
-         \\
-         \frac{1}{4} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
-         \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
-         - \frac{1}{2} \boldsymbol{\phi}^{-1}_2
-       \end{matrix} \right]
-
+    
+    Gamma, Gaussian, GaussianGammaARD, GaussianGammaISO, GaussianWishart
     """
+
+
+    def __init__(self, mu, alpha, ndim=None, shape=None, **kwargs):
+        """
+        Create GaussianARD node.
+        """
+        super().__init__(mu, alpha, ndim=ndim, shape=shape, **kwargs)
 
 
     @classmethod
@@ -1427,7 +1364,7 @@ class GaussianARD(ExponentialFamily):
 
 
 class GaussianGammaISO(ExponentialFamily):
-    """
+    r"""
     Node for Gaussian-gamma (isotropic) random variables.
 
     The prior:
@@ -1436,9 +1373,9 @@ class GaussianGammaISO(ExponentialFamily):
 
         p(x, \alpha| \mu, \Lambda, a, b)
 
-        p(x|\alpha, \mu, \Lambda) = \mathcal(N)(x | \mu, \alpha^{-1} Lambda^{-1})
+        p(x|\alpha, \mu, \Lambda) = \mathcal{N}(x | \mu, \alpha Lambda)
 
-        p(\alpha|a, b) = \mathcal(G)(\alpha | a, b)
+        p(\alpha|a, b) = \mathcal{G}(\alpha | a, b)
 
     The posterior approximation :math:`q(x, \alpha)` has the same Gaussian-gamma
     form.
@@ -1686,18 +1623,40 @@ class GaussianGammaISO(ExponentialFamily):
 
 
 class GaussianGammaARD(ExponentialFamily):
-    """
+    r"""
+    Node for Gaussian and gamma random variables with ARD form.
+
+    The prior:
+    
+    .. math::
+
+        p(x, \tau| \mu, \alpha, a, b) = p(x|\tau, \mu, \alpha) p(\tau|a, b)
+
+        p(x|\alpha, \mu, \alpha) = \mathcal{N}(x | \mu, \mathrm{diag}(
+        \boldsymbol{\alpha} \boldsymbol{\tau} ))
+
+        p(\tau|a, b) = \mathcal{G}(\tau | a, b)
+
+    The posterior approximation :math:`q(x, \tau)` has the same Gaussian-gamma
+    form.
+
+    .. warning:: Not yet implemented.
+
+    See also
+    --------
+    
+    Gaussian, GaussianARD, Gamma, GaussianGammaISO, GaussianWishart
     """
 
 
-    def __init__(self):
+    def __init__(self, mu, alpha, a, b, **kwargs):
         """
         """
         raise NotImplementedError()
 
     
 class GaussianWishart(ExponentialFamily):
-    """
+    r"""
     Node for Gaussian-Wishart random variables.
 
     The prior:

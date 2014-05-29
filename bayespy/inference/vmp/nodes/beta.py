@@ -110,12 +110,49 @@ class BetaDistribution(DirichletDistribution):
         
 
 class Beta(Dirichlet):
-    """
+    r"""
     Node for beta random variables.
+
+    The node models a probability variable :math:`p \in [0,1]` as
+
+    .. math::
+
+        p \sim \mathrm{Beta}(a, b)
+
+    where :math:`a` and :math:`b` are prior counts for success and failure,
+    respectively.
+
+    Parameters
+    ----------
+    
+    alpha : (...,2)-shaped array
+    
+        Two-element vector containing :math:`a` and :math:`b`
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        from bayespy.nodes import Bernoulli, Beta
+        p = Beta([1e-3, 1e-3])
+        z = Bernoulli(p, plates=(10,))
+        z.observe([0, 1, 1, 1, 0, 1, 1, 1, 0, 1])
+        p.update()
+        import bayespy.plot as bpplt
+        import numpy as np
+        bpplt.pdf(p, np.linspace(0, 1, num=100))
     """
 
     _moments = BetaMoments()
     _distribution = BetaDistribution()
+
+
+    def __init__(self, alpha, **kwargs):
+        """
+        Create beta node
+        """
+        super().__init__(alpha, **kwargs)
 
 
     @classmethod

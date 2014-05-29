@@ -143,6 +143,26 @@ class PoissonDistribution(ExponentialFamilyDistribution):
 class Poisson(ExponentialFamily):
     """
     Node for Poisson random variables.
+
+    The node uses Poisson distribution:
+
+    .. math::
+
+        p(x) = \mathrm{Poisson}(x|\lambda)
+
+    where :math:`\lambda` is the rate parameter.
+
+    Parameters
+    ----------
+
+    l : gamma-like node or scalar or array
+
+        :math:`\lambda`, rate parameter
+
+    See also
+    --------
+
+    Gamma, Exponential
     """
 
     dims = ( (), )

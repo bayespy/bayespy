@@ -437,45 +437,93 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
 class GaussianMarkovChain(_TemplateGaussianMarkovChain):
     r"""
-    VMP node for Gaussian Markov chain.
+    Node for Gaussian Markov chain random variables.
 
-    Parents are:
-    `mu` is the mean of x0 (Gaussian)
-    `Lambda` is the precision of x0 (Wishart)
-    `A` is the dynamic matrix (Gaussian)
-    `v` is the diagonal precision of the innovation (Gamma)
-    An additional dummy parent is created:
-    'N' is the number of time instances
-
-    Output is Gaussian variables.
-
-    Time dimension is over the last plate.
-
-    Hmm.. The number of time instances is one more than the plates in
-    A and V. Input N -> Output N+1.
+    In a simple case, the graphical model can be presented as:
 
     .. bayesnet::
 
-       \node[latent] (x1) {$\mathbf{x}_1$};
-       \node[latent, right=of x1] (x2) {$\mathbf{x}_2$};
-       \node[right=of x2] (dots) {$\cdots$};
-       \node[latent, right=of dots] (xn) {$\mathbf{x}_n$};
-       \edge {x1}{x2};
-       \edge {x2}{dots};
+       \tikzstyle{latent} += [minimum size=30pt];
+       
+       \node[latent] (x0) {$\mathbf{x}_0$};
+       \node[latent, right=of x0] (x1) {$\mathbf{x}_1$};
+       \node[right=of x1] (dots) {$\cdots$};
+       \node[latent, right=of dots] (xn) {$\mathbf{x}_{N-1}$};
+       \edge {x0}{x1};
+       \edge {x1}{dots};
        \edge {dots}{xn};
 
+       \node[latent, above left=1 and 0.1 of x0] (mu) {$\boldsymbol{\mu}$};
+       \node[latent, above right=1 and 0.1 of x0] (Lambda) {$\mathbf{\Lambda}$};
+       \node[latent, above left=1 and 0.1 of dots] (A) {$\mathbf{A}$};
+       \node[latent, above right=1 and 0.1 of dots] (nu) {$\boldsymbol{\nu}$};
+       \edge {mu,Lambda} {x0};
+       \edge {A,nu} {x1,dots,xn};
+
+    where :math:`\boldsymbol{\mu}` and :math:`\mathbf{\Lambda}` are the mean and
+    the precision matrix of the initial state, :math:`\mathbf{A}` is the state
+    dynamics matrix and :math:`\boldsymbol{\nu}` is the precision of the
+    innovation noise.  It is possible that :math:`\mathbf{A}` and/or
+    :math:`\boldsymbol{\nu}` are different for each transition instead of being
+    constant.
+
+    The probability distribution is
+
+    .. math::
+
+       p(\mathbf{x}_0, \ldots, \mathbf{x}_{N-1}) = p(\mathbf{x}_0)
+       \prod^{N-1}_{n=1} p(\mathbf{x}_n | \mathbf{x}_{n-1})
+
+    where
+    
+    .. math::
+
+       p(\mathbf{x}_0) &= \mathcal{N}(\mathbf{x}_0 | \boldsymbol{\mu}, \mathbf{\Lambda})
+       \\
+       p(\mathbf{x}_n|\mathbf{x}_{n-1}) &= \mathcal{N}(\mathbf{x}_n |
+       \mathbf{A}_{n-1}\mathbf{x}_{n-1}, \mathrm{diag}(\boldsymbol{\nu}_{n-1})).
+
+    Parameters
+    ----------
+    
+    mu : Gaussian-like node or (...,D)-array
+        :math:`\boldsymbol{\mu}`, mean of :math:`x_0`, :math:`D`-dimensional
+        with plates (...)
+        
+    Lambda : Wishart-like node or (...,D,D)-array
+        :math:`\mathbf{\Lambda}`, precision matrix of :math:`x_0`,
+        :math:`D\times D` -dimensional with plates (...)
+        
+    A : Gaussian-like node or (D,D)-array or (...,1,D,D)-array or (...,N-1,D,D)-array
+        :math:`\mathbf{A}`, state dynamics matrix, :math:`D`-dimensional with
+        plates (D,) or (...,1,D) or (...,N-1,D)
+        
+    nu : gamma-like node or (D,)-array or (...,1,D)-array or (...,N-1,D)-array
+        :math:`\boldsymbol{\nu}`, diagonal elements of the precision of the
+        innovation process, plates (D,) or (...,1,D) or (...,N-1,D)
+
+    n : int, optional
+        :math:`N`, the length of the chain. Must be given if :math:`\mathbf{A}`
+        and :math:`\boldsymbol{\nu}` are constant over time.
 
     See also
     --------
-    bayespy.inference.vmp.nodes.gaussian.Gaussian
-    bayespy.inference.vmp.nodes.wishart.Wishart
-
+    
+    Gaussian, GaussianARD, Wishart, Gamma, SwitchingGaussianMarkovChain,
+    VaryingGaussianMarkovChain, CategoricalMarkovChain
     """
 
     _parent_moments = (GaussianMoments(1),
                        WishartMoments(),
                        GaussianMoments(1),
                        GammaMoments())
+
+
+    def __init__(self, mu, Lambda, A, nu, n=None, **kwargs):
+        """
+        Create GaussianMarkovChain node.
+        """
+        super().__init__(mu, Lambda, A, nu, n=n, **kwargs)
 
 
     @classmethod
@@ -852,40 +900,125 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
 
 class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     r"""
-    VMP node for Gaussian Markov chain with time-varying dynamics.
+    Node for Gaussian Markov chain random variables with time-varying dynamics.
 
-    Parents are:
-    `mu` is the mean of x0 (Gaussian)
-    `Lambda` is the precision of x0 (Wishart)
-    `B` is the template dynamic matrices
-    `S` is the temporal weights for the template dynamic matrices
-    `v` is the diagonal precision of the innovation (Gamma)
-    An additional dummy parent is created:
-    'N' is the number of time instances
-
-    Not efficient if `v` is time dependent.
-
-    Output is Gaussian Markov chain variables.
+    The node models a sequence of Gaussian variables
+    :math:`\mathbf{x}_0,\ldots,\mathbf{x}_{N-1}$ with linear Markovian dynamics.
+    The time variability of the dynamics is obtained by modelling the state
+    dynamics matrix as a linear combination of a set of matrices with
+    time-varying linear combination weights [1]_.  The graphical model can be
+    presented as:
 
     .. bayesnet::
 
-       TODO: FIX THIS
-
-       \node[latent] (x1) {$\mathbf{x}_1$};
-       \node[latent, right=of x1] (x2) {$\mathbf{x}_2$};
-       \node[right=of x2] (dots) {$\cdots$};
-       \node[latent, right=of dots] (xn) {$\mathbf{x}_n$};
-       \edge {x1}{x2};
-       \edge {x2}{dots};
+       \tikzstyle{latent} += [minimum size=40pt];
+       
+       \node[latent] (x0) {$\mathbf{x}_0$};
+       \node[latent, right=of x0] (x1) {$\mathbf{x}_1$};
+       \node[right=of x1] (dots) {$\cdots$};
+       \node[latent, right=of dots] (xn) {$\mathbf{x}_{N-1}$};
+       \edge {x0}{x1};
+       \edge {x1}{dots};
        \edge {dots}{xn};
 
+       \node[latent, above left=1 and 0.1 of x0] (mu) {$\boldsymbol{\mu}$};
+       \node[latent, above right=1 and 0.1 of x0] (Lambda) {$\mathbf{\Lambda}$};
+       \node[det, below=of x1] (A0) {$\mathbf{A}_0$};
+       \node[right=of A0] (Adots) {$\cdots$};
+       \node[det, right=of Adots] (An) {$\mathbf{A}_{N-2}$};
+       \node[latent, above=of dots] (nu) {$\boldsymbol{\nu}$};
+       \edge {mu,Lambda} {x0};
+       \edge {nu} {x1,dots,xn};
+       \edge {A0} {x1};
+       \edge {Adots} {dots};
+       \edge {An} {xn};
+
+       \node[latent, below=of A0] (s0) {$s_{0,k}$};
+       \node[right=of s0] (sdots) {$\cdots$};
+       \node[latent, right=of sdots] (sn) {$\mathbf{s}_{N-2,k}$};
+       \node[latent, left=of s0] (B) {$\mathbf{B}_k$};
+       \edge {B} {A0, Adots, An};
+       \edge {s0} {A0};
+       \edge {sdots} {Adots};
+       \edge {sn} {An};
+
+       \plate {K} {(B)(s0)(sdots)(sn)} {$k=0,\ldots,K-1$};
+
+    where :math:`\boldsymbol{\mu}` and :math:`\mathbf{\Lambda}` are the mean and
+    the precision matrix of the initial state, :math:`\boldsymbol{\nu}` is the
+    precision of the innovation noise, and :math:`\mathbf{A}_n` are the state
+    dynamics matrix obtained by mixing matrices :math:`\mathbf{B}_k` with
+    weights :math:`s_{n,k}`.
+
+    The probability distribution is
+
+    .. math::
+
+       p(\mathbf{x}_0, \ldots, \mathbf{x}_{N-1}) = p(\mathbf{x}_0)
+       \prod^{N-1}_{n=1} p(\mathbf{x}_n | \mathbf{x}_{n-1})
+
+    where
+    
+    .. math::
+
+       p(\mathbf{x}_0) &= \mathcal{N}(\mathbf{x}_0 | \boldsymbol{\mu}, \mathbf{\Lambda})
+       \\
+       p(\mathbf{x}_n|\mathbf{x}_{n-1}) &= \mathcal{N}(\mathbf{x}_n |
+       \mathbf{A}_{n-1}\mathbf{x}_{n-1}, \mathrm{diag}(\boldsymbol{\nu})),
+       \quad \text{for } n=1,\ldots,N-1,
+       \\
+       \mathbf{A}_n & = \sum^{K-1}_{k=0} s_{n,k} \mathbf{B}_k, \quad \text{for }
+       n=0,\ldots,N-2.
+       
+
+    Parameters
+    ----------
+    
+    mu : Gaussian-like node or (...,D)-array
+        :math:`\boldsymbol{\mu}`, mean of :math:`x_0`, :math:`D`-dimensional
+        with plates (...)
+        
+    Lambda : Wishart-like node or (...,D,D)-array
+        :math:`\mathbf{\Lambda}`, precision matrix of :math:`x_0`,
+        :math:`D\times D` -dimensional with plates (...)
+        
+    B : Gaussian-like node or (...,D,D,K)-array
+        :math:`\{\mathbf{B}_k\}_{k=0}^{K-1}`, a set of state dynamics matrix,
+        :math:`D \times K`-dimensional with plates (...,D)
+
+    S : Gaussian-like node or (...,N-1,K)-array
+
+        :math:`\{\mathbf{s}_0,\ldots,\mathbf{s}_{N-2}\}`, time-varying weights
+        of the linear combination, :math:`K`-dimensional with plates (...,N-1)
+        
+    nu : gamma-like node or (...,D)-array
+        :math:`\boldsymbol{\nu}`, diagonal elements of the precision of the
+        innovation process, plates (...,D)
+
+    n : int, optional
+        :math:`N`, the length of the chain. Must be given if :math:`\mathbf{S}`
+        does not have plates over the time domain (which would not make sense).
 
     See also
     --------
-    bayespy.inference.vmp.nodes.gaussian_markov_chain.GaussianMarkovChain
-    bayespy.inference.vmp.nodes.gaussian.Gaussian
-    bayespy.inference.vmp.nodes.wishart.Wishart
+    
+    Gaussian, GaussianARD, Wishart, Gamma, GaussianMarkovChain,
+    SwitchingGaussianMarkovChain
 
+    Notes
+    -----
+
+    Equivalent model block can be constructed with :class:`GaussianMarkovChain`
+    by explicitly using :class:`SumMultiply` to compute the linear combination.
+    However, that approach is not very efficient for large datasets because it
+    does not utilize the structure of :math:`\mathbf{A}_n`, thus it explicitly
+    computes huge moment arrays.
+
+    References
+    ----------
+
+    .. [1] J. Luttinen, T. Raiko, A. Ilin, "Linear State-Space Model with
+       Time-Varying Dynamics," submitted to ECML 2014.
     """
 
     _parent_moments = (GaussianMoments(1),
@@ -893,6 +1026,13 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                        GaussianMoments(2),
                        GaussianMoments(1),
                        GammaMoments())
+
+
+    def __init__(self, mu, Lambda, B, S, nu, n=None, **kwargs):
+        """
+        Create VaryingGaussianMarkovChain node.
+        """
+        super().__init__(mu, Lambda, B, S, nu, n=n, **kwargs)
 
 
     @classmethod
@@ -1294,39 +1434,124 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
 
 class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     r"""
-    VB node for switching Gaussian Markov chain.
+    Node for Gaussian Markov chain random variables with switching dynamics.
 
-    Parents are:
-    `mu` is the mean of x0 (Gaussian)
-    `Lambda` is the precision of x0 (Wishart)
-    `B` contains the template dynamic matrices
-    `z` is the temporal selection of dynamic matrix
-    `v` is the diagonal precision of the innovation (Gamma)
-
-    Not efficient if `v` is time dependent.
-
-    Output is Gaussian Markov chain variables.
+    The node models a sequence of Gaussian variables
+    :math:`\mathbf{x}_0,\ldots,\mathbf{x}_{N-1}$ with linear Markovian dynamics.
+    The dynamics may change in time, which is obtained by having a set of
+    matrices and at each time selecting one of them as the state dynamics
+    matrix.  The graphical model can be presented as:
 
     .. bayesnet::
 
-       TODO: FIX THIS
-
-       \node[latent] (x1) {$\mathbf{x}_1$};
-       \node[latent, right=of x1] (x2) {$\mathbf{x}_2$};
-       \node[right=of x2] (dots) {$\cdots$};
-       \node[latent, right=of dots] (xn) {$\mathbf{x}_n$};
-       \edge {x1}{x2};
-       \edge {x2}{dots};
+       \tikzstyle{latent} += [minimum size=40pt];
+       
+       \node[latent] (x0) {$\mathbf{x}_0$};
+       \node[latent, right=of x0] (x1) {$\mathbf{x}_1$};
+       \node[right=of x1] (dots) {$\cdots$};
+       \node[latent, right=of dots] (xn) {$\mathbf{x}_{N-1}$};
+       \edge {x0}{x1};
+       \edge {x1}{dots};
        \edge {dots}{xn};
 
+       \node[latent, above left=1 and 0.1 of x0] (mu) {$\boldsymbol{\mu}$};
+       \node[latent, above right=1 and 0.1 of x0] (Lambda) {$\mathbf{\Lambda}$};
+       \node[det, below=of x1] (A0) {$\mathbf{A}_0$};
+       \node[right=of A0] (Adots) {$\cdots$};
+       \node[det, right=of Adots] (An) {$\mathbf{A}_{N-2}$};
+       \node[latent, above=of dots] (nu) {$\boldsymbol{\nu}$};
+       \edge {mu,Lambda} {x0};
+       \edge {nu} {x1,dots,xn};
+       \edge {A0} {x1};
+       \edge {Adots} {dots};
+       \edge {An} {xn};
+
+       \node[latent, below=of A0] (z0) {$z_0$};
+       \node[right=of z0] (zdots) {$\cdots$};
+       \node[latent, right=of zdots] (zn) {$z_{N-2}$};
+       \node[latent, left=of z0] (B) {$\mathbf{B}_k$};
+       \edge {B} {A0, Adots, An};
+       \edge {z0} {A0};
+       \edge {zdots} {Adots};
+       \edge {zn} {An};
+
+       \plate {K} {(B)} {$k=0,\ldots,K-1$};
+
+    where :math:`\boldsymbol{\mu}` and :math:`\mathbf{\Lambda}` are the mean and
+    the precision matrix of the initial state, :math:`\boldsymbol{\nu}` is the
+    precision of the innovation noise, and :math:`\mathbf{A}_n` are the state
+    dynamics matrix obtained by selecting one of the matrices
+    :math:`\{\mathbf{B}_k\}^{K-1}_{k=0}` at each time.  The selections are
+    provided by :math:`z_n\in\{0,\ldots,K-1\}`.  The probability distribution is
+
+    .. math::
+
+       p(\mathbf{x}_0, \ldots, \mathbf{x}_{N-1}) = p(\mathbf{x}_0)
+       \prod^{N-1}_{n=1} p(\mathbf{x}_n | \mathbf{x}_{n-1})
+
+    where
+    
+    .. math::
+
+       p(\mathbf{x}_0) &= \mathcal{N}(\mathbf{x}_0 | \boldsymbol{\mu}, \mathbf{\Lambda})
+       \\
+       p(\mathbf{x}_n|\mathbf{x}_{n-1}) &= \mathcal{N}(\mathbf{x}_n |
+       \mathbf{A}_{n-1}\mathbf{x}_{n-1}, \mathrm{diag}(\boldsymbol{\nu})),
+       \quad \text{for } n=1,\ldots,N-1,
+       \\
+       \mathbf{A}_n &= \mathbf{B}_{z_n}, \quad \text{for }
+       n=0,\ldots,N-2.
+       
+
+    Parameters
+    ----------
+    
+    mu : Gaussian-like node or (...,D)-array
+        :math:`\boldsymbol{\mu}`, mean of :math:`x_0`, :math:`D`-dimensional
+        with plates (...)
+        
+    Lambda : Wishart-like node or (...,D,D)-array
+        :math:`\mathbf{\Lambda}`, precision matrix of :math:`x_0`,
+        :math:`D\times D` -dimensional with plates (...)
+        
+    B : Gaussian-like node or (...,D,D,K)-array
+        :math:`\{\mathbf{B}_k\}_{k=0}^{K-1}`, a set of state dynamics matrix,
+        :math:`D \times K`-dimensional with plates (...,D)
+
+    Z : categorical-like node or (...,N-1)-array
+        :math:`\{z_0,\ldots,z_{N-2}\}`, time-dependent selection,
+        :math:`K`-categorical with plates (...,N-1)
+        
+    nu : gamma-like node or (...,D)-array
+        :math:`\boldsymbol{\nu}`, diagonal elements of the precision of the
+        innovation process, plates (...,D)
+
+    n : int, optional
+        :math:`N`, the length of the chain. Must be given if :math:`\mathbf{Z}`
+        does not have plates over the time domain (which would not make sense).
 
     See also
     --------
-    bayespy.inference.vmp.nodes.gaussian_markov_chain.GaussianMarkovChain
-    bayespy.inference.vmp.nodes.gaussian.Gaussian
-    bayespy.inference.vmp.nodes.wishart.Wishart
+    
+    Gaussian, GaussianARD, Wishart, Gamma, GaussianMarkovChain,
+    VaryingGaussianMarkovChain, Categorical, CategoricalMarkovChain
 
+    Notes
+    -----
+
+    Equivalent model block can be constructed with :class:`GaussianMarkovChain`
+    by explicitly using :class:`Gate` to select the state dynamics matrix.
+    However, that approach is not very efficient for large datasets because it
+    does not utilize the structure of :math:`\mathbf{A}_n`, thus it explicitly
+    computes huge moment arrays.
     """
+
+
+    def __init__(self, mu, Lambda, B, Z, nu, n=None, **kwargs):
+        """
+        Create SwitchingGaussianMarkovChain node.
+        """
+        super().__init__(mu, Lambda, B, Z, nu, n=n, **kwargs)
 
 
     @classmethod

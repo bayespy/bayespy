@@ -163,12 +163,47 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
 
     
 class Multinomial(ExponentialFamily):
-    """
+    r"""
     Node for multinomial random variables.
+
+    Assume there are :math:`K` categories and :math:`N` trials each of which
+    leads a success for exactly one of the categories.  Given the probabilities
+    :math:`p_0,\ldots,p_{K-1}` for the categories, multinomial distribution is
+    gives the probability of any combination of numbers of successes for the
+    categories.
+    
+    The node models the number of successes :math:`x_k \in \{0, \ldots, n\}` in
+    :math:`n` trials with probability :math:`p_k` for success in :math:`K`
+    categories.
+
+    .. math::
+
+        \mathrm{Multinomial}(\mathbf{x}| N, \mathbf{p}) = \frac{N!}{x_0!\cdots
+        x_{K-1}!} p_0^{x_0} \cdots p_{K-1}^{x_{K-1}}
+
+    Parameters
+    ----------
+
+    n : scalar or array
+        :math:`N`, number of trials
+    p : Dirichlet-like node or (...,K)-array
+        :math:`\mathbf{p}`, probabilities of successes for the categories
+
+    See also
+    --------
+
+    Dirichlet, Binomial, Categorical
     """
     
     _moments = MultinomialMoments()
     _parent_moments = (DirichletMoments(),)
+
+
+    def __init__(self, n, p, **kwargs):
+        """
+        Create Multinomial node.
+        """
+        super().__init__(n, p, **kwargs)
 
     
     @classmethod

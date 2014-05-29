@@ -31,7 +31,7 @@ from .node import Node, Moments
 
 class Deterministic(Node):
     """
-    Base class for nodes that are deterministic.
+    Base class for deterministic nodes.
 
     Sub-classes must implement:
     1. For implementing the deterministic function:

@@ -21,21 +21,43 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+
 """
 Module for the exponential distribution node.
 """
 
 from .gamma import (GammaMoments,
                     Gamma)
+from .expfamily import ExponentialFamily
 
 
 ExponentialMoments = GammaMoments
 
 
 class Exponential(Gamma):
-    """
+    r"""
     Node for exponential random variables.
 
+    .. warning::
+
+        Use :class:`Gamma` instead of this. `Exponential(l)` is equivalent to
+        `Gamma(1, l)`.
+
+    Parameters
+    ----------
+
+    l : gamma-like node or scalar or array
+
+        Rate parameter
+
+    See also
+    --------
+
+    Gamma, Poisson
+
+    Notes
+    -----
+    
     For simplicity, this is just a gamma node with the first parent fixed to
     one.  Note that this is a bit inconsistent with the BayesPy philosophy which
     states that the node does not only define the form of the prior distribution
@@ -51,5 +73,12 @@ class Exponential(Gamma):
     an exponential prior distribution but gamma posterior approximation.
     """
 
-    def __init__(self, b, **kwargs):
-        super().__init__(1, b, **kwargs)
+
+    def __init__(self, l, **kwargs):
+        raise NotImplementedError("Not yet implemented. Use Gamma(1, lambda)")
+        super().__init__(1, l, **kwargs)
+
+
+    @classmethod
+    def _constructor(cls, l, **kwargs):
+        raise NotImplementedError("Not yet implemented. Use Gamma(1, lambda)")

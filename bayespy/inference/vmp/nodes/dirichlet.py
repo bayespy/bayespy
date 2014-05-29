@@ -151,7 +151,22 @@ class DirichletDistribution(ExponentialFamilyDistribution):
         """
         Compute the moments and :math:`f(x)` for a fixed value.
         """
-        raise NotImplementedError()
+        # Check that probabilities are non-negative
+        p = np.asanyarray(p)
+        if np.ndim(p) < 1:
+            raise ValueError("Probabilities must be given as a vector")
+        if np.any(p < 0) or np.any(p > 1):
+            raise ValueError("Probabilities must be in range [0,1]")
+        if not np.allclose(np.sum(p, axis=-1), 1.0):
+            raise ValueError("Probabilities must sum to one")
+        # Normalize probabilities
+        p = p / np.sum(p, axis=-1, keepdims=True)
+        # Message is log-probabilities
+        logp = np.log(p)
+        u = [logp]
+        f = np.nan
+        raise NotImplementedError("Check formula for f")
+        return (u, f)
 
     
     def random(self, *phi, plates=None):
@@ -162,8 +177,34 @@ class DirichletDistribution(ExponentialFamilyDistribution):
         
 
 class Dirichlet(ExponentialFamily):
-    """
+    r"""
     Node for Dirichlet random variables.
+
+    The node models a set of probabilities :math:`\{\pi_0, \ldots, \pi_{K-1}\}`
+    which satisfy :math:`\sum_{k=0}^{K-1} \pi_k = 1` and :math:`\pi_k \in [0,1]
+    \ \forall k=0,\ldots,K-1`.
+
+    .. math::
+
+        p(\pi_0, \ldots, \pi_{K-1}) = \mathrm{Dirichlet}(\alpha_0, \ldots,
+        \alpha_{K-1})
+
+    where :math:`\alpha_k` are concentration parameters.
+
+    The posterior approximation has the same functional form but with different
+    concentration parameters.
+
+    Parameters
+    ----------
+    
+    alpha : (...,K)-shaped array
+    
+        Prior counts :math:`\alpha_k`
+
+    See also
+    --------
+    
+    Beta, Categorical, Multinomial, CategoricalMarkovChain
     """
 
     _moments = DirichletMoments()
