@@ -16,7 +16,7 @@ MANIFEST
 *.backup
 *.egg-info
 doc/source/generated
-doc/source/_notebooks/*_files/*
+doc/source/examples/*_files/*
 ENV
 *.hdf5
 .env*

@@ -27,7 +27,7 @@ BayesPy -- Bayesian Python
    
    intro
    user_guide/user_guide
-   examples
+   examples/examples
    dev_guide/dev_guide
    user_api/user_api
    dev_api/dev_api
