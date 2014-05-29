@@ -1,5 +1,5 @@
 ..
-   Copyright (C) 2011,2012 Jaakko Luttinen
+   Copyright (C) 2014 Jaakko Luttinen
 
    This file is licensed under Version 3.0 of the GNU General Public
    License. See LICENSE for a text of the license.
@@ -18,24 +18,12 @@
    You should have received a copy of the GNU General Public License
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
-BayesPy -- Bayesian Python
-==========================
 
+Developer API
+=============
+
+Moments, Distributions, utils.misc, utils.random etc ...?
 
 .. toctree::
-   :maxdepth: 2
-   
-   intro
-   user_guide/user_guide
-   examples
-   dev_guide/dev_guide
-   user_api/user_api
-   dev_api/dev_api
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+    
+    plot

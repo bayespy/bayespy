@@ -144,19 +144,3 @@ Using the messages, the natural parameters of
    + \sum_{\mathbf{x} \in \mathrm{ch}(\boldsymbol{\theta})}
      \mathbf{m}_{\mathbf{x}\rightarrow\boldsymbol{\theta}}.
 
-.. include:: vmp/vmp_normal.rst
-
-.. include:: vmp/vmp_gaussian.rst
-
-.. include:: vmp/vmp_gamma.rst
-
-.. include:: vmp/vmp_wishart.rst
-
-.. include:: vmp/vmp_normal_gamma.rst
-
-.. include:: vmp/vmp_gaussian_wishart.rst
-
-.. include:: vmp/vmp_gaussian_gamma.rst
-
-.. include:: vmp/vmp_mixture.rst
-
