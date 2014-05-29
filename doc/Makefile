@@ -63,7 +63,7 @@ html: latexpdf
 	cp $(BUILDDIR)/latex/BayesPy.pdf $(BUILDDIR)/html/_static/
 	cp source/_notebooks/*.ipynb $(BUILDDIR)/html/_notebooks/
 	cp source/_notebooks/*.py $(BUILDDIR)/html/_notebooks/
-	cp -r source/_notebooks/_files $(BUILDDIR)/html/_notebooks/
+	cp -r source/_notebooks/*_files $(BUILDDIR)/html/_notebooks/
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
