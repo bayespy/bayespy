@@ -47,7 +47,7 @@ from bayespy.utils import (misc,
 pyplot = plt
 
 
-def pdf(Z, x, *args, **kwargs):
+def pdf(Z, x, *args, name=None, **kwargs):
     """
     Plot probability density function of a scalar variable.
     """
@@ -56,7 +56,19 @@ def pdf(Z, x, *args, **kwargs):
     except AttributeError:
         lpdf = Z(x)
     p = np.exp(lpdf)
-    return plt.plot(x, p, *args, **kwargs)
+    retval = plt.plot(x, p, *args, **kwargs)
+
+    if name is None:
+        try:
+            name = Z.name
+        except AttributeError:
+            pass
+
+    if name:
+        plt.title(r'$q(%s)$' % (name))
+        plt.xlabel(r'$%s$' % (name))
+        
+    return retval
 
 
 def contour(Z, x, y, n=None, **kwargs):
