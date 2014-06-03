@@ -53,12 +53,18 @@ notebooks:
 	(cd source/examples/ && \
 	ipython nbconvert --to rst *.ipynb && \
 	ipython nbconvert --to python *.ipynb)
+	(cd source/user_guide/ && \
+	ipython nbconvert --to rst *.ipynb && \
+	ipython nbconvert --to python *.ipynb)
 	@echo
 	@echo "Build finished. The notebooks have been converted to RST and Python."
 
-html: latexpdf
+html: latexpdf notebooks
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	cp $(BUILDDIR)/latex/BayesPy.pdf $(BUILDDIR)/html/_static/
+	cp source/user_guide/*.ipynb $(BUILDDIR)/html/user_guide/
+	cp source/user_guide/*.py $(BUILDDIR)/html/user_guide/
+	cp -r source/user_guide/*_files $(BUILDDIR)/html/user_guide/
 	cp source/examples/*.ipynb $(BUILDDIR)/html/examples/
 	cp source/examples/*.py $(BUILDDIR)/html/examples/
 	cp -r source/examples/*_files $(BUILDDIR)/html/examples/
@@ -121,7 +127,7 @@ latex:
 	@echo "Run \`make' in that directory to run these through (pdf)latex" \
 	      "(use \`make latexpdf' here to do that automatically)."
 
-latexpdf:
+latexpdf: notebooks
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
 	@echo "Running LaTeX files through pdflatex..."
 	$(MAKE) -C $(BUILDDIR)/latex all-pdf
