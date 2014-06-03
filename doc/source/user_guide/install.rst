@@ -20,4 +20,4 @@
 
 
 
-.. include:: ../../INSTALL.rst
+.. include:: ../../../INSTALL.rst

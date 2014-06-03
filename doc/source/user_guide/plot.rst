@@ -19,5 +19,19 @@
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Examining results
-=================
+Examining the results
+---------------------
+
+After the results have been obtained, it is important to be able to
+examine the results easily.  ``show`` method prints the approximate
+posterior distribution of the node.  Also, ``get_moments`` can be used
+to obtain the sufficient statistics of the node.
+
+.. todo::
+
+   In order to examine the results more carefully, ``get_parameters``
+   method should return the parameter values of the approximate
+   posterior distribution.  The user may use these values for
+   arbitrarily complex further analysis.
+
+

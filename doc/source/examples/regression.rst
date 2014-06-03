@@ -44,15 +44,15 @@ Linear regression
     Fh = SumMultiply('i,i', B, Xh)
     bpplt.plot(Fh, x=xh, scale=2)
     bpplt.plot(y, x=x, color='r', marker='x', linestyle='None')
-    bpplt.plot(k*xh+c, x=xh, color='r')
+    bpplt.plot(k*xh+c, x=xh, color='r');
 
 .. parsed-literal::
 
-    Iteration 1: loglike=-4.348575e+01 (0.010 seconds)
-    Iteration 2: loglike=-4.288957e+01 (0.000 seconds)
-    Iteration 3: loglike=-4.287939e+01 (0.000 seconds)
-    Iteration 4: loglike=-4.287903e+01 (0.000 seconds)
-    Iteration 5: loglike=-4.287902e+01 (0.010 seconds)
+    Iteration 1: loglike=-4.515537e+01 (0.000 seconds)
+    Iteration 2: loglike=-4.429472e+01 (0.010 seconds)
+    Iteration 3: loglike=-4.428241e+01 (0.000 seconds)
+    Iteration 4: loglike=-4.428197e+01 (0.000 seconds)
+    Iteration 5: loglike=-4.428195e+01 (0.010 seconds)
     Converged.
 
 
@@ -62,33 +62,24 @@ Linear regression
 
 .. code:: python
 
-    bpplt.pdf(tau, np.linspace(0,1,100), color='k')
+    bpplt.pdf(tau, np.linspace(1e-6,1,100), color='k')
     bpplt.pyplot.axvline(s**(-2), color='r')
-
-.. parsed-literal::
-
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/nodes/gamma.py:151: RuntimeWarning: divide by zero encountered in log
-      logx = np.log(x)
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/nodes/expfamily.py:368: RuntimeWarning: invalid value encountered in add
-      return (self.g + f + Z)
+    # Add labels
+    bpplt.pyplot.title(r'$q(\tau)$')
+    bpplt.pyplot.xlabel(r'$\tau$');
 
 
-
-
-.. parsed-literal::
-
-    <matplotlib.lines.Line2D at 0x7f21f49435d0>
-
-
-
-
-.. image:: regression_files/regression_3_2.png
+.. image:: regression_files/regression_3_0.png
 
 
 .. code:: python
 
-    bpplt.contour(B, np.linspace(1,3,100), np.linspace(1,9,100), n=10, colors='k')
+    bpplt.contour(B, np.linspace(1,3,1000), np.linspace(1,9,1000), n=10, colors='k')
     bpplt.plot(c, x=k, color='r', marker='x', linestyle='None', markersize=10, markeredgewidth=2)
+    # Add labels
+    bpplt.pyplot.title(r'$q(k,c)$')
+    bpplt.pyplot.xlabel(r'$k$')
+    bpplt.pyplot.ylabel(r'$c$');
 
 
 .. image:: regression_files/regression_4_0.png
@@ -114,67 +105,86 @@ Improving accuracy
 
 .. parsed-literal::
 
-    Iteration 1: loglike=-4.419598e+01 (0.000 seconds)
-    Iteration 2: loglike=-4.419598e+01 (0.000 seconds)
+    Iteration 1: loglike=-4.594957e+01 (0.000 seconds)
+    Iteration 2: loglike=-4.594957e+01 (0.000 seconds)
     Converged.
 
 
 .. code:: python
 
-    #import bayespy.plot as bpplt
-    # These two lines are needed to enable inline plotting IPython Notebooks
-    #%matplotlib inline
-    #bpplt.plt.plot([])
-    
-    bpplt.plotmatrix(B_tau)
-
-.. parsed-literal::
-
-    /home/jluttine/workspace/bayespy/bayespy/plot.py:747: RuntimeWarning: divide by zero encountered in log
-      logx = np.log(x)
-    /home/jluttine/workspace/bayespy/bayespy/utils/random.py:190: RuntimeWarning: invalid value encountered in subtract
-      return a_logb - gammaln_a + a_logx - logx - bx
+    bpplt.pdf(B_tau.get_marginal_logpdf(gaussian=None, gamma=True),
+              np.linspace(1e-6,1,100), color='k')
+    bpplt.pyplot.axvline(s**(-2), color='r')
+    # Add labels
+    bpplt.pyplot.title(r'$q(\tau)$')
+    bpplt.pyplot.xlabel(r'$\tau$');
 
 
+.. image:: regression_files/regression_7_0.png
 
 
-.. parsed-literal::
+.. code:: python
 
-    array([[<matplotlib.axes.AxesSubplot object at 0x7f21f4a17b10>,
-            <matplotlib.axes.AxesSubplot object at 0x7f21f49e4310>,
-            <matplotlib.axes.AxesSubplot object at 0x7f21f4889890>],
-           [<matplotlib.axes.AxesSubplot object at 0x7f21f4848250>,
-            <matplotlib.axes.AxesSubplot object at 0x7f21f4813710>,
-            <matplotlib.axes.AxesSubplot object at 0x7f21f47ccd90>],
-           [<matplotlib.axes.AxesSubplot object at 0x7f21f479e190>,
-            <matplotlib.axes.AxesSubplot object at 0x7f21f47313d0>,
-            <matplotlib.axes.AxesSubplot object at 0x7f21f46ad2d0>]], dtype=object)
-
-
+    bpplt.contour(B_tau.get_marginal_logpdf(gaussian=[0,1], gamma=False),
+                  np.linspace(1,3,100), np.linspace(1,9,100),
+                  n=10, colors='k')
+    # Plot the true value
+    bpplt.plot(c, x=k, color='r', marker='x', linestyle='None', markersize=10, markeredgewidth=2)
+    # Add labels
+    bpplt.pyplot.title(r'$q(k,c)$')
+    bpplt.pyplot.xlabel(r'$k$')
+    bpplt.pyplot.ylabel(r'$c$');
 
 
-.. image:: regression_files/regression_7_2.png
+.. image:: regression_files/regression_8_0.png
+
+
+.. code:: python
+
+    bpplt.contour(B_tau.get_marginal_logpdf(gaussian=[0], gamma=True),
+                  np.linspace(1,3,100), np.linspace(1e-6,1,100),
+                  n=10, colors='k')
+    bpplt.plot(s**(-2), x=k, color='r', marker='x', linestyle='None', markersize=10, markeredgewidth=2)
+    bpplt.pyplot.title(r'$q(k,\tau)$')
+    bpplt.pyplot.xlabel(r'$k$')
+    bpplt.pyplot.ylabel(r'$\tau$');
+
+
+.. image:: regression_files/regression_9_0.png
 
 
 .. code:: python
 
     xh = np.linspace(-5, 15, 100)
     Xh = np.vstack([xh, np.ones(len(xh))]).T
-    Fh = SumMultiply('i,i', B, Xh)
-    bpplt.timeseries(Fh, x=xh, scale=2)
-    bpplt.plt.plot(x, y, 'rx')
-    bpplt.plt.plot(xh, k*xh+c, 'r')
+    Fh_tau = SumMultiply('i,i', B_tau, Xh)
+    bpplt.plot(Fh_tau, x=xh, scale=2)
+    bpplt.plot(y, x=x, color='r', marker='x', linestyle='None')
+    bpplt.plot(k*xh+c, x=xh, color='r')
+
+::
 
 
+    ---------------------------------------------------------------------------
+    AttributeError                            Traceback (most recent call last)
 
-.. parsed-literal::
+    <ipython-input-8-bad1c68bbf3d> in <module>()
+          2 Xh = np.vstack([xh, np.ones(len(xh))]).T
+          3 Fh_tau = SumMultiply('i,i', B_tau, Xh)
+    ----> 4 bpplt.plot(Fh_tau, x=xh, scale=2)
+          5 bpplt.plot(y, x=x, color='r', marker='x', linestyle='None')
+          6 bpplt.plot(k*xh+c, x=xh, color='r')
 
-    [<matplotlib.lines.Line2D at 0x7f21f453ab50>]
+
+    /home/jluttine/workspace/bayespy/bayespy/plot.py in plot(Y, axis, scale, center, **kwargs)
+        125             return plot_gaussian(Y, axis=axis, scale=scale, center=center, **kwargs)
+        126 
+    --> 127     (mu, var) = Y.get_mean_and_variance()
+        128     std = np.sqrt(var)
+        129 
 
 
-
-
-.. image:: regression_files/regression_8_1.png
+    AttributeError: 'SumMultiply' object has no attribute 'get_mean_and_variance'
 
 
 Multivariate regression

@@ -44,19 +44,26 @@ Xh = np.vstack([xh, np.ones(len(xh))]).T
 Fh = SumMultiply('i,i', B, Xh)
 bpplt.plot(Fh, x=xh, scale=2)
 bpplt.plot(y, x=x, color='r', marker='x', linestyle='None')
-bpplt.plot(k*xh+c, x=xh, color='r')
+bpplt.plot(k*xh+c, x=xh, color='r');
 
 
 # In[2]:
 
-bpplt.pdf(tau, np.linspace(0,1,100), color='k')
+bpplt.pdf(tau, np.linspace(1e-6,1,100), color='k')
 bpplt.pyplot.axvline(s**(-2), color='r')
+# Add labels
+bpplt.pyplot.title(r'$q(\tau)$')
+bpplt.pyplot.xlabel(r'$\tau$');
 
 
 # In[3]:
 
-bpplt.contour(B, np.linspace(1,3,100), np.linspace(1,9,100), n=10, colors='k')
+bpplt.contour(B, np.linspace(1,3,1000), np.linspace(1,9,1000), n=10, colors='k')
 bpplt.plot(c, x=k, color='r', marker='x', linestyle='None', markersize=10, markeredgewidth=2)
+# Add labels
+bpplt.pyplot.title(r'$q(k,c)$')
+bpplt.pyplot.xlabel(r'$k$')
+bpplt.pyplot.ylabel(r'$c$');
 
 
 ### Improving accuracy
@@ -79,34 +86,58 @@ Q.update(repeat=10)
 
 # In[5]:
 
-#import bayespy.plot as bpplt
-# These two lines are needed to enable inline plotting IPython Notebooks
-#%matplotlib inline
-#bpplt.plt.plot([])
-
-bpplt.plotmatrix(B_tau)
+bpplt.pdf(B_tau.get_marginal_logpdf(gaussian=None, gamma=True),
+          np.linspace(1e-6,1,100), color='k')
+bpplt.pyplot.axvline(s**(-2), color='r')
+# Add labels
+bpplt.pyplot.title(r'$q(\tau)$')
+bpplt.pyplot.xlabel(r'$\tau$');
 
 
 # In[6]:
 
+bpplt.contour(B_tau.get_marginal_logpdf(gaussian=[0,1], gamma=False),
+              np.linspace(1,3,100), np.linspace(1,9,100),
+              n=10, colors='k')
+# Plot the true value
+bpplt.plot(c, x=k, color='r', marker='x', linestyle='None', markersize=10, markeredgewidth=2)
+# Add labels
+bpplt.pyplot.title(r'$q(k,c)$')
+bpplt.pyplot.xlabel(r'$k$')
+bpplt.pyplot.ylabel(r'$c$');
+
+
+# In[7]:
+
+bpplt.contour(B_tau.get_marginal_logpdf(gaussian=[0], gamma=True),
+              np.linspace(1,3,100), np.linspace(1e-6,1,100),
+              n=10, colors='k')
+bpplt.plot(s**(-2), x=k, color='r', marker='x', linestyle='None', markersize=10, markeredgewidth=2)
+bpplt.pyplot.title(r'$q(k,\tau)$')
+bpplt.pyplot.xlabel(r'$k$')
+bpplt.pyplot.ylabel(r'$\tau$');
+
+
+# In[8]:
+
 xh = np.linspace(-5, 15, 100)
 Xh = np.vstack([xh, np.ones(len(xh))]).T
-Fh = SumMultiply('i,i', B, Xh)
-bpplt.timeseries(Fh, x=xh, scale=2)
-bpplt.plt.plot(x, y, 'rx')
-bpplt.plt.plot(xh, k*xh+c, 'r')
+Fh_tau = SumMultiply('i,i', B_tau, Xh)
+bpplt.plot(Fh_tau, x=xh, scale=2)
+bpplt.plot(y, x=x, color='r', marker='x', linestyle='None')
+bpplt.plot(k*xh+c, x=xh, color='r')
 
 
 ### Multivariate regression
 
 ### Non-linear regression
 
-# In[6]:
+# In[ ]:
 
 
 
 
-# In[6]:
+# In[ ]:
 
 
 
