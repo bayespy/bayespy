@@ -16,6 +16,7 @@ MANIFEST
 *.backup
 *.egg-info
 doc/source/generated
+doc/source/*/generated
 doc/source/examples/*_files/*
 doc/source/*/*_files/*
 ENV

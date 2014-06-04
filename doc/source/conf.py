@@ -56,7 +56,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 # Or manually: sphinx-autogen -o source/generated source/*.rst
 #autosummary_generate = False
 import glob
-autosummary_generate = glob.glob("*.rst")
+autosummary_generate = glob.glob("*.rst") + glob.glob("*/*.rst") + glob.glob("*/*/*.rst") + glob.glob("*/*/*/*.rst")
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
