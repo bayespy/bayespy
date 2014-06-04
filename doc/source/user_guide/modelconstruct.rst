@@ -23,30 +23,151 @@ Constructing the model
 ======================
 
 
-In BayesPy, the model is constructed by creating nodes which form a
-network.  Roughly speaking, a node corresponds to a random variable
-from a specific probability distribution.  In the example, ``mu`` was
-``Normal`` node corresponding to :math:`\mu` from the normal
-distribution.  However, a node can also correspond to a set of random
-variables or nodes can be deterministic not corresponding to any
-random variable.
+In BayesPy, the model is constructed by creating nodes which form a directed
+network.  There are two types of nodes: stochastic and deterministic.  A
+stochastic node corresponds to a random variable (or a set of random variables)
+from a specific probability distribution.  A deterministic node corresponds to a
+deterministic function of its parents.
 
-When you create a node, you give its parents as parameters.  The role
-and the number of the parents depend on the node.  For instance,
-``Normal`` node takes two parents (mean and precision) and ``Gamma``
-node takes two parents (scale and rate).
 
-.. warning::
+Meaning of nodes
+----------------
 
-   Currently, it is important that the parent has the correct node
-   type, because the model construction and VB inference engine are
-   not yet separated.  For instance, the parents mean and precision of
-   ``Normal`` node must be ``Normal`` and ``Gamma`` nodes (or other
-   nodes that have similar output), respectively.  Thus, currently one
-   can build only conjugate-exponential family models.
+.. currentmodule:: bayespy.nodes
 
-Name and plates
-+++++++++++++++
+
+When constructing the network with nodes, the stochastic nodes actually define
+three important aspects: 1) the prior probability distribution for the
+variables; 2) the factorization of the posterior approximation; and 3) the
+functional form of the posterior approximation for the variables
+
+
+First, the most intuitive feature of the nodes is that they define the prior
+distribution. In the previous example, ``mu`` was a stochastic
+:class:`GaussianARD` node corresponding to :math:`\mu` from the normal
+distribution, ``tau`` was a stochastic :class:`Gamma` node corresponding to
+:math:`\tau` from the gamma distribution, and ``y`` was a stochastic
+:class:`GaussianARD` node corresponding to :math:`y` from the normal
+distribution with mean :math:`\mu` and precision :math:`\tau`.  If we denote the
+set of all nodes by :math:`\Omega`, and by :math:`\pi_X` the set of parents of a
+node :math:`X`, the model is defined as
+
+.. math::
+
+   p(\Omega) = \prod_{X \in \Omega} p(X|\pi_X),
+
+where nodes correspond to the terms :math:`p(X|\pi_X)`.
+
+
+Second, the nodes define the structure of the posterior approximation.  The
+variational Bayesian approximation factorizes with respect to nodes, that is,
+each node corresponds to an independent probability distribution in the
+posterior approximation.  In the previous example, ``mu`` and ``tau`` were
+separate nodes, thus the posterior approximation factorizes with respect to
+them: :math:`q(\mu)q(\tau)`.  Thus, the posterior approximation can be written
+as:
+
+.. math::
+
+   p(\tilde{\Omega}|\hat{\Omega}) \approx \prod_{X \in \tilde{\Omega}} q(X),
+
+where :math:`\tilde{\Omega}` is the set of latent nodes and :math:`\hat{\Omega}`
+is the set of observed nodes.  Sometimes one may want to avoid the factorization
+between some variables.  For this purpose, there are some nodes which model
+several variables jointly without factorization.  For instance,
+:class:`GaussianGammaISO` is a joint node for :math:`\mu` and :math:`\tau`
+variables from the normal-gamma distribution and the posterior approximation
+does not factorize between :math:`\mu` and :math:`\tau`, that is, the posterior
+approximation is :math:`q(\mu,\tau)`.
+
+
+Last, the nodes define the functional form of the posterior approximation.
+Usually, the posterior approximation has the same or similar functional form as
+the prior.  For instance, :class:`Gamma` uses gamma distribution to also
+approximate the posterior distribution.  Similarly, :class:`GaussianARD` uses
+Gaussian distribution for the posterior.  However, the posterior approximation
+of :class:`GaussianARD` uses a full covariance matrix although the prior assumes
+a diagonal covariance matrix.  Thus, there can be slight differences in the
+exact functional form of the posterior approximation but the rule of thumb is
+that the functional form of the posterior approximation is the same as the
+functional form of the prior.
+
+
+Creating nodes
+--------------
+
+Creating a node is basically like writing the conditional prior distribution of
+the variable in Python.  The node is constructed by giving the parent nodes,
+that is, the conditioning variables as arguments.  The number of parents and
+their meaning depend on the node.  For instance, a :class:`Gaussian` node is
+created by giving the mean vector and the precision matrix.  These parents can
+be constant numerical arrays if they are known:
+
+.. code-block:: python3
+
+   from bayespy.nodes import Gaussian
+   X = Gaussian([2, 5], [[1.0, 0.3], [0.3, 1.0]])
+
+or other nodes if they are unknown and given prior distributions:
+
+.. code-block:: python3
+
+   from bayespy.nodes import Gaussian, Wishart
+   mu = Gaussian([0, 0], [[1e-6, 0], [0, 1e-6]])
+   Lambda = Wishart(2, [[1, 0], [0, 1]])
+   X = Gaussian(mu, Lambda)
+
+In Bayesian framework in general, one can give quite arbitrary probability
+distributions for variables.  However, one often uses distributions that are
+easy to handle in practice.  Quite often this means that the parents are given
+conjugate priors.  This is also one of the limitations in BayesPy: only
+conjugate family prior distributions are accepted currently.  Thus, although in
+principle one could give, for instance, gamma prior for the mean parameter
+``mu``, only Gaussian-family distributions are accepted because of the
+conjugacy.  If the parent is not of a proper type, an error is raised.
+
+
+Another a bit rarely encountered limitation is that a node cannot have the same
+stochastic node as several parents without intermediate stochastic nodes.  This
+means that a stochastic node cannot be given to another node as a parent in
+several roles.  For instance, the following would lead to an error:
+
+.. code-block:: python3
+
+   from bayespy.nodes import Gaussian, Dot
+   X = Gaussian([0], [[1]])
+   Y = Dot(X, X)
+
+The error is raised because ``X`` is given as two parents for ``Y``.  Even if
+``X`` is not given several times directly but there are some intermediate
+deterministic nodes, an error is raised.  However, it is valid that a node is a
+parent of another node via several paths if all except one path has intermediate
+stochastic nodes.  Another way to put this is that the parents of a node should
+have independent posterior approximations.  Thus, for instance, the following
+construction does not raise errors:
+
+.. code-block:: python3
+
+   from bayespy.nodes import Gaussian, Dot
+   X = Gaussian([0], [[1]])
+   Z = Gaussian(X, [[1]])
+   Y = Dot(X, Z)
+
+This works because there is now an intermediate stochastic node ``Z`` on the
+other path from ``X`` node to ``Y`` node.
+
+
+The nodes use a few general optional keyword arguments for defining some properties.
+
+  ``name`` :  name of the node or variable
+
+  ``plates`` : plates of the variable (stochastic variables only)
+
+  ``initialize`` : whether to use default initialization or not (stochastic variables only)
+
+
+Defining plates
+---------------
 
 In general, the nodes take some optional parameters: ``name`` and
 ``plates``.  The parameter ``name`` is used to give a name for the
@@ -63,7 +184,8 @@ would be created as
 
 .. code-block:: python3
 
-   y = bp.nodes.Normal(mu, tau, plates=(10,30))
+   from bayespy.nodes import GaussianARD
+   y = GaussianARD(mu, tau, plates=(10,30))
 
 It is also possible that the parents have plates.  The validity of the
 plates between a child and a parent is checked by comparing the plates
