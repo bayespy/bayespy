@@ -225,6 +225,8 @@ class Node():
     _parent_moments = None
     plates = None
 
+    _id_counter = 0
+
     @ensureparents
     def __init__(self, *parents, dims=None, plates=None, name="", 
                  notify_parents=True, plotter=None):
@@ -233,6 +235,13 @@ class Node():
         self.dims = dims
         self.name = name
         self._plotter = plotter
+
+        parent_id_list = []
+        for parent in parents:
+            parent_id_list = parent_id_list + list(parent._get_id_list())
+        if len(parent_id_list) != len(set(parent_id_list)):
+            raise ValueError("Some parents are direct parents via several "
+                             "paths")
 
         # Inform parent nodes
         if notify_parents:
@@ -255,6 +264,26 @@ class Node():
 
         # Children
         self.children = set()
+
+
+    def _get_id_list(self):
+        """
+        Returns the stochastic ID list.
+
+        This method is used to check that same stochastic nodes are not direct
+        parents of a node several times. It is only valid if there are
+        intermediate stochastic nodes.
+
+        To put it another way: each ID corresponds to one factor q(..) in the
+        posterior approximation. Different IDs mean different factors, thus they
+        mean independence. The parents must have independent factors.
+
+        Stochastic nodes should return their unique ID. Deterministic nodes
+        should return the IDs of their parents. Constant nodes should return
+        empty list of IDs.
+        """
+        raise NotImplementedError()
+
 
     @classmethod
     def _total_plates(cls, plates, *parent_plates):

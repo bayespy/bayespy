@@ -170,6 +170,8 @@ class TestNode(misc.TestCase):
                 super().__init__(*args, **kwargs)
             def _get_message_and_mask_to_parent(self, index):
                 return ([msg], mask)
+            def _get_id_list(self):
+                return []
         parent = Dummy(dims=[dims], plates=plates_parent)
         child = Dummy(parent, dims=[dims], plates=plates_child)
 
@@ -447,6 +449,8 @@ class TestSlice(misc.TestCase):
 
         class MyNode(Node):
             _moments = Moments()
+            def _get_id_list(self):
+                return []
 
         # Integer index
         X = MyNode(plates=(3,4), dims=((),))
@@ -615,6 +619,8 @@ class TestSlice(misc.TestCase):
                 super().__init__(**kwargs)
             def _message_to_child(self):
                 return self.u
+            def _get_id_list(self):
+                return []
 
         # Message not a reference to X.u but a copy of it
         X = DummyNode([np.random.randn(3)],
@@ -772,6 +778,8 @@ class TestSlice(misc.TestCase):
 
         class ParentNode(Node):
             _moments = Moments()
+            def _get_id_list(self):
+                return []
             
         class ChildNode(Node):
             _moments = Moments()
@@ -784,6 +792,8 @@ class TestSlice(misc.TestCase):
                 return self.m
             def _mask_to_parent(self, index):
                 return self.mask2
+            def _get_id_list(self):
+                return []
 
         # General broadcasting
         V = ParentNode(plates=(3,3,3),

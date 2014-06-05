@@ -114,6 +114,9 @@ class Stochastic(Node):
 
     def __init__(self, *args, initialize=True, dims=None, **kwargs):
 
+        self._id = Node._id_counter
+        Node._id_counter += 1
+
         super().__init__(*args,
                          dims=dims,
                          **kwargs)
@@ -130,6 +133,26 @@ class Stochastic(Node):
         if initialize:
             self.initialize_from_prior()
 
+
+    def _get_id_list(self):
+        """
+        Returns the stochastic ID list.
+
+        This method is used to check that same stochastic nodes are not direct
+        parents of a node several times. It is only valid if there are
+        intermediate stochastic nodes.
+
+        To put it another way: each ID corresponds to one factor q(..) in the
+        posterior approximation. Different IDs mean different factors, thus they
+        mean independence. The parents must have independent factors.
+
+        Stochastic nodes should return their unique ID. Deterministic nodes
+        should return the IDs of their parents. Constant nodes should return
+        empty list of IDs.
+        """
+        return [self._id]
+
+    
     def _plates_to_parent(self, index):
         return self._distribution.plates_to_parent(index, self.plates)
 

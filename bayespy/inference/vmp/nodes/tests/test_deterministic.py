@@ -34,6 +34,7 @@ from numpy import testing
 
 from ..node import Node, Moments
 from ..deterministic import tile
+from ..stochastic import Stochastic
 
 
 class TestTile(unittest.TestCase):
@@ -41,12 +42,13 @@ class TestTile(unittest.TestCase):
     def check_message_to_children(self, tiles, u_parent, u_tiled,
                                   dims=None, plates=None):
         # Set up the dummy model
-        class Dummy(Node):
+        class Dummy(Stochastic):
             _moments = Moments()
-            def get_moments(self):
-                return u_parent
+            def __init__(self, u, dims=dims, plates=plates):
+                super().__init__(dims=dims, plates=plates, initialize=False)
+                self.u = u
 
-        X = Dummy(dims=dims, plates=plates)
+        X = Dummy(u_parent, dims=dims, plates=plates)
         Y = tile(X, tiles)
 
         u_Y = Y._compute_moments(u_parent)
@@ -154,9 +156,9 @@ class TestTile(unittest.TestCase):
                                 dims=None, plates_parent=None,
                                 plates_children=None):
         # Set up the dummy model
-        class Dummy(Node):
+        class Dummy(Stochastic):
             _moments = Moments()
-        X = Dummy(dims=dims, plates=plates_parent)
+        X = Dummy(dims=dims, plates=plates_parent, initialize=False)
         Y = tile(X, tiles)
 
         m = Y._compute_message_to_parent(0, m_children, None)
@@ -268,9 +270,9 @@ class TestTile(unittest.TestCase):
                              plates_parent=None,
                              plates_children=None):
         # Set up the dummy model
-        class Dummy(Node):
+        class Dummy(Stochastic):
             _moments = Moments()
-        X = Dummy(dims=[()], plates=plates_parent)
+        X = Dummy(dims=[()], plates=plates_parent, initialize=False)
         Y = tile(X, tiles)
 
         mask = Y._compute_mask_to_parent(0, mask_child)

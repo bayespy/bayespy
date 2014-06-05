@@ -156,6 +156,22 @@ class TestSumMultiply(TestCase):
                           'i,i->i',
                           X)
 
+        # Same parent several times
+        self.assertRaises(ValueError,
+                          SumMultiply,
+                          'i,i->i',
+                          X,
+                          X)
+
+        # Same parent several times via deterministic node
+        Xh = SumMultiply('i->i', X)
+        self.assertRaises(ValueError,
+                          SumMultiply,
+                          'i,i->i',
+                          X,
+                          Xh)
+        
+
     def test_message_to_child(self):
         """
         Test the message from SumMultiply to its children.
