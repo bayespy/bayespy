@@ -240,8 +240,7 @@ class Node():
         for parent in parents:
             parent_id_list = parent_id_list + list(parent._get_id_list())
         if len(parent_id_list) != len(set(parent_id_list)):
-            raise ValueError("Some parents are direct parents via several "
-                             "paths")
+            raise ValueError("Parent nodes are not independent")
 
         # Inform parent nodes
         if notify_parents:
