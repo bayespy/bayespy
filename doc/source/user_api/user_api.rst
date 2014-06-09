@@ -18,12 +18,14 @@
    You should have received a copy of the GNU General Public License
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
+.. _sec-user-api:
 
 User API
 ========
 
 
 .. toctree::
+    :maxdepth: 2
 
     nodes
     plot

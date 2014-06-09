@@ -15,7 +15,7 @@
 # 
 # To demonstrate BayesPy, we'll consider a very simple problem: we have a set of observations from a Gaussian distribution with unknown mean and variance, and we want to learn these parameters.  In this case, we do not use any real-world data but generate some artificial data. The dataset consists of ten samples from a Gaussian distribution with mean 5 and standard deviation 10. This dataset can be generated with NumPy as follows:
 
-# In[7]:
+# In[1]:
 
 import numpy as np
 data = np.random.normal(5, 10, size=(10,))
@@ -35,7 +35,7 @@ data = np.random.normal(5, 10, size=(10,))
 
 # This model can be constructed in BayesPy as follows:
 
-# In[8]:
+# In[2]:
 
 from bayespy.nodes import GaussianARD, Gamma
 mu = GaussianARD(0, 1e-6)
@@ -43,14 +43,14 @@ tau = Gamma(1e-6, 1e-6)
 y = GaussianARD(mu, tau, plates=(10,))
 
 
-# In[9]:
+# In[3]:
 
 y.observe(data)
 
 
 # Next we want to estimate the posterior distribution.  In principle, we could use different inference engines (e.g., MCMC or EP) but currently only variational Bayesian (VB) engine is implemented.  The engine is initialized by giving all the nodes of the model:
 
-# In[10]:
+# In[4]:
 
 from bayespy.inference import VB
 Q = VB(mu, tau, y)
@@ -58,7 +58,7 @@ Q = VB(mu, tau, y)
 
 # The inference algorithm can be run as long as wanted (max. 20 iterations in this case):
 
-# In[11]:
+# In[5]:
 
 Q.update(repeat=20)
 
@@ -67,7 +67,7 @@ Q.update(repeat=20)
 # 
 # VB approximates the true posterior $p(\mu,\tau|\mathbf{y})$ with a distribution which factorizes with respect to the nodes: $q(\mu)q(\tau)$. The resulting approximate posterior distributions $q(\mu)$ and $q(\tau)$ can be examined, for instance, by plotting the marginal probability density functions:
 
-# In[13]:
+# In[6]:
 
 import bayespy.plot as bpplt
 # The following two two lines are just for enabling matplotlib plotting in notebooks

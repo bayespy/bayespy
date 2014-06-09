@@ -49,6 +49,11 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 
+gh-pages:
+	rm -rf build/html
+	cd build && git clone https://github.com/bayespy/bayespy.git -b gh-pages html
+	make html
+
 notebooks:
 	(cd source/examples/ && \
 	ipython nbconvert --to rst *.ipynb && \

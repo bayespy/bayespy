@@ -96,10 +96,10 @@ in this case):
 
 .. parsed-literal::
 
-    Iteration 1: loglike=-5.910731e+01 (0.010 seconds)
-    Iteration 2: loglike=-5.721245e+01 (0.000 seconds)
-    Iteration 3: loglike=-5.721009e+01 (0.000 seconds)
-    Iteration 4: loglike=-5.721007e+01 (0.010 seconds)
+    Iteration 1: loglike=-5.789562e+01 (0.010 seconds)
+    Iteration 2: loglike=-5.612083e+01 (0.000 seconds)
+    Iteration 3: loglike=-5.611848e+01 (0.010 seconds)
+    Iteration 4: loglike=-5.611846e+01 (0.000 seconds)
     Converged.
 
 
@@ -124,7 +124,7 @@ instance, by plotting the marginal probability density functions:
     bpplt.pdf(tau, np.linspace(1e-6, 0.08, num=100), color='k', name=r'\tau');
 
 
-.. image:: quickstart_files/quickstart_14_0.png
+.. image:: quickstartbackup_files/quickstartbackup_14_0.png
 
 
 This example was a very simple introduction to using BayesPy. The model

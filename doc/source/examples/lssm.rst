@@ -2,12 +2,12 @@
 Linear state-space model
 ========================
 
-This example is also available as `an IPython notebook <lssm.ipynb>`__
-or `a Python script <lssm.py>`__.
+This example is also available as `an IPython notebook <lssm.ipynb>`_ or
+`a Python script <lssm.py>`_.
 
-In linear state-space models a sequence of :math:`M`-dimensional
+In linear state-space models a sequence of :math:`M`\ -dimensional
 observations :math:`\mathbf{Y}=(\mathbf{y}_1,\ldots,\mathbf{y}_N)` is
-assumed to be generated from latent :math:`D`-dimensional states
+assumed to be generated from latent :math:`D`\ -dimensional states
 :math:`\mathbf{X}=(\mathbf{x}_1,\ldots,\mathbf{x}_N)` which follow a
 first-order Markov process:
 
@@ -156,7 +156,7 @@ coupled. Because VMP updates one variable at a time, it may lead to slow
 zigzagging. This can be solved by using parameter expansion which
 reduces the coupling. In state-space models, the states
 :math:`\mathbf{x}_n` and the loadings :math:`\mathbf{C}` are coupled
-through a dot product :math:`\mathbf{Cx}_n`, which is unaltered if the
+through a dot product :math:`\mathbf{Cx}_n`\ , which is unaltered if the
 latent space is rotated arbitrarily:
 
 .. math::
@@ -166,8 +166,8 @@ latent space is rotated arbitrarily:
 
 Thus, one intuitive transformation would be
 :math:`\mathbf{C}\rightarrow\mathbf{C}\mathbf{R}^{-1}` and
-:math:`\mathbf{X}\rightarrow\mathbf{R}\mathbf{X}`. In order to keep the
-dynamics of the latent states unaffected by the transformation, the
+:math:`\mathbf{X}\rightarrow\mathbf{R}\mathbf{X}`\ . In order to keep
+the dynamics of the latent states unaffected by the transformation, the
 state dynamics matrix :math:`\mathbf{A}` must be transformed
 accordingly:
 
@@ -177,7 +177,7 @@ accordingly:
    \mathbf{R}\mathbf{x}_n = \mathbf{R}\mathbf{A}\mathbf{R}^{-1} \mathbf{R}\mathbf{x}_{n-1} \,,
 
 resulting in a transformation
-:math:`\mathbf{A}\rightarrow\mathbf{R}\mathbf{A}\mathbf{R}^{-1}`. For
+:math:`\mathbf{A}\rightarrow\mathbf{R}\mathbf{A}\mathbf{R}^{-1}`\ . For
 more details, refer to \*Fast Variational Bayesian Linear State-Space
 Model (Luttinen, 2013).
 
