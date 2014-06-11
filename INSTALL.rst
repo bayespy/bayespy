@@ -198,3 +198,15 @@ notebooks directory and running the IPython notebook:
     ipython notebook
 
 This should run a simple server and open a web browser.
+
+You can also run doctest to test code snippets in the documentation:
+
+.. code-block:: console
+
+    make doctest
+
+or in the docstrings:
+
+.. code-block:: console
+
+    nosetests --with-doctest bayespy
