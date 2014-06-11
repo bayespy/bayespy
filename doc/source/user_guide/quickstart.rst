@@ -27,6 +27,9 @@ follows:
 
     import numpy as np
     data = np.random.normal(5, 10, size=(10,))
+Constructing the model
+----------------------
+
 Now, given this data we would like to estimate the mean and the standard
 deviation as if we didn't know their values. The model can be defined as
 follows:
@@ -72,9 +75,13 @@ This model can be constructed in BayesPy as follows:
 .. currentmodule:: bayespy.nodes
 
 This is quite self-explanatory given the model definitions above. We have used two types of nodes :class:`GaussianARD` and :class:`Gamma` to represent Gaussian and gamma distributions, respectively. There are much more distributions in :mod:`bayespy.nodes` so you can construct quite complex conjugate exponential family models. The node :code:`y` uses keyword argument :code:`plates` to define the plates :math:`n=0,\ldots,9`.
-
-Now that we have created the model, we can provide our data by setting :code:`y` as observed:
                 
+Performing inference
+--------------------
+
+Now that we have created the model, we can provide our data by setting
+``y`` as observed:
+
 .. code:: python
 
     y.observe(data)
@@ -104,13 +111,16 @@ in this case):
 
 
 Now the algorithm converged after four iterations, before the requested
-20 iterations.
+20 iterations. VB approximates the true posterior
+:math:`p(\mu,\tau|\mathbf{y})` with a distribution which factorizes with
+respect to the nodes: :math:`q(\mu)q(\tau)`\ .
 
-VB approximates the true posterior :math:`p(\mu,\tau|\mathbf{y})` with a
-distribution which factorizes with respect to the nodes:
-:math:`q(\mu)q(\tau)`\ . The resulting approximate posterior
-distributions :math:`q(\mu)` and :math:`q(\tau)` can be examined, for
-instance, by plotting the marginal probability density functions:
+Examining posterior approximation
+---------------------------------
+
+The resulting approximate posterior distributions :math:`q(\mu)` and
+:math:`q(\tau)` can be examined, for instance, by plotting the marginal
+probability density functions:
 
 .. code:: python
 
@@ -124,7 +134,7 @@ instance, by plotting the marginal probability density functions:
     bpplt.pdf(tau, np.linspace(1e-6, 0.08, num=100), color='k', name=r'\tau');
 
 
-.. image:: quickstart_files/quickstart_14_0.png
+.. image:: quickstart_files/quickstart_19_0.png
 
 
 This example was a very simple introduction to using BayesPy. The model

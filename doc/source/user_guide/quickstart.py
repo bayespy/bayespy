@@ -21,6 +21,8 @@ import numpy as np
 data = np.random.normal(5, 10, size=(10,))
 
 
+### Constructing the model
+
 # Now, given this data we would like to estimate the mean and the standard deviation as if we didn't know their values. The model can be defined as follows:
 # 
 # $$
@@ -43,6 +45,10 @@ tau = Gamma(1e-6, 1e-6)
 y = GaussianARD(mu, tau, plates=(10,))
 
 
+### Performing inference
+
+# Now that we have created the model, we can provide our data by setting `y` as observed:
+
 # In[9]:
 
 y.observe(data)
@@ -63,9 +69,11 @@ Q = VB(mu, tau, y)
 Q.update(repeat=20)
 
 
-# Now the algorithm converged after four iterations, before the requested 20 iterations. 
-# 
-# VB approximates the true posterior $p(\mu,\tau|\mathbf{y})$ with a distribution which factorizes with respect to the nodes: $q(\mu)q(\tau)$. The resulting approximate posterior distributions $q(\mu)$ and $q(\tau)$ can be examined, for instance, by plotting the marginal probability density functions:
+# Now the algorithm converged after four iterations, before the requested 20 iterations. VB approximates the true posterior $p(\mu,\tau|\mathbf{y})$ with a distribution which factorizes with respect to the nodes: $q(\mu)q(\tau)$.
+
+### Examining posterior approximation
+
+# The resulting approximate posterior distributions $q(\mu)$ and $q(\tau)$ can be examined, for instance, by plotting the marginal probability density functions:
 
 # In[13]:
 
