@@ -32,15 +32,10 @@ import scipy.sparse as sp # prefer CSC format
 #import time
 #import profile
 import scipy.spatial.distance as dist
-import scikits.sparse.distance as spdist
+#import scikits.sparse.distance as spdist
 
-import Nodes.ExponentialFamily as ef
-import utils
-
-import imp
-imp.reload(spdist)
-imp.reload(ef)
-imp.reload(utils)
+from . import node as ef
+from bayespy.utils import misc as utils
 
 # Covariance matrices can be either arrays or matrices so be careful
 # with products and powers! Use explicit multiply or dot instead of

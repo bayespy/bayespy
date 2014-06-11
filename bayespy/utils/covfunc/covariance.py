@@ -30,10 +30,6 @@ import scipy.sparse as sp # prefer CSC format
 from bayespy.utils import misc
 from bayespy.utils.covfunc import distance
 
-import imp
-imp.reload(distance)
-imp.reload(utils)
-
 # Covariance matrices can be either arrays or matrices so be careful
 # with products and powers! Use explicit multiply or dot instead of
 # *-operator.

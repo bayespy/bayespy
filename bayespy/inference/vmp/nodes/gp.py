@@ -32,8 +32,9 @@ import time
 import profile
 import scipy.spatial.distance as distance
 
-from nodes import *
-from utils import *
+from .node import Node
+from .stochastic import Stochastic
+from bayespy.utils.misc import *
 
 # Computes log probability density function of the Gaussian
 # distribution
@@ -482,7 +483,8 @@ class NodeConstantGaussianProcess(Node):
 
 
             
-class NodeMultiGaussianProcess(NodeVariable):
+#class NodeMultiGaussianProcess(NodeVariable):
+class NodeMultiGaussianProcess(Stochastic):
     
 
     def __init__(self, m, k, **kwargs):
@@ -660,7 +662,8 @@ class NodeMultiGaussianProcess(NodeVariable):
 
 
 
-class NodeGaussianProcess(NodeVariable):
+class NodeGaussianProcess(Stochastic):
+    #class NodeGaussianProcess(NodeVariable):
 
     def __init__(self, m, k, **kwargs):
 

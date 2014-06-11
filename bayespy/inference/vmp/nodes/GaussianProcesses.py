@@ -33,14 +33,9 @@ import scipy.linalg as linalg
 #import scipy.spatial.distance as distance
 import scipy.sparse as sp
 
-import utils
-import Nodes.ExponentialFamily as EF
-import Nodes.CovarianceFunctions as CF
-
-import imp
-imp.reload(utils)
-imp.reload(EF)
-imp.reload(CF)
+from bayespy.utils import misc as utils
+from . import node as EF
+from . import CovarianceFunctions as CF
 
 class CovarianceMatrix:
     def cholesky(self):
@@ -250,7 +245,7 @@ class Constant(EF.Node):
     
 # Deterministic node for creating a set of GPs which can be used as a
 # mean function to a general GP node.
-class Multiple(EF.NodeVariable):
+class Multiple(EF.Node):
 
     def __init__(self, GPs, **kwargs):
 
@@ -305,7 +300,7 @@ class Multiple(EF.NodeVariable):
 
 
 # Gaussian process distribution
-class GaussianProcess(EF.NodeVariable):
+class GaussianProcess(EF.Node):
 
     def __init__(self, m, k, k_sparse=None, pseudoinputs=None, **kwargs):
 
