@@ -20,7 +20,7 @@
 
 
 Examining the results
----------------------
+=====================
 
 After the results have been obtained, it is important to be able to
 examine the results easily.  ``show`` method prints the approximate
@@ -34,4 +34,23 @@ to obtain the sufficient statistics of the node.
    posterior distribution.  The user may use these values for
    arbitrarily complex further analysis.
 
+Plotting the results
+--------------------
 
+
+Monitoring during the inference algorithm
+-----------------------------------------
+
+blah blah
+
+
+Posterior parameters and moments
+--------------------------------
+
+blah blah
+
+
+Saving and loading results
+--------------------------
+
+blah blah
