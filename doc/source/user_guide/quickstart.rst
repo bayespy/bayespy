@@ -23,10 +23,9 @@ consists of ten samples from a Gaussian distribution with mean 5 and
 standard deviation 10. This dataset can be generated with NumPy as
 follows:
 
-.. code:: python
+>>> import numpy as np
+>>> data = np.random.normal(5, 10, size=(10,))
 
-    import numpy as np
-    data = np.random.normal(5, 10, size=(10,))
 Constructing the model
 ----------------------
 
@@ -65,16 +64,19 @@ shown as a directed factor graph:
                 
 This model can be constructed in BayesPy as follows:
 
-.. code:: python
-
-    from bayespy.nodes import GaussianARD, Gamma
-    mu = GaussianARD(0, 1e-6)
-    tau = Gamma(1e-6, 1e-6)
-    y = GaussianARD(mu, tau, plates=(10,))
+>>> from bayespy.nodes import GaussianARD, Gamma
+>>> mu = GaussianARD(0, 1e-6)
+>>> tau = Gamma(1e-6, 1e-6)
+>>> y = GaussianARD(mu, tau, plates=(10,))
                 
 .. currentmodule:: bayespy.nodes
 
-This is quite self-explanatory given the model definitions above. We have used two types of nodes :class:`GaussianARD` and :class:`Gamma` to represent Gaussian and gamma distributions, respectively. There are much more distributions in :mod:`bayespy.nodes` so you can construct quite complex conjugate exponential family models. The node :code:`y` uses keyword argument :code:`plates` to define the plates :math:`n=0,\ldots,9`.
+This is quite self-explanatory given the model definitions above. We have used
+two types of nodes :class:`GaussianARD` and :class:`Gamma` to represent Gaussian
+and gamma distributions, respectively. There are much more distributions in
+:mod:`bayespy.nodes` so you can construct quite complex conjugate exponential
+family models. The node :code:`y` uses keyword argument :code:`plates` to define
+the plates :math:`n=0,\ldots,9`.
                 
 Performing inference
 --------------------
@@ -82,38 +84,30 @@ Performing inference
 Now that we have created the model, we can provide our data by setting
 ``y`` as observed:
 
-.. code:: python
+>>> y.observe(data)
 
-    y.observe(data)
-Next we want to estimate the posterior distribution. In principle, we
-could use different inference engines (e.g., MCMC or EP) but currently
-only variational Bayesian (VB) engine is implemented. The engine is
-initialized by giving all the nodes of the model:
+Next we want to estimate the posterior distribution. In principle, we could use
+different inference engines (e.g., MCMC or EP) but currently only variational
+Bayesian (VB) engine is implemented. The engine is initialized by giving all the
+nodes of the model:
 
-.. code:: python
+>>> from bayespy.inference import VB
+>>> Q = VB(mu, tau, y)
 
-    from bayespy.inference import VB
-    Q = VB(mu, tau, y)
 The inference algorithm can be run as long as wanted (max. 20 iterations
 in this case):
 
-.. code:: python
+>>> Q.update(repeat=20)
+Iteration 1: loglike=-5.910731e+01 (0.010 seconds)
+Iteration 2: loglike=-5.721245e+01 (0.000 seconds)
+Iteration 3: loglike=-5.721009e+01 (0.000 seconds)
+Iteration 4: loglike=-5.721007e+01 (0.010 seconds)
+Converged.
 
-    Q.update(repeat=20)
-
-.. parsed-literal::
-
-    Iteration 1: loglike=-5.910731e+01 (0.010 seconds)
-    Iteration 2: loglike=-5.721245e+01 (0.000 seconds)
-    Iteration 3: loglike=-5.721009e+01 (0.000 seconds)
-    Iteration 4: loglike=-5.721007e+01 (0.010 seconds)
-    Converged.
-
-
-Now the algorithm converged after four iterations, before the requested
-20 iterations. VB approximates the true posterior
-:math:`p(\mu,\tau|\mathbf{y})` with a distribution which factorizes with
-respect to the nodes: :math:`q(\mu)q(\tau)`\ .
+Now the algorithm converged after four iterations, before the requested 20
+iterations. VB approximates the true posterior :math:`p(\mu,\tau|\mathbf{y})`
+with a distribution which factorizes with respect to the nodes:
+:math:`q(\mu)q(\tau)`\ .
 
 Examining posterior approximation
 ---------------------------------
@@ -122,19 +116,18 @@ The resulting approximate posterior distributions :math:`q(\mu)` and
 :math:`q(\tau)` can be examined, for instance, by plotting the marginal
 probability density functions:
 
-.. code:: python
-
-    import bayespy.plot as bpplt
-    # The following two two lines are just for enabling matplotlib plotting in notebooks
-    %matplotlib inline
-    bpplt.pyplot.plot([])
-    bpplt.pyplot.subplot(2, 1, 1)
-    bpplt.pdf(mu, np.linspace(-10, 20, num=100), color='k', name=r'\mu')
-    bpplt.pyplot.subplot(2, 1, 2)
-    bpplt.pdf(tau, np.linspace(1e-6, 0.08, num=100), color='k', name=r'\tau');
+>>> import bayespy.plot as bpplt
+>>> # The following two two lines are just for enabling matplotlib plotting in notebooks
+>>> %matplotlib inline
+>>> bpplt.pyplot.plot([])
+>>> bpplt.pyplot.subplot(2, 1, 1)
+>>> bpplt.pdf(mu, np.linspace(-10, 20, num=100), color='k', name=r'\mu')
+>>> bpplt.pyplot.subplot(2, 1, 2)
+>>> bpplt.pdf(tau, np.linspace(1e-6, 0.08, num=100), color='k', name=r'\tau');
 
 
-.. image:: quickstart_files/quickstart_19_0.png
+..
+    image:: quickstart_files/quickstart_19_0.png
 
 
 This example was a very simple introduction to using BayesPy. The model
