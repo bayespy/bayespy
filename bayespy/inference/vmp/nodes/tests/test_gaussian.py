@@ -869,6 +869,46 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(u1, Qu1)
 
         pass
+
+
+    def test_initialization(self):
+        """
+        Test initialization methods of GaussianARD
+        """
+
+        X = GaussianARD(1, 2, shape=(2,), plates=(3,))
+
+        # Prior initialization
+        mu = 1 * np.ones((3, 2))
+        alpha = 2 * np.ones((3, 2))
+        X.initialize_from_prior()
+        u = X._message_to_child()
+        self.assertAllClose(u[0]*np.ones((3,2)), 
+                            mu)
+        self.assertAllClose(u[1]*np.ones((3,2,2)), 
+                            linalg.outer(mu, mu, ndim=1) + 
+                            misc.diag(1/alpha, ndim=1))
+
+        # Parameter initialization
+        mu = np.random.randn(3, 2)
+        alpha = np.random.rand(3, 2)
+        X.initialize_from_parameters(mu, alpha)
+        u = X._message_to_child()
+        self.assertAllClose(u[0], mu)
+        self.assertAllClose(u[1], linalg.outer(mu, mu, ndim=1) + 
+                                  misc.diag(1/alpha, ndim=1))
+
+        # Value initialization
+        x = np.random.randn(3, 2)
+        X.initialize_from_value(x)
+        u = X._message_to_child()
+        self.assertAllClose(u[0], x)
+        self.assertAllClose(u[1], linalg.outer(x, x, ndim=1))
+
+        # Random initialization
+        X.initialize_from_random()
+
+        pass
         
 
 class TestGaussianGammaISO(TestCase):
