@@ -36,15 +36,10 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.doctest',
     'numpydoc',
-#'matplotlib.sphinxext.ipython_directive',
+    'matplotlib.sphinxext.plot_directive',
     'sphinx.ext.autosummary',
     'sphinxcontrib.tikz',
     'sphinxcontrib.bayesnet',
-#    'IPython.sphinxext.ipython_console_highlighting',
-#'IPython.sphinxext.only_directives',
-#'matplotlib.sphinxext.mpl',
-#    'matplotlib.sphinxext.plot_directive',
-#    'IPython.sphinxext.ipython_directive',
     ]
 
 
