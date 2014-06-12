@@ -24,6 +24,7 @@
 
     # This is the PCA model from the previous section
     import numpy as np
+    np.random.seed(1)
     from bayespy.nodes import GaussianARD, Gamma, Dot
     D = 3
     X = GaussianARD(0, 1,
@@ -72,113 +73,174 @@ The data is provided by simply calling ``observe`` method of a stochastic node:
 >>> Y.observe(data)
                 
 It is important that the shape of the ``data`` array matches the plates and
-shape of the node ``y`` For instance, if ``y`` is :class:`Wishart` node for
-:math:`3\times 3` matrices with plates ``(5,1,10)``, the full shape of ``y``
-would be ``(5,1,10,3,3)``.  The data array must have this shape exactly, that
-is, no broadcasting rules are applied.
+shape of the node ``Y``.  For instance, if ``Y`` was :class:`Wishart` node for
+:math:`3\times 3` matrices with plates ``(5,1,10)``, the full shape of ``Y``
+would be ``(5,1,10,3,3)``.  The ``data`` array should have this shape exactly,
+that is, no broadcasting rules are applied.
                 
 Missing values
-~~~~~~~~~~~~~~
+++++++++++++++
 
-It is possible to mark missing values by providing a mask:
+It is possible to mark missing values by providing a mask which is a boolean
+array:
 
 .. code:: python
 
-    y.observe(data, mask=[True, False, False, True, True,
-                          False, True, True, True, False])
-``True`` means that the value is observed and ``False`` means that the
-value is missing. The mask is applied to the *plates*, not to the data
-array directly. This means that it is not possible to observe a random
-variable partially, each repetition defined by the plates is either
-fully observed or fully missing. Thus, the mask is applied to the
-plates. It is often possible to circumvent this seemingly tight
-restriction by adding an observable child node which factorizes more.
+>>> Y.observe(data, mask=[[True], [False], [False], [True], [True],
+...                       [False], [True], [True], [True], [False]])
 
-The shape of the mask is broadcasted to plates using standard NumPy
-broadcasting rules. So, if the variable has plates ``(5,1,10)``, the
-mask could have a shape ``()``, ``(1,)``, ``(1,1)``, ``(1,1,1)``,
-``(10,)``, ``(1,10)``, ``(1,1,10)``, ``(5,1,1)`` or ``(5,1,10)``. In
-order to speed up the inference, missing plates are automatically
-ignored by the inference algorithm if they are not needed. Thus, the
-missing values are integrated out giving more accurate approximations
-faster.
+``True`` means that the value is observed and ``False`` means that the value is
+missing.  The shape of the above mask is ``(10,1)``, which broadcasts to the
+plates of Y, ``(10,100)``.  Thus, the above mask means that the second, third,
+sixth and tenth rows of the :math:`10\times 100` data matrix are missing. 
+
+The mask is applied to the *plates*, not to the data array directly.  This means
+that it is not possible to observe a random variable partially, each repetition
+defined by the plates is either fully observed or fully missing.  Thus, the mask
+is applied to the plates.  It is often possible to circumvent this seemingly
+tight restriction by adding an observable child node which factorizes more.
+
+The shape of the mask is broadcasted to plates using standard NumPy broadcasting
+rules. So, if the variable has plates ``(5,1,10)``, the mask could have a shape
+``()``, ``(1,)``, ``(1,1)``, ``(1,1,1)``, ``(10,)``, ``(1,10)``, ``(1,1,10)``,
+``(5,1,1)`` or ``(5,1,10)``.  In order to speed up the inference, missing values
+are automatically integrated out if they are not needed as latent variables to
+child nodes.  This leads to faster convergence and more accurate approximations.
 
 Choosing the inference method
 -----------------------------
 
                 
-Inference methods can be found in :mod:`bayespy.inference` package.
-Currently, only variational Bayesian approximation is implemented
-(:class:`bayespy.inference.VB`).  The inference engine is constructed by
-giving the nodes of the model.
+Inference methods can be found in :mod:`bayespy.inference` package.  Currently,
+only variational Bayesian approximation is implemented
+(:class:`bayespy.inference.VB`).  The inference engine is constructed by giving
+the stochastic nodes of the model.
                 
-.. code:: python
+>>> from bayespy.inference import VB
+>>> Q = VB(Y, C, X, alpha, tau)
 
-    from bayespy.inference import VB
-    Q = VB(node1, node2, node3, node4)
+There is no need to give any deterministic nodes.  Currently, the inference
+engine does not automatically search for stochastic parents and children, thus
+it is important that all stochastic nodes of the model are given.  This should
+be made more robust in future versions.
+
+A node of the model can be obtained by using the name of the node as a key:
+
+>>> Q['X']
+<bayespy.inference.vmp.nodes.gaussian.GaussianARD object at 0x...>
+
+Note that the returned object is the same as the node object itself:
+
+>>> Q['X'] is X
+True
+
+Thus, one may use the object ``X`` when it is available.  However, if the model
+and the inference engine are constructed in another function or module, the node
+object may not be available directly and this feature becomes useful.
+
+
 Initializing the inference
 --------------------------
 
-The inference engines give some initialization to the nodes by default.
-However, the inference algorithms can be sensitive to the
-initialization, thus it is sometimes necessary to have full control over
-the initialization. There may be different initialization methods, but
-for VB you can, for instance, initialize in one of the following ways:
+The inference engines give some initialization to the stochastic nodes by
+default.  However, the inference algorithms can be sensitive to the
+initialization, thus it is sometimes necessary to have better control over the
+initialization.  For VB, the following initialization methods are available:
 
--  ``initialize_from_prior``: Use only parent nodes to update the node.
+- ``initialize_from_prior``: Use the current states of the parent nodes to
+  update the node. This is the default initialization.
 
--  ``initialize_from_parameters``: Use the given parameter values for
-   the distribution.
+- ``initialize_from_parameters``: Use the given parameter values for the
+  distribution.
 
-A random initialization for VB has to be performed manually, because it
-is not obvious what is actually wanted. For instance, one way to achieve
-it is to first update from the parents, then to draw a random sample
-from that distribution and to set the values of the parameters based on
-that. For ``Normal`` node, one could draw the mean parameter randomly
-and choose the precision parameter arbitrarily:
+- ``initialize_from_value``: Use the given value for the variable.
 
-.. code:: python
+- ``initialize_from_random``: Draw a random value for the variable.  The random
+  sample is drawn from the current state of the node's distribution.
 
-    x = bp.nodes.Normal(mu, tau, plates=(10,))
-    x.initialize_from_prior()
-    x.initialize_from_parameters(x.random(), 1)
-In this case, the precision was set to one. The default initialization
-method is ``initialization_from_prior``, which is performed when the
-node is created. If the initialization uses the values of the parents,
-they should be initialized before the children.
+Note that ``initialize_from_value`` and ``initialize_from_random`` initialize
+the distribution with a value of the variable instead of parameters of the
+distribution.  Thus, the distribution is actually a delta distribution with a
+peak on the value after the initialization.  This state of the distribution does
+not have proper natural parameter values nor normalization, thus the VB lower
+bound terms are ``np.nan`` for this initial state.
+
+These initialization methods can be used to perform even a bit more complex
+initializations.  For instance, a Gaussian distribution could be initialized
+with a random mean and variance 0.1.  In our PCA model, this can be obtained by
+
+>>> C.initialize_from_parameters(np.random.randn(10, 1, D), 10)
+
+Note that the shape of the random mean is the sum of the plates ``(10, 1)`` and
+the variable shape ``(D,)``.  In addition, instead of variance,
+:class:`GaussianARD` uses precision as the second parameter.
+
+By default, nodes are initialized with the method ``initialize_from_prior``.
+The method is not very time consuming but if for any reason you want to avoid
+that default initialization computation, you can provide ``initialize=False``
+when creating the stochastic node.  However, the node does not have a proper
+state in that case, which leads to errors in VB learning unless the distribution
+is initialized using the above methods.
+
+
+
 
 Running the inference algorithm
 -------------------------------
 
 The approximation methods are based on iterative algorithms, which can
 be run using ``update`` method. By default, it takes one iteration step
-updating all nodes once. However, you can give as arguments the nodes
-you want to update and they are updated in the given order. It is
-possible to give same nodes several times, for instance:
+updating all nodes once:
 
-.. code:: python
+>>> Q.update()
+Iteration 1: loglike=-9.423766e+02 (... seconds)
 
-    Q.update(node1, node3, node1, node4)
-This would update ``node3`` and ``node4`` once, and ``node1`` twice. In
-order to update several times, one can use the optional argument
-``repeat``.
+The order in which the nodes are updated is the same as the order in which the
+nodes were given when creating ``Q``.  If you want to change the order or update
+only some of the nodes, you can give as arguments the nodes you want to update
+and they are updated in the given order:
 
-.. code:: python
+>>> Q.update(C, X)
+Iteration 2: loglike=-9.406813e+02 (... seconds)
 
-    Q.update(node3, node4, repeat=5)
-    Q.update(node1, node2, node3, node4, repeat=10)
-This first updates ``node3`` and ``node4`` five times and then all the
-nodes ten times. This might be useful, for instance, if updating some
-nodes is expensive and should be done rarely or if updating some nodes
-in the beginning would cause the algorithm to converge to a bad
-solution.
+It is also possible to give the same node several times:
 
-                
-.. warning::
+>>> Q.update(C, X, C, tau)
+Iteration 3: loglike=-9.406672e+02 (... seconds)
 
-   Ideally, one constructs the model and then chooses the inference
-   method to be used - possibly trying several different methods.
-   However, the model construction is not yet separated from the model
-   construction, that is, the constructed model network is also the
-   variational message passing network for VB inference.
-                
+Note that each call to ``update`` is counted as one iteration step although not
+variables are necessarily updated.  Instead of doing one iteration step,
+``repeat`` keyword argument can be used to perform several iteration steps:
+
+>>> Q.update(repeat=10)
+Iteration 4: loglike=-9.395617e+02 (... seconds)
+Iteration 5: loglike=-9.386064e+02 (... seconds)
+Iteration 6: loglike=-9.381864e+02 (... seconds)
+Iteration 7: loglike=-9.379849e+02 (... seconds)
+Iteration 8: loglike=-9.378842e+02 (... seconds)
+Iteration 9: loglike=-9.378328e+02 (... seconds)
+Iteration 10: loglike=-9.378063e+02 (... seconds)
+Iteration 11: loglike=-9.377926e+02 (... seconds)
+Iteration 12: loglike=-9.377855e+02 (... seconds)
+Iteration 13: loglike=-9.377818e+02 (... seconds)
+
+The stochastic nodes have ``update`` method themselves.  The ``update`` method
+of the inference engine ``VB`` is basically just a simple wrapper which calls
+the nodes' ``update`` methods, checks for convergence and does a few other minor
+things.  It is thus recommended to update the nodes as discussed above.
+However, it is possible to update the nodes directly as
+
+>>> C.update()
+
+or even
+
+>>> Q['C'].update()
+
+if needed for some reason.
+
+
+Speeding up inference
++++++++++++++++++++++
+
+rotations!
+
