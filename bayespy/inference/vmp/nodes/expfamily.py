@@ -162,13 +162,8 @@ class ExponentialFamily(Stochastic):
                 cls._moments, 
                 cls._parent_moments)
 
-    def initialize_from_prior(self):
+    def _initialize_from_parent_moments(self, *u_parents):
         if not np.all(self.observed):
-
-            # Messages from parents
-            #u_parents = [parent.message_to_child() for parent in self.parents]
-            u_parents = self._message_from_parents()
-
             # Update natural parameters using parents
             self._update_phi_from_parents(*u_parents)
 
@@ -179,24 +174,18 @@ class ExponentialFamily(Stochastic):
             # TODO/FIXME/BUG: You should use observation mask in order to not
             # overwrite them!
             self._set_moments_and_cgf(u, g, mask=mask)
+        
+
+    def initialize_from_prior(self):
+        u_parents = self._message_from_parents()
+        self._initialize_from_parent_moments(*u_parents)
 
 
     def initialize_from_parameters(self, *args):
-        # Get the moments of the parameters if they were fixed to the
-        # given values.
-        #u_parents = self.compute_fixed_parameter_moments(*args)
-        u_parents = list()
-        for (ind, x) in enumerate(args):
-            distribution = self._parent_moments[ind]
-            u = distribution.compute_fixed_moments(np.asanyarray(x))
-            u_parents.append(u)
-        # Update natural parameters
-        self._update_phi_from_parents(*u_parents)
-        # Update moments
-        # TODO/FIXME: Use the mask of observations!
-        mask = np.logical_not(self.observed)
-        (u, g) = self._distribution.compute_moments_and_cgf(self.phi, mask=mask)
-        self._set_moments_and_cgf(u, g, mask=mask)
+        u_parents = [p_mom.compute_fixed_moments(x) 
+                     for (p_mom, x) in zip(self._parent_moments, *args)]
+        self._initialize_from_parent_moments(*u_parents)
+        
 
     def initialize_from_value(self, x, *args):
         # Update moments from value
@@ -212,7 +201,10 @@ class ExponentialFamily(Stochastic):
         self._set_moments_and_cgf(u, np.inf, mask=mask)
 
     def initialize_from_random(self):
-        self.initialize_from_prior()
+        """
+        Set the variable to a random sample from the current distribution.
+        """
+        #self.initialize_from_prior()
         X = self.random()
         self.initialize_from_value(X)
 

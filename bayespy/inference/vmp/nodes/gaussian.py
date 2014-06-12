@@ -1027,6 +1027,11 @@ class Gaussian(ExponentialFamily):
                 cls._parent_moments)
 
 
+    def initialize_from_parameters(self, mu, Lambda):
+        u = self._parent_moments[0].compute_fixed_moments(mu, Lambda)
+        self._initialize_from_parent_moments(u)
+
+        
     def show(self):
         mu = self.u[0]
         Cov = self.u[1] - misc.m_outer(mu, mu)
@@ -1259,8 +1264,7 @@ class GaussianARD(ExponentialFamily):
         shape_cov = shape[-ndim_mu:] + shape[-ndim_mu:]
 
         moments = GaussianMoments(ndim)
-        parent_moments = [mu_alpha._moments,
-                          GammaMoments()]
+        parent_moments = [mu_alpha._moments]
         distribution = GaussianARDDistribution(shape, ndim_mu)
 
         dims = (shape, shape+shape)
@@ -1277,6 +1281,17 @@ class GaussianARD(ExponentialFamily):
                 moments,
                 parent_moments)
         
+
+    def initialize_from_parameters(self, mu, alpha):
+        # Explicit broadcasting so the shapes match
+        mu = mu * np.ones(np.shape(alpha))
+        alpha = alpha * np.ones(np.shape(mu))
+        # Compute parent moments
+        u = self._parent_moments[0].compute_fixed_moments(mu, alpha)
+        # Initialize distribution
+        self._initialize_from_parent_moments(u)
+
+
     def initialize_from_mean_and_covariance(self, mu, Cov):
         ndim = len(self._distribution.shape)
         u = [mu, Cov + linalg.outer(mu, mu, ndim=ndim)]
