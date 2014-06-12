@@ -1,5 +1,3 @@
-
-                
 ..
    Copyright (C) 2014 Jaakko Luttinen
 

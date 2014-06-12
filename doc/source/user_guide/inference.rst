@@ -1,5 +1,3 @@
-
-                
 ..
    Copyright (C) 2014 Jaakko Luttinen
 
@@ -139,8 +137,8 @@ and the inference engine are constructed in another function or module, the node
 object may not be available directly and this feature becomes useful.
 
 
-Initializing the inference
---------------------------
+Initializing the posterior approximation
+----------------------------------------
 
 The inference engines give some initialization to the stochastic nodes by
 default.  However, the inference algorithms can be sensitive to the
@@ -224,23 +222,64 @@ Iteration 11: loglike=-9.377926e+02 (... seconds)
 Iteration 12: loglike=-9.377855e+02 (... seconds)
 Iteration 13: loglike=-9.377818e+02 (... seconds)
 
-The stochastic nodes have ``update`` method themselves.  The ``update`` method
-of the inference engine ``VB`` is basically just a simple wrapper which calls
-the nodes' ``update`` methods, checks for convergence and does a few other minor
-things.  It is thus recommended to update the nodes as discussed above.
-However, it is possible to update the nodes directly as
+The VB algorithm stops if it converges, that is, the change in the lower bound
+is below some threshold.
+
+>>> Q.update(repeat=100)
+Iteration 14: loglike=-9.377799e+02 (... seconds)
+Iteration 15: loglike=-9.377789e+02 (... seconds)
+Iteration 16: loglike=-9.377784e+02 (... seconds)
+Converged.
+
+Now it did not perform 100 more iterations but only three because the algorithm
+converged.
+
+Instead of using ``update`` method of the inference engine ``VB``, it is
+possible to use the ``update`` methods of the nodes directly as
 
 >>> C.update()
 
-or even
+or
 
 >>> Q['C'].update()
 
-if needed for some reason.
+However, this is not recommended, because the ``update`` method of the inference
+engine ``VB`` is a wrapper which, in addition to calling the nodes' ``update``
+methods, checks for convergence and does a few other useful minor things.  But
+if for any reason these direct update methods are needed, they can be used.
 
 
-Speeding up inference
-+++++++++++++++++++++
+Parameter expansion
++++++++++++++++++++
 
-rotations!
+Sometimes the VB algorithm converges very slowly.  This may happen when the
+variables are strongly coupled in the true posterior but factorized in the
+approximate posterior.  One solution to this problem is to use parameter
+expansion.  The idea is to add an auxiliary variable which parameterizes the
+posterior approximation of several variables.  Then optimizing this auxiliary
+variable actually optimizes several posterior approximations jointly leading to
+faster convergence.
 
+The parameter expansion is model specific.  In BayesPy, only state-space models
+can utilize the parameter expansion currently.  These models have contain a
+variable which is a dot product of two variables (plus some noise):
+
+.. math::
+
+    y = \mathbf{c}^T\mathbf{x} + \mathrm{noise}
+
+We can add an auxiliary variable which rotates the variables :math:`\mathbf{c}`
+and :math:`\mathbf{x}` so that the dot product is unaffected:
+
+.. math::
+
+    y &= \mathbf{c}^T\mathbf{x} + \mathrm{noise}
+    = \mathbf{c}^T \mathbf{R} \mathbf{R}^{-1}\mathbf{x} + \mathrm{noise}
+    = (\mathbf{R}^T\mathbf{c})^T(\mathbf{R}^{-1}\mathbf{x}) + \mathrm{noise}
+
+Now, applying this rotation to the posterior approximations
+:math:`q(\mathbf{c})` and :math:`q(\mathbf{x})`, and optimizing the VB lower
+bound with respect to the rotation leads to parameterized joint optimization of
+:math:`\mathbf{c}` and :math:`\mathbf{x}`.
+
+The parameter expansion is used in BayesPy as ..

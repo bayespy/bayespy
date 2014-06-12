@@ -1,3 +1,31 @@
+..
+   Copyright (C) 2014 Jaakko Luttinen
+
+   This file is licensed under Version 3.0 of the GNU General Public
+   License. See LICENSE for a text of the license.
+
+   This file is part of BayesPy.
+
+   BayesPy is free software: you can redistribute it and/or modify it
+   under the terms of the GNU General Public License version 3 as
+   published by the Free Software Foundation.
+
+   BayesPy is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
+
+
+.. testsetup::
+
+    from matplotlib import pyplot
+    pyplot.ion()
+    import numpy
+    numpy.random.seed(1)
+
 
 Quick start guide
 =================
@@ -98,10 +126,10 @@ The inference algorithm can be run as long as wanted (max. 20 iterations
 in this case):
 
 >>> Q.update(repeat=20)
-Iteration 1: loglike=-5.910731e+01 (0.010 seconds)
-Iteration 2: loglike=-5.721245e+01 (0.000 seconds)
-Iteration 3: loglike=-5.721009e+01 (0.000 seconds)
-Iteration 4: loglike=-5.721007e+01 (0.010 seconds)
+Iteration 1: loglike=-6.020956e+01 (... seconds)
+Iteration 2: loglike=-5.820527e+01 (... seconds)
+Iteration 3: loglike=-5.820290e+01 (... seconds)
+Iteration 4: loglike=-5.820288e+01 (... seconds)
 Converged.
 
 Now the algorithm converged after four iterations, before the requested 20
@@ -117,17 +145,34 @@ The resulting approximate posterior distributions :math:`q(\mu)` and
 probability density functions:
 
 >>> import bayespy.plot as bpplt
->>> # The following two two lines are just for enabling matplotlib plotting in notebooks
->>> %matplotlib inline
->>> bpplt.pyplot.plot([])
 >>> bpplt.pyplot.subplot(2, 1, 1)
+<matplotlib.axes.AxesSubplot object at 0x...>
 >>> bpplt.pdf(mu, np.linspace(-10, 20, num=100), color='k', name=r'\mu')
+[<matplotlib.lines.Line2D object at 0x...>]
 >>> bpplt.pyplot.subplot(2, 1, 2)
->>> bpplt.pdf(tau, np.linspace(1e-6, 0.08, num=100), color='k', name=r'\tau');
+<matplotlib.axes.AxesSubplot object at 0x...>
+>>> bpplt.pdf(tau, np.linspace(1e-6, 0.08, num=100), color='k', name=r'\tau')
+[<matplotlib.lines.Line2D object at 0x...>]
+>>> bpplt.pyplot.show()
 
+.. plot::
 
-..
-    image:: quickstart_files/quickstart_19_0.png
+    import numpy as np
+    data = np.random.normal(5, 10, size=(10,))
+    from bayespy.nodes import GaussianARD, Gamma
+    mu = GaussianARD(0, 1e-6)
+    tau = Gamma(1e-6, 1e-6)
+    y = GaussianARD(mu, tau, plates=(10,))
+    y.observe(data)
+    from bayespy.inference import VB
+    Q = VB(mu, tau, y)
+    Q.update(repeat=20)
+    import bayespy.plot as bpplt
+    bpplt.pyplot.subplot(2, 1, 1)
+    bpplt.pdf(mu, np.linspace(-10, 20, num=100), color='k', name=r'\mu')
+    bpplt.pyplot.subplot(2, 1, 2)
+    bpplt.pdf(tau, np.linspace(1e-6, 0.08, num=100), color='k', name=r'\tau')
+    bpplt.pyplot.show()
 
 
 This example was a very simple introduction to using BayesPy. The model
