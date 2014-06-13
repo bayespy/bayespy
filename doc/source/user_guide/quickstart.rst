@@ -130,7 +130,7 @@ Iteration 1: loglike=-6.020956e+01 (... seconds)
 Iteration 2: loglike=-5.820527e+01 (... seconds)
 Iteration 3: loglike=-5.820290e+01 (... seconds)
 Iteration 4: loglike=-5.820288e+01 (... seconds)
-Converged.
+Converged at iteration 4.
 
 Now the algorithm converged after four iterations, before the requested 20
 iterations. VB approximates the true posterior :math:`p(\mu,\tau|\mathbf{y})`

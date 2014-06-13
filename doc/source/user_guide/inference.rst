@@ -167,11 +167,19 @@ These initialization methods can be used to perform even a bit more complex
 initializations.  For instance, a Gaussian distribution could be initialized
 with a random mean and variance 0.1.  In our PCA model, this can be obtained by
 
->>> C.initialize_from_parameters(np.random.randn(10, 1, D), 10)
+>>> X.initialize_from_parameters(np.random.randn(1, 100, D), 10)
 
-Note that the shape of the random mean is the sum of the plates ``(10, 1)`` and
+Note that the shape of the random mean is the sum of the plates ``(1, 100)`` and
 the variable shape ``(D,)``.  In addition, instead of variance,
-:class:`GaussianARD` uses precision as the second parameter.
+:class:`GaussianARD` uses precision as the second parameter, thus we initialized
+the variance to :math:`\frac{1}{10}`.  This random initialization is important
+in our PCA model because the default initialization gives ``C`` and ``X`` zero
+mean.  If the mean of the other variable was zero when the other is updated, the
+other variable gets zero mean too.  This would lead to an update algorithm where
+both means remain zeros and effectively no latent space is found.  Thus, it is
+important to give non-zero random initialization for ``X`` if ``C`` is updated
+before ``X`` the first time.  It is typical that at least some nodes need be
+initialized with some randomness.
 
 By default, nodes are initialized with the method ``initialize_from_prior``.
 The method is not very time consuming but if for any reason you want to avoid
@@ -191,7 +199,7 @@ be run using ``update`` method. By default, it takes one iteration step
 updating all nodes once:
 
 >>> Q.update()
-Iteration 1: loglike=-9.423766e+02 (... seconds)
+Iteration 1: loglike=-9.022564e+02 (... seconds)
 
 The order in which the nodes are updated is the same as the order in which the
 nodes were given when creating ``Q``.  If you want to change the order or update
@@ -199,37 +207,46 @@ only some of the nodes, you can give as arguments the nodes you want to update
 and they are updated in the given order:
 
 >>> Q.update(C, X)
-Iteration 2: loglike=-9.406813e+02 (... seconds)
+Iteration 2: loglike=-8.300209e+02 (... seconds)
 
 It is also possible to give the same node several times:
 
 >>> Q.update(C, X, C, tau)
-Iteration 3: loglike=-9.406672e+02 (... seconds)
+Iteration 3: loglike=-7.608389e+02 (... seconds)
 
 Note that each call to ``update`` is counted as one iteration step although not
 variables are necessarily updated.  Instead of doing one iteration step,
 ``repeat`` keyword argument can be used to perform several iteration steps:
 
 >>> Q.update(repeat=10)
-Iteration 4: loglike=-9.395617e+02 (... seconds)
-Iteration 5: loglike=-9.386064e+02 (... seconds)
-Iteration 6: loglike=-9.381864e+02 (... seconds)
-Iteration 7: loglike=-9.379849e+02 (... seconds)
-Iteration 8: loglike=-9.378842e+02 (... seconds)
-Iteration 9: loglike=-9.378328e+02 (... seconds)
-Iteration 10: loglike=-9.378063e+02 (... seconds)
-Iteration 11: loglike=-9.377926e+02 (... seconds)
-Iteration 12: loglike=-9.377855e+02 (... seconds)
-Iteration 13: loglike=-9.377818e+02 (... seconds)
+Iteration 4: loglike=-6.909768e+02 (... seconds)
+Iteration 5: loglike=-5.975477e+02 (... seconds)
+Iteration 6: loglike=-4.328053e+02 (... seconds)
+Iteration 7: loglike=-2.802900e+02 (... seconds)
+Iteration 8: loglike=-1.628321e+02 (... seconds)
+Iteration 9: loglike=-9.664200e+01 (... seconds)
+Iteration 10: loglike=-7.202233e+01 (... seconds)
+Iteration 11: loglike=-6.580980e+01 (... seconds)
+Iteration 12: loglike=-6.444844e+01 (... seconds)
+Iteration 13: loglike=-6.400242e+01 (... seconds)
 
-The VB algorithm stops if it converges, that is, the change in the lower bound
-is below some threshold.
+The VB algorithm stops automatically if it converges, that is, the relative
+change in the lower bound is below some threshold:
 
->>> Q.update(repeat=100)
-Iteration 14: loglike=-9.377799e+02 (... seconds)
-Iteration 15: loglike=-9.377789e+02 (... seconds)
-Iteration 16: loglike=-9.377784e+02 (... seconds)
-Converged.
+>>> Q.update(repeat=1000)
+Iteration 14: loglike=-6.371002e+01 (... seconds)
+...
+Iteration 48: loglike=8.275500e+02 (... seconds)
+Converged at iteration 48.
+
+The relative tolerance can be adjusted by providing ``tol`` keyword argument to
+the ``update`` method:
+
+>>> Q.update(repeat=10000, tol=1e-6)
+Iteration 49: loglike=8.275572e+02 (... seconds)
+...
+Iteration 1731: loglike=8.320980e+02 (... seconds)
+Converged at iteration 1731.
 
 Now it did not perform 100 more iterations but only three because the algorithm
 converged.
