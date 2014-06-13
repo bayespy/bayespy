@@ -67,7 +67,7 @@ html: latexpdf notebooks
 	cp source/examples/*.ipynb $(BUILDDIR)/html/examples/
 	cp source/examples/*.py $(BUILDDIR)/html/examples/
 	cp -r source/examples/*_files $(BUILDDIR)/html/examples/
-	cp -r build/latex/user_guide/* build/html/user_guide/
+	cp -r build/plot_directive/user_guide/* build/html/user_guide/
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
