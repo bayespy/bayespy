@@ -395,65 +395,121 @@ remaining leading plate axes of ``tau``.
 Example model: Principal component analysis
 -------------------------------------------
 
-Principal component analysis (PCA):
+Now, we'll construct a bit more complex model which will be used in the
+following sections.  The model is a probabilistic version of principal component
+analysis (PCA):
 
 .. math::
 
-    p(\tau) &= ...
-    \\
-    p(C) &= ...
+    \mathbf{Y} = \mathbf{C}\mathbf{X}^T + \mathrm{noise}
+
+where :math:`\mathbf{Y}` is :math:`M\times N` data matrix, :math:`\mathbf{C}` is
+:math:`M\times D` loading matrix, :math:`\mathbf{X}` is :math:`N\times D` state
+matrix, and noise is isotropic Gaussian.  The dimensionality :math:`D` is
+usually assumed to be much smaller than :math:`M` and :math:`N`.
+
+
+A probabilistic formulation can be written as:
+
+.. math::
+
+   p(\mathbf{Y}) &= \prod^{M-1}_{m=0} \prod^{N-1}_{n=0} \mathcal{N}(y_{mn} |
+   \mathbf{c}_m^T \mathbf{x}_n, \tau)
+   \\
+   p(\mathbf{X}) &= \prod^{N-1}_{n=0} \prod^{D-1}_{d=0} \mathcal{N}(x_{nd} |
+   0, 1)
+   \\
+   p(\mathbf{C}) &= \prod^{M-1}_{m=0} \prod^{D-1}_{d=0} \mathcal{N}(c_{md} |
+   0, \alpha_d)
+   \\
+   p(\boldsymbol{\alpha}) &= \prod^{D-1}_{d=0} \mathcal{G} (\alpha_d | 10^{-3},
+   10^{-3})
+   \\
+   p(\tau) &= \mathcal{G} (\tau | 10^{-3}, 10^{-3})
+
+where we have given automatic relevance determination (ARD) prior for
+:math:`\mathbf{C}`.  This can be visualized as a graphical model:
 
 .. bayesnet::
 
     \node[latent] (y) {$\mathbf{y}_{mn}$} ;
-    \node[det, above left=1 and 2 of y] (dot) {dot} ;
-    \node[latent, above right=1 and 2 of y] (tau) {$\tau$} ;
+    \node[det, above=of y] (dot) {dot} ;
+    \node[latent, right=2 of dot] (tau) {$\tau$} ;
     \node[latent, above left=1 and 2 of dot] (C) {$c_{md}$} ;
     \node[latent, above=of C] (alpha) {$\alpha_d$} ;
     \node[latent, above right=1 and 1 of dot] (X) {$x_{nd}$} ;
 
-    \factor[above=of y] {y-f} {above:$\mathcal{N}$} {dot,tau} {y};
-    \factor[above=of C] {C-f} {above:$\mathcal{N}$} {alpha} {C};
+    \factor[above=of y] {y-f} {left:$\mathcal{N}$} {dot,tau} {y};
+    \factor[above=of C] {C-f} {left:$\mathcal{N}$} {alpha} {C};
     \factor[above=of X] {X-f} {above:$\mathcal{N}$} {} {X};
     \factor[above=of alpha] {alpha-f} {above:$\mathcal{G}$} {} {alpha};
     \factor[above=of tau] {tau-f} {above:$\mathcal{G}$} {} {tau};
+    \edge {C,X} {dot};
 
+    \tikzstyle{plate caption} += [below left=0pt and 0pt of #1.north east] ;
     \plate {d-plate} {(X)(X-f)(X-f-caption)(C)(C-f)(C-f-caption)(alpha)(alpha-f)(alpha-f-caption)} {$d=0,\ldots,2$} ;
-    \plate {m-plate} {(y)(y-f)(y-f-caption)(C)(C-f)(C-f-caption)} {$m=0,\ldots,9$} ;
-    \plate {n-plate} {(y)(y-f)(y-f-caption)(X)(X-f)(X-f-caption)(m-plate-caption)(m-plate.north east)} {$n=0,\ldots,99$} ;
+    \tikzstyle{plate caption} += [below left=5pt and 0pt of #1.south east] ;
+    \plate {m-plate} {(y)(y-f)(y-f-caption)(C)(C-f)(C-f-caption)(d-plate.south west)} {$m=0,\ldots,9$} ;
+    \plate {n-plate} {(y)(y-f)(y-f-caption)(X)(X-f)(X-f-caption)(m-plate-caption)(m-plate.north east)(d-plate.south east)} {$n=0,\ldots,99$} ;
 
-The dimensionality of the latent space:
+Now, let us construct this model in BayesPy.  First, we'll define the
+dimensionality of the latent space in our model:
 
 >>> D = 3
 
-The latent states:
+Then the prior for the latent states :math:`\mathbf{X}`:
 
 >>> X = GaussianARD(0, 1,
 ...                 shape=(D,),
 ...                 plates=(1,100),
 ...                 name='X')
 
-The ARD parameters of the loading matrix:
+Note that the shape of ``X`` is ``(D,)``, although the latent dimensions are
+marked with a plate in the graphical model and they are conditionally
+independent in the prior.  However, we want to (and need to) model the posterior
+dependency of the latent dimensions, thus we cannot factorize them, which would
+happen if we used ``plates=(1,100,D)`` and ``shape=()``.  The first plate axis
+with size 1 is given just for clarity.
+
+The prior for the ARD parameters :math:`\boldsymbol{\alpha}` of the loading
+matrix:
 
 >>> alpha = Gamma(1e-3, 1e-3,
 ...               plates=(D,),
 ...               name='alpha')
 
-The loading matrix:
+The prior for the loading matrix :math:`\mathbf{C}`:
 
 >>> C = GaussianARD(0, alpha,
 ...                 shape=(D,),
 ...                 plates=(10,1),
 ...                 name='C')
 
-The inner product:
+Again, note that the shape is the same as for ``X`` for the same reason.  Also,
+the plates of ``alpha``, ``(D,)``, are mapped to the full shape of the node
+``C``, ``(10,1,D)``, using standard broadcasting rules.
+
+The dot product is just a deterministic node:
 
 >>> F = Dot(C, X)
 
-The observation noise:
+However, note that ``Dot`` requires that the input Gaussian nodes have the same
+shape and that this shape has exactly one axis, that is, the variables are
+vectors.  This the reason why we used shape ``(D,)`` for ``X`` and ``C`` but
+from a bit different perspective.  The node computes the inner product of
+:math:`D`-dimensional vectors resulting in plates ``(10,100)`` broadcasted from
+the plates ``(1,100)`` and ``(10,1)``:
+
+>>> F.plates
+(10, 100)
+
+The prior for the observation noise :math:`\tau`:
 
 >>> tau = Gamma(1e-3, 1e-3)
 
-The observations:
+Finally, the observations are conditionally independent Gaussian scalars:
 
 >>> Y = GaussianARD(F, tau)
+
+Now we have defined our model and the next step is to observe some data and to
+perform inference.
