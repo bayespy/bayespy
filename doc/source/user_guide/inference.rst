@@ -239,8 +239,9 @@ Iteration 14: loglike=-6.371002e+01 (... seconds)
 Iteration 48: loglike=8.275500e+02 (... seconds)
 Converged at iteration 48.
 
-The relative tolerance can be adjusted by providing ``tol`` keyword argument to
-the ``update`` method:
+Now the algorithm stopped before taking 1000 iteration steps because it
+converged.  The relative tolerance can be adjusted by providing ``tol`` keyword
+argument to the ``update`` method:
 
 >>> Q.update(repeat=10000, tol=1e-6)
 Iteration 49: loglike=8.275572e+02 (... seconds)
@@ -248,8 +249,8 @@ Iteration 49: loglike=8.275572e+02 (... seconds)
 Iteration 1731: loglike=8.320980e+02 (... seconds)
 Converged at iteration 1731.
 
-Now it did not perform 100 more iterations but only three because the algorithm
-converged.
+This shows that making the tolerance smaller, may improve the result but it may
+also significantly increase the iteration steps until convergence.
 
 Instead of using ``update`` method of the inference engine ``VB``, it is
 possible to use the ``update`` methods of the nodes directly as
@@ -271,22 +272,25 @@ Parameter expansion
 
 Sometimes the VB algorithm converges very slowly.  This may happen when the
 variables are strongly coupled in the true posterior but factorized in the
-approximate posterior.  One solution to this problem is to use parameter
-expansion.  The idea is to add an auxiliary variable which parameterizes the
-posterior approximation of several variables.  Then optimizing this auxiliary
-variable actually optimizes several posterior approximations jointly leading to
-faster convergence.
+approximate posterior.  This coupling leads to zigzagging of the variational
+parameters which progresses slowly.  One solution to this problem is to use
+parameter expansion.  The idea is to add an auxiliary variable which
+parameterizes the posterior approximation of several variables.  Then optimizing
+this auxiliary variable actually optimizes several posterior approximations
+jointly leading to faster convergence.
 
-The parameter expansion is model specific.  In BayesPy, only state-space models
-can utilize the parameter expansion currently.  These models have contain a
-variable which is a dot product of two variables (plus some noise):
+The parameter expansion is model specific.  Currently in BayesPy, only
+state-space models have built-in parameter expansions available.  These
+state-space models contain a variable which is a dot product of two variables
+(plus some noise):
 
 .. math::
 
     y = \mathbf{c}^T\mathbf{x} + \mathrm{noise}
 
-We can add an auxiliary variable which rotates the variables :math:`\mathbf{c}`
-and :math:`\mathbf{x}` so that the dot product is unaffected:
+The parameter expansion can be motivated by noticing that we can add an
+auxiliary variable which rotates the variables :math:`\mathbf{c}` and
+:math:`\mathbf{x}` so that the dot product is unaffected:
 
 .. math::
 
@@ -299,4 +303,75 @@ Now, applying this rotation to the posterior approximations
 bound with respect to the rotation leads to parameterized joint optimization of
 :math:`\mathbf{c}` and :math:`\mathbf{x}`.
 
-The parameter expansion is used in BayesPy as ..
+The available parameter expansion methods are in module ``transformations``:
+
+>>> from bayespy.inference.vmp import transformations
+
+First, you create the rotation transformations for the two variables:
+
+>>> rotX = transformations.RotateGaussianARD(X)
+>>> rotC = transformations.RotateGaussianARD(C, alpha)
+
+.. currentmodule:: bayespy.inference.vmp.transformations
+
+Here, the rotation for ``C`` provides the ARD parameters ``alpha`` so they are
+updated simultaneously.  In addition to :class:`RotateGaussianARD`, there are a
+few other built-in rotations defined, for instance, :class:`RotateGaussian` and
+:class:`RotateGaussianMarkovChain`.  It is extremely important that the model
+satisfies the assumptions made by the rotation class and the user is mostly
+responsible for this.  The optimizer for the rotations is constructed by giving
+the two rotations and the dimensionality of the rotated space:
+
+.. currentmodule:: bayespy.nodes
+
+>>> R = transformations.RotationOptimizer(rotC, rotX, D)
+
+Now, calling ``rotate`` method will find optimal rotation and update the
+relevant nodes (``X``, ``C`` and ``alpha``) accordingly:
+
+>>> R.rotate()
+
+Let us see how our iteration would have gone if we had used this parameter
+expansion.  First, let us re-initialize our nodes and VB algorithm:
+
+>>> alpha.initialize_from_prior()
+>>> C.initialize_from_prior()
+>>> X.initialize_from_parameters(np.random.randn(1, 100, D), 10)
+>>> tau.initialize_from_prior()
+>>> Q = VB(Y, C, X, alpha, tau)
+
+Then, the rotation is set to run after each iteration step:
+
+>>> Q.callback = R.rotate
+
+Now the iteration converges to the relative tolerance :math:`10^{-6}` much
+faster:
+
+>>> Q.update(repeat=1000, tol=1e-6)
+Iteration 1: loglike=-9.360795e+02 (... seconds)
+...
+Iteration 20: loglike=-2.962718e+01 (... seconds)
+Converged at iteration 20.
+
+However, the lower bound is worse than after converging to the same tolerance in
+1731 iteration steps without the parameter expansion.  To reach a better
+solution, we can force the VB algorithm to proceed for some iterations:
+
+>>> Q.update(repeat=50, tol=np.nan)
+Iteration 21: loglike=-2.962718e+01 (... seconds)
+...
+Iteration 70: loglike=8.560601e+02 (... seconds)
+
+Now the iteration converged to a similar (actually slightly better) lower bound
+than before and much faster: 70 iterations versus 1731 iterations.  One can
+compare the number of iteration steps in this case because the cost per
+iteration step with or without parameter expansion is approximately the same.
+However, this shows that the parameter expansion can have the drawback that it
+converges much faster but may converge to a bad local optimum more easily.
+Usually, this can solved by updating the nodes near the observations a few times
+before starting to update the hyperparameters and to use parameter expansion.
+In any case, the parameter expansion is practically necessary when using
+state-space models in order to converge to a proper solution in a reasonable
+time.
+
+
