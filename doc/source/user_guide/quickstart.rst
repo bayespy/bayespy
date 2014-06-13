@@ -153,6 +153,7 @@ probability density functions:
 <matplotlib.axes.AxesSubplot object at 0x...>
 >>> bpplt.pdf(tau, np.linspace(1e-6, 0.08, num=100), color='k', name=r'\tau')
 [<matplotlib.lines.Line2D object at 0x...>]
+>>> bpplt.pyplot.tight_layout()
 >>> bpplt.pyplot.show()
 
 .. plot::
@@ -172,8 +173,8 @@ probability density functions:
     bpplt.pdf(mu, np.linspace(-10, 20, num=100), color='k', name=r'\mu')
     bpplt.pyplot.subplot(2, 1, 2)
     bpplt.pdf(tau, np.linspace(1e-6, 0.08, num=100), color='k', name=r'\tau')
+    bpplt.pyplot.tight_layout()
     bpplt.pyplot.show()
-
 
 This example was a very simple introduction to using BayesPy. The model
 can be much more complex and each phase contains more options to give
