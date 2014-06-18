@@ -81,7 +81,7 @@ class VB():
         if iterations is not None:
             self.autosave_iterations = iterations
 
-    def update(self, *nodes, repeat=1, plot=False, tol=1e-5):
+    def update(self, *nodes, repeat=1, plot=False, tol=1e-5, verbose=True):
 
         # TODO/FIXME:
         #
@@ -123,8 +123,9 @@ class VB():
 
             # Compute lower bound
             L = self.loglikelihood_lowerbound()
-            print("Iteration %d: loglike=%e (%.3f seconds)" 
-                  % (self.iter+1, L, time.clock()-t))
+            if verbose:
+                print("Iteration %d: loglike=%e (%.3f seconds)" 
+                      % (self.iter+1, L, time.clock()-t))
 
             # Check the progress of the iteration
             if self.iter > 0:
@@ -138,7 +139,8 @@ class VB():
                 div = 0.5 * (abs(L) + abs(self.L[self.iter-1]))
                 if (L - self.L[self.iter-1]) / div < tol:
                     converged = True
-                    print("Converged at iteration %d." % (self.iter+1))
+                    if verbose:
+                        print("Converged at iteration %d." % (self.iter+1))
 
             self.L[self.iter] = L
             self.iter += 1
@@ -148,7 +150,8 @@ class VB():
                 and np.mod(self.iter, self.autosave_iterations) == 0):
 
                 self.save(self.autosave_filename)
-                print('Auto-saved to %s' % self.autosave_filename)
+                if verbose:
+                    print('Auto-saved to %s' % self.autosave_filename)
 
             if converged:
                 return
