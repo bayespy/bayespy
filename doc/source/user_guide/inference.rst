@@ -37,7 +37,7 @@
                     plates=(10,1),
                     name='C')
     F = Dot(C, X)
-    tau = Gamma(1e-3, 1e-3)
+    tau = Gamma(1e-3, 1e-3, name='tau')
     Y = GaussianARD(F, tau)
                 
                 
@@ -64,7 +64,7 @@ First, let us generate some toy data:
 
 >>> c = np.random.randn(10, 2)
 >>> x = np.random.randn(2, 100)
->>> data = np.dot(c, x) + 0.1*np.random.randn()
+>>> data = np.dot(c, x) + 0.1*np.random.randn(10, 100)
 
 The data is provided by simply calling ``observe`` method of a stochastic node:
 
@@ -81,8 +81,6 @@ Missing values
 
 It is possible to mark missing values by providing a mask which is a boolean
 array:
-
-.. code:: python
 
 >>> Y.observe(data, mask=[[True], [False], [False], [True], [True],
 ...                       [False], [True], [True], [True], [False]])
@@ -199,58 +197,59 @@ be run using ``update`` method. By default, it takes one iteration step
 updating all nodes once:
 
 >>> Q.update()
-Iteration 1: loglike=-9.022564e+02 (... seconds)
+Iteration 1: loglike=-9.305259e+02 (... seconds)
 
-The order in which the nodes are updated is the same as the order in which the
-nodes were given when creating ``Q``.  If you want to change the order or update
-only some of the nodes, you can give as arguments the nodes you want to update
-and they are updated in the given order:
+The ``loglike`` tells the VB lower bound.  The order in which the nodes are
+updated is the same as the order in which the nodes were given when creating
+``Q``.  If you want to change the order or update only some of the nodes, you
+can give as arguments the nodes you want to update and they are updated in the
+given order:
 
 >>> Q.update(C, X)
-Iteration 2: loglike=-8.300209e+02 (... seconds)
+Iteration 2: loglike=-8.818976e+02 (... seconds)
 
 It is also possible to give the same node several times:
 
 >>> Q.update(C, X, C, tau)
-Iteration 3: loglike=-7.608389e+02 (... seconds)
+Iteration 3: loglike=-8.071222e+02 (... seconds)
 
 Note that each call to ``update`` is counted as one iteration step although not
 variables are necessarily updated.  Instead of doing one iteration step,
 ``repeat`` keyword argument can be used to perform several iteration steps:
 
 >>> Q.update(repeat=10)
-Iteration 4: loglike=-6.909768e+02 (... seconds)
-Iteration 5: loglike=-5.975477e+02 (... seconds)
-Iteration 6: loglike=-4.328053e+02 (... seconds)
-Iteration 7: loglike=-2.802900e+02 (... seconds)
-Iteration 8: loglike=-1.628321e+02 (... seconds)
-Iteration 9: loglike=-9.664200e+01 (... seconds)
-Iteration 10: loglike=-7.202233e+01 (... seconds)
-Iteration 11: loglike=-6.580980e+01 (... seconds)
-Iteration 12: loglike=-6.444844e+01 (... seconds)
-Iteration 13: loglike=-6.400242e+01 (... seconds)
+Iteration 4: loglike=-7.167588e+02 (... seconds)
+Iteration 5: loglike=-6.827873e+02 (... seconds)
+Iteration 6: loglike=-6.259477e+02 (... seconds)
+Iteration 7: loglike=-4.725400e+02 (... seconds)
+Iteration 8: loglike=-3.270816e+02 (... seconds)
+Iteration 9: loglike=-2.208865e+02 (... seconds)
+Iteration 10: loglike=-1.658761e+02 (... seconds)
+Iteration 11: loglike=-1.469468e+02 (... seconds)
+Iteration 12: loglike=-1.420311e+02 (... seconds)
+Iteration 13: loglike=-1.405139e+02 (... seconds)
 
 The VB algorithm stops automatically if it converges, that is, the relative
 change in the lower bound is below some threshold:
 
 >>> Q.update(repeat=1000)
-Iteration 14: loglike=-6.371002e+01 (... seconds)
+Iteration 14: loglike=-1.396481e+02 (... seconds)
 ...
-Iteration 48: loglike=8.275500e+02 (... seconds)
-Converged at iteration 48.
+Iteration 488: loglike=-1.224106e+02 (... seconds)
+Converged at iteration 488.
 
 Now the algorithm stopped before taking 1000 iteration steps because it
 converged.  The relative tolerance can be adjusted by providing ``tol`` keyword
 argument to the ``update`` method:
 
 >>> Q.update(repeat=10000, tol=1e-6)
-Iteration 49: loglike=8.275572e+02 (... seconds)
+Iteration 489: loglike=-1.224094e+02 (... seconds)
 ...
-Iteration 1731: loglike=8.320980e+02 (... seconds)
-Converged at iteration 1731.
+Iteration 847: loglike=-1.222506e+02 (... seconds)
+Converged at iteration 847.
 
-This shows that making the tolerance smaller, may improve the result but it may
-also significantly increase the iteration steps until convergence.
+Making the tolerance smaller, may improve the result but it may also
+significantly increase the iteration steps until convergence.
 
 Instead of using ``update`` method of the inference engine ``VB``, it is
 possible to use the ``update`` methods of the nodes directly as
@@ -348,30 +347,20 @@ Now the iteration converges to the relative tolerance :math:`10^{-6}` much
 faster:
 
 >>> Q.update(repeat=1000, tol=1e-6)
-Iteration 1: loglike=-9.360795e+02 (... seconds)
+Iteration 1: loglike=-9.363500e+02 (... seconds)
 ...
-Iteration 20: loglike=-2.962718e+01 (... seconds)
-Converged at iteration 20.
+Iteration 18: loglike=-1.221354e+02 (... seconds)
+Converged at iteration 18.
 
-However, the lower bound is worse than after converging to the same tolerance in
-1731 iteration steps without the parameter expansion.  To reach a better
-solution, we can force the VB algorithm to proceed for some iterations:
-
->>> Q.update(repeat=50, tol=np.nan)
-Iteration 21: loglike=-2.962718e+01 (... seconds)
-...
-Iteration 70: loglike=8.560601e+02 (... seconds)
-
-Now the iteration converged to a similar (actually slightly better) lower bound
-than before and much faster: 70 iterations versus 1731 iterations.  One can
-compare the number of iteration steps in this case because the cost per
-iteration step with or without parameter expansion is approximately the same.
-However, this shows that the parameter expansion can have the drawback that it
-converges much faster but may converge to a bad local optimum more easily.
-Usually, this can solved by updating the nodes near the observations a few times
-before starting to update the hyperparameters and to use parameter expansion.
-In any case, the parameter expansion is practically necessary when using
-state-space models in order to converge to a proper solution in a reasonable
-time.
+The convergence took 18 iterations with rotations and 488 or 847 iterations
+without the parameter expansion.  In addition, the lower bound is improved
+slightly.  One can compare the number of iteration steps in this case because
+the cost per iteration step with or without parameter expansion is approximately
+the same.  Sometimes the parameter expansion can have the drawback that it
+converges to a bad local optimum.  Usually, this can be solved by updating the
+nodes near the observations a few times before starting to update the
+hyperparameters and to use parameter expansion.  In any case, the parameter
+expansion is practically necessary when using state-space models in order to
+converge to a proper solution in a reasonable time.
 
 

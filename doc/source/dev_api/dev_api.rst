@@ -25,5 +25,8 @@ Developer API
 Moments, Distributions, utils.misc, utils.random etc ...?
 
 .. toctree::
+    :maxdepth: 2
     
-    plot
+    nodes
+    moments
+

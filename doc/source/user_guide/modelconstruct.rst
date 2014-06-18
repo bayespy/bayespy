@@ -18,6 +18,7 @@
    You should have received a copy of the GNU General Public License
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
+
 .. currentmodule:: bayespy.nodes
                 
 Constructing the model
@@ -218,6 +219,22 @@ as:
 >>> y = Gaussian(mu, Lambda, plates=(10,30))
                 
 .. note:: The plates are always given as a tuple of positive integers.
+
+Plates also define indexing for the nodes, thus you can use simple NumPy-style
+slice indexing to obtain a subset of the plates:
+
+>>> y_0 = y[0]
+>>> y_0.plates
+(30,)
+>>> y_even = y[:,::2]
+>>> y_even.plates
+(10, 15)
+>>> y_complex = y[:5, 10:20:5]
+>>> y_complex.plates
+(5, 2)
+
+Note that this indexing is for the plates only, not for the random variable
+dimensions.
                 
 Sharing and broadcasting plates
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -392,6 +409,8 @@ Note how the last two plate axes of ``tau`` are mapped to the variable axes of
 remaining leading plate axes of ``tau``.
 
 
+
+
 Example model: Principal component analysis
 -------------------------------------------
 
@@ -505,7 +524,7 @@ the plates ``(1,100)`` and ``(10,1)``:
 
 The prior for the observation noise :math:`\tau`:
 
->>> tau = Gamma(1e-3, 1e-3)
+>>> tau = Gamma(1e-3, 1e-3, name='tau')
 
 Finally, the observations are conditionally independent Gaussian scalars:
 

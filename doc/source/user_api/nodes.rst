@@ -105,23 +105,3 @@ Deterministic nodes
 
 
 
-Base nodes (for developers)
-===========================
-
-.. currentmodule:: bayespy.inference.vmp.nodes
-
-These nodes should be interesting only for developers.
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/class.rst
-
-   node.Node
-   stochastic.Stochastic
-   deterministic.Deterministic
-
-.. autosummary::
-   :toctree: generated/
-
-   constant.Constant
-

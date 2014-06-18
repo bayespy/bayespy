@@ -19,21 +19,19 @@
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Plotting
-********
+Nodes
+=====
 
+.. currentmodule:: bayespy.inference.vmp.nodes
 
-Functions
-=========
-
-.. currentmodule:: bayespy.plot
+Base classes and special nodes:
 
 .. autosummary::
    :toctree: generated/
 
-   pdf
-   contour
+   node.Node
+   stochastic.Stochastic
+   expfamily.ExponentialFamily
+   deterministic.Deterministic
+   constant.Constant
 
-
-Plotters
-========
