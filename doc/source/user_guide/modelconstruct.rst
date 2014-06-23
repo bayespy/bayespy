@@ -528,7 +528,7 @@ The prior for the observation noise :math:`\tau`:
 
 Finally, the observations are conditionally independent Gaussian scalars:
 
->>> Y = GaussianARD(F, tau)
+>>> Y = GaussianARD(F, tau, name='Y')
 
 Now we have defined our model and the next step is to observe some data and to
 perform inference.
