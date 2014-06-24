@@ -21,6 +21,35 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+"""
+Functions for plotting nodes.
+
+Functions
+=========
+
+.. currentmodule:: bayespy.plot
+
+.. autosummary::
+   :toctree: generated/
+
+   pdf
+   contour
+   plot
+   hinton
+
+Plotters
+========
+
+.. autosummary::
+   :toctree: generated/
+
+   PDFPlotter
+   ContourPlotter
+   HintonPlotter
+   FunctionPlotter
+   GaussianTimeseriesPlotter
+   CategoricalMarkovChainPlotter
+"""
 
 import os, sys
 import tempfile
@@ -50,6 +79,15 @@ pyplot = plt
 def pdf(Z, x, *args, name=None, **kwargs):
     """
     Plot probability density function of a scalar variable.
+
+    Parameters
+    ----------
+
+    Z : node or function
+        Stochastic node or log pdf function
+
+    x : array
+        Grid points
     """
     try:
         lpdf = Z.logpdf(x)
@@ -74,6 +112,18 @@ def pdf(Z, x, *args, name=None, **kwargs):
 def contour(Z, x, y, n=None, **kwargs):
     """
     Plot 2-D probability density function of a 2-D variable.
+
+    Parameters
+    ----------
+
+    Z : node or function
+        Stochastic node or log pdf function
+
+    x : array
+        Grid points on x axis
+
+    y : array
+        Grid points on y axis
     """
     XY = misc.grid(x, y)
     try:
@@ -95,7 +145,10 @@ def contour(Z, x, y, n=None, **kwargs):
 
 def plot_gaussian_mc(X, scale=2, **kwargs):
     """
-    Parameters:
+    Plot Gaussian Markov chain as a 1-D function
+    
+    Parameters
+    ----------
     X : node
         Node with Gaussian Markov chain moments.
     """
@@ -104,7 +157,10 @@ def plot_gaussian_mc(X, scale=2, **kwargs):
 
 def plot_gaussian(X, axis=-1, scale=2, **kwargs):
     """
-    Parameters:
+    Plot Gaussian node as a 1-D function
+    
+    Parameters
+    ----------
     X : node
         Node with Gaussian moments.
     axis : int
@@ -122,7 +178,7 @@ def plot_gaussian(X, axis=-1, scale=2, **kwargs):
 
 def plot(Y, axis=-1, scale=2, center=False, **kwargs):
     """
-    Plot a variable or an array as 1-D function with errors
+    Plot a variable or an array as 1-D function with errorbars
     """
     if misc.is_numeric(Y):
         return _timeseries_mean_and_error(Y, None, axis=axis, center=center, **kwargs)
@@ -244,7 +300,7 @@ def _rectangle(x, y, width, height, **kwargs):
     return
     
     
-def hinton(W, error=None, vmax=None, square=True):
+def _hinton(W, error=None, vmax=None, square=True):
     """
     Draws a Hinton diagram for visualizing a weight matrix. 
 
@@ -305,6 +361,7 @@ def hinton(W, error=None, vmax=None, square=True):
         plt.ion()
         #P.show()
 
+
 def matrix(A):
     A = np.atleast_2d(A)
     vmax = np.max(np.abs(A))
@@ -325,9 +382,13 @@ def new_matrix(A, vmax=None):
         for j in range(N):
             pass
     
-def gaussian_array(X, rows=-2, cols=-1, scale=1):
+def gaussian_hinton(X, rows=None, cols=None, scale=1):
+    """
+    Plot the Hinton diagram of a Gaussian node
+    """
 
     # Get mean and second moment
+    X = X._convert(GaussianMoments)
     (x, xx) = X.get_moments()
     ndim = len(X.dims[0])
     shape = X.get_shape(0)
@@ -341,6 +402,11 @@ def gaussian_array(X, rows=-2, cols=-1, scale=1):
     x = x * np.ones(shape)
     std = std * np.ones(shape)
 
+    if rows is None:
+        rows = np.nan
+    if cols is None:
+        cols = np.nan
+
     # Preprocess the axes to 0,...,ndim
     if rows < 0:
         rows += size
@@ -351,19 +417,38 @@ def gaussian_array(X, rows=-2, cols=-1, scale=1):
     if cols < 0 or cols >= size:
         raise ValueError("Column axis invalid")
 
-    # Put the row and column axes to the end
-    axes = [i for i in range(size) if i not in (rows, cols)] + [rows, cols]
-    x = np.transpose(x, axes=axes)
-    std = np.transpose(std, axes=axes)
-
     # Remove non-row and non-column axes that have length 1
-    squeezed_shape = tuple([sh for sh in np.shape(x)[:-2] if sh != 1])
-    x = np.reshape(x, squeezed_shape+np.shape(x)[-2:])
-    std = np.reshape(std, squeezed_shape+np.shape(x)[-2:])
+    squeezed_shape = list(shape)
+    for i in reversed(range(len(shape))):
+        if shape[i] == 1 and i != rows and i != cols:
+            squeezed_shape.pop(i)
+        if i < cols:
+            cols -= 1
+        if i < rows:
+            rows -= 1
+    x = np.reshape(x, squeezed_shape)
+    std = np.reshape(std, squeezed_shape)
 
     # Make explicit four axes
     x = misc.atleast_nd(x, 4)
     std = misc.atleast_nd(std, 4)
+
+    size = np.ndim(x)
+    if np.isnan(cols):
+        if rows != size - 1:
+            cols = size - 1
+        else:
+            cols = size - 2
+    if np.isnan(rows):
+        if cols != size - 1:
+            rows = size - 1
+        else:
+            rows = size - 2
+
+    # Put the row and column axes to the end
+    axes = [i for i in range(size) if i not in (rows, cols)] + [rows, cols]
+    x = np.transpose(x, axes=axes)
+    std = np.transpose(std, axes=axes)
 
     if np.ndim(x) != 4:
         raise ValueError("Can not plot arrays with over 4 axes")
@@ -376,12 +461,16 @@ def gaussian_array(X, rows=-2, cols=-1, scale=1):
     for i in range(M):
         for j in range(N):
             plt.subplot(M, N, i*N+j+1)
+
             #plt.subplot(M, N, i*N+j+1, sharey=ax[0], sharex=ax[0])
             if scale == 0:
-                hinton(x[i,j], vmax=vmax)
+                return _hinton(x[i,j], vmax=vmax)
             else:
-                hinton(x[i,j], vmax=vmax, error=scale*std[i,j])
+                return _hinton(x[i,j], vmax=vmax, error=scale*std[i,j])
             #matrix(x[i,j])
+
+
+gaussian_array = gaussian_hinton
 
 def timeseries_categorical_mc(Z):
 
@@ -422,9 +511,7 @@ def beta_hinton(P):
     p = p * np.ones(P.plates)
 
     # Plot Hinton diagram
-    hinton(p, vmax=1.0, square=False)
-
-    return
+    return _hinton(p, vmax=1.0, square=False)
     
 
 def dirichlet_hinton(P, square=True):
@@ -442,18 +529,84 @@ def dirichlet_hinton(P, square=True):
     p = p * np.ones(P.plates+(1,))
 
     # Plot Hinton diagram
-    hinton(p, vmax=1.0, square=square)
-
-    return
+    return _hinton(p, vmax=1.0, square=square)
 
     
+def hinton(X, **kwargs):
+    r"""
+    Plot the Hinton diagram of a node
+
+    The keyword arguments depend on the node type.  For some node types,
+    the diagram also shows uncertainty with non-filled rectangles.
+
+    Parameters
+    ----------
+
+    X : node
+
+    Notes
+    -----
+    
+    The function is a simple wrapper for node specific Hinton diagram
+    plotting functions:
+
+    .. autosummary::
+       :toctree: generated/
+
+       gaussian_hinton
+       beta_hinton
+       dirichlet_hinton
+
+    """
+
+    try:
+        X = X._convert(GaussianMoments)
+    except:
+        pass
+    else:
+        return gaussian_hinton(X, **kwargs)
+
+    try:
+        X = X._convert(BetaMoments)
+    except:
+        pass
+    else:
+        return beta_hinton(X, **kwargs)
+
+    try:
+        X = X._convert(DirichletMoments)
+    except:
+        pass
+    else:
+        return dirichlet_hinton(X, **kwargs)
+
+    return _hinton(X, **kwargs)
+    
+
 class Plotter():
-    def __init__(self, plotter, **kwargs):
+    def __init__(self, plotter, *args, **kwargs):
+        self._args = args
         self._kwargs = kwargs
         self._plotter = plotter
     def __call__(self, X):
-        self._plotter(X, **self._kwargs)
+        self._plotter(X, *self._args, **self._kwargs)
         
+class PDFPlotter(Plotter):
+    def __init__(self, x_grid, **kwargs):
+        super().__init__(pdf, x_grid, **kwargs)
+
+class ContourPlotter(Plotter):
+    def __init__(self, x1_grid, x2_grid, **kwargs):
+        super().__init__(contour, x1_grid, x2_grid, **kwargs)
+
+class HintonPlotter(Plotter):
+    def __init__(self, **kwargs):
+        super().__init__(hinton, **kwargs)
+
+class FunctionPlotter(Plotter):
+    def __init__(self, **kwargs):
+        super().__init__(plot, **kwargs)
+
 class GaussianMarkovChainPlotter(Plotter):
     def __init__(self, **kwargs):
         super().__init__(timeseries_gaussian_mc, **kwargs)

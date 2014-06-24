@@ -34,12 +34,41 @@ from bayespy.utils import misc
 from bayespy.inference.vmp.nodes.node import Node
 
 class VB():
+    r"""
+    Variational Bayesian (VB) inference engine
+
+    Parameters
+    ----------
+
+    nodes : nodes
+    
+        Nodes that form the model. Must include all at least all stochastic
+        nodes of the model.
+        
+    tol : double, optional
+
+        Convergence criterion.  Tolerance for the relative change in the VB
+        lower bound.
+
+    autosave_filename : string, optional
+
+        Filename for automatic saving
+
+    autosave_iterations : int, optional
+
+        Iteration interval between each automatic saving
+
+    callback : callable, optional
+
+        Function which is called after each update iteration step
+
+    """
 
     def __init__(self,
                  *nodes, 
-                 tol=1e-6, 
-                 autosave_iterations=0, 
+                 tol=1e-5, 
                  autosave_filename=None,
+                 autosave_iterations=0, 
                  callback=None):
 
         for (ind, node) in enumerate(nodes):
@@ -74,6 +103,7 @@ class VB():
 
         self.callback = callback
         self.callback_output = None
+        self.tol = tol
 
     def set_autosave(self, filename, iterations=None):
         self.autosave_filename = filename
@@ -81,7 +111,7 @@ class VB():
         if iterations is not None:
             self.autosave_iterations = iterations
 
-    def update(self, *nodes, repeat=1, plot=False, tol=1e-5, verbose=True):
+    def update(self, *nodes, repeat=1, plot=False, tol=None, verbose=True):
 
         # TODO/FIXME:
         #
@@ -136,6 +166,8 @@ class VB():
                                   "numerical inaccuracy?" % L_diff)
 
                 # Check for convergence
+                if tol is None:
+                    tol = self.tol
                 div = 0.5 * (abs(L) + abs(self.L[self.iter-1]))
                 if (L - self.L[self.iter-1]) / div < tol:
                     converged = True

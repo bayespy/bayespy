@@ -3,13 +3,14 @@ Discrete hidden Markov model
 ============================
 
 This example is also available as `an IPython
-notebook <hmm_discrete.ipynb>`_ or `a Python script <hmm_discrete.py>`_.
+notebook <hmm_discrete.ipynb>`__ or `a Python
+script <hmm_discrete.py>`__.
 
 Known parameters
 ----------------
 
 This example follows the one presented in
-`Wikipedia <http://en.wikipedia.org/wiki/Hidden_Markov_model#A_concrete_example>`_.
+`Wikipedia <http://en.wikipedia.org/wiki/Hidden_Markov_model#A_concrete_example>`__.
 Each day, the state of the weather is either 'rainy' or 'sunny'. The
 weather follows a first-order discrete Markov process with the following
 initial state probability and state transition probabilities:

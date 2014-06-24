@@ -37,6 +37,38 @@ from .nodes import gaussian
 from .nodes.categorical import CategoricalMoments
 
 class RotationOptimizer():
+    r"""
+    Optimizer for rotation parameter expansion in state-space models
+
+    Rotates one model block with :math:`\mathbf{R}` and one model block
+    with :math:`\mathbf{R}^{-1}`.
+
+    Parameters
+    ----------
+
+    block1 : rotator object
+
+        The first rotation parameter expansion object
+
+    block2 : rotator object
+
+        The second rotation parameter expansion object
+
+    D : int
+
+        Dimensionality of the latent space
+
+    References
+    ----------
+
+    .. [1] J. Luttinen, A. Ilin, "Transformations in variational Bayesian
+       factor analysis to speed up learning," Neurocomputing, vol. 73,
+       pp. 1093-1102, 2010.
+
+    .. [2] J. Luttinen, "Fast Variational Bayesian Linear State-Space
+       Model," ECML, 2013.
+
+    """
 
     def __init__(self, block1, block2, D):
         self.block1 = block1
@@ -212,6 +244,9 @@ class RotationOptimizer():
                 
 
 class RotateGaussian():
+    r"""
+    Rotation parameter expansion for :class:`bayespy.nodes.Gaussian` node
+    """
 
     def __init__(self, X):
         self.X = X
@@ -361,8 +396,8 @@ def sum_to_plates(V, plates_to, plates_from=None, ndim=0):
 
 class RotateGaussianARD():
     """
-    Class for computing the cost of rotating a Gaussian array with ARD prior.
-
+    Rotation parameter expansion for :class:`GaussianARD` node
+    
     The model:
 
     alpha ~ N(a, b)
@@ -1004,7 +1039,9 @@ class RotateGaussianARD():
 
     
 class RotateGaussianMarkovChain():
-    """
+    r"""
+    Rotation parameter expansion for :class:`GaussianMarkovChain` node
+    
     Assume the following model.
 
     Constant, unit isotropic innovation noise. Unit variance only?
@@ -1279,7 +1316,9 @@ class RotateGaussianMarkovChain():
 
     
 class RotateVaryingMarkovChain(RotateGaussianMarkovChain):
-    """
+    r"""
+    Rotation parameter expansion for :class:`SwitchingGaussianMarkovChain` node
+    
     Assume the following model.
 
     Constant, unit isotropic innovation noise.
@@ -1368,6 +1407,8 @@ class RotateVaryingMarkovChain(RotateGaussianMarkovChain):
 
 class RotateSwitchingMarkovChain(RotateGaussianMarkovChain):
     """
+    Rotation parameter expansion for :class:`VaryingGaussianMarkovChain` node
+
     Assume the following model.
 
     Constant, unit isotropic innovation noise.
@@ -1456,8 +1497,11 @@ class RotateSwitchingMarkovChain(RotateGaussianMarkovChain):
 
 
 class RotateMultiple():
-    """
-    Performs the same rotation for multiple nodes and combines the cost effect.
+    r"""
+    Identical parameter expansion for several nodes simultaneously
+    
+    Performs the same rotation for multiple nodes and combines the cost
+    effect.
     """
 
     def __init__(self, *rotators):

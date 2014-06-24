@@ -24,8 +24,10 @@ User API
 ========
 
 
-.. toctree::
-    :maxdepth: 2
+.. autosummary::
+    :toctree: generated/
 
-    nodes
-    plot
+    bayespy.nodes
+    bayespy.inference
+    bayespy.plot
+
