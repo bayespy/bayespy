@@ -668,11 +668,11 @@ class Node():
         that is, functions that perform plotting for a node.
         """
         if callable(self._plotter):
-            self._plotter(self, **kwargs)
+            ax = self._plotter(self, **kwargs)
             plt.suptitle('q(%s)' % self.name)
+            return ax
         else:
             raise Exception("No plotter defined, can not plot")
-        return
 
     def _convert(self, moments_class):
         converter = self._moments.get_converter(moments_class)

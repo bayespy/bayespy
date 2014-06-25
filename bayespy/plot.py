@@ -43,6 +43,7 @@ Plotters
 .. autosummary::
    :toctree: generated/
 
+   Plotter
    PDFPlotter
    ContourPlotter
    HintonPlotter
@@ -619,8 +620,9 @@ class Plotter():
     >>> x = Gamma(4, 5)
 
     The probability density function can be plotted as:
-    
-    >>> pdf(x, np.linspace(0.1, 10, num=100))               # doctest: +ELLIPSIS
+
+    >>> import bayespy.plot as bpplt
+    >>> bpplt.pdf(x, np.linspace(0.1, 10, num=100))         # doctest: +ELLIPSIS
     [<matplotlib.lines.Line2D object at 0x...>]
 
     However, this can be problematic when one needs to provide a
@@ -628,14 +630,18 @@ class Plotter():
     gives only the node as input.  Thus, we need to create a simple
     plotter wrapper:
     
-    >>> p = Plotter(pdf, np.linspace(0.1, 10, num=100))
+    >>> p = bpplt.Plotter(bpplt.pdf, np.linspace(0.1, 10, num=100))
 
     Now, this callable object ``p`` needs only the node as the input:
 
     >>> p(x)                                                # doctest: +ELLIPSIS
     [<matplotlib.lines.Line2D object at 0x...>]
 
-    Thus, it can be given to the inference engine to use as a plotting function.
+    Thus, it can be given to the inference engine to use as a plotting function:
+
+    >>> x = Gamma(4, 5, plotter=p)
+    >>> x.plot()                                            # doctest: +ELLIPSIS
+    [<matplotlib.lines.Line2D object at 0x...>]
     """
     
 

@@ -361,6 +361,7 @@ When the plotter is set, one can use the ``plot`` method of the node to perform
 plotting:
 
 >>> V.plot()
+<matplotlib.contour.QuadContourSet object at 0x...>
 
 Nodes can also be plotted using the ``plot`` method of the inference engine:
 
