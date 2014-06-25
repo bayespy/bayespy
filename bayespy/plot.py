@@ -584,34 +584,143 @@ def hinton(X, **kwargs):
     
 
 class Plotter():
+    r"""
+    Wrapper for plotting functions and base class for node plotters
+
+    The purpose of this class is to collect all the parameters needed by
+    the plotting function and provide a callable interface which needs
+    only the node as the input.
+    
+    Plotter instances are callable objects that plot a given node in a
+    particular way.
+
+    Parameters
+    ----------
+
+    plotter : function
+
+        Plotting function to use
+
+    args : defined by the plotting function
+
+        Additional inputs needed by the plotting function
+
+    kwargs : defined by the plotting function
+
+        Additional keyword arguments supported by the plotting function
+
+    Examples
+    --------
+
+    First, create a gamma variable:
+    
+    >>> import numpy as np
+    >>> from bayespy.nodes import Gamma
+    >>> x = Gamma(4, 5)
+
+    The probability density function can be plotted as:
+    
+    >>> pdf(x, np.linspace(0.1, 10, num=100))
+
+    However, this can be problematic when one needs to provide a
+    plotting function for the inference engine as the inference engine
+    gives only the node as input.  Thus, we need to create a simple
+    plotter wrapper:
+    
+    >>> p = Plotter(pdf, np.linspace(0.1, 10, num=100))
+
+    Now, this callable object ``p`` needs only the node as the input:
+
+    >>> p(x)
+
+    Thus, it can be given to the inference engine to use
+
+    """
+    
     def __init__(self, plotter, *args, **kwargs):
         self._args = args
         self._kwargs = kwargs
         self._plotter = plotter
     def __call__(self, X):
+        """
+        Plot the 
+        """
         self._plotter(X, *self._args, **self._kwargs)
         
 class PDFPlotter(Plotter):
+    r"""
+    Plotter of probability density function of a scalar node
+
+    Parameters
+    ----------
+
+    x_grid : array
+
+        Numerical grid on which the density function is computed and
+        plotted
+
+    See also
+    --------
+    pdf
+    """
     def __init__(self, x_grid, **kwargs):
         super().__init__(pdf, x_grid, **kwargs)
 
 class ContourPlotter(Plotter):
+    r"""
+    Plotter of probability density function of a two-dimensional node
+
+    Parameters
+    ----------
+
+    x1_grid : array
+
+        Grid for the first dimension
+
+    x2_grid : array
+
+        Grid for the second dimension
+
+    See also
+    --------
+    contour
+    """
     def __init__(self, x1_grid, x2_grid, **kwargs):
         super().__init__(contour, x1_grid, x2_grid, **kwargs)
 
 class HintonPlotter(Plotter):
+    r"""
+    Plotter of the Hinton diagram of a node
+
+    See also
+    --------
+    hinton
+    """
     def __init__(self, **kwargs):
         super().__init__(hinton, **kwargs)
 
 class FunctionPlotter(Plotter):
+    r"""
+    Plotter of a node as a 1-dimensional function
+
+    See also
+    --------
+    plot
+    """
     def __init__(self, **kwargs):
         super().__init__(plot, **kwargs)
 
 class GaussianMarkovChainPlotter(Plotter):
+    r"""
+    Plotter of a Gaussian Markov chain as a timeseries
+    """
     def __init__(self, **kwargs):
         super().__init__(timeseries_gaussian_mc, **kwargs)
 
 class GaussianTimeseriesPlotter(Plotter):
+    r"""
+    Plotter of a Gaussian node as a timeseries
+    """
     def __init__(self, **kwargs):
         super().__init__(timeseries_gaussian, **kwargs)
 
@@ -620,6 +729,9 @@ class GaussianHintonPlotter(Plotter):
         super().__init__(gaussian_array, **kwargs)
 
 class CategoricalMarkovChainPlotter(Plotter):
+    r"""
+    Plotter of a Categorical timeseries
+    """
     def __init__(self, **kwargs):
         super().__init__(timeseries_categorical_mc, **kwargs)
 
