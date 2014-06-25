@@ -587,12 +587,12 @@ class Plotter():
     r"""
     Wrapper for plotting functions and base class for node plotters
 
-    The purpose of this class is to collect all the parameters needed by
-    the plotting function and provide a callable interface which needs
-    only the node as the input.
+    The purpose of this class is to collect all the parameters needed by a
+    plotting function and provide a callable interface which needs only the node
+    as the input.
     
-    Plotter instances are callable objects that plot a given node in a
-    particular way.
+    Plotter instances are callable objects that plot a given node using a
+    specified plotting function.
 
     Parameters
     ----------
@@ -635,19 +635,29 @@ class Plotter():
     >>> p(x)                                                # doctest: +ELLIPSIS
     [<matplotlib.lines.Line2D object at 0x...>]
 
-    Thus, it can be given to the inference engine to use
-
+    Thus, it can be given to the inference engine to use as a plotting function.
     """
     
+
     def __init__(self, plotter, *args, **kwargs):
         self._args = args
         self._kwargs = kwargs
         self._plotter = plotter
+
+
     def __call__(self, X):
         """
-        Plot the 
+        Plot the node using the specified plotting function
+
+        Parameters
+        ----------
+
+        X : node
+
+            The plotted node
         """
         return self._plotter(X, *self._args, **self._kwargs)
+
         
 class PDFPlotter(Plotter):
     r"""
@@ -667,6 +677,7 @@ class PDFPlotter(Plotter):
     """
     def __init__(self, x_grid, **kwargs):
         super().__init__(pdf, x_grid, **kwargs)
+
 
 class ContourPlotter(Plotter):
     r"""
@@ -690,6 +701,7 @@ class ContourPlotter(Plotter):
     def __init__(self, x1_grid, x2_grid, **kwargs):
         super().__init__(contour, x1_grid, x2_grid, **kwargs)
 
+
 class HintonPlotter(Plotter):
     r"""
     Plotter of the Hinton diagram of a node
@@ -700,6 +712,7 @@ class HintonPlotter(Plotter):
     """
     def __init__(self, **kwargs):
         super().__init__(hinton, **kwargs)
+
 
 class FunctionPlotter(Plotter):
     r"""
@@ -712,12 +725,14 @@ class FunctionPlotter(Plotter):
     def __init__(self, **kwargs):
         super().__init__(plot, **kwargs)
 
+
 class GaussianMarkovChainPlotter(Plotter):
     r"""
     Plotter of a Gaussian Markov chain as a timeseries
     """
     def __init__(self, **kwargs):
         super().__init__(timeseries_gaussian_mc, **kwargs)
+
 
 class GaussianTimeseriesPlotter(Plotter):
     r"""
@@ -726,9 +741,14 @@ class GaussianTimeseriesPlotter(Plotter):
     def __init__(self, **kwargs):
         super().__init__(timeseries_gaussian, **kwargs)
 
+
 class GaussianHintonPlotter(Plotter):
+    r"""
+    Plotter of a Gaussian node as a Hinton diagram
+    """
     def __init__(self, **kwargs):
         super().__init__(gaussian_array, **kwargs)
+
 
 class CategoricalMarkovChainPlotter(Plotter):
     r"""
