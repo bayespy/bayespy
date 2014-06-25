@@ -89,7 +89,7 @@ class TestCase(unittest.TestCase):
 
     def assertAllClose(self, A, B, 
                        msg="Arrays not almost equal", 
-                       rtol=1e-5,
+                       rtol=1e-4,
                        atol=0):
 
         self.assertEqual(np.shape(A), np.shape(B), msg=msg)
