@@ -620,7 +620,8 @@ class Plotter():
 
     The probability density function can be plotted as:
     
-    >>> pdf(x, np.linspace(0.1, 10, num=100))
+    >>> pdf(x, np.linspace(0.1, 10, num=100))               # doctest: +ELLIPSIS
+    [<matplotlib.lines.Line2D object at 0x...>]
 
     However, this can be problematic when one needs to provide a
     plotting function for the inference engine as the inference engine
@@ -631,7 +632,8 @@ class Plotter():
 
     Now, this callable object ``p`` needs only the node as the input:
 
-    >>> p(x)
+    >>> p(x)                                                # doctest: +ELLIPSIS
+    [<matplotlib.lines.Line2D object at 0x...>]
 
     Thus, it can be given to the inference engine to use
 
@@ -645,7 +647,7 @@ class Plotter():
         """
         Plot the 
         """
-        self._plotter(X, *self._args, **self._kwargs)
+        return self._plotter(X, *self._args, **self._kwargs)
         
 class PDFPlotter(Plotter):
     r"""
