@@ -245,7 +245,7 @@ class RotationOptimizer():
 
 class RotateGaussian():
     r"""
-    Rotation parameter expansion for :class:`bayespy.nodes.Gaussian` node
+    Rotation parameter expansion for :class:`bayespy.nodes.Gaussian`
     """
 
     def __init__(self, X):
@@ -396,7 +396,7 @@ def sum_to_plates(V, plates_to, plates_from=None, ndim=0):
 
 class RotateGaussianARD():
     """
-    Rotation parameter expansion for :class:`GaussianARD` node
+    Rotation parameter expansion for :class:`bayespy.nodes.GaussianARD`
     
     The model:
 
@@ -1040,7 +1040,7 @@ class RotateGaussianARD():
     
 class RotateGaussianMarkovChain():
     r"""
-    Rotation parameter expansion for :class:`GaussianMarkovChain` node
+    Rotation parameter expansion for :class:`bayespy.nodes.GaussianMarkovChain`
     
     Assume the following model.
 
@@ -1317,7 +1317,7 @@ class RotateGaussianMarkovChain():
     
 class RotateVaryingMarkovChain(RotateGaussianMarkovChain):
     r"""
-    Rotation parameter expansion for :class:`SwitchingGaussianMarkovChain` node
+    Rotation for :class:`bayespy.nodes.SwitchingGaussianMarkovChain`
     
     Assume the following model.
 
@@ -1407,7 +1407,7 @@ class RotateVaryingMarkovChain(RotateGaussianMarkovChain):
 
 class RotateSwitchingMarkovChain(RotateGaussianMarkovChain):
     """
-    Rotation parameter expansion for :class:`VaryingGaussianMarkovChain` node
+    Rotation for :class:`bayespy.nodes.VaryingGaussianMarkovChain`
 
     Assume the following model.
 
