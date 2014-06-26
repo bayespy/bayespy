@@ -114,7 +114,7 @@ from .node import (Moments,
         
 
 class GaussianMoments(Moments):
-    """
+    r"""
     Class for the moments of Gaussian variables.
     """
 
@@ -125,14 +125,14 @@ class GaussianMoments(Moments):
 
 
     def compute_fixed_moments(self, x):
-        """
+        r"""
         Compute the moments for a fixed value
         """
         x = misc.atleast_nd(x, self.ndim)
         return [x, linalg.outer(x, x, ndim=self.ndim)]
 
     def compute_dims_from_values(self, x):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
         """
         x = misc.atleast_nd(x, self.ndim)
@@ -144,13 +144,13 @@ class GaussianMoments(Moments):
 
 
 class GaussianGammaISOMoments(Moments):
-    """
+    r"""
     Class for the moments of Gaussian-gamma-ISO variables.
     """
 
 
     def __init__(self, ndim):
-        """
+        r"""
         Create moments object for Gaussian-gamma isotropic variables
 
         ndim=0: scalar
@@ -163,7 +163,7 @@ class GaussianGammaISOMoments(Moments):
 
     
     def compute_fixed_moments(self, x, alpha):
-        """
+        r"""
         Compute the moments for a fixed value
 
         `x` is a mean vector.
@@ -184,7 +184,7 @@ class GaussianGammaISOMoments(Moments):
     
 
     def compute_dims_from_values(self, x, alpha):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
         """
 
@@ -200,13 +200,13 @@ class GaussianGammaISOMoments(Moments):
 
 
 class GaussianGammaARDMoments(Moments):
-    """
+    r"""
     Class for the moments of Gaussian-gamma-ARD variables.
     """
 
     
     def __init__(self, ndim):
-        """
+        r"""
         Create moments object for Gaussian-gamma isotropic variables
 
         ndim=0: scalar
@@ -219,7 +219,7 @@ class GaussianGammaARDMoments(Moments):
 
     
     def compute_fixed_moments(self, x, alpha):
-        """
+        r"""
         Compute the moments for a fixed value
 
         `x` is a mean vector.
@@ -247,7 +247,7 @@ class GaussianGammaARDMoments(Moments):
     
 
     def compute_dims_from_values(self, x, alpha):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
         """
 
@@ -267,13 +267,13 @@ class GaussianGammaARDMoments(Moments):
 
 
 class GaussianWishartMoments(Moments):
-    """
+    r"""
     Class for the moments of Gaussian-Wishart variables.
     """
     
     
     def compute_fixed_moments(self, x, Lambda):
-        """
+        r"""
         Compute the moments for a fixed value
 
         `x` is a vector.
@@ -292,7 +292,7 @@ class GaussianWishartMoments(Moments):
     
 
     def compute_dims_from_values(self, x, Lambda):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
         """
 
@@ -316,7 +316,7 @@ class GaussianWishartMoments(Moments):
 
 
 class GaussianDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     Class for the VMP formulas of Gaussian variables.
 
     Currently, supports only vector variables.
@@ -412,7 +412,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
 
     
     def compute_message_to_parent(self, parent, index, u, u_mu_Lambda):
-        """
+        r"""
         Compute the message to a parent node.
         """
         if index == 0:
@@ -427,7 +427,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
             raise ValueError("Index out of bounds")
 
     def compute_phi_from_parents(self, u_mu_Lambda, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         Lambda_mu = u_mu_Lambda[0]
@@ -436,7 +436,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
                 -0.5 * Lambda]
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
         """
         # TODO: Compute -2*phi[1] and simplify the formulas
@@ -453,7 +453,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         return (u, g)
 
     def compute_cgf_from_parents(self, u_mu_Lambda):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         mu_Lambda_mu = u_mu_Lambda[1]
@@ -462,7 +462,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         return g
 
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         k = np.shape(x)[-1]
@@ -472,7 +472,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
 
 
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         # TODO/FIXME: You shouldn't draw random values for
@@ -488,7 +488,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
             
 
 class GaussianARDDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     ...
 
     Log probability density function:
@@ -521,7 +521,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         super().__init__()
     
     def compute_message_to_parent(self, parent, index, u, u_mu_alpha):
-        """
+        r"""
         ...
 
 
@@ -585,7 +585,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
 
 
     def compute_mask_to_parent(self, index, mask):
-        """
+        r"""
         Maps the mask to the plates of a parent.
         """
         if index == 0:
@@ -661,7 +661,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
 
 
     def compute_cgf_from_parents(self, u_mu_alpha):
-        """
+        r"""
         Compute the value of the cumulant generating function.
         """
 
@@ -686,7 +686,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         return g
 
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """ Compute u(x) and f(x) for given x. """
+        r""" Compute u(x) and f(x) for given x. """
         if self.ndim > 0 and np.shape(x)[-self.ndim:] != self.shape:
             raise ValueError("Invalid shape")
         k = np.prod(self.shape)
@@ -696,7 +696,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
 
 
     def plates_to_parent(self, index, plates):
-        """
+        r"""
         Resolves the plate mapping to a parent.
 
         Given the plates of the node's moments, this method returns the plates
@@ -715,7 +715,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
             
 
     def plates_from_parent(self, index, plates):
-        """
+        r"""
         Resolve the plate mapping from a parent.
 
         Given the plates of a parent's moments, this method returns the plates
@@ -734,7 +734,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
 
 
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the Gaussian distribution.
         """
         # TODO/FIXME: You shouldn't draw random values for
@@ -781,7 +781,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
 
 
 class GaussianGammaISODistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     Class for the VMP formulas of Gaussian-Gamma-ISO variables.
 
     Currently, supports only vector variables.
@@ -789,7 +789,7 @@ class GaussianGammaISODistribution(ExponentialFamilyDistribution):
 
 
     def compute_message_to_parent(self, parent, index, u, u_mu_Lambda, u_a, u_b):
-        """
+        r"""
         Compute the message to a parent node.
         """
         if index == 0:
@@ -803,7 +803,7 @@ class GaussianGammaISODistribution(ExponentialFamilyDistribution):
 
 
     def compute_phi_from_parents(self, u_mu_Lambda, u_a, u_b, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         Lambda_mu = u_mu_Lambda[0]
@@ -819,7 +819,7 @@ class GaussianGammaISODistribution(ExponentialFamilyDistribution):
 
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
         """
         # Compute helpful variables
@@ -846,7 +846,7 @@ class GaussianGammaISODistribution(ExponentialFamilyDistribution):
 
     
     def compute_cgf_from_parents(self, u_mu_Lambda, u_a, u_b):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         logdet_Lambda = u_mu_Lambda[3]
@@ -858,7 +858,7 @@ class GaussianGammaISODistribution(ExponentialFamilyDistribution):
 
     
     def compute_fixed_moments_and_f(self, x, alpha, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         logalpha = np.log(alpha)
@@ -873,14 +873,14 @@ class GaussianGammaISODistribution(ExponentialFamilyDistribution):
 
     
     def random(self, *params, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         raise NotImplementedError()
 
 
 class GaussianGammaARDDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     """
 
 
@@ -889,7 +889,7 @@ class GaussianGammaARDDistribution(ExponentialFamilyDistribution):
 
     
 class GaussianWishartDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     Class for the VMP formulas of Gaussian-Wishart variables.
 
     Currently, supports only vector variables.
@@ -897,7 +897,7 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
 
 
     def compute_message_to_parent(self, parent, index, u, u_mu_alpha, u_V, u_n):
-        """
+        r"""
         Compute the message to a parent node.
         """
         if index == 0:
@@ -911,14 +911,14 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
 
 
     def compute_phi_from_parents(self, u_mu_alpha, u_V, u_n, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         raise NotImplementedError()
 
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
         """
         raise NotImplementedError()
@@ -926,7 +926,7 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
 
     
     def compute_cgf_from_parents(self, u_mu_alpha, u_V, u_n):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         raise NotImplementedError()
@@ -934,7 +934,7 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
 
     
     def compute_fixed_moments_and_f(self, x, Lambda, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         raise NotImplementedError()
@@ -942,7 +942,7 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
 
     
     def random(self, *params, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         raise NotImplementedError()
@@ -996,7 +996,7 @@ class Gaussian(ExponentialFamily):
 
 
     def __init__(self, mu, Lambda, **kwargs):
-        """
+        r"""
         Create Gaussian node
         """
         super().__init__(mu, Lambda, **kwargs)
@@ -1004,7 +1004,7 @@ class Gaussian(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, mu, Lambda, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
         """
 
@@ -1081,7 +1081,7 @@ class Gaussian(ExponentialFamily):
             self.g -= logdetR
 
     def rotate_matrix(self, R1, R2, inv1=None, logdet1=None, inv2=None, logdet2=None, Q=None):
-        """
+        r"""
         The vector is reshaped into a matrix by stacking the row vectors.
 
         Computes R1*X*R2', which is identical to kron(R1,R2)*x (??)
@@ -1180,7 +1180,7 @@ class GaussianARD(ExponentialFamily):
 
 
     def __init__(self, mu, alpha, ndim=None, shape=None, **kwargs):
-        """
+        r"""
         Create GaussianARD node.
         """
         super().__init__(mu, alpha, ndim=ndim, shape=shape, **kwargs)
@@ -1188,7 +1188,7 @@ class GaussianARD(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, mu, alpha, ndim=None, shape=None, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
 
         If __init__ uses useconstructor decorator, this method is called to
@@ -1345,7 +1345,7 @@ class GaussianARD(ExponentialFamily):
         return
 
     def rotate_plates(self, Q, plate_axis=-1):
-        """
+        r"""
         Approximate rotation of a plate axis.
 
         Mean is rotated exactly but covariance/precision matrix is rotated
@@ -1407,7 +1407,7 @@ class GaussianGammaISO(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, mu, Lambda, a, b, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
 
         This method is called if useconstructor decorator is used for __init__.
@@ -1452,14 +1452,14 @@ class GaussianGammaISO(ExponentialFamily):
 
     
     def show(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         raise NotImplementedError()
 
 
     def plotmatrix(self):
-        """
+        r"""
         Creates a matrix of marginal plots.
 
         On diagonal, are marginal plots of each variable. Off-diagonal plot
@@ -1521,7 +1521,7 @@ class GaussianGammaISO(ExponentialFamily):
 
 
     def get_gaussian_mean_and_variance(self):
-        """
+        r"""
         Return the mean and variance of the distribution
         """
         a = self.phi[3]
@@ -1544,7 +1544,7 @@ class GaussianGammaISO(ExponentialFamily):
 
 
     def get_marginal_logpdf(self, gaussian=None, gamma=None):
-        """
+        r"""
         Get the (marginal) log pdf of a subset of the variables
 
         Parameters
@@ -1665,7 +1665,7 @@ class GaussianGammaARD(ExponentialFamily):
 
 
     def __init__(self, mu, alpha, a, b, **kwargs):
-        """
+        r"""
         """
         raise NotImplementedError()
 
@@ -1695,7 +1695,7 @@ class GaussianWishart(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, mu, alpha, n, V, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
 
         This method is called if useconstructor decorator is used for __init__.
@@ -1744,7 +1744,7 @@ class GaussianWishart(ExponentialFamily):
 
     
     def show(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         raise NotImplementedError()
@@ -1882,7 +1882,7 @@ class GaussianWishart(ExponentialFamily):
 
 
 class GaussianToGaussianGammaISO(Deterministic):
-    """
+    r"""
     Converter for Gaussian moments to Gaussian-gamma isotropic moments
 
     Combines the Gaussian moments with gamma moments for a fixed value 1.
@@ -1891,7 +1891,7 @@ class GaussianToGaussianGammaISO(Deterministic):
 
 
     def __init__(self, X, **kwargs):
-        """
+        r"""
         """
         self.ndim = X._moments.ndim
         
@@ -1904,7 +1904,7 @@ class GaussianToGaussianGammaISO(Deterministic):
             
 
     def _compute_moments(self, u_X):
-        """
+        r"""
         """
         x = u_X[0]
         xx = u_X[1]
@@ -1913,7 +1913,7 @@ class GaussianToGaussianGammaISO(Deterministic):
     
 
     def _compute_message_to_parent(self, index, m_child, u_X):
-        """
+        r"""
         """
         if index == 0:
             m = m_child[:2]
@@ -1927,13 +1927,13 @@ GaussianMoments.add_converter(GaussianGammaISOMoments,
 
 
 class GaussianGammaISOToGaussianGammaARD(Deterministic):
-    """
+    r"""
     Converter for Gaussian-gamma ISO moments to Gaussian-gamma ARD moments
     """
 
 
     def __init__(self, X, **kwargs):
-        """
+        r"""
         """
         self.ndim = X._moments.ndim
         
@@ -1946,7 +1946,7 @@ class GaussianGammaISOToGaussianGammaARD(Deterministic):
             
 
     def _compute_moments(self, u_X_alpha):
-        """
+        r"""
         ...
 
         .. math::
@@ -1969,7 +1969,7 @@ class GaussianGammaISOToGaussianGammaARD(Deterministic):
     
 
     def _compute_message_to_parent(self, index, m_child, u_X_alpha):
-        """
+        r"""
         ...
 
         Message from the child is :math:`[m_0, m_1, m_2, m_3]`:
@@ -2008,7 +2008,7 @@ GaussianGammaISOMoments.add_converter(GaussianGammaARDMoments,
 
 
 class GaussianGammaARDToGaussianWishart(Deterministic):
-    """
+    r"""
     """
 
 
@@ -2055,7 +2055,7 @@ GaussianGammaARDMoments.add_converter(GaussianWishartMoments,
 
 
 class WrapToGaussianGammaISO(Deterministic):
-    """
+    r"""
     """
 
 
@@ -2066,7 +2066,7 @@ class WrapToGaussianGammaISO(Deterministic):
 
     @ensureparents
     def __init__(self, X, alpha, **kwargs):
-        """
+        r"""
         """
         D = X.dims[0][0]
         dims = ( (D,), (D,D), (), () )
@@ -2074,13 +2074,13 @@ class WrapToGaussianGammaISO(Deterministic):
             
 
     def _compute_moments(self, u_X, u_alpha):
-        """
+        r"""
         """
         raise NotImplementedError()
     
 
     def _compute_message_to_parent(self, index, m_child, u_X, u_alpha):
-        """
+        r"""
         """
         if index == 0:
             raise NotImplementedError()
@@ -2091,7 +2091,7 @@ class WrapToGaussianGammaISO(Deterministic):
 
 
     def _compute_mask_to_parent(self, index, mask):
-        """
+        r"""
         """
         if index == 0:
             raise NotImplementedError()
@@ -2102,7 +2102,7 @@ class WrapToGaussianGammaISO(Deterministic):
 
 
     def _plates_to_parent(self, index):
-        """
+        r"""
         """
         if index == 0:
             raise NotImplementedError()
@@ -2113,7 +2113,7 @@ class WrapToGaussianGammaISO(Deterministic):
 
 
     def _plates_from_parent(self, index):
-        """
+        r"""
         """
         if index == 0:
             raise NotImplementedError()
@@ -2124,12 +2124,12 @@ class WrapToGaussianGammaISO(Deterministic):
 
 
 class WrapToGaussianGammaARD(Deterministic):
-    """
+    r"""
     """
 
 
     def __init__(self, mu_alpha, tau, **kwargs):
-        """
+        r"""
         """
 
         # First, just in case mu_alpha is a numeric array, convert mu_alpha to
@@ -2172,7 +2172,7 @@ class WrapToGaussianGammaARD(Deterministic):
 
 
     def _compute_moments(self, u_mu_alpha, u_tau):
-        """
+        r"""
         """
         mu_alpha = u_mu_alpha[0]
         mu2_alpha = u_mu_alpha[1]
@@ -2192,7 +2192,7 @@ class WrapToGaussianGammaARD(Deterministic):
     
 
     def _compute_message_to_parent(self, index, m_child, u_mu_alpha, u_tau):
-        """
+        r"""
         ...
         
         Message from the child is :math:`[m_0, m_1, m_2, m_3]`:
@@ -2261,7 +2261,7 @@ class WrapToGaussianGammaARD(Deterministic):
 
 
     def _compute_mask_to_parent(self, index, mask):
-        """
+        r"""
         """
         if index == 0:
             return mask
@@ -2272,7 +2272,7 @@ class WrapToGaussianGammaARD(Deterministic):
 
 
     def _plates_to_parent(self, index):
-        """
+        r"""
         """
         if index == 0:
             return self.plates
@@ -2284,7 +2284,7 @@ class WrapToGaussianGammaARD(Deterministic):
 
 
     def _plates_from_parent(self, index):
-        """
+        r"""
         """
         if index == 0:
             return self.parents[0].plates
@@ -2298,7 +2298,7 @@ class WrapToGaussianGammaARD(Deterministic):
 
 
 class WrapToGaussianWishart(Deterministic):
-    """
+    r"""
     Wraps Gaussian and Wishart nodes into a Gaussian-Wishart node.
 
     The following node combinations can be wrapped:
@@ -2312,7 +2312,7 @@ class WrapToGaussianWishart(Deterministic):
     
 
     def __init__(self, X, Lambda, **kwargs):
-        """
+        r"""
         """
 
         # Just in case X is an array, convert it to a Gaussian node first.
@@ -2341,7 +2341,7 @@ class WrapToGaussianWishart(Deterministic):
             
 
     def _compute_moments(self, u_X_alpha, u_Lambda):
-        """
+        r"""
         """
         if self.wishart:
             alpha_x = u_X_alpha[0]
@@ -2365,7 +2365,7 @@ class WrapToGaussianWishart(Deterministic):
     
 
     def _compute_message_to_parent(self, index, m_child, u_X_alpha, u_Lambda):
-        """
+        r"""
         ...
 
         Message from the child is :math:`[m_0, m_1, m_2, m_3]`:
@@ -2434,7 +2434,7 @@ class WrapToGaussianWishart(Deterministic):
 
 
 def reshape_gaussian_array(dims_from, dims_to, x0, x1):
-    """
+    r"""
     Reshape the moments Gaussian array variable.
 
     The plates remain unaffected.
@@ -2464,7 +2464,7 @@ def reshape_gaussian_array(dims_from, dims_to, x0, x1):
     return (x0, x1)
 
 def transpose_covariance(Cov, ndim=1):
-    """
+    r"""
     Transpose the covariance array of Gaussian array variable.
 
     That is, swap the last ndim axes with the ndim axes before them. This makes
@@ -2476,7 +2476,7 @@ def transpose_covariance(Cov, ndim=1):
     return np.einsum(Cov, axes_in, axes_out)
 
 def left_rotate_covariance(Cov, R, axis=-1, ndim=1):
-    """
+    r"""
     Rotate the covariance array of Gaussian array variable.
 
     ndim is the number of axes for the Gaussian variable.
@@ -2505,7 +2505,7 @@ def left_rotate_covariance(Cov, R, axis=-1, ndim=1):
     return Cov
     
 def right_rotate_covariance(Cov, R, axis=-1, ndim=1):
-    """
+    r"""
     Rotate the covariance array of Gaussian array variable.
 
     ndim is the number of axes for the Gaussian variable.
@@ -2534,7 +2534,7 @@ def right_rotate_covariance(Cov, R, axis=-1, ndim=1):
     return Cov
     
 def rotate_covariance(Cov, R, axis=-1, ndim=1):
-    """
+    r"""
     Rotate the covariance array of Gaussian array variable.
 
     ndim is the number of axes for the Gaussian variable.
@@ -2549,7 +2549,7 @@ def rotate_covariance(Cov, R, axis=-1, ndim=1):
     return Cov
 
 def rotate_mean(mu, R, axis=-1, ndim=1):
-    """
+    r"""
     Rotate the mean array of Gaussian array variable.
 
     ndim is the number of axes for the Gaussian variable.

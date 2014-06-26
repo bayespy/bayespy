@@ -19,12 +19,12 @@
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Nodes
-=====
+Developer nodes
+===============
 
 .. currentmodule:: bayespy.inference.vmp.nodes
 
-Base classes and special nodes:
+The following base classes are useful if writing new nodes:
 
 .. autosummary::
    :toctree: generated/
@@ -33,5 +33,17 @@ Base classes and special nodes:
    stochastic.Stochastic
    expfamily.ExponentialFamily
    deterministic.Deterministic
-   constant.Constant
 
+The following nodes are examples of special nodes that remain hidden for the
+user although they are often implicitly used:
+
+.. autosummary::
+   :toctree: generated/
+
+   constant.Constant
+   gaussian.GaussianToGaussianGammaISO
+   gaussian.GaussianGammaISOToGaussianGammaARD
+   gaussian.GaussianGammaARDToGaussianWishart
+   gaussian.WrapToGaussianGammaISO
+   gaussian.WrapToGaussianGammaARD
+   gaussian.WrapToGaussianWishart

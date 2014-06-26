@@ -19,27 +19,15 @@
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Moments
-=======
+Utility functions
+=================
 
-.. currentmodule:: bayespy.inference.vmp.nodes
+.. currentmodule:: bayespy.utils
 
 .. autosummary::
    :toctree: generated/
 
-   node.Moments
-   gaussian.GaussianMoments
-   gaussian_markov_chain.GaussianMarkovChainMoments
-   gaussian.GaussianGammaISOMoments
-   gaussian.GaussianGammaARDMoments
-   gaussian.GaussianWishartMoments
-   gamma.GammaMoments
-   wishart.WishartMoments
-   beta.BetaMoments
-   dirichlet.DirichletMoments
-   bernoulli.BernoulliMoments
-   binomial.BinomialMoments
-   categorical.CategoricalMoments
-   categorical_markov_chain.CategoricalMarkovChainMoments
-   multinomial.MultinomialMoments
-   poisson.PoissonMoments
+   linalg
+   random
+   optimize
+   misc

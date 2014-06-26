@@ -21,7 +21,7 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
-"""
+r"""
 General functions random sampling and distributions.
 """
 
@@ -33,7 +33,7 @@ from . import misc
 
 
 def intervals(N, length, amount=1, gap=0):
-    """
+    r"""
     Return random non-overlapping parts of a sequence.
 
     For instance, N=16, length=2 and amount=4:
@@ -59,11 +59,11 @@ def intervals(N, length, amount=1, gap=0):
     return intervals
 
 def mask(*shape, p=0.5):
-    """
+    r"""
     Return a boolean array of the given shape.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     d0, d1, ..., dn : int
         Shape of the output.
     p : value in range [0,1]
@@ -72,11 +72,11 @@ def mask(*shape, p=0.5):
     return np.random.rand(*shape) < p
 
 def wishart_rand(nu, V):
-    """
+    r"""
     Draw a random sample from the Wishart distribution.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     nu : int
     """
     # TODO/FIXME: Are these correct..
@@ -92,7 +92,7 @@ def invwishart_rand(nu, V):
     return np.linalg.inv(wishart_rand(nu, V))
 
 def covariance(D, size=()):
-    """
+    r"""
     Draw a random covariance matrix.
 
     Draws from inverse-Wishart distribution. The distribution of each element is
@@ -100,8 +100,8 @@ def covariance(D, size=()):
 
     C ~ Inv-W(I, D)
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     D : int
         Dimensionality of the covariance matrix.
 
@@ -121,7 +121,7 @@ def covariance(D, size=()):
 #return np.linalg.inv(np.dot(C, C.T))
 
 def correlation(D):
-    """
+    r"""
     Draw a random correlation matrix.
     """
     X = np.random.randn(D,D);
@@ -131,12 +131,12 @@ def correlation(D):
 
 
 def gaussian_logpdf(yVy, yVmu, muVmu, logdet_V, D):
-    """
+    r"""
     Log-density of a Gaussian distribution.
 
     :math:`\mathcal{G}(\mathbf{y}|\boldsymbol{\mu},\mathbf{V}^{-1})`
 
-    Parameters:
+    Parameters
     -----------
     yVy : ndarray or double
         :math:`\mathbf{y}^T\mathbf{Vy}`
@@ -152,14 +152,14 @@ def gaussian_logpdf(yVy, yVmu, muVmu, logdet_V, D):
     return -0.5*yVy + yVmu - 0.5*muVmu + 0.5*logdet_V - 0.5*D*np.log(2*np.pi)
 
 def gaussian_entropy(logdet_V, D):
-    """
+    r"""
     Compute the entropy of a Gaussian distribution.
 
     If you want to get the gradient, just let each parameter be a gradient of
     that term.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     logdet_V : ndarray or double
         The log-determinant of the precision matrix.
     D : int
@@ -168,14 +168,14 @@ def gaussian_entropy(logdet_V, D):
     return -0.5*logdet_V + 0.5*D + 0.5*D*np.log(2*np.pi)
 
 def gamma_logpdf(bx, logx, a_logx, a_logb, gammaln_a):
-    """
+    r"""
     Log-density of :math:`\mathcal{G}(x|a,b)`.
     
     If you want to get the gradient, just let each parameter be a gradient of
     that term.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     bx : ndarray
         :math:`bx`
     logx : ndarray
@@ -191,14 +191,14 @@ def gamma_logpdf(bx, logx, a_logx, a_logb, gammaln_a):
 #def gamma_logpdf(a, log_b, gammaln_a, 
 
 def gamma_entropy(a, log_b, gammaln_a, psi_a, a_psi_a):
-    """
+    r"""
     Entropy of :math:`\mathcal{G}(a,b)`.
 
     If you want to get the gradient, just let each parameter be a gradient of
     that term.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     a : ndarray
         :math:`a`
     log_b : ndarray
@@ -213,7 +213,7 @@ def gamma_entropy(a, log_b, gammaln_a, psi_a, a_psi_a):
     return a - log_b + gammaln_a + psi_a - a_psi_a
 
 def orth(D):
-    """
+    r"""
     Draw random orthogonal matrix.
     """
     Q = np.random.randn(D,D)
@@ -221,7 +221,7 @@ def orth(D):
     return Q
 
 def svd(s):
-    """
+    r"""
     Draw a random matrix given its singular values.
     """
     D = len(s)
@@ -230,7 +230,7 @@ def svd(s):
     return np.dot(U, V.T)
     
 def sphere(N=1):
-    """
+    r"""
     Draw random points uniformly on a unit sphere.
 
     Returns (latitude,longitude) in degrees.
@@ -241,7 +241,7 @@ def sphere(N=1):
 
 
 def bernoulli(p, size=None):
-    """
+    r"""
     Draw random samples from the Bernoulli distribution.
     """
     if isinstance(size, int):
@@ -252,7 +252,7 @@ def bernoulli(p, size=None):
 
 
 def categorical(p, size=None):
-    """
+    r"""
     Draw random samples from a categorical distribution.
     """
     if size is None:
@@ -295,7 +295,7 @@ def categorical(p, size=None):
 
 
 def dirichlet(alpha, size=None):
-    """
+    r"""
     Draw random samples from the Dirichlet distribution.
     """
     if isinstance(size, int):
@@ -310,7 +310,7 @@ def dirichlet(alpha, size=None):
     
 
 def alpha_beta_recursion(logp0, logP):
-    """
+    r"""
     Compute alpha-beta recursion for Markov chain
 
     Initial state log-probabilities are in `p0` and state transition
@@ -377,7 +377,7 @@ def alpha_beta_recursion(logp0, logP):
 
 
 def gaussian_gamma_to_t(mu, Cov, a, b, ndim=1):
-    """
+    r"""
     Integrates gamma distribution to obtain parameters of t distribution
     """
     alpha = a/b
@@ -387,7 +387,7 @@ def gaussian_gamma_to_t(mu, Cov, a, b, ndim=1):
 
 
 def t_logpdf(z2, logdet_cov, nu, D):
-    """
+    r"""
     """
     return (special.gammaln((nu+D)/2)
             - special.gammaln(nu/2)

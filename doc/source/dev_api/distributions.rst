@@ -19,27 +19,31 @@
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Moments
-=======
+Distributions
+=============
 
 .. currentmodule:: bayespy.inference.vmp.nodes
 
 .. autosummary::
    :toctree: generated/
 
-   node.Moments
-   gaussian.GaussianMoments
-   gaussian_markov_chain.GaussianMarkovChainMoments
-   gaussian.GaussianGammaISOMoments
-   gaussian.GaussianGammaARDMoments
-   gaussian.GaussianWishartMoments
-   gamma.GammaMoments
-   wishart.WishartMoments
-   beta.BetaMoments
-   dirichlet.DirichletMoments
-   bernoulli.BernoulliMoments
-   binomial.BinomialMoments
-   categorical.CategoricalMoments
-   categorical_markov_chain.CategoricalMarkovChainMoments
-   multinomial.MultinomialMoments
-   poisson.PoissonMoments
+   stochastic.Distribution
+   expfamily.ExponentialFamilyDistribution
+   gaussian.GaussianDistribution
+   gaussian.GaussianARDDistribution
+   gaussian.GaussianGammaISODistribution
+   gaussian.GaussianGammaARDDistribution
+   gaussian.GaussianWishartDistribution
+   gaussian_markov_chain.GaussianMarkovChainDistribution
+   gaussian_markov_chain.SwitchingGaussianMarkovChainDistribution
+   gaussian_markov_chain.VaryingGaussianMarkovChainDistribution
+   gamma.GammaDistribution
+   wishart.WishartDistribution
+   beta.BetaDistribution
+   dirichlet.DirichletDistribution
+   bernoulli.BernoulliDistribution
+   binomial.BinomialDistribution
+   categorical.CategoricalDistribution
+   categorical_markov_chain.CategoricalMarkovChainDistribution
+   multinomial.MultinomialDistribution
+   poisson.PoissonDistribution

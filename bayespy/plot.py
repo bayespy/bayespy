@@ -537,26 +537,14 @@ def hinton(X, **kwargs):
     r"""
     Plot the Hinton diagram of a node
 
-    The keyword arguments depend on the node type.  For some node types,
-    the diagram also shows uncertainty with non-filled rectangles.
+    The keyword arguments depend on the node type.  For some node types, the
+    diagram also shows uncertainty with non-filled rectangles.  Currently,
+    beta-like, Gaussian-like and Dirichlet-like nodes are supported.
 
     Parameters
     ----------
 
     X : node
-
-    Notes
-    -----
-    
-    The function is a simple wrapper for node specific Hinton diagram
-    plotting functions:
-
-    .. autosummary::
-       :toctree: generated/
-
-       gaussian_hinton
-       beta_hinton
-       dirichlet_hinton
 
     """
 

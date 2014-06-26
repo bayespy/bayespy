@@ -1,29 +1,32 @@
-{% extends "!autosummary/class.rst" %}
+{{ fullname }}
+{{ underline }}
 
-{% block methods %}
-{% if methods %}
-      .. rubric:: Methods
+.. currentmodule:: {{ module }}
 
-      .. autosummary::
-         :toctree:
-      {% for item in all_methods %}
-         {%- if not item.startswith('_') or item in ['__call__'] %}
-         ~{{ name }}.{{ item }}
-         {%- endif -%}
-      {%- endfor %}
-{% endif %}
-{% endblock %}
+.. autoclass:: {{ objname }}
 
-{% block attributes %}
-{% if attributes %}
-      .. rubric:: Attributes
+   {% block methods %}
+   .. automethod:: __init__
 
-      .. autosummary::
-         :toctree:
-      {% for item in all_attributes %}
-         {%- if not item.startswith('_') %}
-         ~{{ name }}.{{ item }}
-         {%- endif -%}
-      {%- endfor %}
-{% endif %}
-{% endblock %}
+   {% if methods %}
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree: generated/
+   {% for item in methods %}
+      ~{{ name }}.{{ item }}
+   {%- endfor %}
+   {% endif %}
+   {% endblock %}
+
+   {% block attributes %}
+   {% if attributes %}
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree: generated/
+   {% for item in attributes %}
+      ~{{ name }}.{{ item }}
+   {%- endfor %}
+   {% endif %}
+   {% endblock %}

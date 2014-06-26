@@ -22,11 +22,15 @@
 Developer API
 =============
 
-Moments, Distributions, utils.misc, utils.random etc ...?
+This chapter contains API specifications which are relevant to BayesPy
+developers and contributors.
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
     
     nodes
     moments
+    distributions
+    utils
+    
 

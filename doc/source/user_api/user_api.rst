@@ -26,6 +26,7 @@ User API
 
 .. autosummary::
     :toctree: generated/
+    :template: autosummary/short_module.rst
 
     bayespy.nodes
     bayespy.inference
