@@ -24,11 +24,11 @@ Examples
 
 .. toctree::
 
-    regression.rst
-    gmm.rst
-    bmm.rst
-    hmm_discrete.rst
-    hmm.rst
-    pca.rst
-    lssm.rst
-    lda.rst
+    regression
+    gmm
+    bmm
+    hmm_discrete
+    hmm
+    pca
+    lssm
+    lda

@@ -55,19 +55,9 @@ gh-pages:
 	make html
 	cd build/html && git add -f *.png *.html *.txt *.js *.pdf *.py *.css * && git commit -a && git push
 
-notebooks:
-	(cd source/examples/ && \
-	ipython nbconvert --to rst *.ipynb && \
-	ipython nbconvert --to python *.ipynb)
-	@echo
-	@echo "Build finished. The notebooks have been converted to RST and Python."
-
-html: latexpdf notebooks
+html: latexpdf
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	cp $(BUILDDIR)/latex/BayesPy.pdf $(BUILDDIR)/html/_static/
-	cp source/examples/*.ipynb $(BUILDDIR)/html/examples/
-	cp source/examples/*.py $(BUILDDIR)/html/examples/
-	cp -r source/examples/*_files $(BUILDDIR)/html/examples/
 	cp -r build/doctest/user_guide/* build/html/user_guide/
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
