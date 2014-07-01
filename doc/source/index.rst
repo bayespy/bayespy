@@ -31,10 +31,9 @@ BayesPy -- Bayesian Python
    dev_guide/dev_guide
    user_api/user_api
    dev_api/dev_api
+   references
 
-Indices and tables
-==================
-
+* :doc:`Bibliography <references>`
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
