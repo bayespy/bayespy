@@ -1,18 +1,45 @@
+..
+   Copyright (C) 2014 Jaakko Luttinen
+
+   This file is licensed under Version 3.0 of the GNU General Public
+   License. See LICENSE for a text of the license.
+
+   This file is part of BayesPy.
+
+   BayesPy is free software: you can redistribute it and/or modify it
+   under the terms of the GNU General Public License version 3 as
+   published by the Free Software Foundation.
+
+   BayesPy is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
+
+.. testsetup::
+
+   import numpy as np
+   np.random.seed(1)
+
 
 Linear state-space model
 ========================
 
-This example is also available as `an IPython notebook <lssm.ipynb>`__
-or `a Python script <lssm.py>`__.
 
-In linear state-space models a sequence of :math:`M`-dimensional
-observations :math:`\mathbf{Y}=(\mathbf{y}_1,\ldots,\mathbf{y}_N)` is
-assumed to be generated from latent :math:`D`-dimensional states
-:math:`\mathbf{X}=(\mathbf{x}_1,\ldots,\mathbf{x}_N)` which follow a
-first-order Markov process:
+Model
+-----
+
+.. currentmodule:: bayespy.nodes
+
+In linear state-space models a sequence of :math:`M`-dimensional observations
+:math:`\mathbf{Y}=(\mathbf{y}_1,\ldots,\mathbf{y}_N)` is assumed to be generated
+from latent :math:`D`-dimensional states
+:math:`\mathbf{X}=(\mathbf{x}_1,\ldots,\mathbf{x}_N)` which follow a first-order
+Markov process:
 
 .. math::
-
 
    \begin{aligned}
    \mathbf{x}_{n} &= \mathbf{A}\mathbf{x}_{n-1} + \text{noise} \,,
@@ -20,316 +47,414 @@ first-order Markov process:
    \mathbf{y}_{n} &= \mathbf{C}\mathbf{x}_{n} + \text{noise} \,,
    \end{aligned}
 
-where the noise is Gaussian, :math:`\mathbf{A}` is the :math:`D\times D`
-state dynamics matrix and :math:`\mathbf{C}` is the :math:`M\times D`
-loading matrix. Usually, the latent space dimensionality :math:`D` is
-assumed to be much smaller than the observation space dimensionality
-:math:`M` in order to model the dependencies of high-dimensional
-observations efficiently.
+where the noise is Gaussian, :math:`\mathbf{A}` is the :math:`D\times D` state
+dynamics matrix and :math:`\mathbf{C}` is the :math:`M\times D` loading
+matrix. Usually, the latent space dimensionality :math:`D` is assumed to be much
+smaller than the observation space dimensionality :math:`M` in order to model
+the dependencies of high-dimensional observations efficiently.
 
-First, let us generate some toy data:
+In order to construct the model in BayesPy, first import relevant nodes:
 
-.. code:: python
+>>> from bayespy.nodes import GaussianARD, GaussianMarkovChain, Gamma, Dot
 
-    import numpy as np
+The data vectors will be 30-dimensional:
+
+>>> M = 30
+
+There will be 400 data vectors:
+
+>>> N = 400
+
+Let us use 10-dimensional latent space:
+
+>>> D = 10
+
+The state dynamics matrix :math:`\mathbf{A}` has ARD prior:
     
-    M = 30
-    N = 400
+>>> alpha = Gamma(1e-5,
+...               1e-5,
+...               plates=(D,),
+...               name='alpha')
+>>> A = GaussianARD(0,
+...                 alpha,
+...                 shape=(D,),
+...                 plates=(D,),
+...                 name='A')
+
+Note that :math:`\mathbf{A}` is a :math:`D\times{}D`-dimensional matrix.
+However, in BayesPy it is modelled as a collection (``plates=(D,)``) of
+:math:`D`-dimensional vectors (``shape=(D,)``) because this is how the variables
+factorize in the posterior approximation of the state dynamics matrix in
+:class:`GaussianMarkovChain`.  The latent states are constructed as
+
+>>> X = GaussianMarkovChain(np.zeros(D),
+...                         1e-3*np.identity(D),
+...                         A,
+...                         np.ones(D),
+...                         n=N,
+...                         name='X')
+
+where the first two arguments are the mean and precision matrix of the initial
+state, the third argument is the state dynamics matrix and the fourth argument
+is the diagonal elements of the precision matrix of the innovation noise.  The
+node also needs the length of the chain given as the keyword argument ``n=N``.
+Thus, the shape of this node is ``(N,D)``.
+
+The linear mapping from the latent space to the observation space is modelled
+with the loading matrix which has ARD prior:
+
+>>> gamma = Gamma(1e-5,
+...               1e-5,
+...               plates=(D,),
+...               name='gamma')
+>>> C = GaussianARD(0,
+...                 gamma,
+...                 shape=(D,),
+...                 plates=(M,1),
+...                 name='C')
+
+Note that the plates for ``C`` are ``(M,1)``, thus the full shape of the node is
+``(M,1,D)``.  The unit plate axis is added so that ``C`` broadcasts with ``X``
+when computing the dot product:
+
+>>> F = Dot(C, 
+...         X,
+...         name='F')
+
+This dot product is computed over the :math:`D`-dimensional latent space, thus
+the result is a :math:`M\times{}N`-dimensional matrix which is now represented
+with plates ``(M,N)`` in BayesPy:
+
+>>> F.plates
+(30, 400)
+
+We also need to use random initialization either for ``C`` or ``X`` in order to
+find non-zero latent space because by default both ``C`` and ``X`` are
+initialized to zero because of their prior distributions.  We use random
+initialization for ``C`` and then we must update ``X`` the first time before
+updating ``C``:
+
+>>> C.initialize_from_random()
     
-    w = 0.3
-    a = np.array([[np.cos(w), -np.sin(w), 0, 0], 
-                  [np.sin(w), np.cos(w),  0, 0], 
-                  [0,         0,          1, 0],
-                  [0,         0,          0, 0]])
-    c = np.random.randn(M,4)
-    x = np.empty((N,4))
-    f = np.empty((M,N))
-    y = np.empty((M,N))
-    x[0] = 10*np.random.randn(4)
-    f[:,0] = np.dot(c,x[0])
-    y[:,0] = f[:,0] + 3*np.random.randn(M)
-    for n in range(N-1):
-        x[n+1] = np.dot(a,x[n]) + np.random.randn(4)
-        f[:,n+1] = np.dot(c,x[n+1])
-        y[:,n+1] = f[:,n+1] + 3*np.random.randn(M)
-        
-The linear state-space model can be constructed as follows:
+The precision of the observation noise is given gamma prior:
 
-.. code:: python
+>>> tau = Gamma(1e-5,
+...             1e-5,
+...             name='tau')
 
-    from bayespy.inference.vmp.nodes.gaussian_markov_chain import GaussianMarkovChain
-    from bayespy.inference.vmp.nodes.gaussian import GaussianARD
-    from bayespy.inference.vmp.nodes.gamma import Gamma
-    from bayespy.inference.vmp.nodes.dot import SumMultiply
-    
-    D = 10
-    
-    # Dynamics matrix with ARD
-    alpha = Gamma(1e-5,
-                  1e-5,
-                  plates=(D,),
-                  name='alpha')
-    A = GaussianARD(0,
-                    alpha,
-                    shape=(D,),
-                    plates=(D,),
-                    name='A')
-    
-    # Latent states with dynamics
-    X = GaussianMarkovChain(np.zeros(D),         # mean of x0
-                            1e-3*np.identity(D), # prec of x0
-                            A,                   # dynamics
-                            np.ones(D),          # innovation
-                            n=N,                 # time instances
-                            name='X',
-                            initialize=False)
-    X.initialize_from_value(np.zeros((N,D))) # just some empty values, X is
-                                             # updated first anyway
-    
-    # Mixing matrix from latent space to observation space using ARD
-    gamma = Gamma(1e-5,
-                  1e-5,
-                  plates=(D,),
-                  name='gamma')
-    C = GaussianARD(0,
-                    gamma,
-                    shape=(D,),
-                    plates=(M,1),
-                    name='C')
-    # Initialize nodes (must use some randomness for C, and update X before C)
-    C.initialize_from_random()
-    
-    # Observation noise
-    tau = Gamma(1e-5,
-                1e-5,
-                name='tau')
-    
-    # Observations
-    F = SumMultiply('i,i',
-                    C, 
-                    X,
-                    name='F')
-    Y = GaussianARD(F,
-                    tau,
-                    name='Y')
-An inference machine using variational Bayesian inference with
-variational message passing is then construced as
+The observations are noisy versions of the dot products:
 
-.. code:: python
+>>> Y = GaussianARD(F,
+...                 tau,
+...                 name='Y')
 
-    from bayespy.inference.vmp.vmp import VB
-    Q = VB(X, C, gamma, A, alpha, tau, Y)
-Observe the data partially (80% is marked missing):
+The variational Bayesian inference engine is then construced as:
 
-.. code:: python
+>>> from bayespy.inference import VB
+>>> Q = VB(X, C, gamma, A, alpha, tau, Y)
 
-    from bayespy.utils import random
-    
-    # Add missing values randomly (keep only 20%)
-    mask = random.mask(M, N, p=0.2)
-    Y.observe(y, mask=mask)
-Then inference (100 iterations) can be run simply as
+Note that ``X`` is given before ``C``, thus ``X`` is updated before ``C`` by
+default.
 
-.. code:: python
+Data
+----
 
-    Q.update(repeat=10)
+Now, let us generate some toy data for our model.  Our true latent space is four
+dimensional with two noisy oscillator components, one random walk component and
+one white noise component.
 
-.. parsed-literal::
+>>> w = 0.3
+>>> a = np.array([[np.cos(w), -np.sin(w), 0, 0], 
+...               [np.sin(w), np.cos(w),  0, 0], 
+...               [0,         0,          1, 0],
+...               [0,         0,          0, 0]])
 
-    Iteration 1: loglike=-3.118644e+04 (0.210 seconds)
-    Iteration 2: loglike=-1.129540e+04 (0.210 seconds)
-    Iteration 3: loglike=-9.139376e+03 (0.210 seconds)
-    Iteration 4: loglike=-8.704676e+03 (0.220 seconds)
-    Iteration 5: loglike=-8.531889e+03 (0.200 seconds)
-    Iteration 6: loglike=-8.386198e+03 (0.210 seconds)
-    Iteration 7: loglike=-8.255826e+03 (0.210 seconds)
-    Iteration 8: loglike=-8.176274e+03 (0.210 seconds)
-    Iteration 9: loglike=-8.139579e+03 (0.210 seconds)
-    Iteration 10: loglike=-8.117779e+03 (0.210 seconds)
+The true linear mapping is just random:
+
+>>> c = np.random.randn(M,4)
+
+Then, generate the latent states and the observations using the model equations:
+
+>>> x = np.empty((N,4))
+>>> f = np.empty((M,N))
+>>> y = np.empty((M,N))
+>>> x[0] = 10*np.random.randn(4)
+>>> f[:,0] = np.dot(c,x[0])
+>>> y[:,0] = f[:,0] + 3*np.random.randn(M)
+>>> for n in range(N-1):
+...     x[n+1] = np.dot(a,x[n]) + [1,1,10,10]*np.random.randn(4)
+...     f[:,n+1] = np.dot(c,x[n+1])
+...     y[:,n+1] = f[:,n+1] + 3*np.random.randn(M)
+
+We want to simulate missing values, thus we create a mask which randomly removes
+80% of the data:
+
+>>> from bayespy.utils import random
+>>> mask = random.mask(M, N, p=0.2)
+>>> Y.observe(y, mask=mask)
 
 
-Speeding up with parameter expansion
-------------------------------------
+Inference
+---------
 
-VB inference can converge extremely slowly if the variables are strongly
-coupled. Because VMP updates one variable at a time, it may lead to slow
-zigzagging. This can be solved by using parameter expansion which
-reduces the coupling. In state-space models, the states
-:math:`\mathbf{x}_n` and the loadings :math:`\mathbf{C}` are coupled
-through a dot product :math:`\mathbf{Cx}_n`, which is unaltered if the
-latent space is rotated arbitrarily:
+As we did not define plotters for our nodes when creating the model, it is done
+now for some of the nodes:
+
+>>> import bayespy.plot as bpplt
+>>> X.set_plotter(bpplt.FunctionPlotter(center=True, axis=-2))
+>>> A.set_plotter(bpplt.HintonPlotter())
+>>> C.set_plotter(bpplt.HintonPlotter())
+>>> tau.set_plotter(bpplt.PDFPlotter(np.linspace(0.02, 0.5, num=1000)))
+
+This enables plotting of the approximate posterior distributions during VB
+learning.  The inference engine can be run using :func:`VB.update` method:
+
+>>> Q.update(repeat=10)
+Iteration 1: loglike=-1.439704e+05 (... seconds)
+...
+Iteration 10: loglike=-1.051441e+04 (... seconds)
+
+The iteration progresses a bit slowly, thus we'll consider parameter expansion
+to speed it up.
+
+Parameter expansion
++++++++++++++++++++
+
+Section :ref:`sec-parameter-expansion` discusses parameter expansion for
+state-space models to speed up inference.  It is based on a rotating the latent
+space such that the posterior in the observation space is not affected:
 
 .. math::
 
+   \mathbf{y}_n = \mathbf{C}\mathbf{x}_n =
+   (\mathbf{C}\mathbf{R}^{-1}) (\mathbf{R}\mathbf{x}_n) \,.
 
-   \mathbf{y}_n = \mathbf{C}\mathbf{x}_n = \mathbf{C}\mathbf{R}^{-1}\mathbf{R}\mathbf{x}_n \,.
-
-Thus, one intuitive transformation would be
+Thus, the transformation is
 :math:`\mathbf{C}\rightarrow\mathbf{C}\mathbf{R}^{-1}` and
-:math:`\mathbf{X}\rightarrow\mathbf{R}\mathbf{X}`. In order to keep the
-dynamics of the latent states unaffected by the transformation, the
-state dynamics matrix :math:`\mathbf{A}` must be transformed
-accordingly:
+:math:`\mathbf{X}\rightarrow\mathbf{R}\mathbf{X}`.  In order to keep the
+dynamics of the latent states unaffected by the transformation, the state
+dynamics matrix :math:`\mathbf{A}` must be transformed accordingly:
 
 .. math::
 
-
-   \mathbf{R}\mathbf{x}_n = \mathbf{R}\mathbf{A}\mathbf{R}^{-1} \mathbf{R}\mathbf{x}_{n-1} \,,
+   \mathbf{R}\mathbf{x}_n = \mathbf{R}\mathbf{A}\mathbf{R}^{-1}
+   \mathbf{R}\mathbf{x}_{n-1} \,,
 
 resulting in a transformation
-:math:`\mathbf{A}\rightarrow\mathbf{R}\mathbf{A}\mathbf{R}^{-1}`. For
-more details, refer to \*Fast Variational Bayesian Linear State-Space
-Model (Luttinen, 2013).
+:math:`\mathbf{A}\rightarrow\mathbf{R}\mathbf{A}\mathbf{R}^{-1}`.  For more
+details, refer to :cite:`Luttinen:2013` and :cite:`Luttinen:2010`.  In BayesPy,
+the transformations are available in
+:mod:`bayespy.inference.vmp.transformations`:
 
-In BayesPy, the transformations can be used as follows:
+>>> from bayespy.inference.vmp import transformations
 
-.. code:: python
-
-    # Import the parameter expansion module
-    from bayespy.inference.vmp import transformations
+The rotation of the loading matrix along with the ARD parameters is defined as:
     
-    # Rotator of the state dynamics matrix
-    rotA = transformations.RotateGaussianARD(Q['A'], Q['alpha'])
-    # Rotator of the states (includes rotation of the state dynamics matrix)
-    rotX = transformations.RotateGaussianMarkovChain(Q['X'], rotA)
-    # Rotator of the loading matrix
-    rotC = transformations.RotateGaussianARD(Q['C'], Q['gamma'])
-    # Rotation optimizer
-    R = transformations.RotationOptimizer(rotX, rotC, D)
-Note that it is crucial to select the correct rotation class which
-corresponds to the particular model block exactly. The rotation can be
-performed after each full VB update:
+>>> rotC = transformations.RotateGaussianARD(C, gamma)
 
-.. code:: python
+For rotating ``X``, we first need to define the rotation of the state dynamics
+matrix:
 
-    for ind in range(10):
-        Q.update()
-        R.rotate()
+>>> rotA = transformations.RotateGaussianARD(A, alpha)
 
-.. parsed-literal::
+Now we can define the rotation of the latent states:
 
-    Iteration 11: loglike=-8.100983e+03 (0.210 seconds)
-    Iteration 12: loglike=-7.622913e+03 (0.210 seconds)
-    Iteration 13: loglike=-7.452057e+03 (0.200 seconds)
-    Iteration 14: loglike=-7.385975e+03 (0.200 seconds)
-    Iteration 15: loglike=-7.351449e+03 (0.210 seconds)
-    Iteration 16: loglike=-7.331026e+03 (0.210 seconds)
-    Iteration 17: loglike=-7.317997e+03 (0.200 seconds)
-    Iteration 18: loglike=-7.309212e+03 (0.200 seconds)
-    Iteration 19: loglike=-7.303074e+03 (0.210 seconds)
-    Iteration 20: loglike=-7.298661e+03 (0.210 seconds)
+>>> rotX = transformations.RotateGaussianMarkovChain(X, rotA)
 
+The optimal rotation for all these variables is found using rotation optimizer:
 
-If you want to implement your own rotations or check the existing ones,
-you may use debugging utilities:
+>>> R = transformations.RotationOptimizer(rotX, rotC, D)
 
-.. code:: python
+Set the parameter expansion to be applied after each iteration:
 
-    for ind in range(10):
-        Q.update()
-        R.rotate(check_bound=True,
-                 check_gradient=True)
+>>> Q.callback = R.rotate
 
-.. parsed-literal::
+Now, run iterations until convergence:
 
-    Iteration 21: loglike=-7.295401e+03 (0.210 seconds)
-    Norm of numerical gradient: 3905.05
-    Norm of function gradient:  3905.05
-    Gradient relative error = 6.39002e-05 and absolute error = 0.249533
-    Iteration 22: loglike=-7.292861e+03 (0.210 seconds)
-    Norm of numerical gradient: 6245.37
+>>> Q.update(repeat=1000)
+Iteration 11: loglike=-1.010806e+04 (... seconds)
+...
+Iteration 60: loglike=-8.906295e+03 (... seconds)
+Converged at iteration 60.
 
-.. parsed-literal::
+Results
+-------
 
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/transformations.py:142: UserWarning: Rotation gradient has relative error 6.39002e-05
-      warnings.warn("Rotation gradient has relative error %g" % err)
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/transformations.py:142: UserWarning: Rotation gradient has relative error 7.56396e-05
-      warnings.warn("Rotation gradient has relative error %g" % err)
+Because we have set the plotters, we can plot those nodes as:
 
+>>> Q.plot(X, A, C, tau)
 
-.. parsed-literal::
+.. plot::
 
-    
-    Norm of function gradient:  6245.43
-    Gradient relative error = 7.56396e-05 and absolute error = 0.472397
-    Iteration 23: loglike=-7.290841e+03 (0.210 seconds)
-    Norm of numerical gradient: 3984.43
-    Norm of function gradient:  3984.43
-    Gradient relative error = 6.78117e-05 and absolute error = 0.270191
-    Iteration 24: loglike=-7.289243e+03 (0.210 seconds)
-    Norm of numerical gradient: 13053.7
+   import numpy as np
+   np.random.seed(1)
+   from bayespy.nodes import GaussianARD, GaussianMarkovChain, Gamma, Dot
+   M = 30
+   N = 400
+   D = 10
+   alpha = Gamma(1e-5,
+                 1e-5,
+                 plates=(D,),
+                 name='alpha')
+   A = GaussianARD(0,
+                   alpha,
+                   shape=(D,),
+                   plates=(D,),
+                   name='A')
+   X = GaussianMarkovChain(np.zeros(D),
+                           1e-3*np.identity(D),
+                           A,
+                           np.ones(D),
+                           n=N,
+                           name='X')
+   gamma = Gamma(1e-5,
+                 1e-5,
+                 plates=(D,),
+                 name='gamma')
+   C = GaussianARD(0,
+                   gamma,
+                   shape=(D,),
+                   plates=(M,1),
+                   name='C')
+   F = Dot(C, 
+           X,
+           name='F')
+   C.initialize_from_random()
+   tau = Gamma(1e-5,
+               1e-5,
+               name='tau')
+   Y = GaussianARD(F,
+                   tau,
+                   name='Y')
+   from bayespy.inference import VB
+   Q = VB(X, C, gamma, A, alpha, tau, Y)
+   w = 0.3
+   a = np.array([[np.cos(w), -np.sin(w), 0, 0], 
+                 [np.sin(w), np.cos(w),  0, 0], 
+                 [0,         0,          1, 0],
+                 [0,         0,          0, 0]])
+   c = np.random.randn(M,4)
+   x = np.empty((N,4))
+   f = np.empty((M,N))
+   y = np.empty((M,N))
+   x[0] = 10*np.random.randn(4)
+   f[:,0] = np.dot(c,x[0])
+   y[:,0] = f[:,0] + 3*np.random.randn(M)
+   for n in range(N-1):
+       x[n+1] = np.dot(a,x[n]) + [1,1,10,10]*np.random.randn(4)
+       f[:,n+1] = np.dot(c,x[n+1])
+       y[:,n+1] = f[:,n+1] + 3*np.random.randn(M)
+   from bayespy.utils import random
+   mask = random.mask(M, N, p=0.2)
+   Y.observe(y, mask=mask)
+   import bayespy.plot as bpplt
+   X.set_plotter(bpplt.FunctionPlotter(center=True, axis=-2))
+   A.set_plotter(bpplt.HintonPlotter())
+   C.set_plotter(bpplt.HintonPlotter())
+   tau.set_plotter(bpplt.PDFPlotter(np.linspace(0.02, 0.5, num=1000)))
+   Q.update(repeat=10)
+   from bayespy.inference.vmp import transformations
+   rotC = transformations.RotateGaussianARD(C, gamma)
+   rotA = transformations.RotateGaussianARD(A, alpha)
+   rotX = transformations.RotateGaussianMarkovChain(X, rotA)
+   R = transformations.RotationOptimizer(rotX, rotC, D)
+   Q.callback = R.rotate
+   Q.update(repeat=1000)
+   Q.plot(X, A, C, tau)
+   bpplt.pyplot.show()
 
-.. parsed-literal::
+There are clearly four effective components in ``X``: random walk (component
+number 1), random oscillation (7 and 10), and white noise (9).  These dynamics
+are also visible in the state dynamics matrix Hinton diagram.  Note that the
+white noise component does not have any dynamics.  Also ``C`` shows only four
+effective components.  The posterior of ``tau`` captures the true value
+:math:`3^{-2}\approx0.111` accurately.  We can also plot predictions in the
+observation space:
 
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/transformations.py:142: UserWarning: Rotation gradient has relative error 6.78117e-05
-      warnings.warn("Rotation gradient has relative error %g" % err)
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/transformations.py:142: UserWarning: Rotation gradient has relative error 2.65118e-05
-      warnings.warn("Rotation gradient has relative error %g" % err)
+>>> bpplt.plot(F, center=True)
 
+.. plot::
 
-.. parsed-literal::
+   import numpy as np
+   np.random.seed(1)
+   from bayespy.nodes import GaussianARD, GaussianMarkovChain, Gamma, Dot
+   M = 30
+   N = 400
+   D = 10
+   alpha = Gamma(1e-5,
+                 1e-5,
+                 plates=(D,),
+                 name='alpha')
+   A = GaussianARD(0,
+                   alpha,
+                   shape=(D,),
+                   plates=(D,),
+                   name='A')
+   X = GaussianMarkovChain(np.zeros(D),
+                           1e-3*np.identity(D),
+                           A,
+                           np.ones(D),
+                           n=N,
+                           name='X')
+   gamma = Gamma(1e-5,
+                 1e-5,
+                 plates=(D,),
+                 name='gamma')
+   C = GaussianARD(0,
+                   gamma,
+                   shape=(D,),
+                   plates=(M,1),
+                   name='C')
+   F = Dot(C, 
+           X,
+           name='F')
+   C.initialize_from_random()
+   tau = Gamma(1e-5,
+               1e-5,
+               name='tau')
+   Y = GaussianARD(F,
+                   tau,
+                   name='Y')
+   from bayespy.inference import VB
+   Q = VB(X, C, gamma, A, alpha, tau, Y)
+   w = 0.3
+   a = np.array([[np.cos(w), -np.sin(w), 0, 0], 
+                 [np.sin(w), np.cos(w),  0, 0], 
+                 [0,         0,          1, 0],
+                 [0,         0,          0, 0]])
+   c = np.random.randn(M,4)
+   x = np.empty((N,4))
+   f = np.empty((M,N))
+   y = np.empty((M,N))
+   x[0] = 10*np.random.randn(4)
+   f[:,0] = np.dot(c,x[0])
+   y[:,0] = f[:,0] + 3*np.random.randn(M)
+   for n in range(N-1):
+       x[n+1] = np.dot(a,x[n]) + [1,1,10,10]*np.random.randn(4)
+       f[:,n+1] = np.dot(c,x[n+1])
+       y[:,n+1] = f[:,n+1] + 3*np.random.randn(M)
+   from bayespy.utils import random
+   mask = random.mask(M, N, p=0.2)
+   Y.observe(y, mask=mask)
+   import bayespy.plot as bpplt
+   Q.update(repeat=10)
+   from bayespy.inference.vmp import transformations
+   rotC = transformations.RotateGaussianARD(C, gamma)
+   rotA = transformations.RotateGaussianARD(A, alpha)
+   rotX = transformations.RotateGaussianMarkovChain(X, rotA)
+   R = transformations.RotationOptimizer(rotX, rotC, D)
+   Q.callback = R.rotate
+   Q.update(repeat=1000)
+   bpplt.plot(F, center=True)
+   bpplt.pyplot.show()
 
-    
-    Norm of function gradient:  13053.8
-    Gradient relative error = 2.65118e-05 and absolute error = 0.346078
-    Iteration 25: loglike=-7.287794e+03 (0.200 seconds)
-    Norm of numerical gradient: 4144.61
-    Norm of function gradient:  4144.59
-    Gradient relative error = 7.02612e-05 and absolute error = 0.291205
-    Iteration 26: loglike=-7.286531e+03 (0.210 seconds)
-    Norm of numerical gradient: 5821.72
+We can also measure the performance numerically by computing root-mean-square
+error (RMSE) of the missing values:
 
-.. parsed-literal::
+>>> from bayespy.utils import misc
+>>> misc.rmse(y[~mask], F.get_moments()[0][~mask])
+5.1822394809385948
 
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/transformations.py:142: UserWarning: Rotation gradient has relative error 7.02612e-05
-      warnings.warn("Rotation gradient has relative error %g" % err)
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/transformations.py:142: UserWarning: Rotation gradient has relative error 4.57892e-05
-      warnings.warn("Rotation gradient has relative error %g" % err)
-
-
-.. parsed-literal::
-
-    
-    Norm of function gradient:  5821.73
-    Gradient relative error = 4.57892e-05 and absolute error = 0.266572
-    Iteration 27: loglike=-7.285469e+03 (0.210 seconds)
-    Norm of numerical gradient: 15766.4
-    Norm of function gradient:  15766.4
-    Gradient relative error = 3.5184e-05 and absolute error = 0.554724
-    Iteration 28: loglike=-7.284584e+03 (0.200 seconds)
-    Norm of numerical gradient: 5782.51
-
-.. parsed-literal::
-
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/transformations.py:142: UserWarning: Rotation gradient has relative error 3.5184e-05
-      warnings.warn("Rotation gradient has relative error %g" % err)
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/transformations.py:142: UserWarning: Rotation gradient has relative error 5.61705e-05
-      warnings.warn("Rotation gradient has relative error %g" % err)
-
-
-.. parsed-literal::
-
-    
-    Norm of function gradient:  5782.51
-    Gradient relative error = 5.61705e-05 and absolute error = 0.324807
-    Iteration 29: loglike=-7.283818e+03 (0.210 seconds)
-    Norm of numerical gradient: 9067.22
-    Norm of function gradient:  9067.21
-    Gradient relative error = 2.4973e-05 and absolute error = 0.226435
-    Iteration 30: loglike=-7.283121e+03 (0.200 seconds)
-    Norm of numerical gradient: 9594.54
-
-.. parsed-literal::
-
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/transformations.py:142: UserWarning: Rotation gradient has relative error 2.4973e-05
-      warnings.warn("Rotation gradient has relative error %g" % err)
-    /home/jluttine/workspace/bayespy/bayespy/inference/vmp/transformations.py:142: UserWarning: Rotation gradient has relative error 5.43175e-05
-      warnings.warn("Rotation gradient has relative error %g" % err)
-
-
-.. parsed-literal::
-
-    
-    Norm of function gradient:  9594.62
-    Gradient relative error = 5.43175e-05 and absolute error = 0.521151
+This is relatively close to the standard deviation of the noise (3), so the
+predictions are quite good considering that only 20% of the data was used.
 

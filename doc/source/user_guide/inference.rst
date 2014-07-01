@@ -265,6 +265,7 @@ engine ``VB`` is a wrapper which, in addition to calling the nodes' ``update``
 methods, checks for convergence and does a few other useful minor things.  But
 if for any reason these direct update methods are needed, they can be used.
 
+.. _sec-parameter-expansion:
 
 Parameter expansion
 +++++++++++++++++++
