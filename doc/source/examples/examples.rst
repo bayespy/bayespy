@@ -23,12 +23,13 @@ Examples
 ********
 
 .. toctree::
+   :maxdepth: 1
 
-    regression
-    gmm
-    bmm
-    hmm_discrete
-    hmm
-    pca
-    lssm
-    lda
+   regression
+   gmm
+   bmm
+   hmm_discrete
+   hmm
+   pca
+   lssm
+   lda

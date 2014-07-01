@@ -57,7 +57,6 @@ Linear regression
 
 
 
-.. image:: regression_files/regression_2_1.png
 
 
 .. code:: python
@@ -69,7 +68,6 @@ Linear regression
     bpplt.pyplot.xlabel(r'$\tau$');
 
 
-.. image:: regression_files/regression_3_0.png
 
 
 .. code:: python
@@ -82,7 +80,6 @@ Linear regression
     bpplt.pyplot.ylabel(r'$c$');
 
 
-.. image:: regression_files/regression_4_0.png
 
 
 Improving accuracy
@@ -120,7 +117,6 @@ Improving accuracy
     bpplt.pyplot.xlabel(r'$\tau$');
 
 
-.. image:: regression_files/regression_7_0.png
 
 
 .. code:: python
@@ -136,7 +132,6 @@ Improving accuracy
     bpplt.pyplot.ylabel(r'$c$');
 
 
-.. image:: regression_files/regression_8_0.png
 
 
 .. code:: python
@@ -150,7 +145,6 @@ Improving accuracy
     bpplt.pyplot.ylabel(r'$\tau$');
 
 
-.. image:: regression_files/regression_9_0.png
 
 
 .. code:: python

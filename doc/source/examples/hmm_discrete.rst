@@ -177,7 +177,6 @@ Plot the estimated state transition probabilities:
     bpplt.dirichlet_hinton(A)
 
 
-.. image:: hmm_discrete_files/hmm_discrete_29_0.png
 
 
 Plot the estimated emission probabilities:
@@ -187,7 +186,6 @@ Plot the estimated emission probabilities:
     bpplt.dirichlet_hinton(P)
 
 
-.. image:: hmm_discrete_files/hmm_discrete_31_0.png
 
 
 It is interesting that these estimated parameters are very different
