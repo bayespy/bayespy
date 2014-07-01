@@ -40,6 +40,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinxcontrib.tikz',
     'sphinxcontrib.bayesnet',
+    'sphinxcontrib.bibtex',
     ]
 
 
