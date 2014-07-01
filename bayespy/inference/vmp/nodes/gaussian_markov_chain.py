@@ -903,11 +903,11 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     Node for Gaussian Markov chain random variables with time-varying dynamics.
 
     The node models a sequence of Gaussian variables
-    :math:`\mathbf{x}_0,\ldots,\mathbf{x}_{N-1}$ with linear Markovian dynamics.
+    :math:`\mathbf{x}_0,\ldots,\mathbf{x}_{N-1}` with linear Markovian dynamics.
     The time variability of the dynamics is obtained by modelling the state
     dynamics matrix as a linear combination of a set of matrices with
-    time-varying linear combination weights [1]_.  The graphical model can be
-    presented as:
+    time-varying linear combination weights.  The
+    graphical model can be presented as:
 
     .. bayesnet::
 
@@ -1017,8 +1017,8 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     References
     ----------
 
-    .. [1] J. Luttinen, T. Raiko, A. Ilin, "Linear State-Space Model with
-       Time-Varying Dynamics," submitted to ECML 2014.
+    :cite:`Luttinen:2014`
+    
     """
 
     _parent_moments = (GaussianMoments(1),

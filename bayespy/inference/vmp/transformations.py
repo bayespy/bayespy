@@ -40,8 +40,8 @@ class RotationOptimizer():
     r"""
     Optimizer for rotation parameter expansion in state-space models
 
-    Rotates one model block with :math:`\mathbf{R}` and one model block
-    with :math:`\mathbf{R}^{-1}`.
+    Rotates one model block with :math:`\mathbf{R}` and one model block with
+    :math:`\mathbf{R}^{-1}`.
 
     Parameters
     ----------
@@ -61,12 +61,7 @@ class RotationOptimizer():
     References
     ----------
 
-    .. [1] J. Luttinen, A. Ilin, "Transformations in variational Bayesian
-       factor analysis to speed up learning," Neurocomputing, vol. 73,
-       pp. 1093-1102, 2010.
-
-    .. [2] J. Luttinen, "Fast Variational Bayesian Linear State-Space
-       Model," ECML, 2013.
+    :cite:`Luttinen:2010`, :cite:`Luttinen:2013`
 
     """
 
