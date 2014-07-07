@@ -58,8 +58,8 @@ gh-pages:
 html: latexpdf
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	cp $(BUILDDIR)/latex/BayesPy.pdf $(BUILDDIR)/html/_static/
-	cp -r build/doctest/user_guide/* build/html/user_guide/
-	cp -r build/doctest/examples/* build/html/examples/
+	cp -r build/latex/user_guide/* build/html/user_guide/
+	cp -r build/latex/examples/* build/html/examples/
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
