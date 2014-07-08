@@ -66,6 +66,8 @@ from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
 from bayespy.inference.vmp.nodes.gaussian import GaussianMoments
 from bayespy.inference.vmp.nodes.beta import BetaMoments
 from bayespy.inference.vmp.nodes.beta import DirichletMoments
+from bayespy.inference.vmp.nodes.bernoulli import BernoulliMoments
+from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
 from bayespy.inference.vmp.nodes.node import Node
 
 from bayespy.utils import (misc,
@@ -317,6 +319,7 @@ def _hinton(W, error=None, vmax=None, square=True):
         reenable = True
         
     #P.clf()
+    W = misc.atleast_nd(W, 2)
     (height, width) = W.shape
     if not vmax:
         #vmax = 2**np.ceil(np.log(np.max(np.abs(W)))/np.log(2))
@@ -497,13 +500,13 @@ def timeseries_categorical_mc(Z):
             hinton(z[i,j].T, vmax=1.0, square=False)
 
 
-def beta_hinton(P):
+def beta_hinton(P, square=True):
     """
     Plot a beta distributed random variable as a Hinton diagram
     """
 
     # Make sure that the node is beta
-    P._convert(BetaMoments)
+    P = P._convert(BetaMoments)
 
     # Compute exp( <log p> )
     p = np.exp(P._message_to_child()[0][...,0])
@@ -512,7 +515,7 @@ def beta_hinton(P):
     p = p * np.ones(P.plates)
 
     # Plot Hinton diagram
-    return _hinton(p, vmax=1.0, square=False)
+    return _hinton(p, vmax=1.0, square=square)
     
 
 def dirichlet_hinton(P, square=True):
@@ -521,7 +524,7 @@ def dirichlet_hinton(P, square=True):
     """
 
     # Make sure that the node is beta
-    P._convert(DirichletMoments)
+    P = P._convert(DirichletMoments)
 
     # Compute exp( <log p> )
     p = np.exp(P._message_to_child()[0])
@@ -533,6 +536,42 @@ def dirichlet_hinton(P, square=True):
     return _hinton(p, vmax=1.0, square=square)
 
     
+def bernoulli_hinton(Z, square=True):
+    """
+    Plot a Bernoulli distributed random variable as a Hinton diagram
+    """
+
+    # Make sure that the node is Bernoulli
+    Z = Z._convert(BernoulliMoments)
+
+    # Get <Z>
+    z = Z._message_to_child()[0]
+
+    # Explicit broadcasting
+    z = z * np.ones(Z.plates)
+
+    # Plot Hinton diagram
+    return _hinton(z, vmax=1.0, square=square)
+    
+
+def categorical_hinton(Z, square=True):
+    """
+    Plot a Bernoulli distributed random variable as a Hinton diagram
+    """
+
+    # Make sure that the node is Bernoulli
+    Z = Z._convert(CategoricalMoments)
+
+    # Get <Z>
+    z = Z._message_to_child()[0]
+
+    # Explicit broadcasting
+    z = z * np.ones(Z.plates+(1,))
+
+    # Plot Hinton diagram
+    return _hinton(np.squeeze(z), vmax=1.0, square=square)
+    
+
 def hinton(X, **kwargs):
     r"""
     Plot the Hinton diagram of a node
@@ -568,6 +607,20 @@ def hinton(X, **kwargs):
         pass
     else:
         return dirichlet_hinton(X, **kwargs)
+
+    try:
+        X = X._convert(BernoulliMoments)
+    except:
+        pass
+    else:
+        return bernoulli_hinton(X, **kwargs)
+
+    try:
+        X = X._convert(CategoricalMoments)
+    except:
+        pass
+    else:
+        return categorical_hinton(X, **kwargs)
 
     return _hinton(X, **kwargs)
     
