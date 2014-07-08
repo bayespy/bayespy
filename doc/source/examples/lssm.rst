@@ -274,7 +274,7 @@ Now, run iterations until convergence:
 >>> Q.update(repeat=1000)
 Iteration 11: loglike=-1.010806e+04 (... seconds)
 ...
-Iteration 60: loglike=-8.906295e+03 (... seconds)
+Iteration 60: loglike=-8.906224e+03 (... seconds)
 Converged at iteration 60.
 
 Results
@@ -453,7 +453,8 @@ error (RMSE) of the missing values:
 
 >>> from bayespy.utils import misc
 >>> misc.rmse(y[~mask], F.get_moments()[0][~mask])
-5.1822394809385948
+5.182592...
+
 
 This is relatively close to the standard deviation of the noise (3), so the
 predictions are quite good considering that only 20% of the data was used.
