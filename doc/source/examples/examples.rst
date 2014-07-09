@@ -28,8 +28,6 @@ Examples
    regression
    gmm
    bmm
-   hmm_discrete
    hmm
    pca
    lssm
-   lda
