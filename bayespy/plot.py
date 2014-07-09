@@ -36,6 +36,7 @@ Functions
    contour
    plot
    hinton
+   gaussian_mixture
 
 Plotters
 ========
@@ -57,13 +58,15 @@ import tempfile
 
 import numpy as np
 import scipy.sparse as sp
+import scipy
 from scipy import special
 import matplotlib.pyplot as plt
 from matplotlib import animation
 #from matplotlib.pyplot import *
 
 from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
-from bayespy.inference.vmp.nodes.gaussian import GaussianMoments
+from bayespy.inference.vmp.nodes.gaussian import (GaussianMoments,
+                                                  GaussianWishartMoments)
 from bayespy.inference.vmp.nodes.beta import BetaMoments
 from bayespy.inference.vmp.nodes.beta import DirichletMoments
 from bayespy.inference.vmp.nodes.bernoulli import BernoulliMoments
@@ -76,6 +79,8 @@ from bayespy.utils import (misc,
 
 
 # Users can use pyplot via this module
+import matplotlib
+mpl = matplotlib
 pyplot = plt
 
 
@@ -300,6 +305,39 @@ def _rectangle(x, y, width, height, **kwargs):
                               height,
                               **kwargs)
     plt.gca().add_patch(rectangle)
+    return
+
+
+def gaussian_mixture(X, scale=1, fill=False, **kwargs):
+    """
+    Plot Gaussian mixture as ellipses in 2-D
+    """
+    mu_Lambda = X.parents[1]._convert(GaussianWishartMoments)
+
+    (mu, _, Lambda, _) = mu_Lambda.get_moments()
+    mu = np.linalg.solve(Lambda, mu)
+
+    if len(mu_Lambda.plates) != 1:
+        raise NotImplementedError("Not yet implemented for more plates")
+    
+    K = mu_Lambda.plates[0]
+
+    for k in range(K):
+        m = mu[k]
+        L = Lambda[k]
+        (u, W) = scipy.linalg.eigh(L)
+        u[0] = np.sqrt(1/u[0])
+        u[1] = np.sqrt(1/u[1])
+        width = 2*u[0]
+        height = 2*u[1]
+        angle = np.arctan(W[0,1] / W[0,0])
+        angle = 180 * angle / np.pi
+        ell = mpl.patches.Ellipse(m, scale*width, scale*height,
+                                  angle=(180+angle),
+                                  fill=fill,
+                                  **kwargs)
+        plt.gca().add_artist(ell)
+
     return
     
     
@@ -932,8 +970,6 @@ def binary_matrix(A):
     G[np.logical_not(A)] = [1,1,1]
     plt.imshow(G, interpolation='nearest')
 
-def gaussian_mixture(w, mu, Sigma):
-    pass
 
 def gaussian_mixture_logpdf(x, w, mu, Sigma):
     # Shape(x)      = (N, D)
