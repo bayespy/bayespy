@@ -23,67 +23,67 @@
    import numpy
    numpy.random.seed(1)
 
-Discrete hidden Markov model
-============================
+Hidden Markov model
+===================
+
+
+In this example, we will demonstrate the use of hidden Markov model in the case
+of known and unknown parameters.  We will also use two different emission
+distributions to demonstrate the flexibility of the model construction.
 
 
 Known parameters
 ----------------
 
+This example follows the one presented in `Wikipedia
+<http://en.wikipedia.org/wiki/Hidden_Markov_model#A_concrete_example>`__.
 
 Model
 +++++
 
-This example follows the one presented in `Wikipedia
-<http://en.wikipedia.org/wiki/Hidden_Markov_model#A_concrete_example>`__.  Each
-day, the state of the weather is either 'rainy' or 'sunny'. The weather follows
-a first-order discrete Markov process with the following initial state
-probability and state transition probabilities:
-
->>> from bayespy.nodes import CategoricalMarkovChain
-
-Initial state probabilities
+Each day, the state of the weather is either 'rainy' or 'sunny'. The weather
+follows a first-order discrete Markov process.  It has the following initial
+state probabilities
 
 >>> a0 = [0.6, 0.4] # p(rainy)=0.6, p(sunny)=0.4
     
-State transition probabilities
+and state transition probabilities:
 
 >>> A = [[0.7, 0.3], # p(rainy->rainy)=0.7, p(rainy->sunny)=0.3
 ...      [0.4, 0.6]] # p(sunny->rainy)=0.4, p(sunny->sunny)=0.6
     
-The length of the process
+We will be observing one hundred samples:
 
 >>> N = 100
     
-Markov chain
+The discrete first-order Markov chain is constructed as:
 
+>>> from bayespy.nodes import CategoricalMarkovChain
 >>> Z = CategoricalMarkovChain(a0, A, states=N)
 
 However, instead of observing this process directly, we observe whether Bob is
 'walking', 'shopping' or 'cleaning'. The probability of each activity depends on
 the current weather as follows:
 
->>> from bayespy.nodes import Categorical, Mixture
-
-Emission probabilities
-
 >>> P = [[0.1, 0.4, 0.5],
 ...      [0.6, 0.3, 0.1]]
 
-Observed process
+where the first row contains activity probabilities on a rainy weather and the
+second row contains activity probabilities on a sunny weather.  Using these
+emission probabilities, the observed process is constructed as:
 
+>>> from bayespy.nodes import Categorical, Mixture
 >>> Y = Mixture(Z, Categorical, P)
 
 Data
 ++++
 
-In order to test our method, we'll generate artificial data using this model:
-
-Draw realization of the weather process
+In order to test our method, we'll generate artificial data from the model
+itself.  First, draw realization of the weather process:
 
 >>> weather = Z.random()
 
-Using this weather, draw realizations of the activities
+Then, using this weather, draw realizations of the activities:
 
 >>> activity = Mixture(weather, Categorical, P).random()
 
@@ -154,79 +154,223 @@ Unknown parameters
 In this example, we consider unknown parameters for the Markov process and
 different emission distribution.
 
+Data
+++++
+
+We generate data from three 2-dimensional Gaussian distributions with different
+mean vectors and common standard deviation:
+
+>>> import numpy as np
+>>> mu = np.array([ [0,0], [3,4], [6,0] ])
+>>> std = 2.0
+
+Thus, the number of clusters is three:
+
+>>> K = 3
+
+And the number of samples is 200:
+
+>>> N = 200
+
+Each initial state is equally probable:
+
+>>> p0 = np.ones(K) / K
+
+State transition matrix is such that with probability 0.9 the process stays in
+the same state.  The probability to move one of the other two states is 0.05 for
+both of those states.
+
+>>> q = 0.9
+>>> r = (1-q) / (K-1)
+>>> P = q*np.identity(K) + r*(np.ones((3,3))-np.identity(3))
+
+Simulate the data:
+
+>>> y = np.zeros((N,2))
+>>> z = np.zeros(N)
+>>> state = np.random.choice(K, p=p0)
+>>> for n in range(N):
+...     z[n] = state
+...     y[n,:] = std*np.random.randn(2) + mu[state]
+...     state = np.random.choice(K, p=P[state])
+
+Then, let us visualize the data:
+
+>>> bpplt.pyplot.figure()
+<matplotlib.figure.Figure object at 0x...>
+>>> bpplt.pyplot.axis('equal')
+(...)
+>>> colors = [ [[1,0,0], [0,1,0], [0,0,1]][int(state)] for state in z ]
+>>> bpplt.pyplot.plot(y[:,0], y[:,1], 'k-', zorder=-10)
+[<matplotlib.lines.Line2D object at 0x...>]
+>>> bpplt.pyplot.scatter(y[:,0], y[:,1], c=colors, s=40)
+<matplotlib.collections.PathCollection object at 0x...>
+
+.. plot::
+
+   import numpy
+   numpy.random.seed(1)
+   from bayespy.nodes import CategoricalMarkovChain
+   a0 = [0.6, 0.4] # p(rainy)=0.6, p(sunny)=0.4
+   A = [[0.7, 0.3], # p(rainy->rainy)=0.7, p(rainy->sunny)=0.3
+        [0.4, 0.6]] # p(sunny->rainy)=0.4, p(sunny->sunny)=0.6
+   N = 100
+   Z = CategoricalMarkovChain(a0, A, states=N)
+   from bayespy.nodes import Categorical, Mixture
+   P = [[0.1, 0.4, 0.5],
+        [0.6, 0.3, 0.1]]
+   Y = Mixture(Z, Categorical, P)
+   weather = Z.random()
+   from bayespy.inference import VB
+   import bayespy.plot as bpplt
+   import numpy as np
+   mu = np.array([ [0,0], [3,4], [6,0] ])
+   std = 2.0
+   K = 3
+   N = 200
+   p0 = np.ones(K) / K
+   q = 0.9
+   r = (1-q)/(K-1)
+   P = q*np.identity(K) + r*(np.ones((3,3))-np.identity(3))
+   y = np.zeros((N,2))
+   z = np.zeros(N)
+   state = np.random.choice(K, p=p0)
+   for n in range(N):
+       z[n] = state
+       y[n,:] = std*np.random.randn(2) + mu[state]
+       state = np.random.choice(K, p=P[state])
+   bpplt.pyplot.figure()
+   bpplt.pyplot.axis('equal')
+   colors = [ [[1,0,0], [0,1,0], [0,0,1]][int(state)] for state in z ]
+   bpplt.pyplot.plot(y[:,0], y[:,1], 'k-', zorder=-10)
+   bpplt.pyplot.scatter(y[:,0], y[:,1], c=colors, s=40)
+   bpplt.pyplot.show()
+
+Consecutive states are connected by a solid black line and the dot color shows
+the true class.
+
 Model
 +++++
 
-Now, we do not know the parameters of the weather process (initial state
+Now, assume that we do not know the parameters of the process (initial state
 probability and state transition probabilities). We give these parameters quite
 non-informative priors, but it is possible to provide more informative priors if
-such information is available. First, the weather process:
+such information is available:
 
 >>> from bayespy.nodes import Dirichlet
+>>> a0 = Dirichlet(1e-3*np.ones(K))
+>>> A = Dirichlet(1e-3*np.ones((K,K)))
 
-Initial state probabilities
-
->>> a0 = Dirichlet([0.1, 0.1])
-
-State transition probabilities
-
->>> A = Dirichlet([[0.1, 0.1],
-...                [0.1, 0.1]])
-
-Markov chain
+The discrete Markov chain is constructed as:
 
 >>> Z = CategoricalMarkovChain(a0, A, states=N)
 
-Second, the emission probabilities are also given quite non-informative priors:
+Now, instead of using categorical emission distribution as before, we'll use
+Gaussian distribution.  For simplicity, we use the true parameters of the
+Gaussian distributions instead of giving priors and estimating them.  The known
+standard deviation can be converted to a precision matrix as:
 
-Emission probabilities
+>>> Lambda = std**(-2) * np.identity(2)
 
->>> P = Dirichlet([[0.1, 0.1, 0.1],
-...                [0.1, 0.1, 0.1]])
+Thus, the observed process is a Gaussian mixture with cluster assignments from
+the hidden Markov process ``Z``:
 
-Observed process
+>>> from bayespy.nodes import Gaussian
+>>> Y = Mixture(Z, Gaussian, mu, Lambda)
 
->>> Y = Mixture(Z, Categorical, P)
+Note that ``Lambda`` does not have cluster plate axis because it is shared
+between the clusters.
 
 Inference
 +++++++++
 
-We use the same data as before:
+Let us use the simulated data:
 
->>> Y.observe(activity)
+>>> Y.observe(y)
 
-Because ``VB`` takes all the unknown variables, we need to provide ``A``, ``a0``
-and ``P`` also:
+Because ``VB`` takes all the random variables, we need to provide ``A`` and
+``a0`` also:
 
->>> Q = VB(Y, Z, A, a0, P)
+>>> Q = VB(Y, Z, A, a0)
 
-If we ran the VB algorithm now, we would get a result where all both states
-would have identical emission probability distribution. This happens because of
-a non-random default initialization. ``P`` is initialized in such a way that
-both states have the same distribution, and ``Z`` is initialized in such a way
-that each state has equal probability. Thus, the VB algorithm won't separate
-them. In such cases, it is necessary to use a random initialization. In
-principle, it is possible to use random initialization for either variable and
-then update the other variable first. In the case of mixture distributions, it
-might be better to initialize the parameters (``P``) randomly and update the
-state assignments (``Z``) first.
+Then, run VB iteration until convergence:
 
->>> P.initialize_from_random()
->>> Q.update(Z, A, a0, P, repeat=1000)
-Iteration 1: loglike=-1.293357e+02 (... seconds)
+>>> Q.update(repeat=1000)
+Iteration 1: loglike=-9.963054e+02 (... seconds)
 ...
-Iteration 38: loglike=-1.229328e+02 (... seconds)
-Converged at iteration 38.
+Iteration 8: loglike=-9.235053e+02 (... seconds)
+Converged at iteration 8.
 
-In order to update the variables in that order, one may explicitly give the
-nodes in that order to the ``update`` method. However, the default update order
-is the one used when constructing ``Q``, which is the same in this case, thus we
-could have ignored listing the nodes to the ``update`` method.
 
 Results
 +++++++
 
-Let us plot the estimated parameters. First, the state transition matrix:
+Plot the classification of the data similarly as the data:
+
+>>> bpplt.pyplot.figure()
+<matplotlib.figure.Figure object at 0x...>
+>>> bpplt.pyplot.axis('equal')
+(...)
+>>> colors = Y.parents[0].get_moments()[0]
+>>> bpplt.pyplot.plot(y[:,0], y[:,1], 'k-', zorder=-10)
+[<matplotlib.lines.Line2D object at 0x...>]
+>>> bpplt.pyplot.scatter(y[:,0], y[:,1], c=colors, s=40)
+<matplotlib.collections.PathCollection object at 0x...>
+
+.. plot::
+
+   import numpy
+   numpy.random.seed(1)
+   from bayespy.nodes import CategoricalMarkovChain
+   a0 = [0.6, 0.4] # p(rainy)=0.6, p(sunny)=0.4
+   A = [[0.7, 0.3], # p(rainy->rainy)=0.7, p(rainy->sunny)=0.3
+        [0.4, 0.6]] # p(sunny->rainy)=0.4, p(sunny->sunny)=0.6
+   N = 100
+   Z = CategoricalMarkovChain(a0, A, states=N)
+   from bayespy.nodes import Categorical, Mixture
+   P = [[0.1, 0.4, 0.5],
+        [0.6, 0.3, 0.1]]
+   Y = Mixture(Z, Categorical, P)
+   weather = Z.random()
+   from bayespy.inference import VB
+   import bayespy.plot as bpplt
+   import numpy as np
+   mu = np.array([ [0,0], [3,4], [6,0] ])
+   std = 2.0
+   K = 3
+   N = 200
+   p0 = np.ones(K) / K
+   q = 0.9
+   r = (1-q)/(K-1)
+   P = q*np.identity(K) + r*(np.ones((3,3))-np.identity(3))
+   y = np.zeros((N,2))
+   z = np.zeros(N)
+   state = np.random.choice(K, p=p0)
+   for n in range(N):
+       z[n] = state
+       y[n,:] = std*np.random.randn(2) + mu[state]
+       state = np.random.choice(K, p=P[state])
+   from bayespy.nodes import Dirichlet
+   a0 = Dirichlet(1e-3*np.ones(K))
+   A = Dirichlet(1e-3*np.ones((K,K)))
+   Z = CategoricalMarkovChain(a0, A, states=N)
+   Lambda = std**(-2) * np.identity(2)
+   from bayespy.nodes import Gaussian
+   Y = Mixture(Z, Gaussian, mu, Lambda)
+   Y.observe(y)
+   Q = VB(Y, Z, A, a0)
+   Q.update(repeat=1000)
+   bpplt.pyplot.figure()
+   bpplt.pyplot.axis('equal')
+   colors = Y.parents[0].get_moments()[0]
+   bpplt.pyplot.plot(y[:,0], y[:,1], 'k-', zorder=-10)
+   bpplt.pyplot.scatter(y[:,0], y[:,1], c=colors, s=40)
+   bpplt.pyplot.show()
+
+The data has been classified quite correctly.  Even samples that are more in the
+region of another cluster are classified correctly if the previous and next
+sample provide enough evidence for the correct class.  We can also plot the
+state transition matrix:
 
 >>> bpplt.hinton(A)
 
@@ -245,112 +389,38 @@ Let us plot the estimated parameters. First, the state transition matrix:
         [0.6, 0.3, 0.1]]
    Y = Mixture(Z, Categorical, P)
    weather = Z.random()
-   activity = Mixture(weather, Categorical, P).random()
-   Y.observe(activity)
    from bayespy.inference import VB
-   Q = VB(Y, Z)
-   Q.update()
    import bayespy.plot as bpplt
+   import numpy as np
+   mu = np.array([ [0,0], [3,4], [6,0] ])
+   std = 2.0
+   K = 3
+   N = 200
+   p0 = np.ones(K) / K
+   q = 0.9
+   r = (1-q)/(K-1)
+   P = q*np.identity(K) + r*(np.ones((3,3))-np.identity(3))
+   y = np.zeros((N,2))
+   z = np.zeros(N)
+   state = np.random.choice(K, p=p0)
+   for n in range(N):
+       z[n] = state
+       y[n,:] = std*np.random.randn(2) + mu[state]
+       state = np.random.choice(K, p=P[state])
    from bayespy.nodes import Dirichlet
-   a0 = Dirichlet([0.1, 0.1])
-   A = Dirichlet([[0.1, 0.1],
-                  [0.1, 0.1]])
+   a0 = Dirichlet(1e-3*np.ones(K))
+   A = Dirichlet(1e-3*np.ones((K,K)))
    Z = CategoricalMarkovChain(a0, A, states=N)
-   P = Dirichlet([[0.1, 0.1, 0.1],
-                  [0.1, 0.1, 0.1]])
-   Y = Mixture(Z, Categorical, P)
-   Y.observe(activity)
-   Q = VB(Y, Z, A, a0, P)
-   P.initialize_from_random()
-   Q.update(Z, A, a0, P, repeat=1000)
+   Lambda = std**(-2) * np.identity(2)
+   from bayespy.nodes import Gaussian
+   Y = Mixture(Z, Gaussian, mu, Lambda)
+   Y.observe(y)
+   Q = VB(Y, Z, A, a0)
+   Q.update(repeat=1000)
    bpplt.hinton(A)
    bpplt.pyplot.show()
 
-
-Second, the emission probabilities:
-
->>> bpplt.hinton(P)
-
-.. plot::
-
-   import numpy
-   numpy.random.seed(1)
-   from bayespy.nodes import CategoricalMarkovChain
-   a0 = [0.6, 0.4] # p(rainy)=0.6, p(sunny)=0.4
-   A = [[0.7, 0.3], # p(rainy->rainy)=0.7, p(rainy->sunny)=0.3
-        [0.4, 0.6]] # p(sunny->rainy)=0.4, p(sunny->sunny)=0.6
-   N = 100
-   Z = CategoricalMarkovChain(a0, A, states=N)
-   from bayespy.nodes import Categorical, Mixture
-   P = [[0.1, 0.4, 0.5],
-        [0.6, 0.3, 0.1]]
-   Y = Mixture(Z, Categorical, P)
-   weather = Z.random()
-   activity = Mixture(weather, Categorical, P).random()
-   Y.observe(activity)
-   from bayespy.inference import VB
-   Q = VB(Y, Z)
-   Q.update()
-   import bayespy.plot as bpplt
-   from bayespy.nodes import Dirichlet
-   a0 = Dirichlet([0.1, 0.1])
-   A = Dirichlet([[0.1, 0.1],
-                  [0.1, 0.1]])
-   Z = CategoricalMarkovChain(a0, A, states=N)
-   P = Dirichlet([[0.1, 0.1, 0.1],
-                  [0.1, 0.1, 0.1]])
-   Y = Mixture(Z, Categorical, P)
-   Y.observe(activity)
-   Q = VB(Y, Z, A, a0, P)
-   P.initialize_from_random()
-   Q.update(Z, A, a0, P, repeat=1000)
-   bpplt.hinton(P)
-   bpplt.pyplot.show()
-
-Note that these estimated parameters are very different from the true
-parameters. This happens because of un-identifiability (different parameters
-lead to similar marginal distributions over the observed process) and the data
-does not have enough evidence for the true parameters.  Note also that the
-states in this model do not anymore correspond to weather.  We can plot the
-states similarly as in the fixed parameter case:
-
-
->>> bpplt.hinton(Z, square=False)
-
-.. plot::
-
-   import numpy
-   numpy.random.seed(1)
-   from bayespy.nodes import CategoricalMarkovChain
-   a0 = [0.6, 0.4] # p(rainy)=0.6, p(sunny)=0.4
-   A = [[0.7, 0.3], # p(rainy->rainy)=0.7, p(rainy->sunny)=0.3
-        [0.4, 0.6]] # p(sunny->rainy)=0.4, p(sunny->sunny)=0.6
-   N = 100
-   Z = CategoricalMarkovChain(a0, A, states=N)
-   from bayespy.nodes import Categorical, Mixture
-   P = [[0.1, 0.4, 0.5],
-        [0.6, 0.3, 0.1]]
-   Y = Mixture(Z, Categorical, P)
-   weather = Z.random()
-   activity = Mixture(weather, Categorical, P).random()
-   Y.observe(activity)
-   from bayespy.inference import VB
-   Q = VB(Y, Z)
-   Q.update()
-   import bayespy.plot as bpplt
-   from bayespy.nodes import Dirichlet
-   a0 = Dirichlet([0.1, 0.1])
-   A = Dirichlet([[0.1, 0.1],
-                  [0.1, 0.1]])
-   Z = CategoricalMarkovChain(a0, A, states=N)
-   P = Dirichlet([[0.1, 0.1, 0.1],
-                  [0.1, 0.1, 0.1]])
-   Y = Mixture(Z, Categorical, P)
-   Y.observe(activity)
-   Q = VB(Y, Z, A, a0, P)
-   P.initialize_from_random()
-   Q.update(Z, A, a0, P, repeat=1000)
-   bpplt.hinton(Z, square=False)
-   bpplt.pyplot.show()
-
-This example could be modified by using some other emission distribution.  For instance, Gaussian distribution would lead to a Gaussian mixture model with dynamics.
+Clearly, the learned state transition matrix is close to the true matrix.  The
+models described above could also be used for classification by providing the
+known class assignments as observed data to ``Z`` and the unknown class
+assignments as missing data.
