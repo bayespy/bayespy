@@ -113,10 +113,14 @@ more than one step.
 Results
 +++++++
 
-One way to plot the categorical timeseries is to use the Hinton diagram:
+.. currentmodule:: bayespy.plot
+
+One way to plot a 2-class categorical timeseries is to use the basic
+:func:`plot` function:
 
 >>> import bayespy.plot as bpplt
->>> bpplt.hinton(Z, square=False)
+>>> bpplt.plot(Z)
+>>> bpplt.plot(1-weather, color='r', marker='x')
 
 .. plot::
 
@@ -139,12 +143,15 @@ One way to plot the categorical timeseries is to use the Hinton diagram:
    Q = VB(Y, Z)
    Q.update()
    import bayespy.plot as bpplt
-   bpplt.hinton(Z, square=False)
+   bpplt.plot(Z)
+   bpplt.plot(1-weather, color='r', marker='x')
    bpplt.pyplot.show()
 
-Non-square blocks are squeezed to fit appropriately in the plot.  Time axis is
-vertical and the two states are side by side.  The wider the white bar, the more
-probable the state at that time is.
+
+The black line shows the posterior probability of rain and the red line and
+crosses show the true state.  Clearly, the method is not able to infer the
+weather very accurately in this case because the activies do not give that much
+information about the weather.
 
 
 
