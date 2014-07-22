@@ -121,3 +121,55 @@ class Bernoulli(ExponentialFamily):
         print("%s ~ Bernoulli(p)" % self.name)
         print("  p = ")
         print(p)
+
+
+from .deterministic import Deterministic
+from .categorical import Categorical, CategoricalMoments
+
+class CategoricalToBernoulli(Deterministic):
+    """
+    A node for converting 2-class categorical moments to Bernoulli moments.
+    """
+
+    
+    def __init__(self, Z, **kwargs):
+        """
+        Create a categorical MC moments to categorical moments conversion node.
+        """
+        # Convert parent to proper type. Z must be a node.
+        Z = Z._convert(CategoricalMoments)
+        K = Z.dims[0][-1]
+        if K != 2:
+            raise ValueError("Only 2-class categorical can be converted to "
+                             "Bernoulli")
+        dims = ( (), )
+        self._moments = BernoulliMoments()
+        self._parent_moments = (CategoricalMoments(2),)
+        super().__init__(Z, dims=dims, **kwargs)
+
+        
+    def _compute_moments(self, u_Z):
+        """
+        Compute the moments given the moments of the parents.
+        """
+        u0 = u_Z[0][...,0]
+        u = [u0]
+        return u
+
+
+    def _compute_message_to_parent(self, index, m, u_Z):
+        """
+        Compute the message to a parent.
+        """
+        if index == 0:
+            m0 = np.concatenate([m[0][...,None],
+                                 np.zeros(np.shape(m[0]))[...,None]],
+                                axis=-1)
+            return [m0]
+        else:
+            raise ValueError("Incorrect parent index")
+    
+
+# Make use of the conversion node
+CategoricalMoments.add_converter(BernoulliMoments,
+                                 CategoricalToBernoulli)
