@@ -46,6 +46,7 @@
     Y.observe(data)
     Y.observe(data, mask=[[True], [False], [False], [True], [True],
                           [False], [True], [True], [True], [False]])
+    X.initialize_from_parameters(np.random.randn(1, 100, D), 10)
     from bayespy.inference import VB
     Q = VB(Y, C, X, alpha, tau)
     X.initialize_from_parameters(np.random.randn(1, 100, D), 10)
@@ -56,7 +57,6 @@
     Q = VB(Y, C, X, alpha, tau)
     Q.callback = R.rotate
     Q.update(repeat=1000, tol=1e-6, verbose=False)
-    Q.update(repeat=50, tol=np.nan, verbose=False)
 
     from bayespy.nodes import Gaussian
 
@@ -372,11 +372,11 @@ every time it plots the same node.  In order to monitor the nodes during
 learning, it is possible to use the keyword argument ``plot``:
 
 >>> Q.update(repeat=5, plot=True, tol=np.nan)
-Iteration 68: loglike=-1.221354e+02 (... seconds)
-Iteration 69: loglike=-1.221354e+02 (... seconds)
-Iteration 70: loglike=-1.221354e+02 (... seconds)
-Iteration 71: loglike=-1.221354e+02 (... seconds)
-Iteration 72: loglike=-1.221354e+02 (... seconds)
+Iteration 19: loglike=-1.221354e+02 (... seconds)
+Iteration 20: loglike=-1.221354e+02 (... seconds)
+Iteration 21: loglike=-1.221354e+02 (... seconds)
+Iteration 22: loglike=-1.221354e+02 (... seconds)
+Iteration 23: loglike=-1.221354e+02 (... seconds)
 
 Each node which has a plotter set will be plotted after it is updated.  Note
 that this may slow down the inference significantly if the plotting operation is
