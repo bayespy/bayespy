@@ -163,6 +163,16 @@ def plot_gaussian_mc(X, scale=2, **kwargs):
     timeseries_gaussian(X, axis=-2, scale=scale, **kwargs)
 
 
+def plot_bernoulli(X, axis=-1, scale=2, **kwargs):
+    """
+    Plot Bernoulli node as a 1-D function
+    """
+    X = X._convert(BernoulliMoments)
+    u_X = X.get_moments()
+    z = u_X[0]
+    return _timeseries_mean_and_error(z, None, axis=axis, **kwargs)
+
+
 def plot_gaussian(X, axis=-1, scale=2, **kwargs):
     """
     Plot Gaussian node as a 1-D function
@@ -192,6 +202,15 @@ def plot(Y, axis=-1, scale=2, center=False, **kwargs):
         return _timeseries_mean_and_error(Y, None, axis=axis, center=center, **kwargs)
 
     if isinstance(Y, Node):
+
+        # Try Bernoulli plotting
+        try:
+            Y = Y._convert(BernoulliMoments)
+        except BernoulliMoments.NoConverterError:
+            pass
+        else:
+            return plot_bernoulli(Y, axis=axis, scale=scale, center=center, **kwargs)
+
         # Try Gaussian plotting
         try:
             Y = Y._convert(GaussianMoments)
