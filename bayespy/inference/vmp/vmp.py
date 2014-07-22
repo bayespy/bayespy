@@ -111,6 +111,10 @@ class VB():
         if iterations is not None:
             self.autosave_iterations = iterations
 
+
+    def set_callback(self, callback):
+        self.callback = callback
+
     def update(self, *nodes, repeat=1, plot=False, tol=None, verbose=True):
 
         # TODO/FIXME:
@@ -169,7 +173,7 @@ class VB():
                 if tol is None:
                     tol = self.tol
                 div = 0.5 * (abs(L) + abs(self.L[self.iter-1]))
-                if (L - self.L[self.iter-1]) / div < tol:
+                if (L - self.L[self.iter-1]) / div < tol or L - self.L[self.iter-1] <= 0:
                     converged = True
                     if verbose:
                         print("Converged at iteration %d." % (self.iter+1))
