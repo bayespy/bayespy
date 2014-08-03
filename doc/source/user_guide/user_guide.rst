@@ -19,6 +19,8 @@
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
 
+.. _sec-user-guide:
+
 User guide
 **********
 
