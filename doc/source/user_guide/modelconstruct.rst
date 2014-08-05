@@ -358,6 +358,8 @@ the posterior approximation, not only prior. If dependencies between a set of
 variables need to be handled, that set must be handled as a some kind of
 multi-dimensional variable.
 
+.. _sec-irregular-plates:
+
 Irregular plates
 ~~~~~~~~~~~~~~~~
 

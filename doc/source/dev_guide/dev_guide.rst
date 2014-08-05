@@ -21,14 +21,14 @@
 Developer guide
 ***************
 
-How to document:
-https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
-
-How to contribute:
-http://docs.scipy.org/doc/numpy/dev/gitwash/development_workflow.html
+This chapter provides basic information for developers about contributing, the
+theoretical background and the core structure.  It is assumed that the reader
+has read and is familiar with :ref:`sec-user-guide`.
 
 .. toctree::
 
-    vmp
-    writingnodes
+   workflow
+   vmp
+   engine
+   writingnodes
 
