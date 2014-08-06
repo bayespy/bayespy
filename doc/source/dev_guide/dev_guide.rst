@@ -26,6 +26,7 @@ theoretical background and the core structure.  It is assumed that the reader
 has read and is familiar with :ref:`sec-user-guide`.
 
 .. toctree::
+   :maxdepth: 2
 
    workflow
    vmp
