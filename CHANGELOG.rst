@@ -10,6 +10,8 @@ Version 0.2 (2014-08-06)
  * Added Gaussian Markov chains with time-varying or swithing dynamics.
 
  * Added discrete Markov chains (enabling hidden Markov models).
+
+ * Added joint Gaussian-Wishart and Gaussian-gamma nodes.
  
  * Added deterministic gating node.
 
