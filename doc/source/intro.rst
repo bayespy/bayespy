@@ -25,3 +25,8 @@ Introduction
 .. include:: ../../README.rst
    :start-line: 2
 
+
+Version history
+---------------
+
+.. include:: ../../CHANGELOG.rst
