@@ -267,6 +267,28 @@ def outer(A, B, ndim=1):
         B = np.reshape(B, shape_B)
     return np.asanyarray(A) * np.asanyarray(B)
 
+
+def _dot(A, B):
+    """
+    Dot product which handles broadcasting properly.
+
+    Future NumPy will have a better built-in implementation for this.
+    """
+    A_plates = np.shape(A)[:-2]
+    B_plates = np.shape(B)[:-2]
+    M = np.shape(A)[-2]
+    N = np.shape(B)[-1]
+    Y_plates = misc.broadcasted_shape(A_plates, B_plates)
+    if Y_plates == ():
+        return np.dot(A, B)
+    indices = misc.nested_iterator(Y_plates)
+    Y_shape = Y_plates + (M, N)
+    Y = np.zeros(Y_shape)
+    for i in indices:
+        Y[i] = np.dot(A[misc.safe_indices(i, A_plates)],
+                      B[misc.safe_indices(i, B_plates)])
+    return Y
+
 def dot(*arrays):
     """
     Compute matrix-matrix product.
@@ -285,7 +307,9 @@ def dot(*arrays):
                 raise ValueError("Must be at least 2-D arrays")
             if np.shape(Y)[-1] != np.shape(X)[-2]:
                 raise ValueError("Dimensions do not match")
-            Y = np.einsum('...ik,...kj->...ij', Y, X)
+            # Replace this with numpy.dot when NumPy implements broadcasting in dot
+            Y = _dot(Y, X)
+            #Y = np.einsum('...ik,...kj->...ij', Y, X)
             #Y = gula.matrix_multiply(Y, X)
         return Y
 
@@ -327,7 +351,8 @@ def mvdot(A, b):
     # return gula.inner1d(A, b[...,np.newaxis,:])
     # 
     # Use einsum instead:
-    return np.einsum('...ik,...k->...i', A, b)
+    return _dot(A, b[...,None])[...,0]
+    #return np.einsum('...ik,...k->...i', A, b)
 
 def mmdot(A, B):
     """
@@ -335,7 +360,8 @@ def mmdot(A, B):
 
     Applies broadcasting.
     """
-    return np.einsum('...ik,...kj->...ij', A, B)
+    return _dot(A, B)
+    #return np.einsum('...ik,...kj->...ij', A, B)
 
 def m_dot(A,b):
     raise DeprecationWarning()

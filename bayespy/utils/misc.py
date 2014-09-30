@@ -564,6 +564,28 @@ def moveaxis(A, axis_from, axis_to):
     return np.transpose(A, axes=axes)
 
 
+def safe_indices(inds, shape):
+    """
+    Makes sure that indices are valid for given shape.
+
+    The shorter shape determines the length.
+
+    For instance,
+
+    >>> safe_indices( (3, 4, 5), (1, 6) )
+    (0, 5)
+    """
+    m = min(len(inds), len(shape))
+
+    if m == 0:
+        return ()
+
+    inds = inds[-m:]
+    maxinds = np.array(shape[-m:]) - 1
+
+    return tuple(np.fmin(inds, maxinds))
+
+
 def broadcasted_shape(*shapes):
     """
     Computes the resulting broadcasted shape for a given set of shapes.
@@ -632,7 +654,7 @@ def add_trailing_axes(x, n):
     
 
 def nested_iterator(max_inds):
-    s = (range(i) for i in max_inds)
+    s = [range(i) for i in max_inds]
     return itertools.product(*s)
 
 def first(L):
