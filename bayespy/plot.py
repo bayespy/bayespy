@@ -498,6 +498,8 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1):
     std = np.reshape(std, squeezed_shape)
 
     # Make explicit four axes
+    cols = cols + (4 - np.ndim(x))
+    rows = rows + (4 - np.ndim(x))
     x = misc.atleast_nd(x, 4)
     std = misc.atleast_nd(std, 4)
 
@@ -532,9 +534,9 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1):
 
             #plt.subplot(M, N, i*N+j+1, sharey=ax[0], sharex=ax[0])
             if scale == 0:
-                return _hinton(x[i,j], vmax=vmax)
+                _hinton(x[i,j], vmax=vmax)
             else:
-                return _hinton(x[i,j], vmax=vmax, error=scale*std[i,j])
+                _hinton(x[i,j], vmax=vmax, error=scale*std[i,j])
             #matrix(x[i,j])
 
 
