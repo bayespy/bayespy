@@ -1,3 +1,10 @@
+Version 0.2.1 (2014-09-30)
+++++++++++++++++++++++++++
+
+ * Add workaround for matplotlib 1.4.0 bug related to interactive mode which
+   affected monitoring
+
+ * Fix bugs in Hinton diagrams for Gaussian variables
 
 Version 0.2 (2014-08-06)
 ++++++++++++++++++++++++
