@@ -53,6 +53,13 @@ Plotters
    CategoricalMarkovChainPlotter
 """
 
+############################################################################
+# A STUPID WORKAROUND FOR A MATPLOTLIB 1.4.0 BUG RELATED TO INTERACTIVE MODE
+# See: https://github.com/matplotlib/matplotlib/issues/3505
+import sys
+sys.ps1 = 'SOMETHING'
+#############################################################################
+
 import os, sys
 import tempfile
 
@@ -483,10 +490,10 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1):
     for i in reversed(range(len(shape))):
         if shape[i] == 1 and i != rows and i != cols:
             squeezed_shape.pop(i)
-        if i < cols:
-            cols -= 1
-        if i < rows:
-            rows -= 1
+            if i < cols:
+                cols -= 1
+            if i < rows:
+                rows -= 1
     x = np.reshape(x, squeezed_shape)
     std = np.reshape(std, squeezed_shape)
 
