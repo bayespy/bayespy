@@ -372,6 +372,7 @@ def alpha_beta_recursion(logp0, logP):
     zz /= np.sum(zz, axis=(-1,-2), keepdims=True)
 
     z0 = np.sum(zz[...,0,:,:], axis=-1)
+    z0 /= np.sum(z0, axis=-1, keepdims=True)
 
     return (z0, zz, g)
 
