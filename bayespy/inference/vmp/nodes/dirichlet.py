@@ -46,10 +46,11 @@ class DirichletPriorMoments(Moments):
         Compute the moments for a fixed value
         """
 
+        alpha = np.asanyarray(alpha)
         if np.ndim(alpha) < 1:
             raise ValueError("The prior sample sizes must be a vector")
         if np.any(alpha < 0):
-            raise ValueError("The prior sample sizes must be positive")
+            raise ValueError("The prior sample sizes must be non-negative")
         
         gammaln_sum = special.gammaln(np.sum(alpha, axis=-1))
         sum_gammaln = np.sum(special.gammaln(alpha), axis=-1)
