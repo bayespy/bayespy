@@ -1,3 +1,10 @@
+Version 0.2.2 (2014-11-01)
+++++++++++++++++++++++++++
+
+ * Fix normalization of categorical Markov chain probabilities (fixes HMM demo)
+
+ * Fix initialization from parameter values
+
 Version 0.2.1 (2014-09-30)
 ++++++++++++++++++++++++++
 
