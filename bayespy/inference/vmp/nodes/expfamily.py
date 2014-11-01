@@ -183,7 +183,7 @@ class ExponentialFamily(Stochastic):
 
     def initialize_from_parameters(self, *args):
         u_parents = [p_mom.compute_fixed_moments(x) 
-                     for (p_mom, x) in zip(self._parent_moments, *args)]
+                     for (p_mom, x) in zip(self._parent_moments, args)]
         self._initialize_from_parent_moments(*u_parents)
         
 
