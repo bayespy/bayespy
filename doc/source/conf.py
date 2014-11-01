@@ -225,9 +225,10 @@ latex_elements = {
 \usetikzlibrary{fit}
 \usetikzlibrary{chains}
 \usetikzlibrary{arrows}
-'''
-#  \usetikzlibrary{shapes, fit, chains, arrows}
-#  \usetikzlibrary{bayesnet}
+''',
+
+# Do not use [T1]{fontenc} because it does not work on libre systems
+'fontenc': ''
 }
 
 #latex_additional_files = ['images/bayesnet.sty',]
