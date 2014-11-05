@@ -658,7 +658,7 @@ class Node():
     def set_plotter(self, plotter):
         self._plotter = plotter
     
-    def plot(self, **kwargs):
+    def plot(self, fig=None, **kwargs):
         """
         Plot the node distribution using the plotter of the node
 
@@ -667,9 +667,11 @@ class Node():
         wanted. See, for instance, bayespy.plot.plotting for available plotters,
         that is, functions that perform plotting for a node.
         """
+        if fig is None:
+            fig = plt.gcf()
         if callable(self._plotter):
-            ax = self._plotter(self, **kwargs)
-            plt.suptitle('q(%s)' % self.name)
+            ax = self._plotter(self, fig=fig, **kwargs)
+            fig.suptitle('q(%s)' % self.name)
             return ax
         else:
             raise Exception("No plotter defined, can not plot")

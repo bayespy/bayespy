@@ -215,7 +215,7 @@ class VB():
             
         return L
 
-    def plot_iteration_by_nodes(self):
+    def plot_iteration_by_nodes(self, axes=plt.gca()):
         """
         Plot the cost function per node during the iteration.
 
@@ -229,10 +229,10 @@ class VB():
         for (d, node) in enumerate(self.l):
             L[:,d] = self.l[node]
             legends += [node.name]
-        plt.plot(np.arange(N)+1, L)
-        plt.legend(legends, loc='lower right')
-        plt.title('Lower bound contributions by nodes')
-        plt.xlabel('Iteration')
+        axes.plot(np.arange(N)+1, L)
+        axes.legend(legends, loc='lower right')
+        axes.set_title('Lower bound contributions by nodes')
+        axes.set_xlabel('Iteration')
 
     def get_iteration_by_nodes(self):
         return self.l
@@ -344,24 +344,26 @@ class VB():
         if len(nodes) == 0:
             nodes = self.model
 
-        if not plt.isinteractive():
-            plt.ion()
-            redisable = True
-        else:
-            redisable = False
+        ## if not plt.isinteractive():
+        ##     plt.ion()
+        ##     redisable = True
+        ## else:
+        ##     redisable = False
 
         for node in nodes:
             node = self[node]
             if node.has_plotter():
                 try:
-                    plt.figure(self._figures[node])
+                    fig = plt.figure(num=self._figures[node])
                 except:
-                    f = plt.figure()
-                    self._figures[node] = f.number
-                plt.clf()
-                node.plot()
-                plt.draw()
+                    fig = plt.figure()
+                    self._figures[node] = fig.number
+                fig.clf()
+                node.plot(fig=fig)
+                fig.canvas.draw()
+
+                # TODO/FIXME: Get rid of this?
                 plt.show()
 
-        if redisable:
-            plt.ioff()
+        ## if redisable:
+        ##     plt.ioff()

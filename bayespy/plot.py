@@ -56,8 +56,9 @@ Plotters
 ############################################################################
 # A STUPID WORKAROUND FOR A MATPLOTLIB 1.4.0 BUG RELATED TO INTERACTIVE MODE
 # See: https://github.com/matplotlib/matplotlib/issues/3505
-import sys
-sys.ps1 = 'SOMETHING'
+#import sys
+#sys.ps1 = 'SOMETHING'
+# This workaround does not work on Python shell, only on IPython
 #############################################################################
 
 import os, sys
@@ -91,7 +92,7 @@ mpl = matplotlib
 pyplot = plt
 
 
-def pdf(Z, x, *args, name=None, **kwargs):
+def pdf(Z, x, *args, name=None, axes=None, **kwargs):
     """
     Plot probability density function of a scalar variable.
 
@@ -104,12 +105,15 @@ def pdf(Z, x, *args, name=None, **kwargs):
     x : array
         Grid points
     """
+    if axes is None:
+        axes = plt.gca()
+        
     try:
         lpdf = Z.logpdf(x)
     except AttributeError:
         lpdf = Z(x)
     p = np.exp(lpdf)
-    retval = plt.plot(x, p, *args, **kwargs)
+    retval = axes.plot(x, p, *args, **kwargs)
 
     if name is None:
         try:
@@ -118,13 +122,13 @@ def pdf(Z, x, *args, name=None, **kwargs):
             pass
 
     if name:
-        plt.title(r'$q(%s)$' % (name))
-        plt.xlabel(r'$%s$' % (name))
+        axes.set_title(r'$q(%s)$' % (name))
+        axes.set_xlabel(r'$%s$' % (name))
         
     return retval
 
 
-def contour(Z, x, y, n=None, **kwargs):
+def contour(Z, x, y, n=None, axes=None, **kwargs):
     """
     Plot 2-D probability density function of a 2-D variable.
 
@@ -140,6 +144,9 @@ def contour(Z, x, y, n=None, **kwargs):
     y : array
         Grid points on y axis
     """
+    if axes is None:
+        axes = plt.gca()
+
     XY = misc.grid(x, y)
     try:
         lpdf = Z.logpdf(XY)
@@ -152,9 +159,9 @@ def contour(Z, x, y, n=None, **kwargs):
     P = np.reshape(p, shape)
     if n is not None:
         levels = np.linspace(0, np.amax(P), num=n+2)[1:-1]
-        return plt.contour(X, Y, P, levels, **kwargs)
+        return axes.contour(X, Y, P, levels, **kwargs)
     else:
-        return plt.contour(X, Y, P, **kwargs)
+        return axes.contour(X, Y, P, **kwargs)
         
 
 
@@ -246,9 +253,12 @@ def timeseries(*args, center=True, **kwargs):
     return plot(*args, center=center, **kwargs)
 
 
-def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, **kwargs):
+def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, fig=None, **kwargs):
     # TODO/FIXME: You must multiply by ones(plates) in order to plot
     # broadcasted plates properly
+
+    if fig is None:
+        fig = plt.gcf()
 
     y = np.atleast_1d(y)
     shape = list(np.shape(y))
@@ -280,11 +290,11 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, **kwargs):
         N = 1
 
     # Plot each timeseries
-    ax0 = plt.subplot(M, N, 1)
+    ax0 = fig.add_subplot(M, N, 1)
     for i in range(M*N):
         if i > 0:
             # Share x axis between all subplots
-            ax = plt.subplot(M, N, i+1, sharex=ax0)
+            ax = fig.add_subplot(M, N, i+1, sharex=ax0)
         else:
             ax = ax0
 
@@ -297,12 +307,11 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, **kwargs):
             plt.setp(ax.get_xticklabels(), visible=False)
 
         if std is None:
-            #plt.plot(y[:,i], *args, **kwargs)
-            errorplot(y=y[:,i], **kwargs)
+            errorplot(y=y[:,i], axes=ax, **kwargs)
         else:
             if len(args) > 0:
                 raise Exception("Can't handle extra arguments")
-            errorplot(y=y[:,i], error=std[:,i], **kwargs)
+            errorplot(y=y[:,i], error=std[:,i], axes=ax, **kwargs)
 
         if center:
             # Center the zero level on y-axis
@@ -311,9 +320,9 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, **kwargs):
             ax.set_ylim([-vmax, vmax])
 
     # Remove height space between subplots
-    plt.subplots_adjust(hspace=0)
+    fig.subplots_adjust(hspace=0)
 
-def _blob(x, y, area, colour):
+def _blob(axes, x, y, area, colour):
     """
     Draws a square-shaped blob with the given area (< 1) at
     the given coordinates.
@@ -321,23 +330,27 @@ def _blob(x, y, area, colour):
     hs = np.sqrt(area) / 2
     xcorners = np.array([x - hs, x + hs, x + hs, x - hs])
     ycorners = np.array([y - hs, y - hs, y + hs, y + hs])
-    plt.fill(xcorners, ycorners, colour, edgecolor=colour)
+    axes.fill(xcorners, ycorners, colour, edgecolor=colour)
 
-def _rectangle(x, y, width, height, **kwargs):
+def _rectangle(axes, x, y, width, height, **kwargs):
     _x = x - width/2
     _y = y - height/2
     rectangle = plt.Rectangle((_x, _y), 
                               width,
                               height,
                               **kwargs)
-    plt.gca().add_patch(rectangle)
+    axes.add_patch(rectangle)
     return
 
 
-def gaussian_mixture(X, scale=1, fill=False, **kwargs):
+def gaussian_mixture(X, scale=1, fill=False, axes=None, **kwargs):
     """
     Plot Gaussian mixture as ellipses in 2-D
     """
+        
+    if axes is None:
+        axes = plt.gca()
+
     mu_Lambda = X.parents[1]._convert(GaussianWishartMoments)
 
     (mu, _, Lambda, _) = mu_Lambda.get_moments()
@@ -362,12 +375,12 @@ def gaussian_mixture(X, scale=1, fill=False, **kwargs):
                                   angle=(180+angle),
                                   fill=fill,
                                   **kwargs)
-        plt.gca().add_artist(ell)
+        axes.add_artist(ell)
 
     return
     
     
-def _hinton(W, error=None, vmax=None, square=True):
+def _hinton(axes, W, error=None, vmax=None, square=True):
     """
     Draws a Hinton diagram for visualizing a weight matrix. 
 
@@ -377,10 +390,10 @@ def _hinton(W, error=None, vmax=None, square=True):
     Originally copied from
     http://wiki.scipy.org/Cookbook/Matplotlib/HintonDiagrams
     """
-    reenable = False
-    if plt.isinteractive():
-        plt.ioff()
-        reenable = True
+    ## reenable = False
+    ## if plt.isinteractive():
+    ##     plt.ioff()
+    ##     reenable = True
         
     #P.clf()
     W = misc.atleast_nd(W, 2)
@@ -392,13 +405,13 @@ def _hinton(W, error=None, vmax=None, square=True):
         else:
             vmax = np.max(np.abs(W))
 
-    plt.fill(0.5+np.array([0,width,width,0]),
-             0.5+np.array([0,0,height,height]),
-             'gray')
-    plt.axis('off')
+    axes.fill(0.5+np.array([0,width,width,0]),
+              0.5+np.array([0,0,height,height]),
+              'gray')
+    axes.axis('off')
     if square:
-        plt.axis('equal')
-    plt.gca().invert_yaxis()
+        axes.axis('equal')
+    axes.invert_yaxis()
     for x in range(width):
         for y in range(height):
             _x = x+1
@@ -417,27 +430,32 @@ def _hinton(W, error=None, vmax=None, square=True):
                 if _w + e > vmax:
                     print(e, _w, vmax)
                     raise Exception("BUG? Value+error greater than max")
-                _rectangle(_x,
+                _rectangle(axes,
+                           _x,
                            _y, 
                            min(1, np.sqrt((_w+e)/vmax)),
                            min(1, np.sqrt((_w+e)/vmax)),
                            edgecolor=_c,
                            fill=False)
-            _blob(_x, _y, min(1, _w/vmax), _c)
+            _blob(axes, _x, _y, min(1, _w/vmax), _c)
                 
-    if reenable:
-        plt.ion()
-        #P.show()
+    ## if reenable:
+    ##     plt.ion()
+    ##     #P.show()
 
 
-def matrix(A):
+def matrix(A, axes=None):
+
+    if axes is None:
+        axes = plt.gca()
+
     A = np.atleast_2d(A)
     vmax = np.max(np.abs(A))
-    return  plt.imshow(A, 
-                       interpolation='nearest', 
-                       cmap='RdBu_r',
-                       vmin=-vmax,
-                       vmax=vmax)
+    return  axes.imshow(A, 
+                        interpolation='nearest', 
+                        cmap='RdBu_r',
+                        vmin=-vmax,
+                        vmax=vmax)
 
 def new_matrix(A, vmax=None):
     A = np.atleast_2d(A)
@@ -450,10 +468,13 @@ def new_matrix(A, vmax=None):
         for j in range(N):
             pass
     
-def gaussian_hinton(X, rows=None, cols=None, scale=1):
+def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
     """
     Plot the Hinton diagram of a Gaussian node
     """
+
+    if fig is None:
+        fig = plt.gcf()
 
     # Get mean and second moment
     X = X._convert(GaussianMoments)
@@ -526,23 +547,24 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1):
     M = np.shape(x)[0]
     N = np.shape(x)[1]
     vmax = np.max(np.abs(x) + scale*std)
-    #plt.subplots(M, N, sharey=True, sharex=True, fig_kw)
-    ax = [plt.subplot(M, N, i*N+j+1) for i in range(M) for j in range(N)]
+    axes = [[fig.add_subplot(M, N, i*N+j+1) for i in range(M)] for j in range(N)]
     for i in range(M):
         for j in range(N):
-            plt.subplot(M, N, i*N+j+1)
+            fig.add_subplot(M, N, i*N+j+1)
 
-            #plt.subplot(M, N, i*N+j+1, sharey=ax[0], sharex=ax[0])
             if scale == 0:
-                _hinton(x[i,j], vmax=vmax)
+                _hinton(axes[i][j], x[i,j], vmax=vmax)
             else:
-                _hinton(x[i,j], vmax=vmax, error=scale*std[i,j])
+                _hinton(axes[i][j], x[i,j], vmax=vmax, error=scale*std[i,j])
             #matrix(x[i,j])
 
 
 gaussian_array = gaussian_hinton
 
-def timeseries_categorical_mc(Z):
+def timeseries_categorical_mc(Z, fig=None):
+
+    if fig is None:
+        fig = plt.gcf()
 
     # Make sure that the node is categorical
     Z = Z._convert(CategoricalMoments)
@@ -557,13 +579,11 @@ def timeseries_categorical_mc(Z):
     M = np.shape(z)[0]
     N = np.shape(z)[1]
 
-    #print("DEBUG IN PLOT", Z.get_shape(0), np.shape(z))
-
     # Plot Hintons
     for i in range(M):
         for j in range(N):
-            plt.subplot(M, N, i*N+j+1)
-            hinton(z[i,j].T, vmax=1.0, square=False)
+            axes = fig.subplot(M, N, i*N+j+1)
+            _hinton(axes, z[i,j].T, vmax=1.0, square=False)
 
 
 def beta_hinton(P, square=True):
@@ -758,7 +778,7 @@ class Plotter():
         self._plotter = plotter
 
 
-    def __call__(self, X):
+    def __call__(self, X, fig=None):
         """
         Plot the node using the specified plotting function
 
@@ -769,7 +789,7 @@ class Plotter():
 
             The plotted node
         """
-        return self._plotter(X, *self._args, **self._kwargs)
+        return self._plotter(X, *self._args, fig=fig, **self._kwargs)
 
         
 class PDFPlotter(Plotter):
@@ -870,57 +890,23 @@ class CategoricalMarkovChainPlotter(Plotter):
     def __init__(self, **kwargs):
         super().__init__(timeseries_categorical_mc, **kwargs)
 
-## def matrix_animation_BACKUP(A, filename=None, fps=25, **kwargs):
 
-##     fig = plt.gcf()
+def matrix_animation(A, filename=None, fps=25, fig=None, **kwargs):
 
-##     A = np.atleast_3d(A)
-##     vmax = np.max(np.abs(A))
-##     x = plt.imshow(A[0],
-##                    interpolation='nearest',
-##                    cmap='RdBu_r',
-##                    vmin=-vmax,
-##                    vmax=vmax,
-##                    **kwargs)
-##     s = plt.title('t = %d' % 0)
+    if fig is None:
+        fig = plt.gcf()
 
-##     if filename is not None:
-##         (_, base_fname) = tempfile.mkstemp(suffix='', prefix='')
-
-##     def animate(nframe):
-##         s.set_text('t = %d' % nframe)
-##         x.set_array(A[nframe])
-##         if filename is not None:
-##             fname = '%s_%05d.png' % (base_fname, nframe)
-##             plt.savefig(fname)
-##             if nframe == np.shape(A)[0] - 1:
-##                 os.system("ffmpeg -r %d -i %s_%%05d.png -r 25 -y %s"
-##                           % (fps, base_fname, filename))
-##                 os.system("rm %s_*.png" % base_fname)
-    
-##         return (x, s)
-
-##     anim = animation.FuncAnimation(fig, animate,
-##                                    frames=np.shape(A)[0],
-##                                    interval=1000/fps,
-##                                    blit=False,
-##                                    repeat=False)
-
-##     return anim
-
-def matrix_animation(A, filename=None, fps=25, **kwargs):
-
-    fig = plt.gcf()
+    axes = fig.add_subplot(111)
 
     A = np.atleast_3d(A)
     vmax = np.max(np.abs(A))
-    x = plt.imshow(A[0],
-                   interpolation='nearest',
-                   cmap='RdBu_r',
-                   vmin=-vmax,
-                   vmax=vmax,
-                   **kwargs)
-    s = plt.title('t = %d' % 0)
+    x = axes.imshow(A[0],
+                    interpolation='nearest',
+                    cmap='RdBu_r',
+                    vmin=-vmax,
+                    vmax=vmax,
+                    **kwargs)
+    s = axes.set_title('t = %d' % 0)
 
     def animate(nframe):
         s.set_text('t = %d' % nframe)
@@ -935,6 +921,7 @@ def matrix_animation(A, filename=None, fps=25, **kwargs):
         
     return anim
 
+
 def save_animation(anim, filename, fps=25, bitrate=5000, fig=None):
 
     # A bug in numpy/matplotlib causes this not to work in python3.3:
@@ -946,7 +933,7 @@ def save_animation(anim, filename, fps=25, bitrate=5000, fig=None):
 
     if fig is None:
         fig = plt.gcf()
-        
+
     writer = animation.FFMpegFileWriter(fps=fps, bitrate=bitrate)
     writer.setup(fig, filename, 100)
     anim.save(filename, 
@@ -955,48 +942,16 @@ def save_animation(anim, filename, fps=25, bitrate=5000, fig=None):
               bitrate=bitrate)
     return
 
- 
-## def matrix_movie(A, filename, 
-##                  fps=25,
-##                  title='Matrix Movie',
-##                  artist='BayesPy',
-##                  dpi=100,
-##                  **kwargs):
 
-##     # A bug in numpy/matplotlib causes this not to work in python3.3:
-##     # https://github.com/matplotlib/matplotlib/issues/1891
+def binary_matrix(A, axes=None):
+    if axes is None:
+        axes = plt.gca()
 
-##     FFMpegWriter = animation.FFMpegFileWriter()
-##     #FFMpegWriter = animation.writers['ffmpeg']
-##     metadata = dict(title=title,
-##                     artist=artist)
-##     writer = FFMpegWriter(fps=fps, metadata=metadata)        
-##     #writer = FFMpegWriter(fps=fps, metadata=metadata)        
-        
-##     A = np.atleast_3d(A)
-##     vmax = np.max(np.abs(A))
-##     x = plt.imshow(A[0],
-##                    interpolation='nearest',
-##                    cmap='RdBu_r',
-##                    vmin=-vmax,
-##                    vmax=vmax,
-##                    **kwargs)
-##     s = plt.title('t = %d' % 0)
-##     fig = plt.gcf()
-    
-##     with writer.saving(fig, filename, dpi):
-##         for (t, a) in enumerate(A):
-##             x.set_array(a)
-##             s.set_text('t = %d' % t)
-##             plt.draw()
-##             #writer.grab_frame()
-
-def binary_matrix(A):
     A = np.atleast_2d(A)
     G = np.zeros(np.shape(A) + (3,))
     G[A] = [0,0,0]
     G[np.logical_not(A)] = [1,1,1]
-    plt.imshow(G, interpolation='nearest')
+    axes.imshow(G, interpolation='nearest')
 
 
 def gaussian_mixture_logpdf(x, w, mu, Sigma):
@@ -1032,29 +987,38 @@ def gaussian_mixture_logpdf(x, w, mu, Sigma):
     
     
 
-def matrixplot(A, colorbar=False):
+def matrixplot(A, colorbar=False, axes=None):
+    if axes is None:
+        axes = plt.gca()
+
     if sp.issparse(A):
         A = A.toarray()
-    plt.imshow(A, interpolation='nearest')
+    axes.imshow(A, interpolation='nearest')
     if colorbar:
-        plt.colorbar()
+        plt.colorbar(ax=axes)
 
 
-def contourplot(x1, x2, y, colorbar=False, filled=True):
+def contourplot(x1, x2, y, colorbar=False, filled=True, axes=None):
     """ Plots 2D contour plot. x1 and x2 are 1D vectors, y contains
     the function values. y.size must be x1.size*x2.size. """
     
+    if axes is None:
+        axes = plt.gca()
+
     y = np.reshape(y, (len(x2),len(x1)))
     if filled:
-        plt.contourf(x1, x2, y)
+        axes.contourf(x1, x2, y)
     else:
-        plt.contour(x1, x2, y)
+        axes.contour(x1, x2, y)
     if colorbar:
-        plt.colorbar()
+        plt.colorbar(ax=axes)
         
 
 def errorplot(y=None, error=None, x=None, lower=None, upper=None,
-              color=(0,0,0,1), **kwargs):
+              color=(0,0,0,1), axes=None, **kwargs):
+
+    if axes is None:
+        axes = plt.gca()
 
     # Default inputs
     if x is None:
@@ -1078,64 +1042,15 @@ def errorplot(y=None, error=None, x=None, lower=None, upper=None,
         #print(np.max(upper))
         l = y - lower
         u = y + upper
-        plt.fill_between(x,
-                         u,
-                         l,
-                         facecolor=(0.6,0.6,0.6,1),
-                         edgecolor=(0,0,0,0),
-                         linewidth=0,
-                         interpolate=True)
+        axes.fill_between(x,
+                          u,
+                          l,
+                          facecolor=(0.6,0.6,0.6,1),
+                          edgecolor=(0,0,0,0),
+                          linewidth=0,
+                          interpolate=True)
     # Plot function
-    plt.plot(x, y, color=color, **kwargs)
-
-#def multiplot(plot_function, *args, **kwargs):
-    
-
-def m_plot(x, Y, style):
-    Y = np.atleast_2d(Y)
-    M = Y.shape[-2]
-    for i in range(M):
-        plt.subplot(M,1,i+1)
-        plt.plot(x, Y[i], style)
-
-## def multi_errorplot(Y, error=None, x=None, lower=None, upper=None):
-
-##     for m in range(M):
-##         for n in range(N):
-##             plt.subplot(M,N,m*N+n)
-##             errorplot(Y[m][n],
-##                       error=error[m][n],
-##                       x=x[m][n],
-##                       lower=lower[m][n],
-##                       upper=upper[m][n])
-
-def m_errorplot(x, Y, L, U):
-    Y = np.atleast_2d(Y)
-    L = np.atleast_2d(L)
-    U = np.atleast_2d(U)
-    M = Y.shape[-2]
-    ## print(np.shape(Y))
-    ## print(np.shape(L))
-    ## print(np.shape(U))
-    ## print(np.shape(M))
-    for i in range(M):
-        plt.subplot(M,1,i+1)
-        lower = Y[i] - L[i]
-        upper = Y[i] + U[i]
-        #print(upper-lower)
-        #if np.any(lower>=upper):
-            #print('WTF?!')
-        plt.fill_between(x,
-                         upper,
-                         lower,
-                         #where=(upper>=lower),
-                         facecolor=(0.6,0.6,0.6,1),
-                         edgecolor=(0,0,0,0),
-                         #edgecolor=(0.6,0.6,0.6,1),
-                         linewidth=0,
-                         interpolate=True)
-        plt.plot(x, Y[i], color=(0,0,0,1))
-        plt.ylabel(str(i))
+    axes.plot(x, y, color=color, **kwargs)
 
 
 def plotmatrix(X):
@@ -1151,19 +1066,23 @@ def plotmatrix(X):
 def _pdf_t(mu, s2, nu, axes=None, scale=4, color='k'):
     """
     """
+    if axes is None:
+        axes = plt.gca()
+
     s = np.sqrt(s2)
     x = np.linspace(mu-scale*s, mu+scale*s, num=100)
     y2 = (x-mu)**2 / s2
     lpdf = random.t_logpdf(y2, np.log(s2), nu, 1)
     p = np.exp(lpdf)
-    if axes is None:
-        axes = plt
     return axes.plot(x, p, color=color)
 
 
 def _pdf_gamma(a, b, axes=None, scale=4, color='k'):
     """
     """
+    if axes is None:
+        axes = plt.gca()
+
     if np.size(a) != 1 or np.size(b) != 1:
         raise ValueError("Parameters must be scalars")
     mean = a/b
@@ -1178,14 +1097,15 @@ def _pdf_gamma(a, b, axes=None, scale=4, color='k'):
                                a*np.log(b),
                                special.gammaln(a))
     p = np.exp(lpdf)
-    if axes is None:
-        axes = plt
     return axes.plot(x, p, color=color)
 
 
 def _contour_t(mu, Cov, nu, axes=None, scale=4, transpose=False, colors='k'):
     """
     """
+    if axes is None:
+        axes = plt.gca()
+
     if np.shape(mu) != (2,) or np.shape(Cov) != (2,2) or np.shape(nu) != ():
         print(np.shape(mu), np.shape(Cov), np.shape(nu))
         raise ValueError("Only 2-d t-distribution allowed")
@@ -1209,8 +1129,6 @@ def _contour_t(mu, Cov, nu, axes=None, scale=4, transpose=False, colors='k'):
     X0 = np.reshape(X0X1[:,0], shape)
     X1 = np.reshape(X0X1[:,1], shape)
     P = np.reshape(p, shape)
-    if axes is None:
-        axes = plt
     return axes.contour(X0, X1, P, colors=colors)
 
 

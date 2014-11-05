@@ -74,7 +74,7 @@ def model(M, N, D):
     return (Y, F, W, X, tau, alpha)
 
 
-def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=False, maxiter=100, debug=False):
+def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=False, maxiter=100, debug=False, plot=True):
 
     if seed is not None:
         np.random.seed(seed)
@@ -119,11 +119,12 @@ def run(M=10, N=100, D_y=3, D=5, seed=42, rotate=False, maxiter=100, debug=False
         Q.update(repeat=maxiter)
 
     # Plot results
-    plt.figure()
-    bpplt.timeseries_normal(F, scale=2)
-    bpplt.timeseries(f, color='g', linestyle='-')
-    bpplt.timeseries(y, color='r', linestyle='None', marker='+')
-    plt.show()
+    if plot:
+        plt.figure()
+        bpplt.timeseries_normal(F, scale=2)
+        bpplt.timeseries(f, color='g', linestyle='-')
+        bpplt.timeseries(y, color='r', linestyle='None', marker='+')
+        plt.show()
 
 if __name__ == '__main__':
     import sys, getopt, os
@@ -169,5 +170,7 @@ if __name__ == '__main__':
         elif opt in ("--k",):
             kwargs["D_y"] = int(arg)
 
+    plt.ion()
     run(**kwargs)
+    plt.ioff()
 
