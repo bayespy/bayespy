@@ -122,7 +122,60 @@ def interactive(function):
     return new_function
 
 
-def pdf(Z, x, *args, name=None, axes=None, **kwargs):
+def _subplots(plotfunc, *args, fig=None, kwargs={}):
+    """Create a collection of subplots
+
+    Each subplot is created with the same plotting function.
+
+    Inputs are given as pairs:
+
+    (x, 3), (y, 2), ...
+
+    where x,y,... are the input arrays and 3,2,... are the ndim
+    parameters.  The last ndim axes of each array are interpreted as a
+    single element to the plotting function.
+
+    All high-level plotting functions should wrap low-level plotting
+    functions with this function in order to generate subplots for
+    plates.
+    """
+
+    if fig is None:
+        fig = plt.gcf()
+
+    # Parse shape and plates of each input array
+    shapes = [np.shape(x)[-n:] if n > 0 else ()
+              for (x,n) in args]
+    plates = [np.shape(x)[:-n] if n > 0 else np.shape(x)
+              for (x,n) in args]
+
+    # Get the full grid shape of the subplots
+    broadcasted_plates = misc.broadcasted_shape(*plates)
+
+    # Subplot indexing layout
+    M = np.prod(broadcasted_plates[-2::-2])
+    N = np.prod(broadcasted_plates[-1::-2])
+    strides_subplot = [np.prod(broadcasted_plates[(j+2)::2]) * N
+                       if ((len(broadcasted_plates)-j) % 2) == 0 else
+                       np.prod(broadcasted_plates[(j+2)::2])
+                       for j in range(len(broadcasted_plates))]
+
+    # Plot each subplot
+    for ind in misc.nested_iterator(broadcasted_plates):
+
+        # Get the list of inputs for this subplot
+        broadcasted_args = []
+        for n in range(len(args)):
+            i = misc.safe_indices(ind, plates[n])
+            broadcasted_args.append(args[n][0][i])
+
+        # Plot the subplot using the given function
+        ind_subplot = np.einsum('i,i', ind, strides_subplot)
+        axes = fig.add_subplot(M, N, ind_subplot+1)
+        plotfunc(*broadcasted_args, axes=axes, **kwargs)
+
+
+def pdf(Z, x, *args, name=None, axes=None, fig=None, **kwargs):
     """
     Plot probability density function of a scalar variable.
 
@@ -135,9 +188,16 @@ def pdf(Z, x, *args, name=None, axes=None, **kwargs):
     x : array
         Grid points
     """
-    if axes is None:
+
+    # TODO: Make it possible to plot a plated variable using _subplots function.
+
+    if axes is None and fig is None:
         axes = plt.gca()
-        
+    else:
+        if fig is None:
+            fig = plt.gcf()
+        axes = fig.add_subplot(111)
+
     try:
         lpdf = Z.logpdf(x)
     except AttributeError:
@@ -158,7 +218,7 @@ def pdf(Z, x, *args, name=None, axes=None, **kwargs):
     return retval
 
 
-def contour(Z, x, y, n=None, axes=None, **kwargs):
+def contour(Z, x, y, n=None, axes=None, fig=None, **kwargs):
     """
     Plot 2-D probability density function of a 2-D variable.
 
@@ -174,8 +234,15 @@ def contour(Z, x, y, n=None, axes=None, **kwargs):
     y : array
         Grid points on y axis
     """
-    if axes is None:
+
+    # TODO: Make it possible to plot a plated variable using _subplots function.
+
+    if axes is None and fig is None:
         axes = plt.gca()
+    else:
+        if fig is None:
+            fig = plt.gcf()
+        axes = fig.add_subplot(111)
 
     XY = misc.grid(x, y)
     try:
@@ -410,7 +477,7 @@ def gaussian_mixture(X, scale=1, fill=False, axes=None, **kwargs):
     return
     
     
-def _hinton(axes, W, error=None, vmax=None, square=True):
+def _hinton(W, error=None, vmax=None, square=True, axes=None):
     """
     Draws a Hinton diagram for visualizing a weight matrix. 
 
@@ -420,6 +487,9 @@ def _hinton(axes, W, error=None, vmax=None, square=True):
     Originally copied from
     http://wiki.scipy.org/Cookbook/Matplotlib/HintonDiagrams
     """
+
+    if axes is None:
+        axes = plt.gca()
 
     W = misc.atleast_nd(W, 2)
     (height, width) = W.shape
@@ -539,12 +609,6 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
     x = np.reshape(x, squeezed_shape)
     std = np.reshape(std, squeezed_shape)
 
-    # Make explicit four axes
-    cols = cols + (4 - np.ndim(x))
-    rows = rows + (4 - np.ndim(x))
-    x = misc.atleast_nd(x, 4)
-    std = misc.atleast_nd(std, 4)
-
     size = np.ndim(x)
     if np.isnan(cols):
         if rows != size - 1:
@@ -562,26 +626,20 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
     x = np.transpose(x, axes=axes)
     std = np.transpose(std, axes=axes)
 
-    if np.ndim(x) != 4:
-        raise ValueError("Can not plot arrays with over 4 axes")
-
-    M = np.shape(x)[0]
-    N = np.shape(x)[1]
     vmax = np.max(np.abs(x) + scale*std)
-    axes = [[fig.add_subplot(M, N, i*N+j+1) for j in range(N)] for i in range(M)]
-    for i in range(M):
-        for j in range(N):
-            fig.add_subplot(M, N, i*N+j+1)
+    
+    if scale == 0:
+        _subplots(_hinton, (x, 2), fig=fig, kwargs=dict(vmax=vmax))
+    else:
+        def plotfunc(z, e, **kwargs):
+            return _hinton(z, error=e, **kwargs)
 
-            if scale == 0:
-                _hinton(axes[i][j], x[i,j], vmax=vmax)
-            else:
-                _hinton(axes[i][j], x[i,j], vmax=vmax, error=scale*std[i,j])
-            #matrix(x[i,j])
+        _subplots(plotfunc, (x, 2), (scale*std, 2), fig=fig, kwargs=dict(vmax=vmax))
 
 
 # For backwards compatibility:
 gaussian_array = gaussian_hinton
+
 
 def timeseries_categorical_mc(Z, fig=None):
 
@@ -605,7 +663,7 @@ def timeseries_categorical_mc(Z, fig=None):
     for i in range(M):
         for j in range(N):
             axes = fig.add_subplot(M, N, i*N+j+1)
-            _hinton(axes, z[i,j].T, vmax=1.0, square=False)
+            _hinton(z[i,j].T, vmax=1.0, square=False, axes=axes)
 
 
 def beta_hinton(P, square=True):
