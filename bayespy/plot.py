@@ -53,16 +53,19 @@ Plotters
    CategoricalMarkovChainPlotter
 """
 
+
+import os, sys
+
 ############################################################################
 # A STUPID WORKAROUND FOR A MATPLOTLIB 1.4.0 BUG RELATED TO INTERACTIVE MODE
 # See: https://github.com/matplotlib/matplotlib/issues/3505
-#import sys
-#sys.ps1 = 'SOMETHING'
-# This workaround does not work on Python shell, only on IPython
+import __main__
+if hasattr(__main__, '__file__'):
+    sys.ps1 = ('WORKAROUND FOR A BUG #3505 IN MATPLOTLIB.\n'
+               'IF YOU SEE THIS MESSAGE, TRY MATPLOTLIB!=1.4.0.')
+# This workaround does not work on Python shell, only on stand-alone scripts
+# and IPython. A better solution: require MPL!=1.4.0.
 #############################################################################
-
-import os, sys
-import tempfile
 
 import numpy as np
 import scipy.sparse as sp
@@ -90,6 +93,33 @@ from bayespy.utils import (misc,
 import matplotlib
 mpl = matplotlib
 pyplot = plt
+
+
+def interactive(function):
+    """A decorator for forcing functions to use the interactive mode.
+
+    Parameters
+    ----------
+
+    function : callable
+        The function to be decorated
+    """
+
+    def new_function(*args, **kwargs):
+        if mpl.is_interactive():
+            was_interactive = True
+        else:
+            was_interactive = False
+            mpl.interactive(True)
+
+        retval = function(*args, **kwargs)
+
+        if not was_interactive:
+            mpl.interactive(False)
+
+        return retval
+
+    return new_function
 
 
 def pdf(Z, x, *args, name=None, axes=None, **kwargs):
@@ -390,12 +420,7 @@ def _hinton(axes, W, error=None, vmax=None, square=True):
     Originally copied from
     http://wiki.scipy.org/Cookbook/Matplotlib/HintonDiagrams
     """
-    ## reenable = False
-    ## if plt.isinteractive():
-    ##     plt.ioff()
-    ##     reenable = True
-        
-    #P.clf()
+
     W = misc.atleast_nd(W, 2)
     (height, width) = W.shape
     if not vmax:
@@ -439,10 +464,6 @@ def _hinton(axes, W, error=None, vmax=None, square=True):
                            fill=False)
             _blob(axes, _x, _y, min(1, _w/vmax), _c)
                 
-    ## if reenable:
-    ##     plt.ion()
-    ##     #P.show()
-
 
 def matrix(A, axes=None):
 
@@ -559,6 +580,7 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
             #matrix(x[i,j])
 
 
+# For backwards compatibility:
 gaussian_array = gaussian_hinton
 
 def timeseries_categorical_mc(Z, fig=None):
@@ -1015,7 +1037,7 @@ def contourplot(x1, x2, y, colorbar=False, filled=True, axes=None):
         
 
 def errorplot(y=None, error=None, x=None, lower=None, upper=None,
-              color=(0,0,0,1), axes=None, **kwargs):
+              color=(0,0,0,1), fillcolor=(0,0,0,0.4), axes=None, **kwargs):
 
     if axes is None:
         axes = plt.gca()
@@ -1038,16 +1060,14 @@ def errorplot(y=None, error=None, x=None, lower=None, upper=None,
 
     # Plot errors
     if (lower is not None) and (upper is not None):
-        #print(np.max(lower))
-        #print(np.max(upper))
         l = y - lower
         u = y + upper
         axes.fill_between(x,
-                          u,
                           l,
-                          facecolor=(0.6,0.6,0.6,1),
-                          edgecolor=(0,0,0,0),
-                          linewidth=0,
+                          u,
+                          facecolor=fillcolor,
+                          edgecolor=(0, 0, 0, 0),
+                          linewidth=1,
                           interpolate=True)
     # Plot function
     axes.plot(x, y, color=color, **kwargs)

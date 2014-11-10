@@ -215,12 +215,15 @@ class VB():
             
         return L
 
-    def plot_iteration_by_nodes(self, axes=plt.gca()):
+    def plot_iteration_by_nodes(self, axes=None):
         """
         Plot the cost function per node during the iteration.
 
         Handy tool for debugging.
         """
+
+        if axes is None:
+            axes = plt.gca()
         
         D = len(self.l)
         N = self.iter
@@ -341,29 +344,22 @@ class VB():
         """
         Plot the distribution of the given nodes (or all nodes)
         """
+
         if len(nodes) == 0:
             nodes = self.model
-
-        ## if not plt.isinteractive():
-        ##     plt.ion()
-        ##     redisable = True
-        ## else:
-        ##     redisable = False
 
         for node in nodes:
             node = self[node]
             if node.has_plotter():
+
                 try:
-                    fig = plt.figure(num=self._figures[node])
-                except:
+                    fignum = self._figures[node]
+                except KeyError:
                     fig = plt.figure()
                     self._figures[node] = fig.number
+                else:
+                    fig = plt.figure(num=fignum)
+
                 fig.clf()
                 node.plot(fig=fig)
                 fig.canvas.draw()
-
-                # TODO/FIXME: Get rid of this?
-                plt.show()
-
-        ## if redisable:
-        ##     plt.ioff()
