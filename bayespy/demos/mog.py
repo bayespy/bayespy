@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 import time
 
 from bayespy.utils import misc
-import bayespy.plot as myplt
+import bayespy.plot as bpplt
 from bayespy.inference.vmp import nodes
 from bayespy.inference.vmp.vmp import VB
 
@@ -64,6 +64,7 @@ def gaussianmix_model(N, K, D):
     return VB(Y, X, Lambda, z, alpha)
 
 
+@bpplt.interactive
 def run(N=50, K=5, D=2):
 
     # Generate data
@@ -103,8 +104,8 @@ def run(N=50, K=5, D=2):
     Q['X'].show()
     Q['alpha'].show()
 
-    plt.show()
 
 if __name__ == '__main__':
     run()
+    plt.show()
 

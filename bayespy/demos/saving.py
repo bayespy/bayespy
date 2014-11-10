@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import h5py
 import tempfile
 
-import bayespy.plot as myplt
+import bayespy.plot as bpplt
 
 from bayespy.utils import misc
 from bayespy.utils import random
@@ -69,6 +69,7 @@ def pca_model(M, N, D):
     return (Y, WX, W, X, tau, alpha)
 
 
+@bpplt.interactive
 def run(M=10, N=100, D_y=3, D=5):
     seed = 45
     print('seed =', seed)
@@ -131,7 +132,7 @@ def run(M=10, N=100, D_y=3, D=5):
     for m in range(M):
         plt.subplot(M,1,m+1)
         #errorplot(y, error=None, x=None, lower=None, upper=None):
-        myplt.errorplot(fh[m], x=np.arange(N), error=err_fh[m])
+        bpplt.errorplot(fh[m], x=np.arange(N), error=err_fh[m])
         plt.plot(np.arange(N), f[m], 'g')
         plt.plot(np.arange(N), y[m], 'r+')
 
@@ -140,16 +141,16 @@ def run(M=10, N=100, D_y=3, D=5):
 
     plt.figure()
     plt.subplot(2,2,1)
-    myplt.binary_matrix(W.mask)
+    bpplt.binary_matrix(W.mask)
     plt.subplot(2,2,2)
-    myplt.binary_matrix(X.mask)
+    bpplt.binary_matrix(X.mask)
     plt.subplot(2,2,3)
-    #myplt.binary_matrix(WX.get_mask())
+    #bpplt.binary_matrix(WX.get_mask())
     plt.subplot(2,2,4)
-    myplt.binary_matrix(Y.mask)
+    bpplt.binary_matrix(Y.mask)
 
-    plt.show()
 
 if __name__ == '__main__':
     run()
+    plt.show()
 

@@ -81,8 +81,9 @@ def mixture_model(distribution, *args, K=3, N=100):
     Q = VB(Y, Z, alpha)
 
     return Q
-    
 
+
+@bpplt.interactive
 def run(N=200, maxiter=10, seed=42, std=2.0, plot=True):
 
     # Use deterministic random numbers
@@ -155,8 +156,6 @@ def run(N=200, maxiter=10, seed=42, std=2.0, plot=True):
     plt.plot(y[:,0], y[:,1], 'k-', zorder=-10)
     plt.scatter(y[:,0], y[:,1], c=colors, s=40)
 
-    plt.show()
-    
 
 if __name__ == '__main__':
     import sys, getopt, os
@@ -189,3 +188,4 @@ if __name__ == '__main__':
             raise ValueError("Unhandled option given")
 
     run(**kwargs)
+    plt.show()

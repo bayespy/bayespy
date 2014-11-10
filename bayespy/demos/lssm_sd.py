@@ -263,6 +263,7 @@ def simulate_data(N):
     return (Y, F)
     
 
+@bpplt.interactive
 def demo(N=1000, maxiter=100, D=3, K=2, seed=42, plot=True, debug=False,
         rotate=True, monitor=True):
     """
@@ -293,7 +294,6 @@ def demo(N=1000, maxiter=100, D=3, K=2, seed=42, plot=True, debug=False,
     # Show results
     if plot:
         Q.plot()
-        plt.show()
 
     return
     
@@ -349,3 +349,4 @@ if __name__ == '__main__':
             raise ValueError("Unhandled option given")
 
     demo(**kwargs)
+    plt.show()

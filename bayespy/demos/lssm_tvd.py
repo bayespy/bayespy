@@ -315,6 +315,7 @@ def simulate_data(N):
     return (y, f)
 
 
+@bpplt.interactive
 def demo(N=1000, D=5, K=4, seed=42, maxiter=200, rotate=True, debug=False,
          precompute=False, plot=True):
 
@@ -379,7 +380,6 @@ def demo(N=1000, D=5, K=4, seed=42, maxiter=200, rotate=True, debug=False,
     print("RMSE for randomly missing values: %f" % rmse_random)
     print("RMSE for gap values: %f" % rmse_gaps)
 
-    plt.show()
 
 if __name__ == '__main__':
     import sys, getopt, os
@@ -437,3 +437,4 @@ if __name__ == '__main__':
             raise ValueError("Unhandled argument given")
 
     demo(**kwargs)
+    plt.show()

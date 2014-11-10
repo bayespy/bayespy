@@ -236,6 +236,8 @@ def simulate_data(M, N):
 
     return (y, f)
 
+
+@bpplt.interactive
 def demo(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=True,
          precompute=False, plot=True, monitor=True):
     """
@@ -269,10 +271,10 @@ def demo(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=True,
         bpplt.timeseries_normal(Q['F'], scale=2)
         bpplt.timeseries(f, linestyle='-', color='b')
         bpplt.timeseries(y, linestyle='None', color='r', marker='.')
-        plt.show()
-    
+
 
 if __name__ == '__main__':
+
     import sys, getopt, os
     try:
         opts, args = getopt.getopt(sys.argv[1:],
@@ -328,3 +330,4 @@ if __name__ == '__main__':
             raise ValueError("Unhandled option given")
 
     demo(**kwargs)
+    plt.show()
