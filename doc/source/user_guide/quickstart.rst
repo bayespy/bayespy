@@ -146,11 +146,11 @@ probability density functions:
 
 >>> import bayespy.plot as bpplt
 >>> bpplt.pyplot.subplot(2, 1, 1)
-<matplotlib.axes.AxesSubplot object at 0x...>
+<matplotlib.axes...AxesSubplot object at 0x...>
 >>> bpplt.pdf(mu, np.linspace(-10, 20, num=100), color='k', name=r'\mu')
 [<matplotlib.lines.Line2D object at 0x...>]
 >>> bpplt.pyplot.subplot(2, 1, 2)
-<matplotlib.axes.AxesSubplot object at 0x...>
+<matplotlib.axes...AxesSubplot object at 0x...>
 >>> bpplt.pdf(tau, np.linspace(1e-6, 0.08, num=100), color='k', name=r'\tau')
 [<matplotlib.lines.Line2D object at 0x...>]
 >>> bpplt.pyplot.tight_layout()
