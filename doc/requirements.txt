@@ -1,0 +1,6 @@
+bayespy
+sphinx
+sphinxcontrib-tikz
+sphinxcontrib-bayesnet
+sphinxcontrib-bibtex
+numpydoc>=0.5
