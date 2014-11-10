@@ -568,7 +568,7 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
     M = np.shape(x)[0]
     N = np.shape(x)[1]
     vmax = np.max(np.abs(x) + scale*std)
-    axes = [[fig.add_subplot(M, N, i*N+j+1) for i in range(M)] for j in range(N)]
+    axes = [[fig.add_subplot(M, N, i*N+j+1) for j in range(N)] for i in range(M)]
     for i in range(M):
         for j in range(N):
             fig.add_subplot(M, N, i*N+j+1)
@@ -604,7 +604,7 @@ def timeseries_categorical_mc(Z, fig=None):
     # Plot Hintons
     for i in range(M):
         for j in range(N):
-            axes = fig.subplot(M, N, i*N+j+1)
+            axes = fig.add_subplot(M, N, i*N+j+1)
             _hinton(axes, z[i,j].T, vmax=1.0, square=False)
 
 
