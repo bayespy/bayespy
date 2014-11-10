@@ -33,6 +33,7 @@ from .deterministic import Deterministic
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
 from .node import Moments
+from .wishart import WishartMoments
 
 from bayespy.utils import misc
 
@@ -214,6 +215,9 @@ class _GammaToDiagonalWishart(Deterministic):
 
     The last plate is used as the diagonal dimension.
     """
+
+    _moments = WishartMoments()
+    _parent_moments = [GammaMoments()]
     
     
     def __init__(self, alpha, **kwargs):
