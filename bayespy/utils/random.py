@@ -307,6 +307,13 @@ def dirichlet(alpha, size=None):
     p = np.random.gamma(alpha, size=size)
     p /= np.sum(p, axis=-1, keepdims=True)
     return p
+
+
+def logodds_to_probability(x):
+    r"""
+    Solves p from log(p/(1-p))
+    """
+    return 1 / (1 + np.exp(-x)) 
     
 
 def alpha_beta_recursion(logp0, logP):

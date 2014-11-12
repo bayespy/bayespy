@@ -39,7 +39,7 @@ from .poisson import PoissonMoments
 from .node import (Moments,
                    ensureparents)
 
-from bayespy.utils import misc
+from bayespy.utils import misc, random
 
 
 class BinomialMoments(PoissonMoments):
@@ -148,11 +148,12 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
     
-    def random(self, *phi):
+    def random(self, *phi, plates=None):
         """
         Draw a random sample from the distribution.
         """
-        raise NotImplementedError()
+        p = random.logodds_to_probability(phi[0])
+        return np.random.binomial(self.N, p, size=plates)
 
     
 class Binomial(ExponentialFamily):
