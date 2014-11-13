@@ -80,6 +80,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
 
     
     def __init__(self, N):
+        N = np.asanyarray(N)
         if not misc.isinteger(N):
             raise ValueError("Number of trials must be integer")
         if np.any(N < 0):
