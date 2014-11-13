@@ -194,3 +194,13 @@ class TestBinomial(TestCase):
         self.assertAllClose(u[0],
                             2)
         pass
+
+    def test_random(self):
+        """
+        Test random sampling in Binomial node
+        """
+        N = [ [5], [50] ]
+        p = [1.0, 0.0]
+        with np.errstate(divide='ignore'):
+            Z = Binomial(N, p, plates=(3,2,2)).random()
+        self.assertArrayEqual(Z, np.ones((3,2,2))*N*p)
