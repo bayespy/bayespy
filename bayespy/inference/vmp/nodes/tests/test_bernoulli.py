@@ -142,3 +142,13 @@ class TestBernoulli(TestCase):
         Z = Bernoulli(0.3)
         Z.observe(2 < 3)
         pass
+
+
+    def test_random(self):
+        """
+        Test random sampling in Bernoulli node
+        """
+        p = [1.0, 0.0]
+        with np.errstate(divide='ignore'):
+            Z = Bernoulli(p, plates=(3,2)).random()
+        self.assertArrayEqual(Z, np.ones((3,2))*p)
