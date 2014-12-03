@@ -1,3 +1,12 @@
+Version 0.2.3 (2014-12-03)
+++++++++++++++++++++++++++
+
+ * Fix matplotlib compatibility broken by recent changes in matplotlib
+
+ * Add random sampling for Binomial and Bernoulli nodes
+
+ * Fix minor bugs, for instance, in plot module
+
 Version 0.2.2 (2014-11-01)
 ++++++++++++++++++++++++++
 
