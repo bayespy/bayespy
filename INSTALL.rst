@@ -29,67 +29,21 @@ errors or some relevant details are missing, please file a bug report at
 https://github.com/bayespy/bayespy/issues.
 
 
-Installing requirements
------------------------
+Installing BayesPy
+------------------
 
-BayesPy requires Python 3.2 (or later) and the following packages:
-
-* NumPy (>=1.8.0), 
-* SciPy (>=0.13.0) 
-* matplotlib (>=1.2)
-* h5py
-
-Ideally, a manual installation of these dependencies is not required and you can
-skip to the next section "Installing Bayespy".  However, there are several
-reasons why the installation of BayesPy as described in the next section won't
-work because of your system.  Thus, this section tries to give as detailed and
-robust a method of setting up your system such that the installation of BayesPy
-should work.
-
-A proper installation of the dependencies for Python 3 can be a bit tricky and
-you may refer to http://www.scipy.org/install.html for more detailed
-instructions about the SciPy stack.  If your system has an older version of any
-of the packages (NumPy, SciPy or matplotlib) or it does not provide the packages
-for Python 3, you may set up a virtual environment and install the latest
-versions there.  To create and activate a new virtual environment, run
+BayesPy can be installed easily by using Pip if the system has been properly set
+up.  First, you may want to set up a virtual environment.  Using virtual
+environment is optional but recommended.  To create and activate a new virtual
+environment, run
 
 .. code-block:: console
 
     virtualenv -p python3 --system-site-packages ENV
     source ENV/bin/activate
 
-If you have relevant system libraries installed (C compiler, Python development
-files, BLAS/LAPACK etc.), you may be able to install the Python packages from
-PyPI.  For instance, on Ubuntu (>= 12.10), you may install the required system
-libraries for each package as:
 
-.. code-block:: console
-
-    sudo apt-get build-dep python3-numpy
-    sudo apt-get build-dep python3-scipy    
-    sudo apt-get build-dep python3-matplotlib
-    sudo apt-get build-dep python-h5py
-
-Then installation/upgrade from PyPI should work:
-
-.. code-block:: console
-
-    pip install distribute --upgrade
-    pip install numpy --upgrade
-    pip install scipy --upgrade
-    pip install matplotlib --upgrade
-    pip install h5py
-
-Note that Matplotlib requires a quite recent version of Distribute (>=0.6.28).
-If you have problems installing any of these packages, refer to the manual of
-that package.
-
-
-Installing BayesPy
-------------------
-
-If the system has been properly set up and the virtual environment is activated
-(optional), latest release of BayesPy can be installed from PyPI simply as
+The latest release of BayesPy can be installed from PyPI simply as
 
 .. code-block:: console
     
@@ -102,6 +56,7 @@ instead:
 
     pip install https://github.com/bayespy/bayespy/archive/master.zip
 
+If you have problems installing BayesPy, read the next section for more details.
 It is recommended to run the unit tests in order to check that BayesPy is
 working properly.  Thus, install Nose and run the unit tests:
 
@@ -111,36 +66,73 @@ working properly.  Thus, install Nose and run the unit tests:
     nosetests bayespy
 
 
+Installing requirements
+-----------------------
+
+BayesPy requires Python 3.2 (or later) and the following packages:
+
+* NumPy (>=1.8.0), 
+* SciPy (>=0.13.0) 
+* matplotlib (>=1.2)
+* h5py
+
+Ideally, Pip should install the necessary requirements and a manual installation
+of these dependencies is not required.  However, there are several reasons why
+the installation of these dependencies needs to be done manually in some cases.
+Thus, this section tries to give some details on how to set up your system.  A
+proper installation of the dependencies for Python 3 can be a bit tricky and you
+may refer to http://www.scipy.org/install.html for more detailed instructions
+about the SciPy stack.  Detailed instructions on installing recent SciPy stack
+for various platforms is out of the scope of these instructions, but we provide
+some general guidance here.  There are basically three ways to install the
+dependencies:
+
+  1. Install a Python distribution which includes the packages.  For Windows,
+     Mac and Linux, there are several Python distributions which include all the
+     necessary packages:
+     http://www.scipy.org/install.html#scientific-python-distributions.  For
+     instance, you may try `Anaconda <http://continuum.io/downloads>`_ or
+     `Enthought <https://www.enthought.com/products/canopy/>`_.
+
+  2. Install the packages using the system package manager.  On Linux, the
+     packages might be called something like ``python-scipy`` or ``scipy``.
+     However, it is possible that these system packages are not recent enough
+     for BayesPy.
+
+  3. Install the packages using Pip: ``pip install "numpy>=1.8.0"
+     "scipy>=0.13.0" "matplotlib>=1.2" h5py``.  However, this may require that
+     the system has the libraries needed for compiling (e.g., C compiler, Python
+     development files, BLAS/LAPACK).  For instance, on Ubuntu (>= 12.10), you
+     may install the required system libraries for each package as:
+
+     .. code-block:: console
+
+        sudo apt-get build-dep python3-numpy
+        sudo apt-get build-dep python3-scipy    
+        sudo apt-get build-dep python3-matplotlib
+        sudo apt-get build-dep python-h5py
+
+     Then installation using Pip should work.  Also, make sure you have recent
+     enough version of Distribute (required by Matplotlib): ``pip install
+     "distribute>=0.6.28"``.
+
+
 Compiling documentation
 -----------------------
 
-This documentation can be found at http://bayespy.org/.  The documentation
-source files are readable as such in reStructuredText format in ``doc/source/``
-directory.  It is possible to compile the documentation into HTML or PDF
-yourself.  In order to compile the documentation, Sphinx is required and a few
-extensions for it. Those can be installed as:
+This documentation can be found at http://bayespy.org/ in HTML and PDF formats.
+The documentation source files are also readable as such in reStructuredText
+format in ``doc/source/`` directory.  It is possible to compile the
+documentation into HTML or PDF yourself.  In order to compile the documentation,
+Sphinx is required and a few extensions for it. Those can be installed as:
 
 .. code-block:: console
 
-    pip install sphinx sphinxcontrib-tikz sphinxcontrib-bayesnet sphinxcontrib-bibtex
+    pip install sphinx sphinxcontrib-tikz sphinxcontrib-bayesnet sphinxcontrib-bibtex "numpydoc>=0.5"
 
-In addition, the ``numpydoc`` extension for Sphinx is required.  However, the
-latest stable release (0.4) does not support Python 3, thus one needs to install
-the development version:
-
-.. code-block:: console
-
-    pip install https://github.com/numpy/numpydoc/archive/master.zip
-
-In order to visualize graphical models in HTML, you need to have ``pnmcrop``.
-On Ubuntu, it can be installed as
-
-.. code-block:: console
-
-    sudo apt-get install netpbm
-
-The documentation can be compiled to HTML and PDF by running the following
-commands in the ``doc`` directory:
+In order to visualize graphical models in HTML, you need to have ``ImageMagick``
+or ``Netpbm`` installed.  The documentation can be compiled to HTML and PDF by
+running the following commands in the ``doc`` directory:
 
 .. code-block:: console
 
