@@ -128,7 +128,7 @@ Sphinx is required and a few extensions for it. Those can be installed as:
 
 .. code-block:: console
 
-    pip install sphinx sphinxcontrib-tikz sphinxcontrib-bayesnet sphinxcontrib-bibtex "numpydoc>=0.5"
+    pip install "sphinx>=1.2.3" sphinxcontrib-tikz sphinxcontrib-bayesnet sphinxcontrib-bibtex "numpydoc>=0.5"
 
 In order to visualize graphical models in HTML, you need to have ``ImageMagick``
 or ``Netpbm`` installed.  The documentation can be compiled to HTML and PDF by
