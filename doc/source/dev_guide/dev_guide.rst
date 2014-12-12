@@ -32,4 +32,5 @@ has read and is familiar with :ref:`sec-user-guide`.
    vmp
    engine
    writingnodes
+   advanced
 

@@ -246,6 +246,61 @@ class ExponentialFamily(Stochastic):
         # TODO/FIXME: Apply mask to g too!!
         self.g = g
 
+
+    def _compute_gradient(self, m_children, *u_parents):
+        r"""
+        Computes the Riemannian/natural gradient for exponential family.
+
+        d = phi_p - phi_q
+
+        where phi_p is phi from log p(all) and phi_q is from log q(self).
+        """
+
+        # Compute the gradient
+        phi = self._compute_phi_from_parents(*u_parents)
+        for i in range(len(self.phi)):
+            phi[i] = (phi[i] + m_children[i] - self.phi[i])
+
+        # Allow using reparameterization (e.g., log for positive parameters)
+        phi = self._parameters_gradient(phi)
+
+        # Explicit broadcasting
+        #for i in range(len(self.phi)):
+        #    phi[i] = phi[i] * np.ones(self.get_shape(i))
+
+        # Vectorize
+
+
+    def update_parameters(self, d):
+        phi = self.get_parameters()
+        self.set_parameters(phi + d)
+        return
+
+
+    def get_parameters(self):
+        r"""
+        Return parameters of the VB distribution.
+
+        The parameters should be such that they can be used for
+        optimization, that is, use log transformation for positive
+        parameters.
+        """
+        return self.phi
+
+
+    def set_parameters(self, x):
+        r"""
+        Update the parameters of the VB distribution.
+
+        The parameters should be such that they can be used for
+        optimization, that is, use log transformation for positive
+        parameters.
+        """
+        phi = self._decode_parameters(x)
+        self._update_moments_and_cgf()
+        return
+
+
     def _update_distribution_and_lowerbound(self, m_children, *u_parents):
 
         # Update phi first from parents..

@@ -237,6 +237,17 @@ class Stochastic(Node):
             m_children = self._message_from_children()
             self._update_distribution_and_lowerbound(m_children, *u_parents)
 
+
+    def get_gradient(self):
+        r"""
+        Computes the Riemannian/natural gradient.
+        """
+        u_parents = self._message_from_parents()
+        m_children = self._message_from_children()
+        # TODO/FIXME: Put observed plates to zero?
+        return self._compute_gradient(m_children, *u_parents)
+
+
     def observe(self, x, mask=True):
         """
         Fix moments, compute f and propagate mask.
