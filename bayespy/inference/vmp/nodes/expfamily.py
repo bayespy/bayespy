@@ -270,10 +270,49 @@ class ExponentialFamily(Stochastic):
 
         # Vectorize
 
+        return phi
 
-    def update_parameters(self, d):
+
+    def get_gradient(self, annealing=1.0):
+        r"""
+        Computes the Riemannian/natural gradient.
+        """
+        u_parents = self._message_from_parents()
+        m_children = self._message_from_children()
+        
+        # TODO/FIXME: Put observed plates to zero?
+        # Compute the gradient
+        phi = self._distribution.compute_phi_from_parents(*u_parents)
+        for i in range(len(self.phi)):
+            phi[i] = phi[i] + annealing*m_children[i] - self.phi[i]
+            phi[i] = phi[i] * np.ones(self.get_shape(i))
+
+        # Allow using reparameterization (e.g., log for positive parameters)
+        #phi = self._parameters_gradient(phi)
+
+        # Explicit broadcasting
+        #for i in range(len(self.phi)):
+        #    phi[i] = phi[i] * np.ones(self.get_shape(i))
+
+        # Vectorize
+        
+
+        return phi
+        #return self._compute_gradient(m_children, *u_parents)
+
+
+    def update_parameters(self, d, scale=1.0):
+        r"""
+        Update the parameters of the VB distribution given a change.
+
+        The parameters should be such that they can be used for
+        optimization, that is, use log transformation for positive
+        parameters.
+        """
         phi = self.get_parameters()
-        self.set_parameters(phi + d)
+        for i in range(len(phi)):
+            phi[i] = phi[i] + scale*d[i]
+        self.set_parameters(phi)
         return
 
 
@@ -285,18 +324,23 @@ class ExponentialFamily(Stochastic):
         optimization, that is, use log transformation for positive
         parameters.
         """
-        return self.phi
+        return [np.copy(p) for p in self.phi]
+            
+
+
+    def _decode_parameters(self, x):
+        return [np.copy(p) for p in x]
 
 
     def set_parameters(self, x):
         r"""
-        Update the parameters of the VB distribution.
+        Set the parameters of the VB distribution.
 
         The parameters should be such that they can be used for
         optimization, that is, use log transformation for positive
         parameters.
         """
-        phi = self._decode_parameters(x)
+        self.phi = self._decode_parameters(x)
         self._update_moments_and_cgf()
         return
 

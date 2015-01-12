@@ -231,21 +231,13 @@ class Stochastic(Node):
                        self.dims[ind]))
 
                 
-    def update(self):
+    def update(self, annealing=1.0):
         if not np.all(self.observed):
             u_parents = self._message_from_parents()
             m_children = self._message_from_children()
+            if annealing != 1.0:
+                m_children = [annealing * m for m in m_children]
             self._update_distribution_and_lowerbound(m_children, *u_parents)
-
-
-    def get_gradient(self):
-        r"""
-        Computes the Riemannian/natural gradient.
-        """
-        u_parents = self._message_from_parents()
-        m_children = self._message_from_children()
-        # TODO/FIXME: Put observed plates to zero?
-        return self._compute_gradient(m_children, *u_parents)
 
 
     def observe(self, x, mask=True):

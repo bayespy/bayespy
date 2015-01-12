@@ -139,3 +139,20 @@ Thus, the Riemannian gradient is
    Should f(Z) be taken into account? It cancels out if prior and q are in the
    same family. But if they are not, it doesn't cancel out. Does it affect the
    gradient?
+
+
+Features
+
+ * simulated annealing
+
+ * Riemannian (conjugate) gradient
+
+ * black box variational inference
+
+ * stochastic variational inference
+
+ * pattern search
+
+ * fast inference
+
+ * parameter expansion
