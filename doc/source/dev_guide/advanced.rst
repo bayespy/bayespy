@@ -140,8 +140,46 @@ Thus, the Riemannian gradient is
    same family. But if they are not, it doesn't cancel out. Does it affect the
    gradient?
 
+Nonlinear conjugate gradient methods :cite:`Hensman:2012`:
 
-Features
+* Fletcher-Reeves:
+
+.. math::
+
+   \beta_n = \frac { \langle \tilde{g}_n, \tilde{g}_n \rangle_n } { \langle
+   \tilde{g}_{n-1}, \tilde{g}_{n-1} \rangle_{n-1} } = \frac { \langle g_n,
+   \tilde{g}_n \rangle } { \langle g_{n-1}, \tilde{g}_{n-1} \rangle }
+
+* Polak-Ribiere:
+
+.. math::
+
+   \beta_n = \frac { \langle \tilde{g}_n, \tilde{g}_n - \tilde{g}_{n-1}
+   \rangle_n } { \langle \tilde{g}_{n-1}, \tilde{g}_{n-1} \rangle_{n-1} } =
+   \frac { \langle g_n, \tilde{g}_n - \tilde{g}_{n-1} \rangle } {
+   \langle g_{n-1}, \tilde{g}_{n-1} \rangle }
+
+* Hestenes-Stiefel:
+
+.. math::
+
+   \beta_n = - \frac { \langle \tilde{g}_n, \tilde{g}_n - \tilde{g}_{n-1}
+   \rangle_n } { \langle \tilde{g}_{n-1}, \tilde{g}_{n-1} \rangle_{n-1} } = -
+   \frac { \langle g_n, \tilde{g}_n - \tilde{g}_{n-1} \rangle } { \langle
+   g_{n-1}, \tilde{g}_{n-1} \rangle }
+
+where :math:`\langle \rangle_i` denotes the inner product in the Riemannian
+geometry, :math:`\langle \rangle` denotes the inner product in the Euclidean
+space, :math:`\tilde{g}` denotes the Riemannian gradient and :math:`g` denotes
+the gradient, and the following property has been used:
+
+.. math::
+
+   \langle \tilde{g}_n, \tilde{x} \rangle_n = \tilde{g}_n^T G_n \tilde{x} = g^T
+   G^{-1}_n G_n \tilde{x} = g^T \tilde{x} = \langle g, \tilde{x} \rangle
+
+TODO
+----
 
  * simulated annealing
 
