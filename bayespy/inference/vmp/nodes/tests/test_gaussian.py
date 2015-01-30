@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2013 Jaakko Luttinen
+# Copyright (C) 2013-2015 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -1068,3 +1068,199 @@ class TestGaussianGammaISO(TestCase):
         """
 
         pass
+
+
+class TestGaussianGradient(TestCase):
+    """Numerically check Riemannian gradient of several nodes.
+    
+    Using VB-EM update equations will take a unit length step to the
+    Riemannian gradient direction.  Thus, the change caused by a VB-EM
+    update and the Riemannian gradient should be equal.
+    """
+
+    def test_riemannian_gradient(self):
+        """Test Riemannian gradient of a Gaussian node."""
+        D = 3
+
+        #
+        # Without observations
+        #
+        
+        # Construct model
+        mu = np.random.randn(D)
+        Lambda = random.covariance(D)
+        X = Gaussian(mu, Lambda)
+        # Random initialization
+        mu0 = np.random.randn(D)
+        Lambda0 = random.covariance(D)
+        X.initialize_from_parameters(mu0, Lambda0)
+        # Initial parameters 
+        phi0 = X.phi
+        # Gradient
+        g = X.get_riemannian_gradient()
+        # Parameters after VB-EM update
+        X.update()
+        phi1 = X.phi
+        # Check
+        self.assertAllClose(g[0],
+                            phi1[0] - phi0[0])
+        self.assertAllClose(g[1],
+                            phi1[1] - phi0[1])
+
+        #
+        # With observations
+        #
+        
+        # Construct model
+        mu = np.random.randn(D)
+        Lambda = random.covariance(D)
+        X = Gaussian(mu, Lambda)
+        V = random.covariance(D)
+        Y = Gaussian(X, V)
+        Y.observe(np.random.randn(D))
+        # Random initialization
+        mu0 = np.random.randn(D)
+        Lambda0 = random.covariance(D)
+        X.initialize_from_parameters(mu0, Lambda0)
+        # Initial parameters 
+        phi0 = X.phi
+        # Gradient
+        g = X.get_riemannian_gradient()
+        # Parameters after VB-EM update
+        X.update()
+        phi1 = X.phi
+        # Check
+        self.assertAllClose(g[0],
+                            phi1[0] - phi0[0])
+        self.assertAllClose(g[1],
+                            phi1[1] - phi0[1])
+
+        pass
+        
+
+    def test_riemannian_gradient(self):
+        """Test Riemannian gradient of a Gaussian node."""
+        D = 3
+
+        #
+        # Without observations
+        #
+        
+        # Construct model
+        mu = np.random.randn(D)
+        Lambda = random.covariance(D)
+        X = Gaussian(mu, Lambda)
+        # Random initialization
+        mu0 = np.random.randn(D)
+        Lambda0 = random.covariance(D)
+        X.initialize_from_parameters(mu0, Lambda0)
+        # Initial parameters 
+        phi0 = X.phi
+        # Gradient
+        g = X.get_riemannian_gradient()
+        # Parameters after VB-EM update
+        X.update()
+        phi1 = X.phi
+        # Check
+        self.assertAllClose(g[0],
+                            phi1[0] - phi0[0])
+        self.assertAllClose(g[1],
+                            phi1[1] - phi0[1])
+
+        # TODO/FIXME: Actually, gradient should be zero because cost function
+        # is zero without observations! Use the mask!
+
+        #
+        # With observations
+        #
+        
+        # Construct model
+        mu = np.random.randn(D)
+        Lambda = random.covariance(D)
+        X = Gaussian(mu, Lambda)
+        V = random.covariance(D)
+        Y = Gaussian(X, V)
+        Y.observe(np.random.randn(D))
+        # Random initialization
+        mu0 = np.random.randn(D)
+        Lambda0 = random.covariance(D)
+        X.initialize_from_parameters(mu0, Lambda0)
+        # Initial parameters 
+        phi0 = X.phi
+        # Gradient
+        g = X.get_riemannian_gradient()
+        # Parameters after VB-EM update
+        X.update()
+        phi1 = X.phi
+        # Check
+        self.assertAllClose(g[0],
+                            phi1[0] - phi0[0])
+        self.assertAllClose(g[1],
+                            phi1[1] - phi0[1])
+
+        pass
+        
+
+    def test_gradient(self):
+        """Test standard gradient of a Gaussian node."""
+        D = 3
+
+        np.random.seed(42)
+
+        #
+        # Without observations
+        #
+        
+        #
+        # With observations
+        #
+        
+        # Construct model
+        mu = np.random.randn(D)
+        Lambda = random.covariance(D)
+        X = Gaussian(mu, Lambda)
+        # Random initialization
+        mu0 = np.random.randn(D)
+        Lambda0 = random.covariance(D)
+        X.initialize_from_parameters(mu0, Lambda0)
+        V = random.covariance(D)
+        Y = Gaussian(X, V)
+        Y.observe(np.random.randn(D))
+        Q = VB(Y, X)
+        # Initial parameters 
+        phi0 = X.phi
+        # Gradient
+        rg = X.get_riemannian_gradient()
+        g = X.get_gradient(rg)
+        # Numerical gradient
+        eps = 1e-6
+        p0 = X.get_parameters()
+        l0 = Q.compute_lowerbound()
+        g_num = [np.zeros(D), np.zeros((D,D))]
+        for i in range(D):
+            e = np.zeros(D)
+            e[i] = eps
+            p1 = p0[0] + e
+            X.set_parameters([p1, p0[1]])
+            l1 = Q.compute_lowerbound()
+            g_num[0][i] = (l1 - l0) / eps
+        for i in range(D):
+            for j in range(D):
+                e = np.zeros((D,D))
+                e[i,j] += eps
+                e[j,i] += eps
+                p1 = p0[1] + e
+                X.set_parameters([p0[0], p1])
+                l1 = Q.compute_lowerbound()
+                g_num[1][i,j] += (l1 - l0) / eps
+                g_num[1][j,i] += (l1 - l0) / eps
+                
+        # Check
+        self.assertAllClose(g[0],
+                            g_num[0])
+        self.assertAllClose(g[1],
+                            g_num[1])
+
+        pass
+        
+

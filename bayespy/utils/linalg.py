@@ -338,7 +338,7 @@ def inv(A, ndim=1):
         raise NotImplementedError()
 
 
-def mvdot(A, b):
+def mvdot(A, b, ndim=1):
     """
     Compute matrix-vector product.
 
@@ -351,17 +351,30 @@ def mvdot(A, b):
     # return gula.inner1d(A, b[...,np.newaxis,:])
     # 
     # Use einsum instead:
+    if ndim != 1:
+        raise NotImplementedError("mvdot not yet implemented for ndim!=1")
+
     return _dot(A, b[...,None])[...,0]
     #return np.einsum('...ik,...k->...i', A, b)
 
-def mmdot(A, B):
+def mmdot(A, B, ndim=1):
     """
     Compute matrix-matrix product.
 
     Applies broadcasting.
     """
+    if ndim != 1:
+        raise Exception("transpose not yet implemented for ndim!=1")
     return _dot(A, B)
     #return np.einsum('...ik,...kj->...ij', A, B)
+
+def transpose(X, ndim=1):
+    """
+    Transpose the matrix.
+    """
+    if ndim != 1:
+        raise Exception("transpose not yet implemented for ndim!=1")
+    return np.swapaxes(X, -1, -2)
 
 def m_dot(A,b):
     raise DeprecationWarning()

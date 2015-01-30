@@ -273,7 +273,7 @@ class ExponentialFamily(Stochastic):
         return phi
 
 
-    def get_gradient(self, annealing=1.0):
+    def get_riemannian_gradient(self, annealing=1.0):
         r"""
         Computes the Riemannian/natural gradient.
         """
@@ -299,6 +299,20 @@ class ExponentialFamily(Stochastic):
 
         return phi
         #return self._compute_gradient(m_children, *u_parents)
+
+
+    def get_gradient(self, rg):
+        r""" Computes gradient with respect to the natural parameters.
+
+        The function takes the Riemannian gradient as an input.  This is for
+        three reasons: 1) You probably want to use the Riemannian gradient
+        anyway so this helps avoiding accidental use of this function.  2) The
+        gradient is computed by using the Riemannian gradient and chain rules.
+        3) Probably you need both Riemannian and normal gradients anyway so you
+        can provide it to this function to avoid re-computing it."""
+            
+        g = self._distribution.compute_gradient(rg, self.u, self.phi)
+        return g
 
 
     def update_parameters(self, d, scale=1.0):

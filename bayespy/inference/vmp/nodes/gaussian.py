@@ -408,6 +408,52 @@ class GaussianDistribution(ExponentialFamilyDistribution):
          \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
          - \frac{1}{2} \boldsymbol{\phi}^{-1}_2
        \end{matrix} \right]
+
+    Riemannian/natural gradient:
+
+    .. math::
+
+       \tilde{\nabla} =
+
+    Gradient of the moments:
+
+    .. math::
+
+       \mathrm{d}\overline{\mathbf{u}} &=
+       \begin{bmatrix}
+         \frac{1}{2} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1} \phi_1
+         - \frac{1}{2} \phi_2^{-1} \mathrm{d}\phi_1
+         \\
+         - \frac{1}{4} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1} \phi_1 \phi_1^{\mathrm{T}} \phi_2^{-1}
+         - \frac{1}{4} \phi_2^{-1} \phi_1 \phi_1^{\mathrm{T}} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1}
+         + \frac{1}{2} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1}
+         + \frac{1}{4} \phi_2^{-1} \mathrm{d}\phi_1 \phi_1^{\mathrm{T}} \phi_2^{-1}
+         + \frac{1}{4} \phi_2^{-1} \phi_1 \mathrm{d}\phi_1^{\mathrm{T}} \phi_2^{-1}
+       \end{bmatrix}
+       \\
+       &=
+       \begin{bmatrix}
+         2 (\overline{u}_2 - \overline{u}_1 \overline{u}_1^{\mathrm{T}}) \mathrm{d}\phi_2 \overline{u}_1
+         + (\overline{u}_2 - \overline{u}_1 \overline{u}_1^{\mathrm{T}}) \mathrm{d}\phi_1
+         \\
+         u_1 u_1^T d\phi_2 u_1 u_1^T - u_2 d\phi_2 u_2
+         + 2 (u_2 - u_1 u_1^T) d\phi_1 u_1^T
+       \end{bmatrix}
+
+    Standard gradient:
+
+    .. math::
+
+       \nabla =
+       \begin{bmatrix}
+         (\overline{u}_2 - \overline{u}_1 \overline{u}_1^{\mathrm{T}}) \tilde{\nabla}_1
+         + 2 (u_2 - u_1 u_1^T) \tilde{\nabla}_2 u_1
+         \\
+         (u_2 - u_1 u_1^T) \tilde{\nabla}_1 u_1^T
+         +  u_1 \tilde{\nabla}_1^T (u_2 - u_1 u_1^T)
+         + u_1 u_1^T \tilde{\nabla}_2 u_1 u_1^T
+         - u_2 \tilde{\nabla}_2 u_2
+       \end{bmatrix}
     """    
 
     
@@ -469,6 +515,29 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         u = [x, misc.m_outer(x,x)]
         f = -k/2*np.log(2*np.pi)
         return (u, f)
+
+
+    def compute_gradient(self, g, u, phi):
+        r"""
+        Compute the standard gradient with respect to the natural parameters.
+        """
+        ndim = 1
+        x = u[0]
+        xx = u[1]
+        # Some helpful variables
+        x_x = linalg.outer(x, x, ndim=ndim)
+        Cov = xx - x_x
+        cov_g0 = linalg.mvdot(Cov, g[0], ndim=ndim)
+        cov_g0_x = linalg.outer(cov_g0, x, ndim=ndim)
+        g1_x = linalg.mvdot(g[1], x, ndim=ndim)
+        # Compute gradient terms
+        d0 = cov_g0 + 2 * linalg.mvdot(Cov, g1_x, ndim=ndim)
+        d1 = (cov_g0_x + linalg.transpose(cov_g0_x, ndim=ndim)
+              + x_x * linalg.inner(g1_x, x, ndim=ndim)
+              + linalg.mmdot(xx,
+                             linalg.mmdot(g[1], xx, ndim=ndim)))
+
+        return [d0, d1]
 
 
     def random(self, *phi, plates=None):
