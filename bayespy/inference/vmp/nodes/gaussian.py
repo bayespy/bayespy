@@ -346,120 +346,33 @@ class GaussianDistribution(ExponentialFamilyDistribution):
          \boldsymbol{\mu}
        + \frac{1}{2} \log |\mathbf{\Lambda}|
        - \frac{D}{2} \log (2\pi)
-
-    .. math::
-
-       \mathbf{u} (\mathbf{x})
-       &=
-       \left[ \begin{matrix}
-         \mathbf{x}
-         \\
-         \mathbf{xx}^{\mathrm{T}}
-       \end{matrix} \right]
-       \\
-       \boldsymbol{\phi} (\boldsymbol{\mu}, \mathbf{\Lambda})
-       &=
-       \left[ \begin{matrix}
-         \mathbf{\Lambda} \boldsymbol{\mu} 
-         \\
-         - \frac{1}{2} \mathbf{\Lambda}
-       \end{matrix} \right]
-       \\
-       \boldsymbol{\phi}_{\boldsymbol{\mu}} (\mathbf{x}, \mathbf{\Lambda})
-       &=
-       \left[ \begin{matrix}
-         \mathbf{\Lambda} \mathbf{x} 
-         \\
-         - \frac{1}{2} \mathbf{\Lambda}
-       \end{matrix} \right]
-       \\
-       \boldsymbol{\phi}_{\mathbf{\Lambda}} (\mathbf{x}, \boldsymbol{\mu})
-       &=
-       \left[ \begin{matrix}
-         - \frac{1}{2} \mathbf{xx}^{\mathrm{T}}
-         + \frac{1}{2} \mathbf{x}\boldsymbol{\mu}^{\mathrm{T}}
-         + \frac{1}{2} \boldsymbol{\mu}\mathbf{x}^{\mathrm{T}}
-         - \frac{1}{2} \boldsymbol{\mu\mu}^{\mathrm{T}}
-         \\
-         \frac{1}{2}
-       \end{matrix} \right]
-       \\
-       g (\boldsymbol{\mu}, \mathbf{\Lambda})
-       &=
-       - \frac{1}{2} \operatorname{tr}(\boldsymbol{\mu\mu}^{\mathrm{T}}
-                                       \mathbf{\Lambda} )
-       + \frac{1}{2} \log |\mathbf{\Lambda}|
-       \\
-       g_{\boldsymbol{\phi}} (\boldsymbol{\phi})
-       &=
-       \frac{1}{4} \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
-       \boldsymbol{\phi}_1
-       + \frac{1}{2} \log | -2 \boldsymbol{\phi}_2 |
-       \\
-       f(\mathbf{x})
-       &= - \frac{D}{2} \log(2\pi)
-       \\
-       \overline{\mathbf{u}}  (\boldsymbol{\phi})
-       &=
-       \left[ \begin{matrix}
-         - \frac{1}{2} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
-         \\
-         \frac{1}{4} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
-         \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
-         - \frac{1}{2} \boldsymbol{\phi}^{-1}_2
-       \end{matrix} \right]
-
-    Riemannian/natural gradient:
-
-    .. math::
-
-       \tilde{\nabla} =
-
-    Gradient of the moments:
-
-    .. math::
-
-       \mathrm{d}\overline{\mathbf{u}} &=
-       \begin{bmatrix}
-         \frac{1}{2} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1} \phi_1
-         - \frac{1}{2} \phi_2^{-1} \mathrm{d}\phi_1
-         \\
-         - \frac{1}{4} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1} \phi_1 \phi_1^{\mathrm{T}} \phi_2^{-1}
-         - \frac{1}{4} \phi_2^{-1} \phi_1 \phi_1^{\mathrm{T}} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1}
-         + \frac{1}{2} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1}
-         + \frac{1}{4} \phi_2^{-1} \mathrm{d}\phi_1 \phi_1^{\mathrm{T}} \phi_2^{-1}
-         + \frac{1}{4} \phi_2^{-1} \phi_1 \mathrm{d}\phi_1^{\mathrm{T}} \phi_2^{-1}
-       \end{bmatrix}
-       \\
-       &=
-       \begin{bmatrix}
-         2 (\overline{u}_2 - \overline{u}_1 \overline{u}_1^{\mathrm{T}}) \mathrm{d}\phi_2 \overline{u}_1
-         + (\overline{u}_2 - \overline{u}_1 \overline{u}_1^{\mathrm{T}}) \mathrm{d}\phi_1
-         \\
-         u_1 u_1^T d\phi_2 u_1 u_1^T - u_2 d\phi_2 u_2
-         + 2 (u_2 - u_1 u_1^T) d\phi_1 u_1^T
-       \end{bmatrix}
-
-    Standard gradient:
-
-    .. math::
-
-       \nabla =
-       \begin{bmatrix}
-         (\overline{u}_2 - \overline{u}_1 \overline{u}_1^{\mathrm{T}}) \tilde{\nabla}_1
-         + 2 (u_2 - u_1 u_1^T) \tilde{\nabla}_2 u_1
-         \\
-         (u_2 - u_1 u_1^T) \tilde{\nabla}_1 u_1^T
-         +  u_1 \tilde{\nabla}_1^T (u_2 - u_1 u_1^T)
-         + u_1 u_1^T \tilde{\nabla}_2 u_1 u_1^T
-         - u_2 \tilde{\nabla}_2 u_2
-       \end{bmatrix}
     """    
 
     
     def compute_message_to_parent(self, parent, index, u, u_mu_Lambda):
         r"""
         Compute the message to a parent node.
+
+        .. math::
+
+           \boldsymbol{\phi}_{\boldsymbol{\mu}} (\mathbf{x}, \mathbf{\Lambda})
+           &=
+           \left[ \begin{matrix}
+             \mathbf{\Lambda} \mathbf{x} 
+             \\
+             - \frac{1}{2} \mathbf{\Lambda}
+           \end{matrix} \right]
+           \\
+           \boldsymbol{\phi}_{\mathbf{\Lambda}} (\mathbf{x}, \boldsymbol{\mu})
+           &=
+           \left[ \begin{matrix}
+             - \frac{1}{2} \mathbf{xx}^{\mathrm{T}}
+             + \frac{1}{2} \mathbf{x}\boldsymbol{\mu}^{\mathrm{T}}
+             + \frac{1}{2} \boldsymbol{\mu}\mathbf{x}^{\mathrm{T}}
+             - \frac{1}{2} \boldsymbol{\mu\mu}^{\mathrm{T}}
+             \\
+             \frac{1}{2}
+           \end{matrix} \right]
         """
         if index == 0:
             x = u[0]
@@ -475,6 +388,16 @@ class GaussianDistribution(ExponentialFamilyDistribution):
     def compute_phi_from_parents(self, u_mu_Lambda, mask=True):
         r"""
         Compute the natural parameter vector given parent moments.
+
+        .. math::
+
+           \boldsymbol{\phi} (\boldsymbol{\mu}, \mathbf{\Lambda})
+           &=
+           \left[ \begin{matrix}
+             \mathbf{\Lambda} \boldsymbol{\mu} 
+             \\
+             - \frac{1}{2} \mathbf{\Lambda}
+           \end{matrix} \right]
         """
         Lambda_mu = u_mu_Lambda[0]
         Lambda = u_mu_Lambda[2]
@@ -484,6 +407,24 @@ class GaussianDistribution(ExponentialFamilyDistribution):
     def compute_moments_and_cgf(self, phi, mask=True):
         r"""
         Compute the moments and :math:`g(\phi)`.
+
+        .. math::
+        
+           \overline{\mathbf{u}}  (\boldsymbol{\phi})
+           &=
+           \left[ \begin{matrix}
+             - \frac{1}{2} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
+             \\
+             \frac{1}{4} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
+             \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
+             - \frac{1}{2} \boldsymbol{\phi}^{-1}_2
+           \end{matrix} \right]
+           \\
+           g_{\boldsymbol{\phi}} (\boldsymbol{\phi})
+           &=
+           \frac{1}{4} \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
+           \boldsymbol{\phi}_1
+           + \frac{1}{2} \log | -2 \boldsymbol{\phi}_2 |
         """
         # TODO: Compute -2*phi[1] and simplify the formulas
         L = misc.m_chol(-2*phi[1])
@@ -501,6 +442,13 @@ class GaussianDistribution(ExponentialFamilyDistribution):
     def compute_cgf_from_parents(self, u_mu_Lambda):
         r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
+
+        .. math::
+           g (\boldsymbol{\mu}, \mathbf{\Lambda})
+           &=
+           - \frac{1}{2} \operatorname{tr}(\boldsymbol{\mu\mu}^{\mathrm{T}}
+                                           \mathbf{\Lambda} )
+           + \frac{1}{2} \log |\mathbf{\Lambda}|
         """
         mu_Lambda_mu = u_mu_Lambda[1]
         logdet_Lambda = u_mu_Lambda[3]
@@ -510,6 +458,19 @@ class GaussianDistribution(ExponentialFamilyDistribution):
     def compute_fixed_moments_and_f(self, x, mask=True):
         r"""
         Compute the moments and :math:`f(x)` for a fixed value.
+
+        .. math::
+
+           \mathbf{u} (\mathbf{x})
+           &=
+           \left[ \begin{matrix}
+             \mathbf{x}
+             \\
+             \mathbf{xx}^{\mathrm{T}}
+           \end{matrix} \right]
+           \\
+           f(\mathbf{x})
+           &= - \frac{D}{2} \log(2\pi)
         """
         k = np.shape(x)[-1]
         u = [x, misc.m_outer(x,x)]
@@ -520,6 +481,47 @@ class GaussianDistribution(ExponentialFamilyDistribution):
     def compute_gradient(self, g, u, phi):
         r"""
         Compute the standard gradient with respect to the natural parameters.
+        
+        Gradient of the moments:
+
+        .. math::
+
+           \mathrm{d}\overline{\mathbf{u}} &=
+           \begin{bmatrix}
+             \frac{1}{2} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1} \phi_1
+             - \frac{1}{2} \phi_2^{-1} \mathrm{d}\phi_1
+             \\
+             - \frac{1}{4} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1} \phi_1 \phi_1^{\mathrm{T}} \phi_2^{-1}
+             - \frac{1}{4} \phi_2^{-1} \phi_1 \phi_1^{\mathrm{T}} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1}
+             + \frac{1}{2} \phi_2^{-1} \mathrm{d}\phi_2 \phi_2^{-1}
+             + \frac{1}{4} \phi_2^{-1} \mathrm{d}\phi_1 \phi_1^{\mathrm{T}} \phi_2^{-1}
+             + \frac{1}{4} \phi_2^{-1} \phi_1 \mathrm{d}\phi_1^{\mathrm{T}} \phi_2^{-1}
+           \end{bmatrix}
+           \\
+           &=
+           \begin{bmatrix}
+             2 (\overline{u}_2 - \overline{u}_1 \overline{u}_1^{\mathrm{T}}) \mathrm{d}\phi_2 \overline{u}_1
+             + (\overline{u}_2 - \overline{u}_1 \overline{u}_1^{\mathrm{T}}) \mathrm{d}\phi_1
+             \\
+             u_2 d\phi_2 u_2 - 2 u_1 u_1^T d\phi_2 u_1 u_1^T
+             + 2 (u_2 - u_1 u_1^T) d\phi_1 u_1^T
+           \end{bmatrix}
+
+        Standard gradient given the gradient with respect to the moments, that
+        is, given the Riemannian gradient :math:`\tilde{\nabla}`:
+
+        .. math::
+
+           \nabla =
+           \begin{bmatrix}
+             (\overline{u}_2 - \overline{u}_1 \overline{u}_1^{\mathrm{T}}) \tilde{\nabla}_1
+             + 2 (u_2 - u_1 u_1^T) \tilde{\nabla}_2 u_1
+             \\
+             (u_2 - u_1 u_1^T) \tilde{\nabla}_1 u_1^T
+             +  u_1 \tilde{\nabla}_1^T (u_2 - u_1 u_1^T)
+             + 2 u_2 \tilde{\nabla}_2 u_2
+             - 2 u_1 u_1^T \tilde{\nabla}_2 u_1 u_1^T
+           \end{bmatrix}
         """
         ndim = 1
         x = u[0]
@@ -533,9 +535,9 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         # Compute gradient terms
         d0 = cov_g0 + 2 * linalg.mvdot(Cov, g1_x, ndim=ndim)
         d1 = (cov_g0_x + linalg.transpose(cov_g0_x, ndim=ndim)
-              + x_x * linalg.inner(g1_x, x, ndim=ndim)
-              + linalg.mmdot(xx,
-                             linalg.mmdot(g[1], xx, ndim=ndim)))
+              + 2 * linalg.mmdot(xx,
+                                 linalg.mmdot(g[1], xx, ndim=ndim))
+              - 2 * x_x * linalg.inner(g1_x, x, ndim=ndim))
 
         return [d0, d1]
 
