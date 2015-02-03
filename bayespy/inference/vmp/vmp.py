@@ -194,10 +194,10 @@ class VB():
 
 
 
-    def compute_lowerbound(self):
+    def compute_lowerbound(self, ignore_masked=True):
         L = 0
         for node in self.model:
-            L += node.lower_bound_contribution()
+            L += node.lower_bound_contribution(ignore_masked=ignore_masked)
         return L
 
     def compute_lowerbound_terms(self, *nodes):

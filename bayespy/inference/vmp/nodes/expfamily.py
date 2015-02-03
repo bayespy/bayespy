@@ -414,7 +414,7 @@ class ExponentialFamily(Stochastic):
         self.observed = mask
         self._update_mask()
 
-    def lower_bound_contribution(self, gradient=False):
+    def lower_bound_contribution(self, gradient=False, ignore_masked=True):
         # Compute E[ log p(X|parents) - log q(X) ] over q(X)q(parents)
         
         # Messages from parents
@@ -447,11 +447,15 @@ class ExponentialFamily(Stochastic):
 
             L = L + Z
 
-        return (np.sum(np.where(self.mask, L, 0))
-                * self._plate_multiplier(self.plates,
-                                         np.shape(L),
-                                         np.shape(self.mask)))
-        #return L
+        if ignore_masked:
+            return (np.sum(np.where(self.mask, L, 0))
+                    * self._plate_multiplier(self.plates,
+                                             np.shape(L),
+                                             np.shape(self.mask)))
+        else:
+            return np.sum(L) * self._plate_multiplier(self.plates,
+                                                      np.shape(L))
+
 
     def logpdf(self, X, mask=True):
         """
