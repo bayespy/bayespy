@@ -537,7 +537,10 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         d1 = (cov_g0_x + linalg.transpose(cov_g0_x, ndim=ndim)
               + 2 * linalg.mmdot(xx,
                                  linalg.mmdot(g[1], xx, ndim=ndim))
-              - 2 * x_x * linalg.inner(g1_x, x, ndim=ndim))
+              - 2 * x_x * misc.add_trailing_axes(linalg.inner(g1_x,
+                                                              x,
+                                                              ndim=ndim),
+                                                 2*ndim))
 
         return [d0, d1]
 

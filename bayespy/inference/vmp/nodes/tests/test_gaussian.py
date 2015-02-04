@@ -1304,6 +1304,60 @@ class TestGaussianGradient(TestCase):
         self.assertAllClose(g[1],
                             g_num[1])
 
+
+        #
+        # With plates
+        #
+
+        # Construct model
+        K = D+1
+        mu = np.random.randn(D)
+        Lambda = random.covariance(D)
+        X = Gaussian(mu, Lambda, plates=(K,))
+        V = random.covariance(D, size=(K,))
+        Y = Gaussian(X, V)
+        Y.observe(np.random.randn(K,D))
+        Q = VB(Y, X)
+        # Random initialization
+        mu0 = np.random.randn(*(X.get_shape(0)))
+        Lambda0 = random.covariance(D, size=X.plates)
+        X.initialize_from_parameters(mu0, Lambda0)
+        # Initial parameters 
+        phi0 = X.phi
+        # Gradient
+        rg = X.get_riemannian_gradient()
+        g = X.get_gradient(rg)
+        # Numerical gradient
+        eps = 1e-6
+        p0 = X.get_parameters()
+        l0 = Q.compute_lowerbound()
+        g_num = [np.zeros(X.get_shape(0)), np.zeros(X.get_shape(1))]
+        for k in range(K):
+            for i in range(D):
+                e = np.zeros(X.get_shape(0))
+                e[k,i] = eps
+                p1 = p0[0] + e
+                X.set_parameters([p1, p0[1]])
+                l1 = Q.compute_lowerbound()
+                g_num[0][k,i] = (l1 - l0) / eps
+            for i in range(D):
+                for j in range(i+1):
+                    e = np.zeros(X.get_shape(1))
+                    e[k,i,j] += eps
+                    e[k,j,i] += eps
+                    p1 = p0[1] + e
+                    X.set_parameters([p0[0], p1])
+                    l1 = Q.compute_lowerbound()
+                    g_num[1][k,i,j] = (l1 - l0) / (2*eps)
+                    g_num[1][k,j,i] = (l1 - l0) / (2*eps)
+                
+        # Check
+        self.assertAllClose(g[0],
+                            g_num[0])
+        self.assertAllClose(g[1],
+                            g_num[1])
+
+
         pass
         
 
