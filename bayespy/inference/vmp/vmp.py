@@ -363,3 +363,135 @@ class VB():
                 fig.clf()
                 node.plot(fig=fig)
                 fig.canvas.draw()
+
+
+    def get_gradients(self, *nodes, euclidian=False):
+        """
+        Computes gradients (both Riemannian and normal)
+        """
+        rg = [X.get_riemannian_gradient() for X in nodes]
+        if euclidian:
+            g = [self[node].get_gradient(rg_x)
+                 for (node, rg_x) in zip(nodes, rg)]
+            return (rg, g)
+        else:
+            return rg
+
+
+    def get_parameters(self, *nodes):
+        """
+        Get parameters of the nodes
+        """
+        return [self[node].get_parameters()
+                for node in nodes]
+
+
+    def set_parameters(self, x, *nodes):
+        """
+        Set parameters of the nodes
+        """
+        for (node, xi) in zip(nodes, x):
+            self[node].set_parameters(xi)
+        return
+
+
+    def dot(self, x1, x2):
+        """
+        Computes dot products of given vectors (in parameter format)
+        """
+        v = 0
+        # Loop over nodes
+        for (y1, y2) in zip(x1, x2):
+            # Loop over parameters
+            for (z1, z2) in zip(y1, y2):
+                v += np.dot(np.ravel(z1), np.ravel(z2))
+        return v
+
+
+    def add(self, x1, x2, scale=1):
+        """
+        Add two vectors (in parameter format)
+        """
+        v = []
+        # Loop over nodes
+        for (y1, y2) in zip(x1, x2):
+            v.append([])
+            # Loop over parameters
+            for (z1, z2) in zip(y1, y2):
+                v[-1].append(z1 + scale*z2)
+        return v
+
+
+    def optimize(self, *nodes, maxiter=10, verbose=True):
+        """
+        Optimize nodes using Riemannian conjugate gradient
+        """
+
+        # Append the cost arrays
+        self.L = np.append(self.L, misc.nans(maxiter))
+        for (node, l) in self.l.items():
+            self.l[node] = np.append(l, misc.nans(maxiter))
+
+        t = time.clock()
+        
+        # Get gradients
+        p = self.get_parameters(*nodes)
+        (rg, g) = self.get_gradients(*nodes, euclidian=True)
+
+        dd_prev = self.dot(g, rg)
+
+        # Take a gradient ascending step
+        p_new = self.add(p, rg)
+        self.set_parameters(p_new, *nodes)
+        p = p_new
+
+        L = self.loglikelihood_lowerbound()
+        
+        if verbose:
+            print("Iteration (CG) %d: loglike=%e (%.3f seconds)" 
+                  % (self.iter+1, L, time.clock()-t))
+
+        s = rg
+        self.L[self.iter] = L
+        self.iter += 1
+
+        for i in range(maxiter-1):
+
+            t = time.clock()
+
+            (rg, g) = self.get_gradients(*nodes, euclidian=True)
+
+            dd_curr = self.dot(g, rg)
+            b = dd_curr / dd_prev
+            dd_prev = dd_curr
+
+            s = self.add(rg, s, scale=b)
+
+            p_new = self.add(p, s)
+
+            try:
+                self.set_parameters(p_new, *nodes)
+            except:
+                print("WARNING! CG update was unsuccessful, using gradient and resetting CG")
+                s = rg
+                p_new = self.add(p, rg)
+                self.set_parameters(p_new, *nodes)
+
+            L = self.loglikelihood_lowerbound()
+            if L < self.L[self.iter-1]:
+                print("WARNING! CG decreased lower bound, use gradient and reset CG")
+                s = rg
+                p_new = self.add(p, rg)
+                self.set_parameters(p_new, *nodes)
+                L = self.loglikelihood_lowerbound()
+
+            if verbose:
+                print("Iteration (CG) %d: loglike=%e (%.3f seconds)" 
+                      % (self.iter+1, L, time.clock()-t))
+
+            self.L[self.iter] = L
+            self.iter += 1
+            p = p_new
+
+
+
