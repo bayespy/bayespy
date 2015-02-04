@@ -30,6 +30,7 @@ import numpy as np
 from bayespy.nodes import (Beta,
                            Bernoulli,
                            GaussianARD,
+                           Gaussian,
                            SumMultiply)
 
 from bayespy.utils import random
@@ -40,18 +41,47 @@ import bayespy.plot as bpplt
 
 
 def get_gradient(*nodes):
-    return [X.get_gradient() for X in nodes]
+    """
+    Computes gradients (both Riemannian and normal)
+    """
+    rg = [X.get_riemannian_gradient() for X in nodes]
+    g = [X.get_gradient(rg_x) for (X, rg_x) in zip(nodes, rg)]
+    return (rg, g)
 
 
 def dot(x1, x2):
+    """
+    Computes dot products of given vectors
+    """
     v = 0
+    # Loop over nodes
     for (y1, y2) in zip(x1, x2):
+        # Loop over parameters
         for (z1, z2) in zip(y1, y2):
             v += np.dot(np.ravel(z1), np.ravel(z2))
     return v
 
 
+def add(x1, x2, scale=1):
+    """
+    Computes dot products of given vectors
+    """
+    v = []
+    # Loop over nodes
+    for (y1, y2) in zip(x1, x2):
+        v.append([])
+        # Loop over parameters
+        for (z1, z2) in zip(y1, y2):
+            v[-1].append(z1 + scale*z2)
+    return v
+
+
 def update_direction(d, s, b):
+    """
+    Updates direction d with direction s weighted by b.
+
+    d + b*s
+    """
     y = []
     for (di, si) in zip(d, s):
         y.append([])
@@ -60,56 +90,93 @@ def update_direction(d, s, b):
     return y
 
 
-def step(nodes, s):
-    for (node, si) in zip(nodes, s):
-        node.update_parameters(si, scale=1)
+def set_parameters(nodes, p):
+    """
+    Update parameters by taking a step into the given direction
+    """
+    for (node, pi) in zip(nodes, p):
+        node.set_parameters(pi)
     return
 
 
-def optimize(Q, *nodes):
+def get_parameters(*nodes):
+    """
+    Update parameters by taking a step into the given direction
+    """
+    return [node.get_parameters() for node in nodes]
+
+
+def step(nodes, s, scale=1):
+    """
+    Update parameters by taking a step into the given direction
+    """
+    for (node, si) in zip(nodes, s):
+        node.update_parameters(si, scale=scale)
+    return
+
+
+def optimize(Q, *nodes, maxiter=10):
+
+    print("Start CG optimization")
 
     print(Q.compute_lowerbound())
 
     # Get gradients
-    grad = get_gradient(*nodes)
+    p = get_parameters(*nodes)
+    (rg, g) = get_gradient(*nodes)
 
-    dd_prev = dot(grad, grad)
+    dd_prev = dot(g, rg)
 
-    step(nodes, grad)
+    p_new = add(p, rg)
+    set_parameters(nodes, p_new)
+    p = p_new
+    #step(nodes, rg)
     print(Q.compute_lowerbound())
 
-    s = grad
+    s = rg
     
-    for i in range(10):
+    for i in range(maxiter):
 
-        grad = get_gradient(*nodes)
+        (rg, g) = get_gradient(*nodes)
 
-        dd_curr = dot(grad, grad)
+        dd_curr = dot(g, rg)
         b = dd_curr / dd_prev
         dd_prev = dd_curr
 
-        s = update_direction(grad, s, b)
+        s = update_direction(rg, s, b)
 
-        step(nodes, s)
+        p_new = add(p, s)
+        try:
+            set_parameters(nodes, p_new)
+        except:
+            print("WARNING! CG update was unsuccessful, using gradient and resetting CG")
+            s = rg
+            p_new = add(p, rg)
+            set_parameters(nodes, p_new)
+        p = p_new
 
-        print(Q.compute_lowerbound())
+        #step(nodes, s, scale=1)
+
+        print("Iteration %d: loglike=%e" % (i+1, Q.compute_lowerbound()))
 
 
 def pca():
 
     np.random.seed(41)
 
-    M = 1
-    N = 1
-    D = 1
+    M = 4
+    N = 3
+    D = 2
 
     # Construct the model
-    X = GaussianARD(0, 1, plates=(1,N), shape=(D,))
-    W = GaussianARD(0, 1, plates=(M,1), shape=(D,))
+    X = Gaussian(np.zeros(D), np.identity(D), plates=(1,N))
+    W = Gaussian(np.zeros(D), np.identity(D), plates=(M,1))
+    #X = GaussianARD(0, 1, plates=(1,N), shape=(D,))
+    #W = GaussianARD(0, 1, plates=(M,1), shape=(D,))
     W.initialize_from_random()
     F = SumMultiply('d,d->', W, X)
     #F = SumMultiply(',->', W, X)
-    Y = GaussianARD(F, 1000)
+    Y = GaussianARD(F, 1e4)
 
     # Observe data
     data = np.sum(W.random() * X.random(), axis=-1)
@@ -126,7 +193,7 @@ def pca():
     w = W.get_parameters()
 
     # Run VB-EM
-    Q.update(repeat=10)
+    Q.update(repeat=20)
 
     # Restore the state
     X.set_parameters(x)
@@ -134,7 +201,7 @@ def pca():
 
     # Run Riemannian conjugate gradient
     #Q.update(repeat=10)
-    optimize(Q, X, W)
+    optimize(Q, X, W, maxiter=20)
     ## d_X = X.get_gradient()
     ## d_W = W.get_gradient()
     ## dd_previous = dot([d_X, d_W], [d_X, d_W])
