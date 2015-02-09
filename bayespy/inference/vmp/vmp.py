@@ -523,7 +523,7 @@ class VB():
                 g2 = g
 
             if method == 'gradient':
-                pass
+                b = 0
             elif method == 'fletcher-reeves':
                 dd_curr = self.dot(g1, g2)
                 if dd_prev == 0:
@@ -534,7 +534,10 @@ class VB():
             else:
                 raise Exception("Unknown optimization method: %s" % (method))
 
-            s = self.add(g2, s, scale=b)
+            if b:
+                s = self.add(g2, s, scale=b)
+            else:
+                s = g2
 
             success = False
             while not success:
