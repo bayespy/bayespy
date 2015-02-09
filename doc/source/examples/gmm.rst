@@ -191,8 +191,16 @@ effectively the correct number of clusters (4).  These clusters capture the true
 density accurately.
 
 
-Next steps
-----------
+In addition to clustering and density estimation, this model could also be used
+for classification by setting the known class assignments as observed.
+
+
+Advanced next steps
+-------------------
+
+
+Joint node for mean and precision
++++++++++++++++++++++++++++++++++
 
 .. currentmodule:: bayespy.nodes
 
@@ -203,5 +211,70 @@ posterior approximation and the speed of the VB estimation.  However, the
 implementation is a bit more complex.
 
 
-In addition to clustering and density estimation, this model could also be used
-for classification by setting the known class assignments as observed.
+
+Fast collapsed inference
+++++++++++++++++++++++++
+
+..
+   MOVE THE FOLLOWING TO, FOR INSTANCE, MOG OR PCA EXAMPLE:
+
+   >>> def reset():
+   ...     alpha.initialize_from_prior()
+   ...     C.initialize_from_prior()
+   ...     X.initialize_from_random()
+   ...     tau.initialize_from_prior()
+   ...     return VB(Y, C, X, alpha, tau)
+   >>> Q = reset()
+   >>> Q.update(repeat=1000)
+   ...
+   >>> bpplt.pyplot.plot(Q.L, 'k-')
+   >>> Q = reset()
+   >>> Q.optimize(X, C, alpha, tau, maxiter=1000)
+   ...
+   >>> bpplt.pyplot.plot(Q.L, 'r--')
+
+   .. plot::
+
+       import numpy as np
+       np.random.seed(1)
+       # This is the PCA model from the previous sections
+       from bayespy.nodes import GaussianARD, Gamma, Dot
+       D = 3
+       X = GaussianARD(0, 1,
+                       shape=(D,),
+                       plates=(1,100),
+                       name='X')
+       alpha = Gamma(1e-3, 1e-3,
+                     plates=(D,),
+                     name='alpha')
+       C = GaussianARD(0, alpha,
+                       shape=(D,),
+                       plates=(10,1),
+                       name='C')
+       F = Dot(C, X)
+       tau = Gamma(1e-3, 1e-3, name='tau')
+       Y = GaussianARD(F, tau, name='Y')
+       c = np.random.randn(10, 2)
+       x = np.random.randn(2, 100)
+       data = np.dot(c, x) + 0.1*np.random.randn(10, 100)
+       Y.observe(data)
+       from bayespy.inference import VB
+       import bayespy.plot as bpplt
+       Q = None
+       def reset():
+           alpha.initialize_from_prior()
+           C.initialize_from_prior()
+           X.initialize_from_random()
+           tau.initialize_from_prior()
+           return VB(Y, C, X, alpha, tau)
+       Q = reset()
+       Q.update(repeat=1000)
+       bpplt.pyplot.plot(np.cumsum(Q.cputime), Q.L, 'k-')
+       Q = reset()
+       Q.optimize(X, C, alpha, tau, maxiter=1000)
+       bpplt.pyplot.plot(np.cumsum(Q.cputime), Q.L, 'b--')
+       Q = reset()
+       Q.optimize(C, tau, maxiter=1000, collapsed=[X, alpha])
+       bpplt.pyplot.plot(np.cumsum(Q.cputime), Q.L, 'r:')
+       bpplt.pyplot.ylim(-100, 100)
+
