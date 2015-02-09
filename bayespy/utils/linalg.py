@@ -56,7 +56,6 @@ def chol(C):
             try:
                 U[i] = linalg.cho_factor(C[i])[0]
             except np.linalg.linalg.LinAlgError:
-                print(C[i])
                 raise Exception("Matrix not positive definite")
         return U
 
