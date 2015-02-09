@@ -572,6 +572,10 @@ def safe_indices(inds, shape):
 
     For instance,
 
+    .. testsetup::
+
+       from bayespy.utils.misc import safe_indices
+
     >>> safe_indices( (3, 4, 5), (1, 6) )
     (0, 5)
     """
