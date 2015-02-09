@@ -122,6 +122,20 @@ class GammaDistribution(ExponentialFamilyDistribution):
     def compute_moments_and_cgf(self, phi, mask=True):
         """
         Compute the moments and :math:`g(\phi)`.
+
+        .. math::
+
+           \overline{\mathbf{u}}  (\boldsymbol{\phi})
+           &=
+           \begin{bmatrix}
+             - \frac{\phi_2} {\phi_1}
+             \\
+             \psi(\phi_2) - \log(-\phi_1)
+           \end{bmatrix}
+           \\
+           g_{\boldsymbol{\phi}} (\boldsymbol{\phi})
+           &=
+           TODO
         """
         log_b = np.log(-phi[0])
         u0 = phi[1] / (-phi[0])
@@ -164,6 +178,37 @@ class GammaDistribution(ExponentialFamilyDistribution):
                                size=plates)
 
     
+    def compute_gradient(self, g, u, phi):
+        """
+        Compute the moments and :math:`g(\phi)`.
+
+        .. math::
+
+           \mathrm{d}\overline{\mathbf{u}} &=
+           \begin{bmatrix}
+             - \frac{\mathrm{d}\phi_2} {phi_1} + \frac{\phi_2}{\phi_1^2} \mathrm{d}\phi_1
+             \\
+             \psi^{(1)}(\phi_2) \mathrm{d}\phi_2 - \frac{1}{\phi_1} \mathrm{d}\phi_1
+           \end{bmatrix}
+
+
+        Standard gradient given the gradient with respect to the moments, that
+        is, given the Riemannian gradient :math:`\tilde{\nabla}`:
+
+        .. math::
+
+           \nabla =
+           \begin{bmatrix}
+             \nabla_1 \frac{\phi_2}{\phi_1^2} - \nabla_2 \frac{1}{\phi_1}
+             \\
+             \nabla_2 \psi^{(1)}(\phi_2) - \nabla_1 \frac {1} {\phi_1}
+           \end{bmatrix}
+        """
+        d0 = g[0] * phi[1] / phi[0]**2 - g[1] / phi[0]
+        d1 = g[1] * special.polygamma(1, phi[1]) - g[0] / phi[0]
+        return [d0, d1]
+
+
 class Gamma(ExponentialFamily):
     """
     Node for gamma random variables.
