@@ -1078,65 +1078,6 @@ class TestGaussianGradient(TestCase):
     update and the Riemannian gradient should be equal.
     """
 
-    def test_riemannian_gradient(self):
-        """Test Riemannian gradient of a Gaussian node."""
-        D = 3
-
-        #
-        # Without observations
-        #
-        
-        # Construct model
-        mu = np.random.randn(D)
-        Lambda = random.covariance(D)
-        X = Gaussian(mu, Lambda)
-        # Random initialization
-        mu0 = np.random.randn(D)
-        Lambda0 = random.covariance(D)
-        X.initialize_from_parameters(mu0, Lambda0)
-        # Initial parameters 
-        phi0 = X.phi
-        # Gradient
-        g = X.get_riemannian_gradient()
-        # Parameters after VB-EM update
-        X.update()
-        phi1 = X.phi
-        # Check
-        self.assertAllClose(g[0],
-                            phi1[0] - phi0[0])
-        self.assertAllClose(g[1],
-                            phi1[1] - phi0[1])
-
-        #
-        # With observations
-        #
-        
-        # Construct model
-        mu = np.random.randn(D)
-        Lambda = random.covariance(D)
-        X = Gaussian(mu, Lambda)
-        V = random.covariance(D)
-        Y = Gaussian(X, V)
-        Y.observe(np.random.randn(D))
-        # Random initialization
-        mu0 = np.random.randn(D)
-        Lambda0 = random.covariance(D)
-        X.initialize_from_parameters(mu0, Lambda0)
-        # Initial parameters 
-        phi0 = X.phi
-        # Gradient
-        g = X.get_riemannian_gradient()
-        # Parameters after VB-EM update
-        X.update()
-        phi1 = X.phi
-        # Check
-        self.assertAllClose(g[0],
-                            phi1[0] - phi0[0])
-        self.assertAllClose(g[1],
-                            phi1[1] - phi0[1])
-
-        pass
-        
 
     def test_riemannian_gradient(self):
         """Test Riemannian gradient of a Gaussian node."""
