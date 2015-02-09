@@ -18,12 +18,153 @@
    You should have received a copy of the GNU General Public License
    along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 
+
+.. testsetup::
+
+    import numpy as np
+    np.random.seed(1)
+    # This is the PCA model from the previous sections
+    from bayespy.nodes import GaussianARD, Gamma, Dot
+    D = 3
+    X = GaussianARD(0, 1,
+                    shape=(D,),
+                    plates=(1,100),
+                    name='X')
+    alpha = Gamma(1e-3, 1e-3,
+                  plates=(D,),
+                  name='alpha')
+    C = GaussianARD(0, alpha,
+                    shape=(D,),
+                    plates=(10,1),
+                    name='C')
+    F = Dot(C, X)
+    tau = Gamma(1e-3, 1e-3, name='tau')
+    Y = GaussianARD(F, tau, name='Y')
+    c = np.random.randn(10, 2)
+    x = np.random.randn(2, 100)
+    data = np.dot(c, x) + 0.1*np.random.randn(10, 100)
+    Y.observe(data)
+    from bayespy.inference import VB
+    import bayespy.plot as bpplt
+    Q = None
+
+
 Advanced topics
 ===============
 
-This section contains some sketching and notes related to advanced topics such
-as Riemannian gradient, black box variational inference and stochastic
-variational inference.
+This section contains brief information on how to implement some advanced
+methods in BayesPy.  These methods include Riemannian conjugate gradient
+methods, pattern search, simulated annealing, collapsed variational inference,
+stochastic variational inference and black box variational inference.  In order
+to use these methods properly, the user should understand them to some extent.
+They are also considered experimental, thus you may encounter bugs or
+unimplemented features.  In any case, these methods may provide huge performance
+improvements easily compared to the standard VB-EM algorithm.
+
+
+Gradient-based optimization
+---------------------------
+
+Variational Bayesian learning basically means that the parameters of the
+approximate posterior distributions are optimized to maximize the lower bound of
+the marginal log likelihood.  This optimization can be done by using
+gradient-based optimization methods.  In order to improve the gradient-based
+methods, it is recommended to take into account the information geometry by
+using the Riemannian (a.k.a. natural) gradient.  In fact, the standard VB-EM
+algorithm is equivalent to a gradient ascent method which uses the Riemannian
+gradient and step length 1.  Thus, it is natural to try to improve this method
+by using non-linear conjugate gradient methods instead of gradient ascent.
+These optimization methods are especially useful when the VB-EM update equations
+are not available but one has to use fixed form approximation.  But it is
+possible that the Riemannian conjugate gradient method improve performance even
+when the VB-EM update equations are available.
+
+
+>>> def reset():
+...     alpha.initialize_from_prior()
+...     C.initialize_from_prior()
+...     X.initialize_from_random()
+...     tau.initialize_from_prior()
+...     return VB(Y, C, X, alpha, tau)
+>>> Q = reset()
+>>> Q.update(repeat=1000)
+...
+>>> bpplt.pyplot.plot(Q.L, 'k-')
+>>> Q = reset()
+>>> Q.optimize(maxiter=1000)
+...
+>>> bpplt.pyplot.plot(Q.L, 'r--')
+
+.. plot::
+
+    import numpy as np
+    np.random.seed(1)
+    # This is the PCA model from the previous sections
+    from bayespy.nodes import GaussianARD, Gamma, Dot
+    D = 3
+    X = GaussianARD(0, 1,
+                    shape=(D,),
+                    plates=(1,100),
+                    name='X')
+    alpha = Gamma(1e-3, 1e-3,
+                  plates=(D,),
+                  name='alpha')
+    C = GaussianARD(0, alpha,
+                    shape=(D,),
+                    plates=(10,1),
+                    name='C')
+    F = Dot(C, X)
+    tau = Gamma(1e-3, 1e-3, name='tau')
+    Y = GaussianARD(F, tau, name='Y')
+    c = np.random.randn(10, 2)
+    x = np.random.randn(2, 100)
+    data = np.dot(c, x) + 0.1*np.random.randn(10, 100)
+    Y.observe(data)
+    from bayespy.inference import VB
+    import bayespy.plot as bpplt
+    Q = None
+    def reset():
+        alpha.initialize_from_prior()
+        C.initialize_from_prior()
+        X.initialize_from_random()
+        tau.initialize_from_prior()
+        return VB(Y, C, X, alpha, tau)
+    Q = reset()
+    Q.update(repeat=1000)
+    bpplt.pyplot.plot(Q.L, 'k-')
+    Q = reset()
+    Q.optimize(C, X, maxiter=1000)
+    bpplt.pyplot.plot(Q.L, 'r--')
+
+
+.. currentmodule:: bayespy.inference
+
+The optimization algorithm in :func:`VB.optimize` is quite simple.  One may use
+the source code and modify the algorithm if more customizations are needed.
+
+
+Collapsed inference
+-------------------
+
+
+Pattern search
+--------------
+
+
+Simulated annealing
+-------------------
+
+
+Stochastic variational inference
+--------------------------------
+
+
+Black-box variational inference
+-------------------------------
+
+
+
+
 
 
 The VB lower bound and its gradients
