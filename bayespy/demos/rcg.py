@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2014 Jaakko Luttinen
+# Copyright (C) 2014-2015 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -30,6 +30,7 @@ import numpy as np
 from bayespy.nodes import (Beta,
                            Bernoulli,
                            GaussianARD,
+                           Gamma,
                            Gaussian,
                            SumMultiply)
 
@@ -49,21 +50,24 @@ def pca():
     D = 5
 
     # Construct the model
-    X = Gaussian(np.zeros(D), np.identity(D), plates=(1,N))
-    W = Gaussian(np.zeros(D), np.identity(D), plates=(M,1))
+    X = GaussianARD(0, 1, plates=(1,N), shape=(D,))
+    #X = Gaussian(np.zeros(D), np.identity(D), plates=(1,N))
+    alpha = Gamma(1e-3, 1e-3, plates=(D,))
+    W = GaussianARD(0, alpha, plates=(M,1), shape=(D,))
+    #W = Gaussian(np.zeros(D), np.identity(D), plates=(M,1))
     #X = GaussianARD(0, 1, plates=(1,N), shape=(D,))
     #W = GaussianARD(0, 1, plates=(M,1), shape=(D,))
     W.initialize_from_random()
     F = SumMultiply('d,d->', W, X)
     #F = SumMultiply(',->', W, X)
-    Y = GaussianARD(F, 1e4)
+    Y = GaussianARD(F, 1e1)
 
     # Observe data
     data = np.sum(W.random() * X.random(), axis=-1)
     Y.observe(data)
 
     # Initialize VB engine
-    Q = VB(Y, X, W)
+    Q = VB(Y, X, W, alpha)
 
     # Take one update step (so phi is ok)
     Q.update()
@@ -78,7 +82,7 @@ def pca():
     Q.set_parameters(p, X, W)
 
     # Run Riemannian conjugate gradient
-    Q.optimize(X, W, maxiter=30)
+    Q.optimize(W, maxiter=30, collapsed=[X, alpha])
 
 
 
