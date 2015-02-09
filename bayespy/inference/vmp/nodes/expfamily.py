@@ -72,6 +72,16 @@ class ExponentialFamilyDistribution(Distribution):
         return L
 
 
+    def compute_gradient(self, g, u, phi):
+        r"""
+        Compute the standard gradient with respect to the natural parameters.
+        """
+
+        raise NotImplementedError("Standard gradient not yet implemented for %s"
+                                  % (self.__class__.__name__))
+
+
+
 def useconstructor(__init__):
     def constructor_decorator(self, *args, **kwargs):
         if (self.dims is None or
