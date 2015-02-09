@@ -137,8 +137,9 @@ class GammaDistribution(ExponentialFamilyDistribution):
            &=
            TODO
         """
-        log_b = np.log(-phi[0])
-        u0 = phi[1] / (-phi[0])
+        with np.errstate(invalid='raise', divide='raise'):
+            log_b = np.log(-phi[0])
+            u0 = phi[1] / (-phi[0])
         u1 = special.digamma(phi[1]) - log_b
         u = [u0, u1]
         g = phi[1] * log_b - special.gammaln(phi[1])
