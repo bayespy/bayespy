@@ -82,6 +82,7 @@ class VB():
         
         self.iter = 0
         self.L = np.array(())
+        self.cputime = np.array(())
         self.l = dict(zip(self.model, 
                           len(self.model)*[np.array([])]))
         self.autosave_iterations = autosave_iterations
@@ -124,6 +125,7 @@ class VB():
 
         # Append the cost arrays
         self.L = np.append(self.L, misc.nans(repeat))
+        self.cputime = np.append(self.cputime, misc.nans(repeat))
         for (node, l) in self.l.items():
             self.l[node] = np.append(l, misc.nans(repeat))
 
@@ -157,9 +159,13 @@ class VB():
 
             # Compute lower bound
             L = self.loglikelihood_lowerbound()
+            cputime = time.clock() - t
             if verbose:
                 print("Iteration %d: loglike=%e (%.3f seconds)" 
-                      % (self.iter+1, L, time.clock()-t))
+                      % (self.iter+1, L, cputime))
+
+            self.L[self.iter] = L
+            self.cputime[self.iter] = cputime
 
             # Check the progress of the iteration
             if self.iter > 0:
@@ -169,16 +175,13 @@ class VB():
                     warnings.warn("Lower bound decreased %e! Bug somewhere or "
                                   "numerical inaccuracy?" % L_diff)
 
+
                 # Check for convergence
-                if tol is None:
-                    tol = self.tol
-                div = 0.5 * (abs(L) + abs(self.L[self.iter-1]))
-                if (L - self.L[self.iter-1]) / div < tol or L - self.L[self.iter-1] <= 0:
+                if self.has_converged(tol=tol):
                     converged = True
                     if verbose:
                         print("Converged at iteration %d." % (self.iter+1))
 
-            self.L[self.iter] = L
             self.iter += 1
 
             # Auto-save, if requested
@@ -191,6 +194,19 @@ class VB():
 
             if converged:
                 return
+
+
+    def has_converged(self, tol=None):
+        # Check for convergence
+        L0 = self.L[self.iter-1]
+        L1 = self.L[self.iter]
+        if tol is None:
+            tol = self.tol
+        div = 0.5 * (abs(L0) + abs(L1))
+        if (L1 - L0) / div < tol or L1 - L0 <= 0:
+            return True
+        else:
+            return False
 
 
 
@@ -255,8 +271,8 @@ class VB():
 
         # By default, use the same file as for auto-saving
         if not filename:
-            if self.filename:
-                filename = self.filename
+            if self.autosave_filename:
+                filename = self.autosave_filename
             else:
                 raise Exception("Filename must be given.")
 
@@ -274,6 +290,7 @@ class VB():
                     node.save(nodegroup.create_group(node.name))
             # Write iteration statistics
             misc.write_to_hdf5(h5f, self.L, 'L')
+            misc.write_to_hdf5(h5f, self.cputime, 'cputime')
             misc.write_to_hdf5(h5f, self.iter, 'iter')
             if self.callback_output is not None:
                 misc.write_to_hdf5(h5f, 
@@ -290,8 +307,8 @@ class VB():
 
         # By default, use the same file as for auto-saving
         if not filename:
-            if self.filename:
-                filename = self.filename
+            if self.autosave_filename:
+                filename = self.autosave_filename
             else:
                 raise Exception("Filename must be given.")
             
@@ -320,6 +337,7 @@ class VB():
                                         % node.name)
             # Read iteration statistics
             self.L = h5f['L'][...]
+            self.cputime = h5f['cputime'][...]
             self.iter = h5f['iter'][...]
             for node in self.model:
                 self.l[node] = h5f['boundterms'][node.name][...]
@@ -369,7 +387,7 @@ class VB():
         """
         Computes gradients (both Riemannian and normal)
         """
-        rg = [X.get_riemannian_gradient() for X in nodes]
+        rg = [self[node].get_riemannian_gradient() for node in nodes]
         if euclidian:
             g = [self[node].get_gradient(rg_x)
                  for (node, rg_x) in zip(nodes, rg)]
@@ -422,7 +440,8 @@ class VB():
         return v
 
 
-    def optimize(self, *nodes, maxiter=10, verbose=True, method='fletcher-reeves', riemannian=True, collapsed=None):
+    def optimize(self, *nodes, maxiter=10, verbose=True, method='fletcher-reeves',
+                 riemannian=True, collapsed=None, tol=None):
         """
         Optimize nodes using Riemannian conjugate gradient
         """
@@ -434,6 +453,7 @@ class VB():
 
         # Append the cost arrays
         self.L = np.append(self.L, misc.nans(maxiter))
+        self.cputime = np.append(self.cputime, misc.nans(maxiter))
         for (node, l) in self.l.items():
             self.l[node] = np.append(l, misc.nans(maxiter))
 
@@ -469,17 +489,21 @@ class VB():
 
         # Update collapsed variables
         for node in collapsed:
-            node.update()
+            self[node].update()
 
         L = self.loglikelihood_lowerbound()
-        
+
+        cputime = time.clock() - t
         if verbose:
             print("Iteration (CG) %d: loglike=%e (%.3f seconds)" 
-                  % (self.iter+1, L, time.clock()-t))
+                  % (self.iter+1, L, cputime))
 
         s = g2
         self.L[self.iter] = L
+        self.cputime[self.iter] = cputime
         self.iter += 1
+
+        converged = False
 
         for i in range(maxiter-1):
 
@@ -512,36 +536,50 @@ class VB():
 
             s = self.add(g2, s, scale=b)
 
-            p_new = self.add(p, s)
+            success = False
+            while not success:
 
-            try:
-                self.set_parameters(p_new, *nodes)
-            except:
-                print("WARNING! CG update was unsuccessful, using gradient and resetting CG")
-                s = g2
-                p_new = self.add(p, g2)
-                self.set_parameters(p_new, *nodes)
+                p_new = self.add(p, s)
 
-            # Update collapsed variables
-            for node in collapsed:
-                node.update()
+                try:
+                    self.set_parameters(p_new, *nodes)
+                except:
+                    print("WARNING! CG update was unsuccessful, use gradient and reset CG")
+                    s = g2
+                    continue
 
-            L = self.loglikelihood_lowerbound()
+                # Update collapsed variables
+                for node in collapsed:
+                    self[node].update()
 
-            if L < self.L[self.iter-1]:
-                print("WARNING! CG decreased lower bound, use gradient and reset CG")
-                s = g2
-                p_new = self.add(p, g2)
-                self.set_parameters(p_new, *nodes)
                 L = self.loglikelihood_lowerbound()
 
+                if L < self.L[self.iter-1]: # and not np.allclose(L, self.L[self.iter-1]):
+                    print("WARNING! CG decreased lower bound to %e, use gradient and reset CG" % L)
+                    s = g2
+                    continue
+
+                success = True
+
+            cputime = time.clock() - t
             if verbose:
                 print("Iteration (CG) %d: loglike=%e (%.3f seconds)" 
-                      % (self.iter+1, L, time.clock()-t))
+                      % (self.iter+1, L, cputime))
 
+            self.cputime[self.iter] = cputime
             self.L[self.iter] = L
+
+            # Check for convergence
+            if self.has_converged(tol=tol):
+                converged = True
+                if verbose:
+                    print("Converged at iteration %d." % (self.iter+1))
+
             self.iter += 1
             p = p_new
+
+            if converged:
+                break
 
 
 
