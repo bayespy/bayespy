@@ -1,5 +1,5 @@
 ######################################################################
-# Copyright (C) 2011-2013 Jaakko Luttinen
+# Copyright (C) 2011-2015 Jaakko Luttinen
 #
 # This file is licensed under Version 3.0 of the GNU General Public
 # License. See LICENSE for a text of the license.
@@ -422,10 +422,15 @@ class VB():
         return v
 
 
-    def optimize(self, *nodes, maxiter=10, verbose=True):
+    def optimize(self, *nodes, maxiter=10, verbose=True, method='fletcher-reeves', riemannian=True, collapsed=None):
         """
         Optimize nodes using Riemannian conjugate gradient
         """
+
+        method = method.lower()
+
+        if collapsed is None:
+            collapsed = []
 
         # Append the cost arrays
         self.L = np.append(self.L, misc.nans(maxiter))
@@ -433,17 +438,38 @@ class VB():
             self.l[node] = np.append(l, misc.nans(maxiter))
 
         t = time.clock()
+
+        # Current parameters
+        p = self.get_parameters(*nodes)
         
         # Get gradients
-        p = self.get_parameters(*nodes)
-        (rg, g) = self.get_gradients(*nodes, euclidian=True)
+        if riemannian and method == 'gradient':
+            rg = self.get_gradients(*nodes, euclidian=False)
+        else:
+            (rg, g) = self.get_gradients(*nodes, euclidian=True)
 
-        dd_prev = self.dot(g, rg)
+        if riemannian:
+            g1 = g
+            g2 = rg
+        else:
+            g1 = g
+            g2 = g
+
+        if method == 'gradient':
+            pass
+        elif method == 'fletcher-reeves':
+            dd_prev = self.dot(g1, g2)
+        else:
+            raise Exception("Unknown optimization method: %s" % (method))
 
         # Take a gradient ascending step
-        p_new = self.add(p, rg)
+        p_new = self.add(p, g2)
         self.set_parameters(p_new, *nodes)
         p = p_new
+
+        # Update collapsed variables
+        for node in collapsed:
+            node.update()
 
         L = self.loglikelihood_lowerbound()
         
@@ -451,7 +477,7 @@ class VB():
             print("Iteration (CG) %d: loglike=%e (%.3f seconds)" 
                   % (self.iter+1, L, time.clock()-t))
 
-        s = rg
+        s = g2
         self.L[self.iter] = L
         self.iter += 1
 
@@ -459,13 +485,32 @@ class VB():
 
             t = time.clock()
 
-            (rg, g) = self.get_gradients(*nodes, euclidian=True)
+            # Get gradients
+            if riemannian and method == 'gradient':
+                rg = self.get_gradients(*nodes, euclidian=False)
+            else:
+                (rg, g) = self.get_gradients(*nodes, euclidian=True)
 
-            dd_curr = self.dot(g, rg)
-            b = dd_curr / dd_prev
-            dd_prev = dd_curr
+            if riemannian:
+                g1 = g
+                g2 = rg
+            else:
+                g1 = g
+                g2 = g
 
-            s = self.add(rg, s, scale=b)
+            if method == 'gradient':
+                pass
+            elif method == 'fletcher-reeves':
+                dd_curr = self.dot(g1, g2)
+                if dd_prev == 0:
+                    b = 0
+                else:
+                    b = dd_curr / dd_prev
+                dd_prev = dd_curr
+            else:
+                raise Exception("Unknown optimization method: %s" % (method))
+
+            s = self.add(g2, s, scale=b)
 
             p_new = self.add(p, s)
 
@@ -473,15 +518,20 @@ class VB():
                 self.set_parameters(p_new, *nodes)
             except:
                 print("WARNING! CG update was unsuccessful, using gradient and resetting CG")
-                s = rg
-                p_new = self.add(p, rg)
+                s = g2
+                p_new = self.add(p, g2)
                 self.set_parameters(p_new, *nodes)
 
+            # Update collapsed variables
+            for node in collapsed:
+                node.update()
+
             L = self.loglikelihood_lowerbound()
+
             if L < self.L[self.iter-1]:
                 print("WARNING! CG decreased lower bound, use gradient and reset CG")
-                s = rg
-                p_new = self.add(p, rg)
+                s = g2
+                p_new = self.add(p, g2)
                 self.set_parameters(p_new, *nodes)
                 L = self.loglikelihood_lowerbound()
 
