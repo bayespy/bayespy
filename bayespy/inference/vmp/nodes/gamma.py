@@ -99,7 +99,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
     
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
-        """
+        r"""
         Compute the message to a parent node.
         """
         if index == 0:
@@ -112,7 +112,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
 
 
     def compute_phi_from_parents(self, *u_parents, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         return [-u_parents[1][0],
@@ -120,7 +120,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
     
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
 
         .. math::
@@ -147,7 +147,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
 
 
     def compute_cgf_from_parents(self, *u_parents):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         a = u_parents[0][0]
@@ -159,7 +159,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
 
             
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         if np.any(x < 0):
@@ -171,7 +171,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
 
 
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         return np.random.gamma(phi[1],
@@ -180,7 +180,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
 
     
     def compute_gradient(self, g, u, phi):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
 
         .. math::
