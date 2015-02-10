@@ -48,6 +48,7 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
+	rm -rf source/*/generated
 
 gh-pages:
 	rm -rf build/html
