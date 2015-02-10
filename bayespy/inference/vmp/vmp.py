@@ -28,6 +28,7 @@ import time
 import h5py
 import datetime
 import tempfile
+import scipy
 
 from bayespy.utils import misc
 
@@ -80,7 +81,7 @@ class VB():
 
         self._figures = {}
         
-        self.iter = 0
+        self.iter = -1
         self.L = np.array(())
         self.cputime = np.array(())
         self.l = dict(zip(self.model, 
@@ -136,6 +137,7 @@ class VB():
         converged = False
 
         for i in range(repeat):
+            self.iter += 1
             t = time.clock()
 
             # Update nodes
@@ -181,8 +183,6 @@ class VB():
                     converged = True
                     if verbose:
                         print("Converged at iteration %d." % (self.iter+1))
-
-            self.iter += 1
 
             # Auto-save, if requested
             if (self.autosave_iterations > 0 
@@ -493,20 +493,22 @@ class VB():
 
         L = self.loglikelihood_lowerbound()
 
+        s = g2
         cputime = time.clock() - t
+        
+        self.iter += 1
+        self.L[self.iter] = L
+        self.cputime[self.iter] = cputime
+
         if verbose:
             print("Iteration (CG) %d: loglike=%e (%.3f seconds)" 
                   % (self.iter+1, L, cputime))
-
-        s = g2
-        self.L[self.iter] = L
-        self.cputime[self.iter] = cputime
-        self.iter += 1
 
         converged = False
 
         for i in range(maxiter-1):
 
+            self.iter += 1
             t = time.clock()
 
             # Get gradients
@@ -557,7 +559,7 @@ class VB():
 
                 L = self.loglikelihood_lowerbound()
 
-                if L < self.L[self.iter-1]: # and not np.allclose(L, self.L[self.iter-1]):
+                if L < self.L[self.iter-1] and not np.allclose(L, self.L[self.iter-1], rtol=1e-8):
                     print("WARNING! CG decreased lower bound to %e, use gradient and reset CG" % L)
                     s = g2
                     continue
@@ -578,11 +580,78 @@ class VB():
                 if verbose:
                     print("Converged at iteration %d." % (self.iter+1))
 
-            self.iter += 1
             p = p_new
 
             if converged:
                 break
+
+
+    def pattern_search(self, *nodes, collapsed=None, maxiter=3):
+        """Perform simple pattern search :cite:`Honkela:2002`.
+
+        Some of the variables can be collapsed.
+        """
+
+        if collapsed is None:
+            collapsed = []
+
+        t = time.clock()
+
+        # Update all nodes
+        for x in nodes:
+            self[x].update()
+        for x in collapsed:
+            self[x].update()
+
+        # Current parameter values
+        p0 = self.get_parameters(*nodes)
+
+        # Update optimized nodes
+        for x in nodes:
+            self[x].update()
+
+        # New parameter values
+        p1 = self.get_parameters(*nodes)
+
+        # Search direction
+        dp = self.add(p1, p0, scale=-1)
+
+        # Cost function for pattern search
+        def cost(alpha):
+            p_new = self.add(p1, dp, scale=alpha)
+            try:
+                self.set_parameters(p_new, *nodes)
+            except:
+                return np.inf
+            # Update collapsed nodes
+            for x in collapsed:
+                self[x].update()
+            return -self.compute_lowerbound()
+
+        # Optimize step length
+        res = scipy.optimize.minimize_scalar(cost, bracket=[0, 3], options={'maxiter':maxiter})
+
+        # Set found parameter values
+        p_new = self.add(p1, dp, scale=res.x)
+        self.set_parameters(p_new, *nodes)
+
+        # Update collapsed nodes
+        for x in collapsed:
+            self[x].update()
+
+        self.L = np.append(self.L, misc.nans(1))
+        self.cputime = np.append(self.cputime, misc.nans(1))
+        for (node, l) in self.l.items():
+            self.l[node] = np.append(l, misc.nans(1))
+
+        self.iter += 1
+        L = self.loglikelihood_lowerbound()
+        cputime = time.clock() - t
+
+        self.cputime[self.iter] = cputime
+        self.L[self.iter] = L
+
+        print("Iteration %d (PS): loglike=%e (%.3f seconds)" % (self.iter+1, L, cputime))
 
 
 
