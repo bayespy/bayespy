@@ -91,8 +91,7 @@ improve performance even when the VB-EM update equations are available.
 
 .. currentmodule:: bayespy.inference
 
-The optimization algorithm in :func:`VB.optimize` is quite simple.  One may use
-the source code and modify the algorithm if more customizations are needed.
+The optimization algorithm in :func:`VB.optimize` has a simple interface.
 Instead of using the default Riemannian geometry, one can use the Euclidean
 geometry by giving :code:`riemannian=False`.  It is also possible to choose the
 optimization method from gradient ascent (:code:`method='gradient'`) or
@@ -117,6 +116,16 @@ tricks in the following sections.
    but also by the conjugate gradient methods in the Riemannian geometry.  Thus,
    the Riemannian conjugate gradient may not yet work for all models.
 
+
+It is possible to construct custom optimization algorithms with the tools
+provided by :class:`VB`.  For instance, :func:`VB.get_parameters` and
+:func:`VB.set_parameters` can be used to handle the parameters of nodes.
+:func:`VB.get_gradients` is used for computing the gradients of nodes.  The
+parameter and gradient objects are not numerical arrays but more complex nested
+lists not meant to be accessed by the user.  Thus, for simple arithmetics with
+the parameter and gradient objects, use functions :func:`VB.add` and
+:func:`VB.dot`.  Finally, :func:`VB.compute_lowerbound` and
+:func:`VB.has_converged` can be used to monitor the lower bound.
 
 
 Collapsed inference
@@ -159,6 +168,33 @@ free to do this.
 
 Pattern search
 --------------
+
+The pattern search method estimates the direction in which the approximate
+posterior distributions are updating and performs a line search in that
+direction :cite:`Honkela:2002`.  The search direction is based on the difference
+in the VB parameters on successive updates (or several updates).  The idea is
+that the VB-EM algorithm may be slow because it just zigzags and this can be
+fixed by moving to the direction in which the VB-EM is slowly moving.
+
+BayesPy offers a simple built-in pattern search method
+:func:`VB.pattern_search`.  The method updates the nodes twice, measures the
+difference in the parameters and performs a line search with a small number of
+function evaluations:
+
+>>> Q.pattern_search(C, X)
+
+Similarly to the collapsed optimization, it is possible to collapse some of the
+variables in the pattern search.  The same rules of conditional independence
+apply as above.  The collapsed variables are given as list:
+
+>>> Q.pattern_search(C, tau, collapsed=[X, alpha])
+
+Also, a maximum number of iterations can be set by using ``maxiter`` keyword
+argument.  It is not always obvious whether a pattern search will improve the
+rate of convergence or not but if it seems that the convergence is slow because
+of zigzagging, it may be worth a try.  In addition, it is possible to write a
+more customized VB learning algorithm which uses pattern searches by using the
+different methods of :class:`VB` discussed above.
 
 
 Simulated annealing
