@@ -82,6 +82,7 @@ class VB():
         self._figures = {}
         
         self.iter = -1
+        self.annealing_changed = False
         self.L = np.array(())
         self.cputime = np.array(())
         self.l = dict(zip(self.model, 
@@ -123,12 +124,6 @@ class VB():
         #
         # If no nodes are given and thus everything is updated, the update order
         # should be from down to bottom. Or something similar..
-
-        # Append the cost arrays
-        self.L = np.append(self.L, misc.nans(repeat))
-        self.cputime = np.append(self.cputime, misc.nans(repeat))
-        for (node, l) in self.l.items():
-            self.l[node] = np.append(l, misc.nans(repeat))
 
         # By default, update all nodes
         if len(nodes) == 0:
@@ -408,12 +403,6 @@ class VB():
         if collapsed is None:
             collapsed = []
 
-        # Append the cost arrays
-        self.L = np.append(self.L, misc.nans(maxiter))
-        self.cputime = np.append(self.cputime, misc.nans(maxiter))
-        for (node, l) in self.l.items():
-            self.l[node] = np.append(l, misc.nans(maxiter))
-
         t = time.clock()
 
         # Current parameters
@@ -574,11 +563,6 @@ class VB():
         for x in collapsed:
             self[x].update()
 
-        self.L = np.append(self.L, misc.nans(1))
-        self.cputime = np.append(self.cputime, misc.nans(1))
-        for (node, l) in self.l.items():
-            self.l[node] = np.append(l, misc.nans(1))
-
         cputime = time.clock() - t
         self._end_iteration_step('PS', cputime)
 
@@ -595,6 +579,18 @@ class VB():
         """
         for node in self.model:
             node.annealing = annealing
+        self.annealing_changed = True
+        return
+
+
+    def _append_iterations(self, iters):
+        """
+        Append some arrays for more iterations
+        """
+        self.L = np.append(self.L, misc.nans(iters))
+        self.cputime = np.append(self.cputime, misc.nans(iters))
+        for (node, l) in self.l.items():
+            self.l[node] = np.append(l, misc.nans(iters))
         return
 
 
@@ -604,6 +600,10 @@ class VB():
         """
 
         self.iter += 1
+
+        if self.iter >= len(self.L):
+            self._append_iterations(100)
+
         L = self.loglikelihood_lowerbound()
 
         self.cputime[self.iter] = cputime
@@ -625,7 +625,7 @@ class VB():
 
         # Check the progress of the iteration
         converged = False
-        if self.iter > 0:
+        if not self.annealing_changed and self.iter > 0:
             # Check for errors
             if self.L[self.iter-1] - L > 1e-6:
                 L_diff = (self.L[self.iter-1] - L)
@@ -645,5 +645,7 @@ class VB():
             self.save(self.autosave_filename)
             if verbose:
                 print('Auto-saved to %s' % self.autosave_filename)
+
+        self.annealing_changed = False
 
         return converged

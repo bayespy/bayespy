@@ -131,6 +131,8 @@ class ExponentialFamily(Stochastic):
     @useconstructor
     def __init__(self, *parents, initialize=True, **kwargs):
 
+        self.annealing = 1.0
+
         # Terms for the lower bound (G for latent and F for observed)
         self.g = np.array(np.nan)
         self.f = np.array(np.nan)
@@ -218,6 +220,7 @@ class ExponentialFamily(Stochastic):
         X = self.random()
         self.initialize_from_value(X)
 
+
     def _update_phi_from_parents(self, *u_parents):
 
         # TODO/FIXME: Could this be combined to the function
@@ -283,7 +286,7 @@ class ExponentialFamily(Stochastic):
         return phi
 
 
-    def get_riemannian_gradient(self, annealing=1.0):
+    def get_riemannian_gradient(self):
         r"""
         Computes the Riemannian/natural gradient.
         """
@@ -294,7 +297,7 @@ class ExponentialFamily(Stochastic):
         # Compute the gradient
         phi = self._distribution.compute_phi_from_parents(*u_parents)
         for i in range(len(self.phi)):
-            phi[i] = phi[i] + annealing*m_children[i] - self.phi[i]
+            phi[i] = self.annealing * (phi[i] + m_children[i]) - self.phi[i]
             phi[i] = phi[i] * np.ones(self.get_shape(i))
 
         # Allow using reparameterization (e.g., log for positive parameters)
@@ -375,10 +378,11 @@ class ExponentialFamily(Stochastic):
         self._update_phi_from_parents(*u_parents)
         # .. then just add children's message
         for i in range(len(self.phi)):
-            self.phi[i] = self.phi[i] + m_children[i]
+            self.phi[i] = self.annealing * (self.phi[i] + m_children[i])
 
         # Update u and g
         self._update_moments_and_cgf()
+
 
     def _update_moments_and_cgf(self):
         """
@@ -432,14 +436,14 @@ class ExponentialFamily(Stochastic):
         u_parents = self._message_from_parents()
         phi = self._distribution.compute_phi_from_parents(*u_parents)
         # G from parents
-        L = self._distribution.compute_cgf_from_parents(*u_parents)
+        L = self.annealing * self._distribution.compute_cgf_from_parents(*u_parents)
         # L = g
         # G for unobserved variables (ignored variables are handled
         # properly automatically)
         latent_mask = np.logical_not(self.observed)
         #latent_mask = np.logical_and(self.mask, np.logical_not(self.observed))
         # F for observed, G for latent
-        L = L + np.where(self.observed, self.f, -self.g)
+        L = L + np.where(self.observed, self.annealing*self.f, -self.g)
         for (phi_p, phi_q, u_q, dims) in zip(phi, self.phi, self.u, self.dims):
             # Form a mask which puts observed variables to zero and
             # broadcasts properly
@@ -452,6 +456,8 @@ class ExponentialFamily(Stochastic):
 
             # Compute the term
             phi_q = np.where(latent_mask_i, phi_q, 0)
+            # Apply annealing
+            phi_p = self.annealing * phi_p
             # TODO/FIXME: Use einsum here?
             Z = np.sum((phi_p-phi_q) * u_q, axis=axis_sum)
 
