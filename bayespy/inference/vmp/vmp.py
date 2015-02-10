@@ -144,7 +144,7 @@ class VB():
                         self.plot(X)
 
             cputime = time.clock() - t
-            if self._end_iteration_step('VBEM', cputime, tol=tol):
+            if self._end_iteration_step(None, cputime, tol=tol, verbose=verbose):
                 return
 
 
@@ -604,11 +604,6 @@ class VB():
         if self.iter >= len(self.L):
             self._append_iterations(100)
 
-        L = self.loglikelihood_lowerbound()
-
-        self.cputime[self.iter] = cputime
-        self.L[self.iter] = L
-
         # Call the custom function provided by the user
         if callable(self.callback):
             z = self.callback()
@@ -620,8 +615,18 @@ class VB():
                     self.callback_output = np.concatenate((self.callback_output,z),
                                                           axis=-1)
 
-        print("Iteration %d (%s): loglike=%e (%.3f seconds)"
-              % (self.iter+1, method, L, cputime))
+        L = self.loglikelihood_lowerbound()
+
+        self.cputime[self.iter] = cputime
+        self.L[self.iter] = L
+
+        if verbose:
+            if method:
+                print("Iteration %d (%s): loglike=%e (%.3f seconds)"
+                      % (self.iter+1, method, L, cputime))
+            else:
+                print("Iteration %d: loglike=%e (%.3f seconds)"
+                      % (self.iter+1, L, cputime))
 
         # Check the progress of the iteration
         converged = False
