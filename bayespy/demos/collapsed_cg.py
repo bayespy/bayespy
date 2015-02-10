@@ -90,14 +90,18 @@ def mixture_of_gaussians():
     (Hensman et al 2012).
     """
 
+    np.random.seed(41)
+
     # Number of samples
     N = 1000
+    # Number of clusters in the model (five in the data)
+    K = 10
 
     # Overlap parameter of clusters
-    R = 3
+    R = 2
 
     # Construct the model
-    Q = mog.gaussianmix_model(N, 5, 2, covariance='diagonal')
+    Q = mog.gaussianmix_model(N, K, 2, covariance='diagonal')
 
     # Generate data from five Gaussian clusters
     mu = np.array([[0, 0],
@@ -105,7 +109,7 @@ def mixture_of_gaussians():
                    [-R, R],
                    [R, -R],
                    [-R, -R]])
-    Z = Q['z'].random()
+    Z = random.categorical(np.ones(5), size=N)
     data = np.empty((N, 2))
     for n in range(N):
         data[n,:] = mu[Z[n]] + np.random.randn(2)
@@ -128,11 +132,11 @@ def mixture_of_gaussians():
 
     bpplt.pyplot.xlabel('CPU time (in seconds)')
     bpplt.pyplot.ylabel('VB lower bound')
-    bpplt.pyplot.legend(['VB-EM', 'RCG'])
+    bpplt.pyplot.legend(['VB-EM', 'Collapsed Riemannian CG'], loc='lower right')
 
-    bpplt.pyplot.figure()
-    bpplt.pyplot.plot(data[:,0], data[:,1], 'rx')
-    bpplt.pyplot.title('Data')
+    ## bpplt.pyplot.figure()
+    ## bpplt.pyplot.plot(data[:,0], data[:,1], 'rx')
+    ## bpplt.pyplot.title('Data')
 
     bpplt.pyplot.show()
     
