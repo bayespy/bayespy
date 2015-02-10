@@ -154,7 +154,7 @@ class Deterministic(Node):
             for (ind, parent) in enumerate(self.parents):
                 parent._remove_child(self, ind)
 
-    def lower_bound_contribution(self, gradient=False):
+    def lower_bound_contribution(self, gradient=False, **kwargs):
         # Deterministic functions are delta distributions so the lower bound
         # contribuion is zero.
         return 0
