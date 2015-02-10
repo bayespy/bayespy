@@ -100,7 +100,7 @@ def run(M=40, N=100, D_y=6, D=8, seed=42, rotate=False, maxiter=1000, debug=Fals
 
         bpplt.pyplot.xlabel('CPU time (in seconds)')
         bpplt.pyplot.ylabel('VB lower bound')
-        bpplt.pyplot.legend(['VB-EM', 'Pattern search'])
+        bpplt.pyplot.legend(['VB-EM', 'Pattern search'], loc='lower right')
 
 
 if __name__ == '__main__':
