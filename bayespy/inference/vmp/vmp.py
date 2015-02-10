@@ -587,7 +587,7 @@ class VB():
 
 
     def pattern_search(self, *nodes, collapsed=None, maxiter=3):
-        """Perform simple pattern search :cite:`Honkela:2002`.
+        """Perform simple pattern search :cite:`Honkela:2003`.
 
         Some of the variables can be collapsed.
         """
