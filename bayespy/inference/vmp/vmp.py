@@ -137,7 +137,7 @@ class VB():
         converged = False
 
         for i in range(repeat):
-            self.iter += 1
+
             t = time.clock()
 
             # Update nodes
@@ -148,51 +148,8 @@ class VB():
                     if plot:
                         self.plot(X)
 
-            # Call the custom function provided by the user
-            if callable(self.callback):
-                z = self.callback()
-                if z is not None:
-                    z = np.array(z)[...,np.newaxis]
-                    if self.callback_output is None:
-                        self.callback_output = z
-                    else:
-                        self.callback_output = np.concatenate((self.callback_output,z),
-                                                              axis=-1)
-
-            # Compute lower bound
-            L = self.loglikelihood_lowerbound()
             cputime = time.clock() - t
-            if verbose:
-                print("Iteration %d: loglike=%e (%.3f seconds)" 
-                      % (self.iter+1, L, cputime))
-
-            self.L[self.iter] = L
-            self.cputime[self.iter] = cputime
-
-            # Check the progress of the iteration
-            if self.iter > 0:
-                # Check for errors
-                if self.L[self.iter-1] - L > 1e-6:
-                    L_diff = (self.L[self.iter-1] - L)
-                    warnings.warn("Lower bound decreased %e! Bug somewhere or "
-                                  "numerical inaccuracy?" % L_diff)
-
-
-                # Check for convergence
-                if self.has_converged(tol=tol):
-                    converged = True
-                    if verbose:
-                        print("Converged at iteration %d." % (self.iter+1))
-
-            # Auto-save, if requested
-            if (self.autosave_iterations > 0 
-                and np.mod(self.iter, self.autosave_iterations) == 0):
-
-                self.save(self.autosave_filename)
-                if verbose:
-                    print('Auto-saved to %s' % self.autosave_filename)
-
-            if converged:
+            if self._end_iteration_step('VBEM', cputime, tol=tol):
                 return
 
 
@@ -496,19 +453,10 @@ class VB():
         s = g2
         cputime = time.clock() - t
         
-        self.iter += 1
-        self.L[self.iter] = L
-        self.cputime[self.iter] = cputime
-
-        if verbose:
-            print("Iteration (CG) %d: loglike=%e (%.3f seconds)" 
-                  % (self.iter+1, L, cputime))
-
-        converged = False
+        self._end_iteration_step('OPT', cputime, tol=tol)
 
         for i in range(maxiter-1):
 
-            self.iter += 1
             t = time.clock()
 
             # Get gradients
@@ -559,30 +507,17 @@ class VB():
 
                 L = self.loglikelihood_lowerbound()
 
-                if L < self.L[self.iter-1] and not np.allclose(L, self.L[self.iter-1], rtol=1e-8):
+                if L < self.L[self.iter] and not np.allclose(L, self.L[self.iter], rtol=1e-8):
                     print("WARNING! CG decreased lower bound to %e, use gradient and reset CG" % L)
                     s = g2
                     continue
 
                 success = True
 
-            cputime = time.clock() - t
-            if verbose:
-                print("Iteration (CG) %d: loglike=%e (%.3f seconds)" 
-                      % (self.iter+1, L, cputime))
-
-            self.cputime[self.iter] = cputime
-            self.L[self.iter] = L
-
-            # Check for convergence
-            if self.has_converged(tol=tol):
-                converged = True
-                if verbose:
-                    print("Converged at iteration %d." % (self.iter+1))
-
             p = p_new
-
-            if converged:
+            
+            cputime = time.clock() - t
+            if self._end_iteration_step('OPT', cputime, tol=tol):
                 break
 
 
@@ -644,14 +579,71 @@ class VB():
         for (node, l) in self.l.items():
             self.l[node] = np.append(l, misc.nans(1))
 
+        cputime = time.clock() - t
+        self._end_iteration_step('PS', cputime)
+
+
+    def set_annealing(self, annealing):
+        """
+        Set deterministic annealing from range (0, 1].
+
+        With 1, no annealing, standard updates.
+
+        With smaller values, entropy has more weight and model
+        probability equations less.  With 0, one would obtain improper
+        uniform distributions.
+        """
+        for node in self.model:
+            node.annealing = annealing
+        return
+
+
+    def _end_iteration_step(self, method, cputime, tol=None, verbose=True):
+        """
+        Do some routines after each iteration step
+        """
+
         self.iter += 1
         L = self.loglikelihood_lowerbound()
-        cputime = time.clock() - t
 
         self.cputime[self.iter] = cputime
         self.L[self.iter] = L
 
-        print("Iteration %d (PS): loglike=%e (%.3f seconds)" % (self.iter+1, L, cputime))
+        # Call the custom function provided by the user
+        if callable(self.callback):
+            z = self.callback()
+            if z is not None:
+                z = np.array(z)[...,np.newaxis]
+                if self.callback_output is None:
+                    self.callback_output = z
+                else:
+                    self.callback_output = np.concatenate((self.callback_output,z),
+                                                          axis=-1)
 
+        print("Iteration %d (%s): loglike=%e (%.3f seconds)"
+              % (self.iter+1, method, L, cputime))
 
+        # Check the progress of the iteration
+        converged = False
+        if self.iter > 0:
+            # Check for errors
+            if self.L[self.iter-1] - L > 1e-6:
+                L_diff = (self.L[self.iter-1] - L)
+                warnings.warn("Lower bound decreased %e! Bug somewhere or "
+                              "numerical inaccuracy?" % L_diff)
 
+            # Check for convergence
+            if self.has_converged(tol=tol):
+                converged = True
+                if verbose:
+                    print("Converged at iteration %d." % (self.iter+1))
+
+        # Auto-save, if requested
+        if (self.autosave_iterations > 0 
+            and np.mod(self.iter, self.autosave_iterations) == 0):
+
+            self.save(self.autosave_filename)
+            if verbose:
+                print('Auto-saved to %s' % self.autosave_filename)
+
+        return converged
