@@ -110,8 +110,8 @@ def run(N=50, K=5, D=2):
     plt.scatter(y[:,0], y[:,1])
     print('integrated pdf:', np.sum(pdf)*(18*18)/(N1*N2))
 
-    Q['X'].show()
-    Q['alpha'].show()
+    #Q['X'].show()
+    #Q['alpha'].show()
 
 
 if __name__ == '__main__':
