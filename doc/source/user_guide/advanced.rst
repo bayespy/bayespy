@@ -171,7 +171,7 @@ Pattern search
 
 The pattern search method estimates the direction in which the approximate
 posterior distributions are updating and performs a line search in that
-direction :cite:`Honkela:2002`.  The search direction is based on the difference
+direction :cite:`Honkela:2003`.  The search direction is based on the difference
 in the VB parameters on successive updates (or several updates).  The idea is
 that the VB-EM algorithm may be slow because it just zigzags and this can be
 fixed by moving to the direction in which the VB-EM is slowly moving.
@@ -182,19 +182,24 @@ difference in the parameters and performs a line search with a small number of
 function evaluations:
 
 >>> Q.pattern_search(C, X)
+Iteration ...
 
 Similarly to the collapsed optimization, it is possible to collapse some of the
 variables in the pattern search.  The same rules of conditional independence
 apply as above.  The collapsed variables are given as list:
 
 >>> Q.pattern_search(C, tau, collapsed=[X, alpha])
+Iteration ...
 
 Also, a maximum number of iterations can be set by using ``maxiter`` keyword
 argument.  It is not always obvious whether a pattern search will improve the
 rate of convergence or not but if it seems that the convergence is slow because
-of zigzagging, it may be worth a try.  In addition, it is possible to write a
-more customized VB learning algorithm which uses pattern searches by using the
-different methods of :class:`VB` discussed above.
+of zigzagging, it may be worth a try.  Note that the computational cost of the
+pattern search is quite high, thus it is not recommended to perform it after
+every VB-EM update but every now and then, for instance, after every 10
+iterations.  In addition, it is possible to write a more customized VB learning
+algorithm which uses pattern searches by using the different methods of
+:class:`VB` discussed above.
 
 
 Simulated annealing
