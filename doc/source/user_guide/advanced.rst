@@ -202,8 +202,44 @@ algorithm which uses pattern searches by using the different methods of
 :class:`VB` discussed above.
 
 
-Simulated annealing
--------------------
+Deterministic annealing
+-----------------------
+
+The standard VB-EM algorithm converges to a local optimum which can often be
+inferior to the global optimum and many other local optima.  Deterministic
+annealing aims at finding a better local optimum, hopefully even the global
+optimum :cite:`Katahira:2008`.  It does this by increasing the weight on the
+entropy of the posterior approximation in the VB lower bound.  Effectively, the
+annealed lower bound becomes closer to a uniform function instead of the
+original multimodal lower bound.  The weight on the entropy is recovered slowly
+and the optimization is much more robust to initialization.
+
+In BayesPy, the annealing can be set by using :func:`VB.set_annealing`.  The
+given annealing should be in range :math:`(0,1]` but this is not validated in
+case the user wants to do something experimental.  If annealing is set to 1, the
+original VB lower bound is recovered.  Annealing with 0 would lead to an
+improper uniform distribution, thus it will lead to errors.  The entropy term is
+weighted by the inverse of this annealing term.  An alternative view is that the
+model probability density functions are raised to the power of the annealing
+term.
+
+Typically, the annealing is used in such a way that the annealing is very small
+at the beginning (e.g., 0.01) and increased after every convergence of the VB
+algorithm until value 1 is reached.  After the annealing value is increased, the
+algorithm continues from where it had just converged.  The annealing can be used
+for instance as:
+
+>>> beta = 0.01
+>>> while beta < 1.0:
+...     beta = min(beta*1.5, 1.0)
+...     Q.set_annealing(beta)
+...     Q.update(repeat=100, tol=1e-4)
+Iteration ...
+
+Here, the ``tol`` keyword argument is used to adjust the threshold for
+convergence.  In this case, it is a bit larger than by default so the algorithm
+does not need to converge perfectly but a rougher convergence is sufficient for
+the next iteration with a new annealing value.
 
 
 Stochastic variational inference
