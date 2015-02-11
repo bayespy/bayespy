@@ -55,8 +55,8 @@
     Q = VB(Y, C, X, alpha, tau)
     Q.callback = R.rotate
     Q.update(repeat=1000, tol=1e-6, verbose=False)
-
-
+    import warnings
+    warnings.simplefilter('error', UserWarning)
 
 Advanced topics
 ===============
@@ -99,6 +99,7 @@ conjugate gradient methods (only :code:`method='fletcher-reeves'` implemented at
 the moment).  For instance, we could optimize nodes ``C`` and ``X`` jointly
 using Euclidean gradient ascent as:
 
+>>> Q = VB(Y, C, X, alpha, tau)
 >>> Q.optimize(C, X, riemannian=False, method='gradient', maxiter=5)
 Iteration ...
 
@@ -223,13 +224,13 @@ weighted by the inverse of this annealing term.  An alternative view is that the
 model probability density functions are raised to the power of the annealing
 term.
 
-Typically, the annealing is used in such a way that the annealing is very small
-at the beginning (e.g., 0.01) and increased after every convergence of the VB
-algorithm until value 1 is reached.  After the annealing value is increased, the
-algorithm continues from where it had just converged.  The annealing can be used
-for instance as:
+Typically, the annealing is used in such a way that the annealing is small at
+the beginning and increased after every convergence of the VB algorithm until
+value 1 is reached.  After the annealing value is increased, the algorithm
+continues from where it had just converged.  The annealing can be used for
+instance as:
 
->>> beta = 0.01
+>>> beta = 0.1
 >>> while beta < 1.0:
 ...     beta = min(beta*1.5, 1.0)
 ...     Q.set_annealing(beta)
