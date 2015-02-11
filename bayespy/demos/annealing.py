@@ -93,15 +93,12 @@ def run(N=500, seed=42, maxiter=100, plot=True):
     # VB-EM with deterministic annealing
     #
     Q.load()
-    beta = 0.03
-    while True:
+    beta = 0.01
+    while beta < 1.0:
+        beta = min(beta*1.5, 1.0)
         Q.set_annealing(beta)
         print("Set annealing to %.2f" % beta)
-        Q.update(repeat=maxiter, tol=1e-8)
-        if beta == 1:
-            break
-        else:
-            beta = min(beta*2, 1.0)
+        Q.update(repeat=maxiter, tol=1e-4)
 
     ## if plot:
     ##     bpplt.pyplot.plot(Q.L, 'r:')
