@@ -83,6 +83,7 @@ class VB():
         
         self.iter = -1
         self.annealing_changed = False
+        self.converged = False
         self.L = np.array(())
         self.cputime = np.array(())
         self.l = dict(zip(self.model, 
@@ -149,16 +150,7 @@ class VB():
 
 
     def has_converged(self, tol=None):
-        # Check for convergence
-        L0 = self.L[self.iter-1]
-        L1 = self.L[self.iter]
-        if tol is None:
-            tol = self.tol
-        div = 0.5 * (abs(L0) + abs(L1))
-        if (L1 - L0) / div < tol or L1 - L0 <= 0:
-            return True
-        else:
-            return False
+        return self.converged
 
 
 
@@ -183,7 +175,7 @@ class VB():
             
         return L
 
-    def plot_iteration_by_nodes(self, axes=None):
+    def plot_iteration_by_nodes(self, axes=None, diff=False):
         """
         Plot the cost function per node during the iteration.
 
@@ -194,16 +186,25 @@ class VB():
             axes = plt.gca()
         
         D = len(self.l)
-        N = self.iter
-        L = np.empty((N,D))
+        N = self.iter + 1
+        if diff:
+            L = np.empty((N-1,D))
+            x = np.arange(N-1) + 2
+        else:
+            L = np.empty((N,D))
+            x = np.arange(N) + 1
         legends = []
         for (d, node) in enumerate(self.l):
-            L[:,d] = self.l[node]
+            if diff:
+                L[:,d] = np.diff(self.l[node][:N])
+            else:
+                L[:,d] = self.l[node][:N]
             legends += [node.name]
-        axes.plot(np.arange(N)+1, L)
+        axes.plot(x, L)
         axes.legend(legends, loc='lower right')
         axes.set_title('Lower bound contributions by nodes')
         axes.set_xlabel('Iteration')
+
 
     def get_iteration_by_nodes(self):
         return self.l
@@ -244,10 +245,11 @@ class VB():
             misc.write_to_hdf5(h5f, self.L, 'L')
             misc.write_to_hdf5(h5f, self.cputime, 'cputime')
             misc.write_to_hdf5(h5f, self.iter, 'iter')
+            misc.write_to_hdf5(h5f, self.converged, 'converged')
             if self.callback_output is not None:
                 misc.write_to_hdf5(h5f, 
-                                          self.callback_output,
-                                          'callback_output')
+                                   self.callback_output,
+                                   'callback_output')
             boundgroup = h5f.create_group('boundterms')
             for node in self.model:
                 misc.write_to_hdf5(boundgroup, self.l[node], node.name)
@@ -291,6 +293,7 @@ class VB():
             self.L = h5f['L'][...]
             self.cputime = h5f['cputime'][...]
             self.iter = h5f['iter'][...]
+            self.converged = h5f['converged'][...]
             for node in self.model:
                 self.l[node] = h5f['boundterms'][node.name][...]
             try:
@@ -437,7 +440,7 @@ class VB():
         for node in collapsed:
             self[node].update()
 
-        L = self.loglikelihood_lowerbound()
+        L = self.compute_lowerbound()
 
         s = g2
         cputime = time.clock() - t
@@ -494,7 +497,7 @@ class VB():
                 for node in collapsed:
                     self[node].update()
 
-                L = self.loglikelihood_lowerbound()
+                L = self.compute_lowerbound()
 
                 if L < self.L[self.iter] and not np.allclose(L, self.L[self.iter], rtol=1e-8):
                     print("WARNING! CG decreased lower bound to %e, use gradient and reset CG" % L)
@@ -580,6 +583,7 @@ class VB():
         for node in self.model:
             node.annealing = annealing
         self.annealing_changed = True
+        self.converged = False
         return
 
 
@@ -629,7 +633,7 @@ class VB():
                       % (self.iter+1, L, cputime))
 
         # Check the progress of the iteration
-        converged = False
+        self.converged = False
         if not self.annealing_changed and self.iter > 0:
             # Check for errors
             if self.L[self.iter-1] - L > 1e-6:
@@ -638,10 +642,15 @@ class VB():
                               "numerical inaccuracy?" % L_diff)
 
             # Check for convergence
-            if self.has_converged(tol=tol):
-                converged = True
+            L0 = self.L[self.iter-1]
+            L1 = self.L[self.iter]
+            if tol is None:
+                tol = self.tol
+            div = 0.5 * (abs(L0) + abs(L1))
+            if (L1 - L0) / div < tol or L1 - L0 <= 0:
                 if verbose:
                     print("Converged at iteration %d." % (self.iter+1))
+                self.converged = True
 
         # Auto-save, if requested
         if (self.autosave_iterations > 0 
@@ -653,4 +662,4 @@ class VB():
 
         self.annealing_changed = False
 
-        return converged
+        return self.converged
