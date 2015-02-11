@@ -119,8 +119,8 @@ class ExponentialFamily(Stochastic):
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
        _compute_mask_to_parent(index, mask)
-       _plates_to_parent(self, index)
-       _plates_from_parent(self, index)
+       _compute_plates_to_parent(self, index, plates)
+       _compute_plates_from_parent(self, index, plates)
     
     """
 
@@ -494,12 +494,15 @@ class ExponentialFamily(Stochastic):
 
         if ignore_masked:
             return (np.sum(np.where(self.mask, L, 0))
-                    * self._plate_multiplier(self.plates,
-                                             np.shape(L),
-                                             np.shape(self.mask)))
+                    * self.broadcasting_multiplier(self.plates,
+                                                   np.shape(L),
+                                                   np.shape(self.mask))
+                    * np.prod(self.plate_multiplier))
         else:
-            return np.sum(L) * self._plate_multiplier(self.plates,
-                                                      np.shape(L))
+            return (np.sum(L)
+                    * self.broadcasting_multiplier(self.plates,
+                                                   np.shape(L))
+                    * np.prod(self.plate_multiplier))
 
 
     def logpdf(self, X, mask=True):

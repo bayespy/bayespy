@@ -46,8 +46,8 @@ class Deterministic(Node):
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
        _compute_mask_to_parent(index, mask)
-       _plates_to_parent(self, index)
-       _plates_from_parent(self, index)
+       _compute_plates_to_parent(self, index, plates)
+       _compute_plates_from_parent(self, index, plates)
     
     
     """
@@ -193,15 +193,14 @@ def tile(X, tiles):
             self._moments = X._moments
             super().__init__(X, dims=X.dims, **kwargs)
     
-        def _plates_to_parent(self, index):
-            plates = list(self.plates)
+        def _compute_plates_to_parent(self, index, plates):
+            plates = list(plates)
             for i in range(-len(tiles), 0):
                 plates[i] = plates[i] // tiles[i]
             return tuple(plates)
 
-        def _plates_from_parent(self, index):
-            return tuple(misc.multiply_shapes(self.parents[index].plates,
-                                              tiles))
+        def _compute_plates_from_parent(self, index, plates):
+            return tuple(misc.multiply_shapes(plates, tiles))
 
         def _compute_mask_to_parent(self, index, mask):
             # Idea: Reshape the message array such that every other axis

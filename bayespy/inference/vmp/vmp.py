@@ -79,6 +79,8 @@ class VB():
         # Remove duplicate nodes
         self.model = misc.unique(nodes)
 
+        self.ignore_bound_checks = False
+
         self._figures = {}
         
         self.iter = -1
@@ -210,7 +212,10 @@ class VB():
         return self.l
 
 
-    def save(self, filename=None):
+    def save(self, *nodes, filename=None):
+
+        if len(nodes) == 0:
+            nodes = self.model
 
         if self.iter == 0:
             # Check HDF5 version.
@@ -235,7 +240,7 @@ class VB():
         try:
             # Write each node
             nodegroup = h5f.create_group('nodes')
-            for node in self.model:
+            for node in nodes:
                 if node.name == '':
                     raise Exception("In order to save nodes, they must have "
                                     "(unique) names.")
@@ -251,7 +256,7 @@ class VB():
                                    self.callback_output,
                                    'callback_output')
             boundgroup = h5f.create_group('boundterms')
-            for node in self.model:
+            for node in nodes:
                 misc.write_to_hdf5(boundgroup, self.l[node], node.name)
         finally:
             # Close file
@@ -294,7 +299,7 @@ class VB():
             self.cputime = h5f['cputime'][...]
             self.iter = h5f['iter'][...]
             self.converged = h5f['converged'][...]
-            for node in self.model:
+            for node in nodes:
                 self.l[node] = h5f['boundterms'][node.name][...]
             try:
                 self.callback_output = h5f['callback_output'][...]
@@ -338,6 +343,16 @@ class VB():
                 fig.canvas.draw()
 
 
+    @property
+    def ignore_bound_checks(self):
+        return self.__ignore_bound_checks
+
+
+    @ignore_bound_checks.setter
+    def ignore_bound_checks(self, ignore):
+        self.__ignore_bound_checks = ignore
+
+
     def get_gradients(self, *nodes, euclidian=False):
         """
         Computes gradients (both Riemannian and normal)
@@ -365,6 +380,17 @@ class VB():
         """
         for (node, xi) in zip(nodes, x):
             self[node].set_parameters(xi)
+        return
+
+
+    def gradient_step(self, *nodes, scale=1.0):
+        """
+        Update nodes by taking a gradient ascent step
+        """
+        p = self.add(self.get_parameters(*nodes),
+                     self.get_gradients(*nodes),
+                     scale=scale)
+        self.set_parameters(p, *nodes)
         return
 
 
@@ -634,7 +660,7 @@ class VB():
 
         # Check the progress of the iteration
         self.converged = False
-        if not self.annealing_changed and self.iter > 0:
+        if not self.ignore_bound_checks and not self.annealing_changed and self.iter > 0:
             # Check for errors
             if self.L[self.iter-1] - L > 1e-6:
                 L_diff = (self.L[self.iter-1] - L)

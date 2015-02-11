@@ -178,15 +178,14 @@ class Gate(Deterministic):
             raise ValueError("Invalid parent index")
 
 
-    def _plates_to_parent(self, index):
+    def _compute_plates_to_parent(self, index, plates):
         """
         """
         if index == 0:
-            return self.plates
+            return plates
         elif index == 1:
-
+            plates = list(plates)
             # Add the cluster plate axis
-            plates = list(self.plates)
             if self.gated_plate < 0:
                 knd = len(plates) + self.gated_plate + 1
             else:
@@ -198,14 +197,14 @@ class Gate(Deterministic):
             raise ValueError("Invalid parent index")
 
 
-    def _plates_from_parent(self, index):
+    def _compute_plates_from_parent(self, index, plates):
         """
         """
         if index == 0:
-            return self.parents[index].plates
+            return plates
         elif index == 1:
+            plates = list(plates)
             # Remove the cluster plate, if the parent has it
-            plates = list(self.parents[index].plates)
             if len(plates) >= abs(self.gated_plate):
                 plates.pop(self.gated_plate)
             return tuple(plates)
