@@ -215,7 +215,7 @@ def tile(X, tiles):
             
             # Handle broadcasting rules for axes that have unit length in
             # the message (although the plate may be non-unit length). Also,
-            # compute the corresponding plate_multiplier.
+            # compute the corresponding broadcasting_multiplier.
             plates = list(plates)
             tiles_m = list(tiles_m)
             for j in range(len(plates)):
@@ -261,7 +261,7 @@ def tile(X, tiles):
 
                 # Handle broadcasting rules for axes that have unit length in
                 # the message (although the plate may be non-unit length). Also,
-                # compute the corresponding plate_multiplier.
+                # compute the corresponding broadcasting multiplier.
                 r = 1
                 shape = list(shape)
                 tiles_ind = list(tiles_ind)

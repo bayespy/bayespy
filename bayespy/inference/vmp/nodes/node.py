@@ -229,7 +229,7 @@ class Node():
 
     @ensureparents
     def __init__(self, *parents, dims=None, plates=None, name="", 
-                 notify_parents=True, plotter=None, plate_multiplier=None):
+                 notify_parents=True, plotter=None, plates_multiplier=None):
 
         self.parents = parents
         self.dims = dims
@@ -265,13 +265,13 @@ class Node():
         self.children = set()
 
         # Get and validate the plate multiplier
-        parent_plate_multiplier = [self._plate_multiplier_from_parent(index) 
+        parent_plates_multiplier = [self._plates_multiplier_from_parent(index) 
                                    for index in range(len(self.parents))]
-        #if plate_multiplier is None:
-        #    plate_multiplier = parent_plate_multiplier
-        plate_multiplier = self._total_plates(plate_multiplier,
-                                              *parent_plate_multiplier)
-        self.plate_multiplier = plate_multiplier
+        #if plates_multiplier is None:
+        #    plates_multiplier = parent_plates_multiplier
+        plates_multiplier = self._total_plates(plates_multiplier,
+                                              *parent_plates_multiplier)
+        self.plates_multiplier = plates_multiplier
 
 
     def _get_id_list(self):
@@ -344,28 +344,21 @@ class Node():
                                                 self.parents[index].plates)
 
 
-    ## def _plate_multiplier_to_parent(self, index):
-    ##     return self._compute_plates_to_parent(index, self.plate_multiplier)
-        
-
-    def _plate_multiplier_from_parent(self, index):
+    def _plates_multiplier_from_parent(self, index):
         return self._compute_plates_from_parent(index,
-                                                self.parents[index].plate_multiplier)
+                                                self.parents[index].plates_multiplier)
 
 
     @property
-    def plate_multiplier(self):
+    def plates_multiplier(self):
         """ Plate multiplier is applied to messages to parents """
-        return self.__plate_multiplier
+        return self.__plates_multiplier
 
 
-    @plate_multiplier.setter
-    def plate_multiplier(self, value):
+    @plates_multiplier.setter
+    def plates_multiplier(self, value):
         # TODO/FIXME: Check that multiplier is consistent with plates
-        self.__plate_multiplier = value
-        ## if hasattr(self, 'parents'):
-        ##     for (ind, parent) in enumerate(self.parents):
-        ##         parent.plate_multiplier = self._plate_multiplier_to_parent(ind)
+        self.__plates_multiplier = value
         return
 
 
@@ -581,16 +574,16 @@ class Node():
                                         index, 
                                         parent.plates))
 
-                multiplier_parent = self._plate_multiplier_from_parent(index)
+                multiplier_parent = self._plates_multiplier_from_parent(index)
                 try:
-                    r *= self.broadcasting_multiplier(self.plate_multiplier,
+                    r *= self.broadcasting_multiplier(self.plates_multiplier,
                                                       multiplier_parent)
                 except:
                     raise ValueError("The plate multipliers are incompatible. "
                                      "This node (%s) has %s and parent[%d] "
                                      "(%s) has %s"
                                      % (self.name,
-                                        self.plate_multiplier,
+                                        self.plates_multiplier,
                                         index,
                                         parent.name,
                                         multiplier_parent))

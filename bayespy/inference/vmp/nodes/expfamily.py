@@ -497,12 +497,12 @@ class ExponentialFamily(Stochastic):
                     * self.broadcasting_multiplier(self.plates,
                                                    np.shape(L),
                                                    np.shape(self.mask))
-                    * np.prod(self.plate_multiplier))
+                    * np.prod(self.plates_multiplier))
         else:
             return (np.sum(L)
                     * self.broadcasting_multiplier(self.plates,
                                                    np.shape(L))
-                    * np.prod(self.plate_multiplier))
+                    * np.prod(self.plates_multiplier))
 
 
     def logpdf(self, X, mask=True):
