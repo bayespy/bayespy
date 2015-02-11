@@ -297,7 +297,7 @@ class ExponentialFamily(Stochastic):
         # Compute the gradient
         phi = self._distribution.compute_phi_from_parents(*u_parents)
         for i in range(len(self.phi)):
-            phi[i] = self.annealing * (phi[i] + m_children[i]) - self.phi[i]
+            phi[i] = phi[i] + m_children[i] - self.phi[i]/self.annealing
             phi[i] = phi[i] * np.ones(self.get_shape(i))
 
         # Allow using reparameterization (e.g., log for positive parameters)
@@ -429,21 +429,31 @@ class ExponentialFamily(Stochastic):
         self._update_mask()
 
     def lower_bound_contribution(self, gradient=False, ignore_masked=True):
-        # Compute E[ log p(X|parents) - log q(X) ] over q(X)q(parents)
+        r"""Compute E[ log p(X|parents) - log q(X) ]
+
+        If deterministic annealing is used, the term E[ -log q(X) ] is
+        divided by the anneling coefficient.  That is, phi and cgf of q
+        are multiplied by the temperature (inverse annealing
+        coefficient).
+        
+        """
+
+        # Annealing temperature
+        T = 1 / self.annealing
         
         # Messages from parents
         #u_parents = [parent.message_to_child() for parent in self.parents]
         u_parents = self._message_from_parents()
         phi = self._distribution.compute_phi_from_parents(*u_parents)
         # G from parents
-        L = self.annealing * self._distribution.compute_cgf_from_parents(*u_parents)
+        L = self._distribution.compute_cgf_from_parents(*u_parents)
         # L = g
         # G for unobserved variables (ignored variables are handled
         # properly automatically)
         latent_mask = np.logical_not(self.observed)
         #latent_mask = np.logical_and(self.mask, np.logical_not(self.observed))
         # F for observed, G for latent
-        L = L + np.where(self.observed, self.annealing*self.f, -self.g)
+        L = L + np.where(self.observed, self.f, -T*self.g)
         for (phi_p, phi_q, u_q, dims) in zip(phi, self.phi, self.u, self.dims):
             # Form a mask which puts observed variables to zero and
             # broadcasts properly
@@ -457,9 +467,9 @@ class ExponentialFamily(Stochastic):
             # Compute the term
             phi_q = np.where(latent_mask_i, phi_q, 0)
             # Apply annealing
-            phi_p = self.annealing * phi_p
+            phi_p = phi_p
             # TODO/FIXME: Use einsum here?
-            Z = np.sum((phi_p-phi_q) * u_q, axis=axis_sum)
+            Z = np.sum((phi_p-T*phi_q) * u_q, axis=axis_sum)
 
             L = L + Z
 
