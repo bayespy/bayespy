@@ -20,9 +20,9 @@ matrix:
 install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq libatlas-dev libatlas-base-dev liblapack-dev gfortran hdf5-tools libhdf5-serial-dev
-  - pip install numpy$NUMPYSPEC
-  - pip install scipy$SCIPYSPEC
-  - pip install matplotlib$MATPLOTLIBSPEC
+  - travis_wait pip install numpy$NUMPYSPEC
+  - travis_wait pip install scipy$SCIPYSPEC
+  - travis_wait pip install matplotlib$MATPLOTLIBSPEC
   - pip install h5py
   - pip install coverage coveralls
 # command to run tests, e.g. python setup.py test
