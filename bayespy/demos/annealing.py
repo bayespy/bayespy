@@ -72,9 +72,9 @@ def run(N=500, seed=42, maxiter=100, plot=True):
 
     Y.observe(data)
 
-    # Initialize means closer to the inferior local optimum
+    # Initialize means closer to the inferior local optimum in which the
+    # cluster means are swapped
     mu.initialize_from_value([0, 6])
-    #mu.initialize_from_value([6, 0])
 
     Q = VB(Y, Z, mu)
     Q.save()
@@ -83,8 +83,6 @@ def run(N=500, seed=42, maxiter=100, plot=True):
     # Standard VB-EM algorithm
     #
     Q.update(repeat=maxiter)
-    ## if plot:
-    ##     bpplt.pyplot.plot(Q.L, 'k-')
 
     mu_vbem = mu.u[0].copy()
     L_vbem = Q.compute_lowerbound()
@@ -95,18 +93,10 @@ def run(N=500, seed=42, maxiter=100, plot=True):
     Q.load()
     beta = 0.01
     while beta < 1.0:
-        beta = min(beta*1.5, 1.0)
-        Q.set_annealing(beta)
+        beta = min(beta*1.2, 1.0)
         print("Set annealing to %.2f" % beta)
+        Q.set_annealing(beta)
         Q.update(repeat=maxiter, tol=1e-4)
-
-    ## if plot:
-    ##     bpplt.pyplot.plot(Q.L, 'r:')
-
-    ##     bpplt.pyplot.xlabel('Iterations')
-    ##     bpplt.pyplot.ylabel('VB lower bound')
-    ##     bpplt.pyplot.legend(['VB-EM', 'Deterministic annealing'],
-    ##                         loc='lower right')
 
     mu_anneal = mu.u[0].copy()
     L_anneal = Q.compute_lowerbound()
@@ -148,5 +138,6 @@ if __name__ == '__main__':
             kwargs["N"] = int(arg)
 
     run(**kwargs)
+
     plt.show()
 
