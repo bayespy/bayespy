@@ -114,7 +114,9 @@ def run(N=500, seed=42, maxiter=100, plot=True):
     mu_anneal = mu.u[0].copy()
     L_anneal = Q.compute_lowerbound()
 
-    print("True component probabilities:", np.array([0.3, 0.7]))
+    print("==============================")
+    print("RESULTS FOR VB-EM vs ANNEALING")
+    print("Fixed component probabilities:", np.array([0.3, 0.7]))
     print("True component means:", np.array([4, -4]))
     print("VB-EM component means:", mu_vbem)
     print("VB-EM lower bound:", L_vbem)
