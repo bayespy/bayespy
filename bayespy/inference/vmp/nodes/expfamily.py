@@ -21,6 +21,8 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+import warnings
+
 import numpy as np
 
 from bayespy.utils import misc
@@ -256,8 +258,10 @@ class ExponentialFamily(Stochastic):
 
     def _set_moments_and_cgf(self, u, g, mask=True):
         self._set_moments(u, mask=mask)
-        # TODO/FIXME: Apply mask to g too!!
-        self.g = g
+
+        self.g = np.where(mask, g, self.g)
+
+        return
 
 
     def _compute_gradient(self, m_children, *u_parents):
@@ -328,19 +332,19 @@ class ExponentialFamily(Stochastic):
         return g
 
 
-    def update_parameters(self, d, scale=1.0):
-        r"""
-        Update the parameters of the VB distribution given a change.
+    ## def update_parameters(self, d, scale=1.0):
+    ##     r"""
+    ##     Update the parameters of the VB distribution given a change.
 
-        The parameters should be such that they can be used for
-        optimization, that is, use log transformation for positive
-        parameters.
-        """
-        phi = self.get_parameters()
-        for i in range(len(phi)):
-            phi[i] = phi[i] + scale*d[i]
-        self.set_parameters(phi)
-        return
+    ##     The parameters should be such that they can be used for
+    ##     optimization, that is, use log transformation for positive
+    ##     parameters.
+    ##     """
+    ##     phi = self.get_parameters()
+    ##     for i in range(len(phi)):
+    ##         phi[i] = phi[i] + scale*d[i]
+    ##     self.set_parameters(phi)
+    ##     return
 
 
     def get_parameters(self):
@@ -377,8 +381,8 @@ class ExponentialFamily(Stochastic):
         # Update phi first from parents..
         self._update_phi_from_parents(*u_parents)
         # .. then just add children's message
-        for i in range(len(self.phi)):
-            self.phi[i] = self.annealing * (self.phi[i] + m_children[i])
+        self.phi = [self.annealing * (phi + m)
+                    for (phi, m) in zip(self.phi, m_children)]
 
         # Update u and g
         self._update_moments_and_cgf()
@@ -421,8 +425,7 @@ class ExponentialFamily(Stochastic):
         # Set the moments
         self._set_moments(u, mask=mask)
         
-        # TODO/FIXME: Use the mask?
-        self.f = f
+        self.f = np.where(mask, f, self.f)
 
         # Observed nodes should not be ignored
         self.observed = mask
@@ -442,18 +445,35 @@ class ExponentialFamily(Stochastic):
         T = 1 / self.annealing
         
         # Messages from parents
-        #u_parents = [parent.message_to_child() for parent in self.parents]
         u_parents = self._message_from_parents()
         phi = self._distribution.compute_phi_from_parents(*u_parents)
         # G from parents
         L = self._distribution.compute_cgf_from_parents(*u_parents)
-        # L = g
-        # G for unobserved variables (ignored variables are handled
-        # properly automatically)
+
+        # G for unobserved variables (ignored variables are handled properly
+        # automatically)
         latent_mask = np.logical_not(self.observed)
-        #latent_mask = np.logical_and(self.mask, np.logical_not(self.observed))
-        # F for observed, G for latent
-        L = L + np.where(self.observed, self.f, -T*self.g)
+
+        # G and F
+        if np.all(self.observed):
+            z = np.nan
+        elif T == 1:
+            z = -self.g
+        else:
+            z = -T * self.g
+            ## TRIED THIS BUT IT WAS WRONG:
+            ## z = -T * self.g + (1-T) * self.f
+            ## if np.any(np.isnan(self.f)):
+            ##     warnings.warn("F(x) not implemented for node %s. This "
+            ##                   "is required for annealed lower bound "
+            ##                   "computation." % self.__class__.__name__)
+            ##
+            ## It was wrong because the optimal q distribution has f which is
+            ## weighted by 1/T and here the f of q is weighted by T so the
+            ## total weight is 1, thus it cancels out with f of p.
+
+        L = L + np.where(self.observed, self.f, z)
+
         for (phi_p, phi_q, u_q, dims) in zip(phi, self.phi, self.u, self.dims):
             # Form a mask which puts observed variables to zero and
             # broadcasts properly
@@ -467,7 +487,6 @@ class ExponentialFamily(Stochastic):
             # Compute the term
             phi_q = np.where(latent_mask_i, phi_q, 0)
             # Apply annealing
-            phi_p = phi_p
             # TODO/FIXME: Use einsum here?
             Z = np.sum((phi_p-T*phi_q) * u_q, axis=axis_sum)
 
