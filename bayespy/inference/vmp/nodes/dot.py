@@ -488,9 +488,9 @@ class SumMultiply(Deterministic):
             # plates of the parent. In order to avoid this broadcasting and
             # summing, it is more efficient to just multiply by the correct
             # factor.
-            r = self._plate_multiplier(self.plates, 
-                                       result_plates,
-                                       parent.plates)
+            r = self.broadcasting_multiplier(self.plates, 
+                                             result_plates,
+                                             parent.plates)
             if r != 1:
                 msg[ind] *= r
 

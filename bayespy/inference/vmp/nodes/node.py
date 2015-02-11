@@ -229,7 +229,7 @@ class Node():
 
     @ensureparents
     def __init__(self, *parents, dims=None, plates=None, name="", 
-                 notify_parents=True, plotter=None):
+                 notify_parents=True, plotter=None, plates_multiplier=None):
 
         self.parents = parents
         self.dims = dims
@@ -263,6 +263,15 @@ class Node():
 
         # Children
         self.children = set()
+
+        # Get and validate the plate multiplier
+        parent_plates_multiplier = [self._plates_multiplier_from_parent(index) 
+                                   for index in range(len(self.parents))]
+        #if plates_multiplier is None:
+        #    plates_multiplier = parent_plates_multiplier
+        plates_multiplier = self._total_plates(plates_multiplier,
+                                              *parent_plates_multiplier)
+        self.plates_multiplier = plates_multiplier
 
 
     def _get_id_list(self):
@@ -315,13 +324,43 @@ class Node():
         from .constant import Constant
         return Constant(moments, node)
 
-    def _plates_to_parent(self, index):
+
+    def _compute_plates_to_parent(self, index, plates):
         # Sub-classes may want to overwrite this if they manipulate plates
-        return self.plates
+        return plates
+
+
+    def _compute_plates_from_parent(self, index, plates):
+        # Sub-classes may want to overwrite this if they manipulate plates
+        return plates
+
+
+    def _plates_to_parent(self, index):
+        return self._compute_plates_to_parent(index, self.plates)
+
 
     def _plates_from_parent(self, index):
-        # Sub-classes may want to overwrite this if they manipulate plates
-        return self.parents[index].plates
+        return self._compute_plates_from_parent(index,
+                                                self.parents[index].plates)
+
+
+    def _plates_multiplier_from_parent(self, index):
+        return self._compute_plates_from_parent(index,
+                                                self.parents[index].plates_multiplier)
+
+
+    @property
+    def plates_multiplier(self):
+        """ Plate multiplier is applied to messages to parents """
+        return self.__plates_multiplier
+
+
+    @plates_multiplier.setter
+    def plates_multiplier(self, value):
+        # TODO/FIXME: Check that multiplier is consistent with plates
+        self.__plates_multiplier = value
+        return
+
 
     def get_shape(self, ind):
         return self.plates + self.dims[ind]
@@ -512,10 +551,10 @@ class Node():
                 # sum over it), so we need to multiply it.
                 plates_self = self._plates_to_parent(index)
                 try:
-                    r = self._plate_multiplier(plates_self, 
-                                               plates_m,
-                                               plates_mask,
-                                               parent.plates)
+                    r = self.broadcasting_multiplier(plates_self, 
+                                                     plates_m,
+                                                     plates_mask,
+                                                     parent.plates)
                 except ValueError:
                     raise ValueError("The plates of the message, the mask and "
                                      "parent[%d] node (%s) are not a "
@@ -534,6 +573,20 @@ class Node():
                                         plates_self,
                                         index, 
                                         parent.plates))
+
+                multiplier_parent = self._plates_multiplier_from_parent(index)
+                try:
+                    r *= self.broadcasting_multiplier(self.plates_multiplier,
+                                                      multiplier_parent)
+                except:
+                    raise ValueError("The plate multipliers are incompatible. "
+                                     "This node (%s) has %s and parent[%d] "
+                                     "(%s) has %s"
+                                     % (self.name,
+                                        self.plates_multiplier,
+                                        index,
+                                        parent.name,
+                                        multiplier_parent))
 
                 # Add variable axes to the mask
                 shape_mask = np.shape(mask) + (1,) * len(parent.dims[i])
@@ -594,7 +647,7 @@ class Node():
             parent._remove_child(self, ind)
 
     @staticmethod
-    def _plate_multiplier(plates, *args):
+    def broadcasting_multiplier(plates, *args):
         """
         Compute the plate multiplier for given shapes.
 
@@ -711,7 +764,7 @@ class Node():
         # Compute the correction term.  If some of the plates that should be
         # summed are actually broadcasted, one must multiply by the size of the
         # corresponding plate
-        r = Node._plate_multiplier(plates_from, arrays_plates, plates_to)
+        r = Node.broadcasting_multiplier(plates_from, arrays_plates, plates_to)
 
         # For simplicity, make the arrays equal ndim
         arrays = misc.make_equal_ndim(*arrays)

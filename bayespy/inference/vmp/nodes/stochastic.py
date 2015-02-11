@@ -104,8 +104,8 @@ class Stochastic(Node):
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
        _compute_mask_to_parent(index, mask)
-       _plates_to_parent(self, index)
-       _plates_from_parent(self, index)
+       _compute_plates_to_parent(self, index, plates)
+       _compute_plates_from_parent(self, index, plates)
     
     """
 
@@ -153,12 +153,11 @@ class Stochastic(Node):
         return [self._id]
 
     
-    def _plates_to_parent(self, index):
-        return self._distribution.plates_to_parent(index, self.plates)
+    def _compute_plates_to_parent(self, index, plates):
+        return self._distribution.plates_to_parent(index, plates)
 
-    def _plates_from_parent(self, index):
-        return self._distribution.plates_from_parent(index,
-                                                     self.parents[index].plates)
+    def _compute_plates_from_parent(self, index, plates):
+        return self._distribution.plates_from_parent(index, plates)
     
     def _compute_mask_to_parent(self, index, mask):
         return self._distribution.compute_mask_to_parent(index, mask)
@@ -231,11 +230,14 @@ class Stochastic(Node):
                        self.dims[ind]))
 
                 
-    def update(self):
+    def update(self, annealing=1.0):
         if not np.all(self.observed):
             u_parents = self._message_from_parents()
             m_children = self._message_from_children()
+            if annealing != 1.0:
+                m_children = [annealing * m for m in m_children]
             self._update_distribution_and_lowerbound(m_children, *u_parents)
+
 
     def observe(self, x, mask=True):
         """

@@ -374,8 +374,8 @@ def covariance_to_variance(C, ndim=1, covariance_axis=None):
 def sum_to_plates(V, plates_to, plates_from=None, ndim=0):
     if ndim == 0:
         if plates_from is not None:
-            r = gaussian.Gaussian._plate_multiplier(plates_from,
-                                                    np.shape(V))
+            r = gaussian.Gaussian.broadcasting_multiplier(plates_from,
+                                                          np.shape(V))
         else:
             r = 1
         return r * misc.sum_to_shape(V, plates_to)
@@ -384,7 +384,7 @@ def sum_to_plates(V, plates_to, plates_from=None, ndim=0):
         plates_V = np.shape(V)[:-ndim]
         shape_to = tuple(plates_to) + dims_V
         if plates_from is not None:
-            r = gaussian.Gaussian._plate_multiplier(plates_from, plates_V)
+            r = gaussian.Gaussian.broadcasting_multiplier(plates_from, plates_V)
         else:
             r = 1
         return r * misc.sum_to_shape(V, shape_to)
@@ -724,7 +724,7 @@ class RotateGaussianARD():
         def sum_plates(V, *plates):
             full_plates = misc.broadcasted_shape(*plates)
             
-            r = self.node_X._plate_multiplier(full_plates, np.shape(V))
+            r = self.node_X.broadcasting_multiplier(full_plates, np.shape(V))
             return r * np.sum(V)
 
         XmuXmu_alpha = XmuXmu * alpha
@@ -788,10 +788,10 @@ class RotateGaussianARD():
         # Compute the gradient with respect R
         #
 
-        plate_multiplier = self.node_X._plate_multiplier
+        broadcasting_multiplier = self.node_X.broadcasting_multiplier
         def sum_plates(V, plates):
             ones = np.ones(np.shape(R))
-            r = plate_multiplier(plates, np.shape(V)[:-2])
+            r = broadcasting_multiplier(plates, np.shape(V)[:-2])
             return r * misc.sum_multiply(V, ones,
                                          axis=(-1,-2),
                                          sumaxis=False,
@@ -842,7 +842,7 @@ class RotateGaussianARD():
                                          0,
                                          (sum_plates(D_logalpha,
                                                      plates_X)
-                                          * plate_multiplier((D,),
+                                          * broadcasting_multiplier((D,),
                                                              plates_alpha[-1:])),
                                          0)
 
@@ -941,8 +941,8 @@ class RotateGaussianARD():
 
         def sum_plates(V, plates):
             ones = np.ones(np.shape(Q))
-            r = self.node_X._plate_multiplier(plates,
-                                              np.shape(V)[:-2])
+            r = self.node_X.broadcasting_multiplier(plates,
+                                                    np.shape(V)[:-2])
 
             return r * misc.sum_multiply(V, ones,
                                          axis=(-1,-2),
@@ -973,7 +973,7 @@ class RotateGaussianARD():
                                           0,
                                           (sum_plates(D_logalpha,
                                                       plates_X[:-1])
-                                           * plate_multiplier((N,D),
+                                           * broadcasting_multiplier((N,D),
                                                               plates_alpha[-2:])),
                                           0)
 

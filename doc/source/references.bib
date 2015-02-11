@@ -1,61 +1,96 @@
-@ARTICLE{Luttinen:2010,
-  author = {Luttinen, Jaakko and Ilin, Alexander},
-  title = {Transformations in variational {Bayesian} factor analysis to speed
-        up learning},
-  journal = {Neurocomputing},
-  year = {2010},
-  volume = {73},
-  pages = {1093--1102},
-  abstract = {We propose simple transformation of the hidden states in variational
-        Bayesian factor analysis models to speed up the learning procedure.
-        The speed-up is achieved by using proper parameterization of the
-        posterior approximation which allows joint optimization of its individual
-        factors, thus the transformation is theoretically justified. We derive
-        the transformation formulae for variational Bayesian factor analysis
-        and show experimentally that it can significantly improve the rate
-        of convergence. The proposed transformation basically performs centering
-        and whitening of the hidden factors taking into account the posterior
-        uncertainties. Similar transformations can be applied to other variational
-        Bayesian factor analysis models as well.},
-  doi = {10.1016/j.neucom.2009.11.018}
+% This file was created with JabRef 2.10.
+% Encoding: ISO8859_1
+
+
+@InProceedings{Hensman:2012,
+  Title                    = {Fast Variational Inference in the Conjugate Exponential Family},
+  Author                   = {Hensman, James and Rattray, Magnus and Lawrence, Neil D.},
+  Booktitle                = {Advances in Neural Information Processing Systems 25},
+  Year                     = {2012},
+
+  Address                  = {Lake Tahoe, Nevada, USA},
+  Editor                   = {Pereira, F. and Burges, C.J.C. and Bottou, L. and Weinberger, K.Q.},
+  Pages                    = {2888--2896}
 }
 
-@INCOLLECTION{Luttinen:2013,
-  author = {Luttinen, Jaakko},
-  title = {Fast Variational {Bayesian} Linear State-Space Model},
-  booktitle = {Machine Learning and Knowledge Discovery in Databases},
-  publisher = {Springer},
-  year = {2013},
-  editor = {Blockeel, Hendrik and Kersting, Kristian and Nijssen, Siegfried and
-        Železný, Filip},
-  volume = {8188},
-  series = {Lecture Notes in Computer Science},
-  pages = {305--320},
-  abstract = {This paper presents a fast variational Bayesian method for linear
-        state-space models. The standard variational Bayesian expectation-maximization
-        (VB-EM) algorithm is improved by a parameter expansion which optimizes
-        the rotation of the latent space. With this approach, the inference
-        is orders of magnitude faster than the standard method. The speed
-        of the proposed method is demonstrated on an artificial dataset and
-        a large real-world dataset, which shows that the standard VB-EM algorithm
-        is not suitable for large datasets because it converges extremely
-        slowly. In addition, the paper estimates the temporal state variables
-        using a smoothing algorithm based on the block LDL decomposition.
-        This smoothing algorithm reduces the number of required matrix inversions
-        and avoids a model augmentation compared to previous approaches.},
-  doi = {10.1007/978-3-642-40988-2_20}
+@Article{Hoffman:2013,
+  Title                    = {Stochastic Variational Inference},
+  Author                   = {Hoffman, Matthew D. and David M. Blei and Chong Wang and John Paisley},
+  Journal                  = {Journal of Machine Learning Research},
+  Year                     = {2013},
+  Pages                    = {1303--47},
+  Volume                   = {14},
+
+  Owner                    = {jluttine},
+  Timestamp                = {2014.12.02}
 }
 
-@INCOLLECTION{Luttinen:2014,
-  author = {Luttinen, Jaakko and Raiko, Tapani and Ilin, Alexander},
-  title = {Linear State-Space Model with Time-Varying Dynamics},
-  booktitle = {Machine Learning and Knowledge Discovery in Databases},
-  publisher = {Springer},
-  year = {2014},
-  editor = {Calders, Toon and Esposito, Floriana and H\"ullermeier, Eyke and Meo, Rosa},
-  volume = {???},
-  series = {Lecture Notes in Computer Science},
-  pages = {???--???},
-  abstract = {???},
-  doi = {???}
+@Article{Honkela:2010,
+  Title                    = {Approximate {Riemannian} Conjugate Gradient Learning for Fixed-Form Variational {Bayes}},
+  Author                   = {Honkela, Antti and Raiko, Tapani and Kuusela, Mikael and Tornio, Matti and Karhunen, Juha},
+  Journal                  = {Journal of Machine Learning Research},
+  Year                     = {2010},
+  Pages                    = {3235--3268},
+  Volume                   = {11},
+
+  Owner                    = {jluttine},
+  Timestamp                = {2014.08.13}
 }
+
+@Article{Honkela:2003,
+  Title                    = {Accelerating Cyclic Update Algorithms for Parameter Estimation by Pattern Searches},
+  Author                   = {Honkela, Antti and Valpola, Harri and Karhunen, Juha},
+  Journal                  = {Neural Processing Letters},
+  Year                     = {2003},
+  Number                   = {2},
+  Pages                    = {191--203},
+  Volume                   = {17},
+
+  Doi                      = {10.1023/A:1023655202546},
+  Owner                    = {jluttine},
+  Timestamp                = {2015.02.10}
+}
+
+@InCollection{Luttinen:2013,
+  Title                    = {Fast Variational {Bayesian} Linear State-Space Model},
+  Author                   = {Luttinen, Jaakko},
+  Booktitle                = {Machine Learning and Knowledge Discovery in Databases},
+  Publisher                = {Springer},
+  Year                     = {2013},
+  Editor                   = {Blockeel, Hendrik and Kersting, Kristian and Nijssen, Siegfried and Železný, Filip},
+  Pages                    = {305--320},
+  Series                   = {Lecture Notes in Computer Science},
+  Volume                   = {8188},
+
+  Abstract                 = {This paper presents a fast variational Bayesian method for linear state-space models. The standard variational Bayesian expectation-maximization (VB-EM) algorithm is improved by a parameter expansion which optimizes the rotation of the latent space. With this approach, the inference is orders of magnitude faster than the standard method. The speed of the proposed method is demonstrated on an artificial dataset and a large real-world dataset, which shows that the standard VB-EM algorithm is not suitable for large datasets because it converges extremely slowly. In addition, the paper estimates the temporal state variables using a smoothing algorithm based on the block LDL decomposition. This smoothing algorithm reduces the number of required matrix inversions and avoids a model augmentation compared to previous approaches.},
+  Doi                      = {10.1007/978-3-642-40988-2_20}
+}
+
+@Article{Luttinen:2010,
+  Title                    = {Transformations in variational {Bayesian} factor analysis to speed up learning},
+  Author                   = {Luttinen, Jaakko and Ilin, Alexander},
+  Journal                  = {Neurocomputing},
+  Year                     = {2010},
+  Pages                    = {1093--1102},
+  Volume                   = {73},
+
+  Abstract                 = {We propose simple transformation of the hidden states in variational Bayesian factor analysis models to speed up the learning procedure. The speed-up is achieved by using proper parameterization of the posterior approximation which allows joint optimization of its individual factors, thus the transformation is theoretically justified. We derive the transformation formulae for variational Bayesian factor analysis and show experimentally that it can significantly improve the rate of convergence. The proposed transformation basically performs centering and whitening of the hidden factors taking into account the posterior uncertainties. Similar transformations can be applied to other variational Bayesian factor analysis models as well.},
+  Doi                      = {10.1016/j.neucom.2009.11.018}
+}
+
+@InCollection{Luttinen:2014,
+  Title                    = {Linear State-Space Model with Time-Varying Dynamics},
+  Author                   = {Luttinen, Jaakko and Raiko, Tapani and Ilin, Alexander},
+  Booktitle                = {Machine Learning and Knowledge Discovery in Databases},
+  Publisher                = {Springer},
+  Year                     = {2014},
+  Editor                   = {Calders, Toon and Esposito, Floriana and H\"ullermeier, Eyke and Meo, Rosa},
+  Note                     = {To appear},
+  Pages                    = {338--353},
+  Series                   = {Lecture Notes in Computer Science},
+  Volume                   = {8725},
+
+  Abstract                 = {This paper introduces a linear state-space model with time-varying dynamics. The time dependency is obtained by forming the state dynamics matrix as a time-varying linear combination of a set of matrices. The time dependency of the weights in the linear combination is modelled by another linear Gaussian dynamical model allowing the model to learn how the dynamics of the process changes. Previous approaches have used switching models which have a small set of possible state dynamics matrices and the model selects one of those matrices at each time, thus jumping between them. Our model forms the dynamics as a linear combination and the changes can be smooth and more continuous. The model is motivated by physical processes which are described by linear partial differential equations whose parameters vary in time. An example of such a process could be a temperature field whose evolution is driven by a varying wind direction. The posterior inference is performed using variational Bayesian approximation. The experiments on stochastic advection-diffusion processes and real-world weather processes show that the model with time-varying dynamics can outperform previously introduced approaches.},
+  Doi                      = {10.1007/978-3-662-44851-9_22}
+}
+

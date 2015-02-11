@@ -21,6 +21,8 @@
 # along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
 ######################################################################
 
+import warnings
+
 import numpy as np
 
 from bayespy.utils import misc
@@ -72,6 +74,16 @@ class ExponentialFamilyDistribution(Distribution):
         return L
 
 
+    def compute_gradient(self, g, u, phi):
+        r"""
+        Compute the standard gradient with respect to the natural parameters.
+        """
+
+        raise NotImplementedError("Standard gradient not yet implemented for %s"
+                                  % (self.__class__.__name__))
+
+
+
 def useconstructor(__init__):
     def constructor_decorator(self, *args, **kwargs):
         if (self.dims is None or
@@ -107,8 +119,8 @@ class ExponentialFamily(Stochastic):
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
        _compute_mask_to_parent(index, mask)
-       _plates_to_parent(self, index)
-       _plates_from_parent(self, index)
+       _compute_plates_to_parent(self, index, plates)
+       _compute_plates_from_parent(self, index, plates)
     
     """
 
@@ -120,6 +132,8 @@ class ExponentialFamily(Stochastic):
 
     @useconstructor
     def __init__(self, *parents, initialize=True, **kwargs):
+
+        self.annealing = 1.0
 
         # Terms for the lower bound (G for latent and F for observed)
         self.g = np.array(np.nan)
@@ -208,6 +222,7 @@ class ExponentialFamily(Stochastic):
         X = self.random()
         self.initialize_from_value(X)
 
+
     def _update_phi_from_parents(self, *u_parents):
 
         # TODO/FIXME: Could this be combined to the function
@@ -243,19 +258,135 @@ class ExponentialFamily(Stochastic):
 
     def _set_moments_and_cgf(self, u, g, mask=True):
         self._set_moments(u, mask=mask)
-        # TODO/FIXME: Apply mask to g too!!
-        self.g = g
+
+        self.g = np.where(mask, g, self.g)
+
+        return
+
+
+    def _compute_gradient(self, m_children, *u_parents):
+        r"""
+        Computes the Riemannian/natural gradient for exponential family.
+
+        d = phi_p - phi_q
+
+        where phi_p is phi from log p(all) and phi_q is from log q(self).
+        """
+
+        # Compute the gradient
+        phi = self._compute_phi_from_parents(*u_parents)
+        for i in range(len(self.phi)):
+            phi[i] = (phi[i] + m_children[i] - self.phi[i])
+
+        # Allow using reparameterization (e.g., log for positive parameters)
+        phi = self._parameters_gradient(phi)
+
+        # Explicit broadcasting
+        #for i in range(len(self.phi)):
+        #    phi[i] = phi[i] * np.ones(self.get_shape(i))
+
+        # Vectorize
+
+        return phi
+
+
+    def get_riemannian_gradient(self):
+        r"""
+        Computes the Riemannian/natural gradient.
+        """
+        u_parents = self._message_from_parents()
+        m_children = self._message_from_children()
+        
+        # TODO/FIXME: Put observed plates to zero?
+        # Compute the gradient
+        phi = self._distribution.compute_phi_from_parents(*u_parents)
+        for i in range(len(self.phi)):
+            phi[i] = phi[i] + m_children[i] - self.phi[i]/self.annealing
+            phi[i] = phi[i] * np.ones(self.get_shape(i))
+
+        # Allow using reparameterization (e.g., log for positive parameters)
+        #phi = self._parameters_gradient(phi)
+
+        # Explicit broadcasting
+        #for i in range(len(self.phi)):
+        #    phi[i] = phi[i] * np.ones(self.get_shape(i))
+
+        # Vectorize
+        
+
+        return phi
+        #return self._compute_gradient(m_children, *u_parents)
+
+
+    def get_gradient(self, rg):
+        r""" Computes gradient with respect to the natural parameters.
+
+        The function takes the Riemannian gradient as an input.  This is for
+        three reasons: 1) You probably want to use the Riemannian gradient
+        anyway so this helps avoiding accidental use of this function.  2) The
+        gradient is computed by using the Riemannian gradient and chain rules.
+        3) Probably you need both Riemannian and normal gradients anyway so you
+        can provide it to this function to avoid re-computing it."""
+            
+        g = self._distribution.compute_gradient(rg, self.u, self.phi)
+        return g
+
+
+    ## def update_parameters(self, d, scale=1.0):
+    ##     r"""
+    ##     Update the parameters of the VB distribution given a change.
+
+    ##     The parameters should be such that they can be used for
+    ##     optimization, that is, use log transformation for positive
+    ##     parameters.
+    ##     """
+    ##     phi = self.get_parameters()
+    ##     for i in range(len(phi)):
+    ##         phi[i] = phi[i] + scale*d[i]
+    ##     self.set_parameters(phi)
+    ##     return
+
+
+    def get_parameters(self):
+        r"""
+        Return parameters of the VB distribution.
+
+        The parameters should be such that they can be used for
+        optimization, that is, use log transformation for positive
+        parameters.
+        """
+        return [np.copy(p) for p in self.phi]
+            
+
+
+    def _decode_parameters(self, x):
+        return [np.copy(p) for p in x]
+
+
+    def set_parameters(self, x):
+        r"""
+        Set the parameters of the VB distribution.
+
+        The parameters should be such that they can be used for
+        optimization, that is, use log transformation for positive
+        parameters.
+        """
+        self.phi = self._decode_parameters(x)
+        self._update_moments_and_cgf()
+        return
+
 
     def _update_distribution_and_lowerbound(self, m_children, *u_parents):
 
         # Update phi first from parents..
         self._update_phi_from_parents(*u_parents)
         # .. then just add children's message
-        for i in range(len(self.phi)):
-            self.phi[i] = self.phi[i] + m_children[i]
+        self.phi = [self.annealing * (phi + m)
+                    for (phi, m) in zip(self.phi, m_children)]
 
         # Update u and g
         self._update_moments_and_cgf()
+
 
     def _update_moments_and_cgf(self):
         """
@@ -294,29 +425,55 @@ class ExponentialFamily(Stochastic):
         # Set the moments
         self._set_moments(u, mask=mask)
         
-        # TODO/FIXME: Use the mask?
-        self.f = f
+        self.f = np.where(mask, f, self.f)
 
         # Observed nodes should not be ignored
         self.observed = mask
         self._update_mask()
 
-    def lower_bound_contribution(self, gradient=False):
-        # Compute E[ log p(X|parents) - log q(X) ] over q(X)q(parents)
+    def lower_bound_contribution(self, gradient=False, ignore_masked=True):
+        r"""Compute E[ log p(X|parents) - log q(X) ]
+
+        If deterministic annealing is used, the term E[ -log q(X) ] is
+        divided by the anneling coefficient.  That is, phi and cgf of q
+        are multiplied by the temperature (inverse annealing
+        coefficient).
+        
+        """
+
+        # Annealing temperature
+        T = 1 / self.annealing
         
         # Messages from parents
-        #u_parents = [parent.message_to_child() for parent in self.parents]
         u_parents = self._message_from_parents()
         phi = self._distribution.compute_phi_from_parents(*u_parents)
         # G from parents
         L = self._distribution.compute_cgf_from_parents(*u_parents)
-        # L = g
-        # G for unobserved variables (ignored variables are handled
-        # properly automatically)
+
+        # G for unobserved variables (ignored variables are handled properly
+        # automatically)
         latent_mask = np.logical_not(self.observed)
-        #latent_mask = np.logical_and(self.mask, np.logical_not(self.observed))
-        # F for observed, G for latent
-        L = L + np.where(self.observed, self.f, -self.g)
+
+        # G and F
+        if np.all(self.observed):
+            z = np.nan
+        elif T == 1:
+            z = -self.g
+        else:
+            z = -T * self.g
+            ## TRIED THIS BUT IT WAS WRONG:
+            ## z = -T * self.g + (1-T) * self.f
+            ## if np.any(np.isnan(self.f)):
+            ##     warnings.warn("F(x) not implemented for node %s. This "
+            ##                   "is required for annealed lower bound "
+            ##                   "computation." % self.__class__.__name__)
+            ##
+            ## It was wrong because the optimal q distribution has f which is
+            ## weighted by 1/T and here the f of q is weighted by T so the
+            ## total weight is 1, thus it cancels out with f of p.
+
+        L = L + np.where(self.observed, self.f, z)
+
         for (phi_p, phi_q, u_q, dims) in zip(phi, self.phi, self.u, self.dims):
             # Form a mask which puts observed variables to zero and
             # broadcasts properly
@@ -329,16 +486,24 @@ class ExponentialFamily(Stochastic):
 
             # Compute the term
             phi_q = np.where(latent_mask_i, phi_q, 0)
+            # Apply annealing
             # TODO/FIXME: Use einsum here?
-            Z = np.sum((phi_p-phi_q) * u_q, axis=axis_sum)
+            Z = np.sum((phi_p-T*phi_q) * u_q, axis=axis_sum)
 
             L = L + Z
 
-        return (np.sum(np.where(self.mask, L, 0))
-                * self._plate_multiplier(self.plates,
-                                         np.shape(L),
-                                         np.shape(self.mask)))
-        #return L
+        if ignore_masked:
+            return (np.sum(np.where(self.mask, L, 0))
+                    * self.broadcasting_multiplier(self.plates,
+                                                   np.shape(L),
+                                                   np.shape(self.mask))
+                    * np.prod(self.plates_multiplier))
+        else:
+            return (np.sum(L)
+                    * self.broadcasting_multiplier(self.plates,
+                                                   np.shape(L))
+                    * np.prod(self.plates_multiplier))
+
 
     def logpdf(self, X, mask=True):
         """

@@ -31,7 +31,7 @@ import bayespy.plot as bpplt
 from bayespy.inference.vmp import nodes
 from bayespy.inference.vmp.vmp import VB
 
-def gaussianmix_model(N, K, D):
+def gaussianmix_model(N, K, D, covariance='full'):
     # N = number of data vectors
     # K = number of clusters
     # D = dimensionality
@@ -40,24 +40,33 @@ def gaussianmix_model(N, K, D):
 
     # K prior weights (for components)
     alpha = nodes.Dirichlet(1e-3*np.ones(K),
-                         name='alpha')
+                            name='alpha')
     # N K-dimensional cluster assignments (for data)
     z = nodes.Categorical(alpha,
-                       plates=(N,),
-                       name='z')
+                          plates=(N,),
+                          name='z')
     # K D-dimensional component means
-    X = nodes.Gaussian(np.zeros(D), 0.01*np.identity(D),
-                    plates=(K,),
-                    name='X')
-    # K D-dimensional component covariances
-    Lambda = nodes.Wishart(D, 0.01*np.identity(D),
-                        plates=(K,),
-                        name='Lambda')
-    # N D-dimensional observation vectors
-    Y = nodes.Mixture(z, nodes.Gaussian, X, Lambda, plates=(N,), name='Y')
-    # TODO: Plates should be learned automatically if not given (it
-    # would be the smallest shape broadcasted from the shapes of the
-    # parents)
+    X = nodes.GaussianARD(0, 1e-3,
+                          shape=(D,),
+                          plates=(K,),
+                          name='X')
+    if covariance.lower() == 'full':
+        # K D-dimensional component covariances
+        Lambda = nodes.Wishart(D, 0.01*np.identity(D),
+                               plates=(K,),
+                               name='Lambda')
+        # N D-dimensional observation vectors
+        Y = nodes.Mixture(z, nodes.Gaussian, X, Lambda, plates=(N,), name='Y')
+    elif covariance.lower() == 'diagonal':
+        # Inverse variances
+        Lambda = nodes.Gamma(1e-3, 1e-3, plates=(K, D), name='Lambda')
+        # N D-dimensional observation vectors
+        Y = nodes.Mixture(z, nodes.GaussianARD, X, Lambda, plates=(N,), name='Y')
+    elif covariance.lower() == 'isotropic':
+        # Inverse variances
+        Lambda = nodes.Gamma(1e-3, 1e-3, plates=(K, 1), name='Lambda')
+        # N D-dimensional observation vectors
+        Y = nodes.Mixture(z, nodes.GaussianARD, X, Lambda, plates=(N,), name='Y')
 
     z.initialize_from_random()
 
@@ -101,8 +110,8 @@ def run(N=50, K=5, D=2):
     plt.scatter(y[:,0], y[:,1])
     print('integrated pdf:', np.sum(pdf)*(18*18)/(N1*N2))
 
-    Q['X'].show()
-    Q['alpha'].show()
+    #Q['X'].show()
+    #Q['alpha'].show()
 
 
 if __name__ == '__main__':

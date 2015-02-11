@@ -31,3 +31,4 @@ User guide
     modelconstruct
     inference
     plot
+    advanced

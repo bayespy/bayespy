@@ -111,22 +111,34 @@ class DirichletDistribution(ExponentialFamilyDistribution):
 
     
     def compute_message_to_parent(self, parent, index, u_self, u_alpha):
-        """
+        r"""
         Compute the message to a parent node.
         """
         raise NotImplementedError()
 
     
     def compute_phi_from_parents(self, u_alpha, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         return [u_alpha[0]]
 
     
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
+
+        .. math::
+
+           \overline{\mathbf{u}}  (\boldsymbol{\phi})
+           &=
+           \begin{bmatrix}
+             \psi(\phi_1) - \psi(\sum_d \phi_{1,d})
+           \end{bmatrix}
+           \\
+           g_{\boldsymbol{\phi}} (\boldsymbol{\phi})
+           &=
+           TODO
         """
         sum_gammaln = np.sum(special.gammaln(phi[0]), axis=-1)
         gammaln_sum = special.gammaln(np.sum(phi[0], axis=-1))
@@ -142,14 +154,14 @@ class DirichletDistribution(ExponentialFamilyDistribution):
 
     
     def compute_cgf_from_parents(self, u_alpha):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         return u_alpha[1]
 
     
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         # Check that probabilities are non-negative
@@ -171,11 +183,32 @@ class DirichletDistribution(ExponentialFamilyDistribution):
 
     
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         return random.dirichlet(phi[0], size=plates)
         
+
+    def compute_gradient(self, g, u, phi):
+        r"""
+        Compute the moments and :math:`g(\phi)`.
+
+             \psi(\phi_1) - \psi(\sum_d \phi_{1,d})
+
+        Standard gradient given the gradient with respect to the moments, that
+        is, given the Riemannian gradient :math:`\tilde{\nabla}`:
+
+        .. math::
+
+           \nabla &=
+           \begin{bmatrix}
+             (\psi^{(1)}(\phi_1) - \psi^{(1)}(\sum_d \phi_{1,d}) \nabla_1
+           \end{bmatrix}
+        """
+        sum_phi = np.sum(phi[0], axis=-1, keepdims=True)
+        d0 = g[0] * (special.polygamma(1, phi[0]) - special.polygamma(1, sum_phi))
+        return [d0]
+
 
 class Dirichlet(ExponentialFamily):
     r"""

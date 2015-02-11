@@ -46,8 +46,8 @@ class Deterministic(Node):
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
        _compute_mask_to_parent(index, mask)
-       _plates_to_parent(self, index)
-       _plates_from_parent(self, index)
+       _compute_plates_to_parent(self, index, plates)
+       _compute_plates_from_parent(self, index, plates)
     
     
     """
@@ -154,7 +154,7 @@ class Deterministic(Node):
             for (ind, parent) in enumerate(self.parents):
                 parent._remove_child(self, ind)
 
-    def lower_bound_contribution(self, gradient=False):
+    def lower_bound_contribution(self, gradient=False, **kwargs):
         # Deterministic functions are delta distributions so the lower bound
         # contribuion is zero.
         return 0
@@ -193,15 +193,14 @@ def tile(X, tiles):
             self._moments = X._moments
             super().__init__(X, dims=X.dims, **kwargs)
     
-        def _plates_to_parent(self, index):
-            plates = list(self.plates)
+        def _compute_plates_to_parent(self, index, plates):
+            plates = list(plates)
             for i in range(-len(tiles), 0):
                 plates[i] = plates[i] // tiles[i]
             return tuple(plates)
 
-        def _plates_from_parent(self, index):
-            return tuple(misc.multiply_shapes(self.parents[index].plates,
-                                              tiles))
+        def _compute_plates_from_parent(self, index, plates):
+            return tuple(misc.multiply_shapes(plates, tiles))
 
         def _compute_mask_to_parent(self, index, mask):
             # Idea: Reshape the message array such that every other axis
@@ -216,7 +215,7 @@ def tile(X, tiles):
             
             # Handle broadcasting rules for axes that have unit length in
             # the message (although the plate may be non-unit length). Also,
-            # compute the corresponding plate_multiplier.
+            # compute the corresponding broadcasting_multiplier.
             plates = list(plates)
             tiles_m = list(tiles_m)
             for j in range(len(plates)):
@@ -262,7 +261,7 @@ def tile(X, tiles):
 
                 # Handle broadcasting rules for axes that have unit length in
                 # the message (although the plate may be non-unit length). Also,
-                # compute the corresponding plate_multiplier.
+                # compute the corresponding broadcasting multiplier.
                 r = 1
                 shape = list(shape)
                 tiles_ind = list(tiles_ind)
