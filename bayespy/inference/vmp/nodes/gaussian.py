@@ -536,7 +536,8 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         d0 = cov_g0 + 2 * linalg.mvdot(Cov, g1_x, ndim=ndim)
         d1 = (cov_g0_x + linalg.transpose(cov_g0_x, ndim=ndim)
               + 2 * linalg.mmdot(xx,
-                                 linalg.mmdot(g[1], xx, ndim=ndim))
+                                 linalg.mmdot(g[1], xx, ndim=ndim),
+                                 ndim=ndim)
               - 2 * x_x * misc.add_trailing_axes(linalg.inner(g1_x,
                                                               x,
                                                               ndim=ndim),
@@ -912,7 +913,8 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         d0 = cov_g0 + 2 * linalg.mvdot(Cov, g1_x, ndim=ndim)
         d1 = (cov_g0_x + linalg.transpose(cov_g0_x, ndim=ndim)
               + 2 * linalg.mmdot(xx,
-                                 linalg.mmdot(g[1], xx, ndim=ndim))
+                                 linalg.mmdot(g[1], xx, ndim=ndim),
+                                 ndim=ndim)
               - 2 * x_x * misc.add_trailing_axes(linalg.inner(g1_x,
                                                               x,
                                                               ndim=ndim),
