@@ -301,7 +301,7 @@ class ExponentialFamily(Stochastic):
         # Compute the gradient
         phi = self._distribution.compute_phi_from_parents(*u_parents)
         for i in range(len(self.phi)):
-            phi[i] = phi[i] + m_children[i] - self.phi[i]/self.annealing
+            phi[i] = self.annealing * (phi[i] + m_children[i]) - self.phi[i]
             phi[i] = phi[i] * np.ones(self.get_shape(i))
 
         # Allow using reparameterization (e.g., log for positive parameters)
@@ -329,6 +329,8 @@ class ExponentialFamily(Stochastic):
         can provide it to this function to avoid re-computing it."""
             
         g = self._distribution.compute_gradient(rg, self.u, self.phi)
+        for i in range(len(g)):
+            g[i] /= self.annealing
         return g
 
 
