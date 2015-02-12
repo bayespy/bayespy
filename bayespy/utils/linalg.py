@@ -351,7 +351,7 @@ def mvdot(A, b, ndim=1):
     # 
     # Use einsum instead:
     if ndim > 0:
-        b = misc.add_axes(b, num=ndim, axis=-ndim)
+        b = misc.add_axes(b, num=ndim, axis=-1-ndim)
 
     return inner(A, b, ndim=ndim)
     ## if ndim != 1:
