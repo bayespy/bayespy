@@ -350,11 +350,15 @@ def mvdot(A, b, ndim=1):
     # return gula.inner1d(A, b[...,np.newaxis,:])
     # 
     # Use einsum instead:
-    if ndim != 1:
-        raise NotImplementedError("mvdot not yet implemented for ndim!=1")
+    if ndim > 0:
+        b = misc.add_axes(b, num=ndim, axis=-ndim)
 
-    return _dot(A, b[...,None])[...,0]
-    #return np.einsum('...ik,...k->...i', A, b)
+    return inner(A, b, ndim=ndim)
+    ## if ndim != 1:
+    ##     raise NotImplementedError("mvdot not yet implemented for ndim!=1")
+
+    ## return _dot(A, b[...,None])[...,0]
+    ## #return np.einsum('...ik,...k->...i', A, b)
 
 def mmdot(A, B, ndim=1):
     """
@@ -362,18 +366,24 @@ def mmdot(A, B, ndim=1):
 
     Applies broadcasting.
     """
-    if ndim != 1:
-        raise Exception("transpose not yet implemented for ndim!=1")
-    return _dot(A, B)
+    if ndim == 0:
+        return A * B
+    elif ndim == 1:
+        return _dot(A, B)
+    else:
+        raise Exception("mmdot not yet implemented for ndim>1")
     #return np.einsum('...ik,...kj->...ij', A, B)
 
 def transpose(X, ndim=1):
     """
     Transpose the matrix.
     """
-    if ndim != 1:
-        raise Exception("transpose not yet implemented for ndim!=1")
-    return np.swapaxes(X, -1, -2)
+    for n in range(ndim):
+        X = np.swapaxes(X, -1-n, -1-ndim-n)
+    return X
+    ## if ndim != 1:
+    ##     raise Exception("transpose not yet implemented for ndim!=1")
+    ## return np.swapaxes(X, -1, -2)
 
 def m_dot(A,b):
     raise DeprecationWarning()
