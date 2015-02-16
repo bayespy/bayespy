@@ -23,3 +23,11 @@ ENV
 *.hdf5
 .env*
 .ipynb_checkpoints
+
+# temp files
+.DS_Store
+*.swp
+
+# test artifacts
+/.coverage
+/result_images
