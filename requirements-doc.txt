@@ -1,0 +1,10 @@
+
+# Use setup.py with editable mode
+-e .
+
+# Additional requirements for building documentation
+sphinx>=1.2.3
+sphinxcontrib-tikz
+sphinxcontrib-bayesnet
+sphinxcontrib-bibtex
+numpydoc>=0.5
