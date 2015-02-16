@@ -33,6 +33,10 @@ import numpy as np
 from matplotlib.testing.decorators import image_comparison
 
 import bayespy.plot as bpplt
+from bayespy.nodes import Bernoulli, Beta, Categorical, Dirichlet, \
+    Gaussian, Mixture, Wishart
+from bayespy.inference import VB
+from bayespy.utils import random
 
 @image_comparison(baseline_images=['gaussian_mixture'], extensions=['png'])
 def test_gaussian_mixture_plot():
@@ -54,14 +58,12 @@ def test_gaussian_mixture_plot():
     D = 2
     K = 10
 
-    from bayespy.nodes import Dirichlet, Categorical
     alpha = Dirichlet(1e-5*np.ones(K),
                       name='alpha')
     Z = Categorical(alpha,
                     plates=(N,),
                     name='z')
 
-    from bayespy.nodes import Gaussian, Wishart
     mu = Gaussian(np.zeros(D), 1e-5*np.identity(D),
                   plates=(K,),
                   name='mu')
@@ -69,15 +71,66 @@ def test_gaussian_mixture_plot():
                      plates=(K,),
                      name='Lambda')
 
-    from bayespy.nodes import Mixture
     Y = Mixture(Z, Gaussian, mu, Lambda,
                 name='Y')
     Z.initialize_from_random()
 
-    from bayespy.inference import VB
     Q = VB(Y, mu, Lambda, Z, alpha)
     Y.observe(y)
     Q.update(repeat=1000)
 
     bpplt.gaussian_mixture(Y, scale=2)
     bpplt.pyplot.show()
+
+
+@image_comparison(baseline_images=['hinton_r'], extensions=['png'])
+def test_hinton_plot_dirichlet():
+    (R,P,Z) = _setup_bernoulli_mixture()
+    bpplt.hinton(R)
+
+@image_comparison(baseline_images=['hinton_p'], extensions=['png'])
+def test_hinton_plot_beta():
+    (R,P,Z) = _setup_bernoulli_mixture()
+    bpplt.hinton(P)
+
+@image_comparison(baseline_images=['hinton_z'], extensions=['png'])
+def test_hinton_plot_categorical():
+    (R,P,Z) = _setup_bernoulli_mixture()
+    bpplt.hinton(Z)
+
+def _setup_bernoulli_mixture():
+    """
+    Setup code for the hinton tests.
+
+    This code is from http://www.bayespy.org/examples/bmm.html
+    """
+    np.random.seed(1)
+    p0 = [0.1, 0.9, 0.1, 0.9, 0.1, 0.9, 0.1, 0.9, 0.1, 0.9]
+    p1 = [0.1, 0.1, 0.1, 0.1, 0.1, 0.9, 0.9, 0.9, 0.9, 0.9]
+    p2 = [0.9, 0.9, 0.9, 0.9, 0.9, 0.1, 0.1, 0.1, 0.1, 0.1]
+    p = np.array([p0, p1, p2])
+
+    z = random.categorical([1/3, 1/3, 1/3], size=100)
+    x = random.bernoulli(p[z])
+    N = 100
+    D = 10
+    K = 10
+
+    R = Dirichlet(K*[1e-5],
+                  name='R')
+    Z = Categorical(R,
+                    plates=(N,1),
+                    name='Z')
+
+    P = Beta([0.5, 0.5],
+             plates=(D,K),
+             name='P')
+
+    X = Mixture(Z, Bernoulli, P)
+
+    Q = VB(Z, R, X, P)
+    P.initialize_from_random()
+    X.observe(x)
+    Q.update(repeat=1000)
+
+    return (R,P,Z)
