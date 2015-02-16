@@ -33,15 +33,20 @@ Installing BayesPy
 ------------------
 
 BayesPy can be installed easily by using Pip if the system has been properly set
-up.  First, you may want to set up a virtual environment.  Using virtual
-environment is optional but recommended.  To create and activate a new virtual
-environment, run
+up.  If you have problems with the following methods, see the following section
+for some help on installing the requirements.
+
+For users
++++++++++
+
+First, you may want to set up a virtual environment.  Using virtual environment
+is optional but recommended.  To create and activate a new virtual environment,
+run (in the folder in which you want to create the environment):
 
 .. code-block:: console
 
     virtualenv -p python3 --system-site-packages ENV
     source ENV/bin/activate
-
 
 The latest release of BayesPy can be installed from PyPI simply as
 
@@ -55,6 +60,33 @@ instead:
 .. code-block:: console
 
     pip install https://github.com/bayespy/bayespy/archive/master.zip
+
+For developers
+++++++++++++++
+
+If you want to install the development version of BayesPy in such a way that you
+can easily edit the package, follow these instructions.  Get the git repository:
+
+.. code-block:: console
+
+    git clone https://github.com/bayespy/bayespy.git
+    cd bayespy
+
+Create and activate a new virtual environment (optional but recommended):
+
+.. code-block:: console
+
+    virtualenv -p python3 --system-site-packages ENV
+    source ENV/bin/activate
+
+Install BayesPy in editable mode:
+
+.. code-block:: console
+
+    pip install -e .
+
+Checking installation
++++++++++++++++++++++
 
 If you have problems installing BayesPy, read the next section for more details.
 It is recommended to run the unit tests in order to check that BayesPy is
