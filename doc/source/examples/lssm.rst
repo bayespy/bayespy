@@ -274,8 +274,12 @@ Now, run iterations until convergence:
 >>> Q.update(repeat=1000)
 Iteration 11: loglike=-1.010806e+04 (... seconds)
 ...
-Iteration 60: loglike=-8.906259e+03 (... seconds)
-Converged at iteration 60.
+Iteration 58: loglike=-8.906382e+03 (... seconds)
+Converged at iteration 58.
+
+..
+    Iteration 60: loglike=-8.906259e+03 (... seconds)
+    Converged at iteration 60.
 
 Results
 -------

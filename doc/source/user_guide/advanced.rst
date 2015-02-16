@@ -317,16 +317,19 @@ Use random initialization for ``C`` to break the symmetry in ``C`` and ``X``:
 
 Then, stochastic variational inference algorithm could look as follows:
 
+>>> Q.ignore_bound_checks = True
 >>> for n in range(200):
 ...     subset = np.random.choice(100, 5)
 ...     Y.observe(data[:,subset])
 ...     Q.update(X)
 ...     learning_rate = (n + 2.0) ** (-0.7)
 ...     Q.gradient_step(C, alpha, tau, scale=learning_rate)
+Iteration ...
 
-The loop consists of three parts: 1) Draw a random mini-batch of the data (5
-samples from 100).  2) Update the intermediate variable ``X``.  3) Update global
-variables with gradient ascent using a proper learning rate.
+First, we ignore the bound checks because they are noisy.  Then, the loop
+consists of three parts: 1) Draw a random mini-batch of the data (5 samples from
+100).  2) Update the intermediate variable ``X``.  3) Update global variables
+with gradient ascent using a proper learning rate.
 
 
 Black-box variational inference
