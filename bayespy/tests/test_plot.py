@@ -34,7 +34,7 @@ from matplotlib.testing.decorators import image_comparison
 
 import bayespy.plot as bpplt
 from bayespy.nodes import Bernoulli, Beta, Categorical, Dirichlet, \
-    Gaussian, Mixture, Wishart
+    Gamma, Gaussian, GaussianARD, Mixture, SumMultiply, Wishart
 from bayespy.inference import VB
 from bayespy.utils import random
 
@@ -98,6 +98,22 @@ def test_hinton_plot_categorical():
     (R,P,Z) = _setup_bernoulli_mixture()
     bpplt.hinton(Z)
 
+
+@image_comparison(baseline_images=['pdf'], extensions=['png'])
+def test_pdf_plot():
+    data = _setup_linear_regression()
+    bpplt.pdf(data['tau'], np.linspace(1e-6,1,100), color='k')
+    bpplt.pyplot.axvline(data['s']**(-2), color='r')
+
+@image_comparison(baseline_images=['contour'], extensions=['png'])
+def test_contour_plot():
+    data = _setup_linear_regression()
+    bpplt.contour(data['B'], np.linspace(1,3,1000), np.linspace(1,9,1000),
+                  n=10, colors='k')
+    bpplt.plot(data['c'], x=data['k'], color='r', marker='x', linestyle='None',
+               markersize=10, markeredgewidth=2)
+
+
 def _setup_bernoulli_mixture():
     """
     Setup code for the hinton tests.
@@ -134,3 +150,34 @@ def _setup_bernoulli_mixture():
     Q.update(repeat=1000)
 
     return (R,P,Z)
+
+def _setup_linear_regression():
+    """
+    Setup code for the pdf and contour tests.
+
+    This code is from http://www.bayespy.org/examples/regression.html
+    """
+    np.random.seed(1)
+    k = 2 # slope
+    c = 5 # bias
+    s = 2 # noise standard deviation
+
+    x = np.arange(10)
+    y = k*x + c + s*np.random.randn(10)
+    X = np.vstack([x, np.ones(len(x))]).T
+
+    B = GaussianARD(0, 1e-6, shape=(2,))
+
+    F = SumMultiply('i,i', B, X)
+
+    tau = Gamma(1e-3, 1e-3)
+    Y = GaussianARD(F, tau)
+    Y.observe(y)
+
+    Q = VB(Y, B, tau)
+    Q.update(repeat=1000)
+    xh = np.linspace(-5, 15, 100)
+    Xh = np.vstack([xh, np.ones(len(xh))]).T
+    Fh = SumMultiply('i,i', B, Xh)
+
+    return locals()
