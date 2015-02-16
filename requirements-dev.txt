@@ -1,0 +1,7 @@
+
+# Use setup.py with editable mode
+-e .
+
+# Additional packages useful for developing
+ipython
+nose
