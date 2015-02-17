@@ -106,7 +106,7 @@ license.
 Contributors
 ------------
 
-This is an overview of the list of contributors:
+The list of contributors:
 
 * Jaakko Luttinen
 
