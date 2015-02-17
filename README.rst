@@ -19,7 +19,7 @@ welcome.
 Project information
 -------------------
 
-Copyright (C) 2011-2015 Jaakko Luttinen, Aalto University
+Copyright (C) 2011-2015 Jaakko Luttinen and other contributors (see below)
 
 BayesPy including the documentation is licensed under Version 3.0 of
 the GNU General Public License. See LICENSE file for a text of the
@@ -102,3 +102,14 @@ License.
 static networks with discrete variables.  There was no information about the
 license.
 
+
+Contributors
+------------
+
+This is an overview of the list of contributors:
+
+* Jaakko Luttinen
+
+* Hannu Hartikainen
+
+Each file or the git log can be used for more detailed information.
