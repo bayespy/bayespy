@@ -27,7 +27,7 @@ install:
   - pip install coverage coveralls
 # run tests (select a proper matplotlib backend)
 before_script:
-  - echo "backend : Agg" | tee matplotlibrc
+  - "echo backend : Agg > matplotlibrc"
 script:  nosetests --with-doctest --with-coverage
 # check coverage
 after_success:
