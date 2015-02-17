@@ -16,7 +16,7 @@ matrix:
         - NUMPYSPEC=
         - SCIPYSPEC=
         - MATPLOTLIBSPEC=
-# command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
+# install dependencies
 install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq libatlas-dev libatlas-base-dev liblapack-dev gfortran hdf5-tools libhdf5-serial-dev
@@ -25,7 +25,8 @@ install:
   - travis_wait pip install matplotlib$MATPLOTLIBSPEC
   - pip install h5py
   - pip install coverage coveralls
-# command to run tests, e.g. python setup.py test
+# run tests (select a proper matplotlib backend)
+before_script: echo "backend : Agg" > matplotlibrc
 script:  nosetests --with-doctest --with-coverage
 # check coverage
 after_success:
