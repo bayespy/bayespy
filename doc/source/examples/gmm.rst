@@ -51,8 +51,8 @@ Thus, there are 200 data vectors in total.  The data looks as follows:
 
 .. plot::
 
-   import numpy
-   numpy.random.seed(1)
+   import numpy as np
+   np.random.seed(1)
    y0 = np.random.multivariate_normal([0, 0], [[1, 0], [0, 0.02]], size=50)
    y1 = np.random.multivariate_normal([0, 0], [[0.02, 0], [0, 1]], size=50)
    y2 = np.random.multivariate_normal([2, 2], [[1, -0.9], [-0.9, 1]], size=50)
