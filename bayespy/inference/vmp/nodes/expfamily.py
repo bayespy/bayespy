@@ -521,9 +521,6 @@ class ExponentialFamily(Stochastic):
             Z = Z + np.sum(phi_d * u_d, axis=axis_sum)
             #Z = Z + misc.sum_multiply(phi_d, u_d, axis=axis_sum)
 
-        ## print('Z', Z)
-        ## print('f', f)
-        ## print('g', self.g)
         return (self.g + f + Z)
         
 
