@@ -449,6 +449,93 @@ def sum_to_dim(A, dim):
         A = np.sum(A, axis=axes)
     return A
 
+
+def broadcasting_multiplier(plates, *args):
+    """
+    Compute the plate multiplier for given shapes.
+
+    The first shape is compared to all other shapes (using NumPy
+    broadcasting rules). All the elements which are non-unit in the first
+    shape but 1 in all other shapes are multiplied together.
+
+    This method is used, for instance, for computing a correction factor for
+    messages to parents: If this node has non-unit plates that are unit
+    plates in the parent, those plates are summed. However, if the message
+    has unit axis for that plate, it should be first broadcasted to the
+    plates of this node and then summed to the plates of the parent. In
+    order to avoid this broadcasting and summing, it is more efficient to
+    just multiply by the correct factor. This method computes that
+    factor. The first argument is the full plate shape of this node (with
+    respect to the parent). The other arguments are the shape of the message
+    array and the plates of the parent (with respect to this node).
+    """
+
+    # Check broadcasting of the shapes
+    for arg in args:
+        broadcasted_shape(plates, arg)
+
+    # Check that each arg-plates are a subset of plates?
+    for arg in args:
+        if not is_shape_subset(arg, plates):
+            print("Plates:", plates)
+            print("Args:", args)
+            raise ValueError("The shapes in args are not a sub-shape of "
+                             "plates")
+
+    r = 1
+    for j in range(-len(plates),0):
+        mult = True
+        for arg in args:
+            # if -j <= len(arg) and arg[j] != 1:
+            if not (-j > len(arg) or arg[j] == 1):
+                mult = False
+        if mult:
+            r *= plates[j]
+    return r
+
+
+def sum_multiply_to_plates(*arrays, to_plates=(), from_plates=None, ndim=0):
+    """
+    Compute the product of the arguments and sum to the target shape.
+    """
+    arrays = list(arrays)
+    def get_plates(x):
+        if ndim == 0:
+            return x
+        else:
+            return x[:-ndim]
+
+    plates_arrays = [get_plates(np.shape(array)) for array in arrays]
+    product_plates = broadcasted_shape(*plates_arrays)
+
+    if from_plates is None:
+        from_plates = product_plates
+        r = 1
+    else:
+        r = broadcasting_multiplier(from_plates, product_plates, to_plates)
+
+    for ind in range(len(arrays)):
+        plates_others = plates_arrays[:ind] + plates_arrays[(ind+1):]
+        plates_without = broadcasted_shape(to_plates, *plates_others)
+        ax = axes_to_collapse(plates_arrays[ind], #get_plates(np.shape(arrays[ind])),
+                              plates_without)
+        if ax:
+            ax = tuple([a-ndim for a in ax])
+            arrays[ind] = np.sum(arrays[ind], axis=ax, keepdims=True)
+
+    plates_arrays = [get_plates(np.shape(array)) for array in arrays]
+    product_plates = broadcasted_shape(*plates_arrays)
+
+    ax = axes_to_collapse(product_plates, to_plates)
+    if ax:
+        ax = tuple([a-ndim for a in ax])
+        y = sum_multiply(*arrays, axis=ax, keepdims=True)
+    else:
+        y = functools.reduce(np.multiply, arrays)
+    y = squeeze_to_dim(y, len(to_plates) + ndim)
+    return r * y
+
+
 def sum_multiply(*args, axis=None, sumaxis=True, keepdims=False):
 
     # Computes sum(arg[0]*arg[1]*arg[2]*..., axis=axes_to_sum) without
