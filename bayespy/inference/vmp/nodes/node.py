@@ -530,54 +530,45 @@ class Node():
         # The parent we're sending the message to
         parent = self.parents[index]
 
+        # Plates with respect to the parent
+        plates_self = self._plates_to_parent(index)
+
+        # Plate multiplier of the parent
+        multiplier_parent = self._plates_multiplier_from_parent(index)
+
+        # Check if m is a logpdf function (for black-box variational inference)
+        if callable(m):
+            def m_function(*args):
+                lpdf = m(*args)
+                # Log pdf only contains plate axes!
+                plates_m = np.shape(lpdf)
+                r = (self.broadcasting_multiplier(plates_self,
+                                                  plates_m,
+                                                  plates_mask,
+                                                  parent.plates) *
+                     self.broadcasting_multiplier(self.plates_multiplier,
+                                                  multiplier_parent))
+                axes_msg = misc.axes_to_collapse(plates_m, parent.plates)
+                m[i] = misc.sum_multiply(mask_i, m[i], r,
+                                         axis=axes_msg,
+                                         keepdims=True)
+
+                # Remove leading singular plates if the parent does not have
+                # those plate axes.
+                m[i] = misc.squeeze_to_dim(m[i], len(shape_parent))
+
+            return m_function
+            raise NotImplementedError()
+
         # Compact the message to a proper shape
         for i in range(len(m)):
 
             # Empty messages are given as None. We can ignore those.
             if m[i] is not None:
 
-                # Plates in the message
-                shape_m = np.shape(m[i])
-                dim_parent = len(parent.dims[i])
-                if dim_parent > 0:
-                    plates_m = shape_m[:-dim_parent]
-                else:
-                    plates_m = shape_m
-
-                # Compute the multiplier (multiply by the number of plates for
-                # which the message, the mask and the parent have single
-                # plates).  Such a plate is meant to be broadcasted but because
-                # the parent has singular plate axis, it won't broadcast (and
-                # sum over it), so we need to multiply it.
-                plates_self = self._plates_to_parent(index)
                 try:
-                    r = self.broadcasting_multiplier(plates_self, 
-                                                     plates_m,
-                                                     plates_mask,
-                                                     parent.plates)
-                except ValueError:
-                    raise ValueError("The plates of the message, the mask and "
-                                     "parent[%d] node (%s) are not a "
-                                     "broadcastable subset of the plates of "
-                                     "this node (%s).  The message has shape "
-                                     "%s, meaning plates %s. The mask has "
-                                     "plates %s. This node has plates %s with "
-                                     "respect to the parent[%d], which has "
-                                     "plates %s."
-                                     % (index,
-                                        parent.name,
-                                        self.name,
-                                        np.shape(m[i]), 
-                                        plates_m, 
-                                        plates_mask,
-                                        plates_self,
-                                        index, 
-                                        parent.plates))
-
-                multiplier_parent = self._plates_multiplier_from_parent(index)
-                try:
-                    r *= self.broadcasting_multiplier(self.plates_multiplier,
-                                                      multiplier_parent)
+                    r = self.broadcasting_multiplier(self.plates_multiplier,
+                                                     multiplier_parent)
                 except:
                     raise ValueError("The plate multipliers are incompatible. "
                                      "This node (%s) has %s and parent[%d] "
@@ -588,26 +579,23 @@ class Node():
                                         parent.name,
                                         multiplier_parent))
 
+                ndim = len(parent.dims[i])
+                # Source and target shapes
+                if ndim > 0:
+                    dims = misc.broadcasted_shape(np.shape(m[i])[-ndim:],
+                                                  parent.dims[i])
+                    from_shape = plates_self + dims
+                else:
+                    from_shape = plates_self
+                to_shape = parent.get_shape(i)
                 # Add variable axes to the mask
-                shape_mask = np.shape(mask) + (1,) * len(parent.dims[i])
-                mask_i = np.reshape(mask, shape_mask)
-
-                # Sum over plates that are not in the message nor in the parent
-                shape_parent = parent.get_shape(i)
-                shape_msg = misc.broadcasted_shape(shape_m, shape_parent)
-                axes_mask = misc.axes_to_collapse(shape_mask, shape_msg)
-                mask_i = np.sum(mask_i, axis=axes_mask, keepdims=True)
-
-                # Compute the masked message and sum over the plates that the
-                # parent does not have.
-                axes_msg = misc.axes_to_collapse(shape_msg, shape_parent)
-                m[i] = misc.sum_multiply(mask_i, m[i], r, 
-                                         axis=axes_msg, 
-                                         keepdims=True)
-
-                # Remove leading singular plates if the parent does not have
-                # those plate axes.
-                m[i] = misc.squeeze_to_dim(m[i], len(shape_parent))
+                mask_i = misc.add_trailing_axes(mask, ndim)
+                # Apply mask and sum plate axes as necessary (and apply plate
+                # multiplier)
+                m[i] = r * misc.sum_multiply_to_plates(m[i], mask_i,
+                                                       to_plates=to_shape,
+                                                       from_plates=from_shape,
+                                                       ndim=0)
 
         return m
 
@@ -648,45 +636,46 @@ class Node():
 
     @staticmethod
     def broadcasting_multiplier(plates, *args):
-        """
-        Compute the plate multiplier for given shapes.
+        return misc.broadcasting_multiplier(plates, *args)
+        ## """
+        ## Compute the plate multiplier for given shapes.
 
-        The first shape is compared to all other shapes (using NumPy
-        broadcasting rules). All the elements which are non-unit in the first
-        shape but 1 in all other shapes are multiplied together.
+        ## The first shape is compared to all other shapes (using NumPy
+        ## broadcasting rules). All the elements which are non-unit in the first
+        ## shape but 1 in all other shapes are multiplied together.
 
-        This method is used, for instance, for computing a correction factor for
-        messages to parents: If this node has non-unit plates that are unit
-        plates in the parent, those plates are summed. However, if the message
-        has unit axis for that plate, it should be first broadcasted to the
-        plates of this node and then summed to the plates of the parent. In
-        order to avoid this broadcasting and summing, it is more efficient to
-        just multiply by the correct factor. This method computes that
-        factor. The first argument is the full plate shape of this node (with
-        respect to the parent). The other arguments are the shape of the message
-        array and the plates of the parent (with respect to this node).
-        """
+        ## This method is used, for instance, for computing a correction factor for
+        ## messages to parents: If this node has non-unit plates that are unit
+        ## plates in the parent, those plates are summed. However, if the message
+        ## has unit axis for that plate, it should be first broadcasted to the
+        ## plates of this node and then summed to the plates of the parent. In
+        ## order to avoid this broadcasting and summing, it is more efficient to
+        ## just multiply by the correct factor. This method computes that
+        ## factor. The first argument is the full plate shape of this node (with
+        ## respect to the parent). The other arguments are the shape of the message
+        ## array and the plates of the parent (with respect to this node).
+        ## """
         
-        # Check broadcasting of the shapes
-        for arg in args:
-            misc.broadcasted_shape(plates, arg)
+        ## # Check broadcasting of the shapes
+        ## for arg in args:
+        ##     misc.broadcasted_shape(plates, arg)
 
-        # Check that each arg-plates are a subset of plates?
-        for arg in args:
-            if not misc.is_shape_subset(arg, plates):
-                raise ValueError("The shapes in args are not a sub-shape of "
-                                 "plates.")
+        ## # Check that each arg-plates are a subset of plates?
+        ## for arg in args:
+        ##     if not misc.is_shape_subset(arg, plates):
+        ##         raise ValueError("The shapes in args are not a sub-shape of "
+        ##                          "plates.")
             
-        r = 1
-        for j in range(-len(plates),0):
-            mult = True
-            for arg in args:
-                # if -j <= len(arg) and arg[j] != 1:
-                if not (-j > len(arg) or arg[j] == 1):
-                    mult = False
-            if mult:
-                r *= plates[j]
-        return r
+        ## r = 1
+        ## for j in range(-len(plates),0):
+        ##     mult = True
+        ##     for arg in args:
+        ##         # if -j <= len(arg) and arg[j] != 1:
+        ##         if not (-j > len(arg) or arg[j] == 1):
+        ##             mult = False
+        ##     if mult:
+        ##         r *= plates[j]
+        ## return r
 
     def move_plates(self, from_plate, to_plate):
         return _MovePlate(self, 
