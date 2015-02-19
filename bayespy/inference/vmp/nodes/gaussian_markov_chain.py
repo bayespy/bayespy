@@ -260,6 +260,8 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         u_inputs : list of ndarrays
             Moments of input signals.
         """
+
+        D = np.shape(u[0])[-1]
         
         if index == 0:   # mu
             raise NotImplementedError()
@@ -274,9 +276,29 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             # function which computes sum(v*XnXn) without computing the huge
             # v*XnXn explicitly.
             m1 = -0.5 * message_sum_multiply(parent.plates,
-                                             parent.dims[1],
+                                             (D, D), #parent.dims[1],
                                              v[...,np.newaxis,np.newaxis],
                                              XnXn[..., :-1, np.newaxis, :, :])
+            if len(u_inputs):
+                Xn = u[0]
+                z = u_inputs[0][0]
+                zz = u_inputs[0][1]
+                D_inputs = np.shape(z)[-1]
+                m0_B = v[...,None] * Xn[...,1:,:,None] * z[...,None,:]
+                m1_BB = -0.5 * message_sum_multiply(parent.plates,
+                                                    (D_inputs, D_inputs),
+                                                    zz[..., None,    :,    :],
+                                                    v[ ...,    :, None, None])
+                Xp_z = Xn[...,:-1,:,None] * z[...,None,:]
+                m1_AB = -0.5 * message_sum_multiply(parent.plates,
+                                                    (D, D_inputs),
+                                                    Xp_z[..., None,    :,    :],
+                                                    v[   ...,    :, None, None])
+                # Construct full message arrays from blocks
+                m0 = np.concatenate([m0, m0_B], axis=-1)
+                row1 = np.concatenate([m1, m1_AB], axis=-1)
+                row2 = np.concatenate([m1_AB.swapaxes(-1,-2), m1_BB], axis=-1)
+                m1 = np.concatenate([row1, row2], axis=-2)
                                       
             #m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
         elif index == 3: # v
@@ -288,6 +310,9 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
                   + np.einsum('...ik,...ki->...i', A, XpXn)
                   - 0.5*np.einsum('...ikl,...kl->...i', AA, XnXn[...,:-1,:,:]))
             m1 = 0.5
+            if len(u_inputs):
+                raise NotImplementedError("Message to innovation not yet implemented "
+                                          "if using input signals")
         elif index == 4: # input signals
             raise NotImplementedError()
 
@@ -399,13 +424,13 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
                                                    u_v[1],
                                                    self.N)
 
-        if len(inputs):
+        if len(u_inputs):
             D = np.shape(u_mu[0])[-1]
             uu = u_inputs[0][1]
             BB = u_A[1][...,D:,D:]
             v = u_v[0]
             BB_v = np.einsum('...d,...dij->...ij', v, BB)
-            g_inputs = np.einsum('...ij->...ij', uu, BB_v)
+            g_inputs = -0.5 * np.einsum('...ij,...ij->...', uu, BB_v)
             # Sum over time axis
             if np.ndim(g_inputs) == 0 or np.shape(g_inputs)[-1] == 1:
                 g_inputs *= self.N
