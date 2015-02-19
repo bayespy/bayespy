@@ -395,6 +395,38 @@ class TestGaussianMarkovChain(TestCase):
                       np.random.rand(1,1,3),
                       plates=(1,1,3)))
 
+        #
+        # Check with input signals
+        #
+
+        mu = 2
+        Lambda = 3
+        A = 4
+        B = 5
+        v = 6
+        inputs = [[-2], [3]]
+        X = GaussianMarkovChain([mu], [[Lambda]], [[A,B]], [v], inputs=inputs)
+        V = (np.array([[v*A**2, -v*A,    0],
+                       [-v*A,    v*A**2, -v*A],
+                       [0,       -v*A,   0]]) +
+             np.array([[Lambda, 0, 0],
+                       [0,      v, 0],
+                       [0,      0, v]]))
+        m = (np.array([Lambda*mu, 0, 0]) +
+             np.array([0, v*B*inputs[0][0], v*B*inputs[1][0]]) -
+             np.array([v*A*B*inputs[0][0], v*A*B*inputs[1][0], 0]))
+        Cov = np.linalg.inv(V)
+        mean = np.dot(Cov, m)
+
+        X.update()
+        u = X.get_moments()
+
+        self.assertAllClose(u[0], mean[:,None])
+        self.assertAllClose(u[1] - u[0][...,None,:]*u[0][...,:,None],
+                            Cov[(0,1,2),(0,1,2),None,None])
+        self.assertAllClose(u[2] - u[0][...,:-1,:,None]*u[0][...,1:,None,:],
+                            Cov[(0,1),(1,2),None,None])
+
         pass
         
         
