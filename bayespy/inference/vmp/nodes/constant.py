@@ -70,3 +70,18 @@ class Constant(Node):
     
     def get_moments(self):
         return self.u
+
+
+    def set_value(self, x):
+        x = np.asanyarray(x)
+        shapes = [np.shape(ui) for ui in self.u]
+        self.u = self._moments.compute_fixed_moments(x)
+        for (i, shape) in enumerate(shapes):
+            if np.shape(self.u[i]) != shape:
+                raise ValueError("Incorrect shape for the array")
+
+
+    def lower_bound_contribution(self, gradient=False, **kwargs):
+        # Deterministic functions are delta distributions so the lower bound
+        # contribuion is zero.
+        return 0
