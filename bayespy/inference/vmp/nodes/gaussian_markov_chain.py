@@ -239,7 +239,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
     """
 
 
-    def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_A, u_v):
+    def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_A, u_v, *u_inputs):
         """
         Compute a message to a parent.
 
@@ -257,8 +257,8 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             Moments of parent `A`.
         u_v : list of ndarrays
             Moments of parent `v`.
-        u_N : list of ndarrays
-            Moments of parent `N`.
+        u_inputs : list of ndarrays
+            Moments of input signals.
         """
         
         if index == 0:   # mu
@@ -288,7 +288,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
                   + np.einsum('...ik,...ki->...i', A, XpXn)
                   - 0.5*np.einsum('...ikl,...kl->...i', AA, XnXn[...,:-1,:,:]))
             m1 = 0.5
-        elif index == 4: # N
+        elif index == 4: # input signals
             raise NotImplementedError()
 
         return [m0, m1]
@@ -303,11 +303,13 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             return mask[...,np.newaxis,np.newaxis]
         elif index == 3: # v
             return mask[...,np.newaxis,np.newaxis]
+        elif index == 4: # input signals
+            return mask[...,np.newaxis]
         else:
             raise ValueError("Index out of bounds")
 
 
-    def compute_phi_from_parents(self, u_mu, u_Lambda, u_A, u_v, mask=True):
+    def compute_phi_from_parents(self, u_mu, u_Lambda, u_A, u_v, *u_inputs, mask=True):
         """
         Compute the natural parameters using parents' moments.
 
@@ -332,15 +334,29 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         N = self.N
         
         # Helpful variables (show shapes in comments)
-        mu = u_mu[0]         # (..., D)
-        Lambda = u_Lambda[0] # (..., D, D)
-        A = u_A[0]           # (..., N-1, D, D)
-        AA = u_A[1]          # (..., N-1, D, D, D)
-        v = u_v[0]           # (..., N-1, D)
+        mu = u_mu[0]           # (..., D)
+        Lambda = u_Lambda[0]   # (..., D, D)
+        A = u_A[0][...,:D]     # (..., N-1, D, D)
+        AA = u_A[1][...,:D,:D] # (..., N-1, D, D, D)
+        B = u_A[0][...,D:]     # (..., N-1, D, inputs)
+        BB = u_A[1][...,D:,D:] # (..., N-1, D, inputs, inputs)
+        AB = u_A[1][...,:D,D:] # (..., N-1, D, D, inputs)
+        v = u_v[0]             # (..., N-1, D)
+        if len(u_inputs):
+            inputs = u_inputs[0][0]
+        else:
+            inputs = None
 
         # Allocate memory (take into account effective plates)
-        plates_phi0 = misc.broadcasted_shape(np.shape(mu)[:-1],
-                                             np.shape(Lambda)[:-2])
+        if inputs is not None:
+            plates_phi0 = misc.broadcasted_shape(np.shape(mu)[:-1],
+                                                 np.shape(Lambda)[:-2],
+                                                 np.shape(B)[:-3],
+                                                 np.shape(v)[:-2],
+                                                 np.shape(AB)[:-4])
+        else:
+            plates_phi0 = misc.broadcasted_shape(np.shape(mu)[:-1],
+                                                 np.shape(Lambda)[:-2])
         plates_phi1 = misc.broadcasted_shape(np.shape(Lambda)[:-2],
                                              np.shape(v)[:-2],
                                              np.shape(AA)[:-4])
@@ -355,6 +371,12 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         phi0[...,0,:] = np.einsum('...ik,...k->...i', Lambda, mu)
         phi1[...,0,:,:] = Lambda
 
+        # Effect of the input signals
+        if inputs is not None:
+            phi0[...,1:,:] += np.einsum('...i,...ij,...j->...i', v, B, inputs)
+            AB_v = np.einsum('...dij,...d->...ij', AB, v)
+            phi0[...,:-1,:] -= np.einsum('...ij,...j->...i', AB_v, inputs)
+
         # Diagonal blocks: -0.5 * (V_i + A_{i+1}' * V_{i+1} * A_{i+1})
         phi1[..., 1:, :, :] = v[...,np.newaxis]*np.identity(D)
         phi1[..., :-1, :, :] += np.einsum('...kij,...k->...ij', AA, v)
@@ -367,15 +389,32 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
         return (phi0, phi1, phi2)
 
-    def compute_cgf_from_parents(self, u_mu, u_Lambda, u_A, u_v):
+    def compute_cgf_from_parents(self, u_mu, u_Lambda, u_A, u_v, *u_inputs):
         """
         Compute CGF using the moments of the parents.
         """
-        return _compute_cgf_for_gaussian_markov_chain(u_mu[1],
-                                                      u_Lambda[0],
-                                                      u_Lambda[1],
-                                                      u_v[1],
-                                                      self.N)
+        g = _compute_cgf_for_gaussian_markov_chain(u_mu[1],
+                                                   u_Lambda[0],
+                                                   u_Lambda[1],
+                                                   u_v[1],
+                                                   self.N)
+
+        if len(inputs):
+            D = np.shape(u_mu[0])[-1]
+            uu = u_inputs[0][1]
+            BB = u_A[1][...,D:,D:]
+            v = u_v[0]
+            BB_v = np.einsum('...d,...dij->...ij', v, BB)
+            g_inputs = np.einsum('...ij->...ij', uu, BB_v)
+            # Sum over time axis
+            if np.ndim(g_inputs) == 0 or np.shape(g_inputs)[-1] == 1:
+                g_inputs *= self.N
+            else:
+                g_inputs = np.sum(g_inputs, axis=-1)
+            g = g + g_inputs
+
+        return g
+
 
     def plates_to_parent(self, index, plates):
         """
@@ -403,6 +442,8 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             return plates + (self.N-1, self.D)
         elif index == 3: # v
             return plates + (self.N-1, self.D)
+        elif index == 4: # input signals
+            return plates + (self.N-1,)
         else:
             raise ValueError("Invalid parent index.")
 
@@ -431,6 +472,8 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             return plates[:-2]
         elif index == 3: # v
             return plates[:-2]
+        elif index == 4: # input signals
+            return plates[:-1]
         else:
             raise ValueError("Invalid parent index.")
 
@@ -513,22 +556,16 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
     VaryingGaussianMarkovChain, CategoricalMarkovChain
     """
 
-    _parent_moments = (GaussianMoments(1),
-                       WishartMoments(),
-                       GaussianMoments(1),
-                       GammaMoments())
 
-
-    def __init__(self, mu, Lambda, A, nu, n=None, **kwargs):
+    def __init__(self, mu, Lambda, A, nu, n=None, inputs=None, **kwargs):
         """
         Create GaussianMarkovChain node.
         """
-        super().__init__(mu, Lambda, A, nu, n=n, **kwargs)
+        super().__init__(mu, Lambda, A, nu, n=n, inputs=inputs, **kwargs)
 
 
     @classmethod
-    @ensureparents
-    def _constructor(cls, mu, Lambda, A, v, n=None, **kwargs):
+    def _constructor(cls, mu, Lambda, A, v, n=None, inputs=None, **kwargs):
         """
         Constructs distribution and moments objects.
         
@@ -547,30 +584,69 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         Similarly, `v` should be a collection of diagonal innovation
         matrix elements, thus the last plate should equal D.
         """
-        
-        n_A = 1
+
+        # Check whether to use input signals or not
+        if inputs is None:
+            _parent_moments = (GaussianMoments(1),
+                               WishartMoments(),
+                               GaussianMoments(1),
+                               GammaMoments())
+        else:
+            _parent_moments = (GaussianMoments(1),
+                               WishartMoments(),
+                               GaussianMoments(1),
+                               GammaMoments(),
+                               GaussianMoments(1))
+
+        # Ensure that parent nodes are of proper type
+        mu = cls._ensure_moments(mu, _parent_moments[0])
+        Lambda = cls._ensure_moments(Lambda, _parent_moments[1])
+        A = cls._ensure_moments(A, _parent_moments[2])
+        v = cls._ensure_moments(v, _parent_moments[3])
+        if inputs is not None:
+            inputs = cls._ensure_moments(inputs, _parent_moments[4])
+
+        # Time instances from input signals
+        if inputs is not None and len(inputs.plates) >= 1:
+            n_inputs = inputs.plates[-1]
+        else:
+            n_inputs = 1
+        # Time instances from state dynamics matrix
         if len(A.plates) >= 2:
             n_A = A.plates[-2]
-        n_v = 1
+        else:
+            n_A = 1
+        # Time instances from innovation noise
         if len(v.plates) >= 2:
             n_v = v.plates[-2]
-        if n_v != n_A and n_v != 1 and n_A != 1:
-            raise Exception("Plates of A and v are giving different number of time instances")
-        n_A = max(n_v, n_A)
+        else:
+            n_v = 1
+        # Check consistency of the number of time instances
+        if ( (n_v != n_A and n_v != 1 and n_A != 1) or
+             (n_inputs != n_A and n_inputs != 1 and n_A != 1) or
+             (n_inputs != n_v and n_inputs != 1 and n_v != 1) ):
+            raise Exception("Plates of parents are giving different number of time instances")
+        n_parents = max(n_v, n_A, n_inputs)
         if n is None:
-            if n_A == 1:
+            if n_parents == 1:
                 raise Exception("The number of time instances could not be "
                                 "determined automatically. Give the number of "
                                 "time instances.")
-            n = n_A + 1
-        elif n_A != 1 and n_A+1 != n:
+            n = n_parents + 1
+        elif n_parents != 1 and n_parents+1 != n:
             raise Exception("The number of time instances must match "
                             "the number of last plates of parents: "
-                            "%d != %d+1" % (n, n_A))
-                                
+                            "%d != %d+1" % (n, n_parents))
+
+        # Dimensionality of the states
         D = mu.dims[0][0]
-        #M = N.get_moments()[0]
+        # Number of states
         M = n
+        # Dimensionality of the inputs
+        if inputs is None:
+            D_inputs = 0
+        else:
+            D_inputs = inputs.dims[0][0]
 
         # Check mu
         if mu.dims != ( (D,), (D,D) ):
@@ -579,7 +655,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         if Lambda.dims != ( (D,D), () ):
             raise Exception("Second parent has wrong dimensionality")
         # Check A
-        if A.dims != ( (D,), (D,D) ):
+        if A.dims != ( (D+D_inputs,), (D+D_inputs,D+D_inputs) ):
             raise Exception("Third parent has wrong dimensionality")
         if len(A.plates) == 0 or A.plates[-1] != D:
             raise Exception("Third parent should have a last plate "
@@ -606,12 +682,18 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
                              "parent should have length equal to one or "
                              "N-1 where N is the number of time "
                              "instances.")
-
+        # Check input signals
+        if inputs is not None:
+            if inputs.dims != ( (D_inputs,), (D_inputs, D_inputs) ):
+                raise ValueError("Input signals have wrong dimensionality")
         
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
         distribution = GaussianMarkovChainDistribution(M, D)
 
-        parents = [mu, Lambda, A, v]
+        if inputs is None:
+            parents = [mu, Lambda, A, v]
+        else:
+            parents = [mu, Lambda, A, v, inputs]
 
         return ( parents,
                  kwargs,
@@ -623,7 +705,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
                                    distribution.plates_from_parent(3, v.plates)),
                  distribution, 
                  cls._moments, 
-                 cls._parent_moments)
+                 _parent_moments)
 
     
 
