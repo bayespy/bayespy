@@ -1455,7 +1455,7 @@ class GaussianARD(ExponentialFamily):
         print(str(Cov))
 
 
-    def rotate(self, R, inv=None, logdet=None, axis=-1, Q=None):
+    def rotate(self, R, inv=None, logdet=None, axis=-1, Q=None, subset=None):
 
         ndim = len(self._distribution.shape)
         

@@ -405,7 +405,7 @@ class RotateGaussianARD():
     Requirements:
     * X and alpha do not contain any observed values
     """
-    def __init__(self, X, *alpha, axis=-1, precompute=False):
+    def __init__(self, X, *alpha, axis=-1, precompute=False, subset=None):
         """
         Precompute tells whether to compute some moments once in the setup
         function instead of every time in the bound function.  However, they are
@@ -438,6 +438,20 @@ class RotateGaussianARD():
             raise ValueError("Axis out of bounds")
         self.axis = axis
 
+        # Allow rotation of only subset of elements/slices
+        self.D = X.dims[0][axis]
+        if subset is None:
+            #self.subset = np.ones(self.D, dtype=bool)
+            self.subset = None #tuple(range(self.D))
+        else:
+            #self.subset = tuple(range(self.D))
+            self.subset = subset #self.subset[subset]
+            if axis != -1:
+                raise NotImplementedError("Subset indexing for non-last "
+                                          "axis not yet implemented")
+            ## self.subset = np.zeros(self.D, dtype=bool)
+            ## self.subset[list(subset)] = True
+
 
     def nodes(self):
         if self.update_alpha:
@@ -445,11 +459,27 @@ class RotateGaussianARD():
         else:
             return [self.node_X]
 
+
+    def _full_rotation_matrix(self, R):
+        if self.subset is not None:
+            R_full = np.identity(self.D)
+            indices = np.ix_(self.subset, self.subset)
+            R_full[indices] = R
+            return R_full
+        else:
+            return R
+
+
     def rotate(self, R, inv=None, logdet=None, Q=None):
 
+        ## R = self._full_rotation_matrix(R)
+        ## if inv is not None:
+        ##     inv = self._full_rotation_matrix(inv)
+
         self.node_X.rotate(R, 
-                           inv=inv, 
-                           logdet=logdet, 
+                           inv=inv,
+                           logdet=logdet,
+                           subset=self.subset,
                            axis=self.axis)
 
         if self.plate_axis is not None:
@@ -483,6 +513,9 @@ class RotateGaussianARD():
         # Get the mean parameter. It will not be rotated. This assumes that mu
         # and alpha are really independent.
         (alpha_mu, alpha_mu2, alpha, _) = self.node_parent.get_moments()
+        (X, XX) = self.node_X.get_moments()
+
+        #
         mu = alpha_mu / alpha
         mu2 = alpha_mu2 / alpha
         # For simplicity, force mu to have the same shape as X
@@ -492,8 +525,6 @@ class RotateGaussianARD():
         ##                                              self.node_X.dims[0],
         ##                                              mu,
         ##                                              mumu)
-
-        (X, XX) = self.node_X.get_moments()
 
         # Take diagonal of covariances to variances for axes that are not in R
         # (and move those axes to be the last)
@@ -621,6 +652,59 @@ class RotateGaussianARD():
         self.plates_X = plates_X
         self.plates_alpha = plates_alpha
 
+        # Take only a subset of the matrix for rotation
+        if self.subset is not None:
+            if self.precompute:
+                raise NotImplementedError("Precomputation not implemented when "
+                                          "using a subset")
+            # from X
+            self.X = self.X[...,self.subset]
+            self.mu2 = self.mu2[...,self.subset]
+            if plate_axis is not None:
+                # from CovX
+                inds = []
+                for i in range(np.ndim(self.CovX)-2):
+                    inds.append(range(np.shape(self.CovX)[i]))
+                inds.append(self.subset)
+                inds.append(self.subset)
+                indices = np.ix_(*inds)
+                self.CovX = self.CovX[indices]
+                # from mu
+                self.mu = self.mu[...,self.subset]
+            else:
+                # from XX
+                inds = []
+                for i in range(np.ndim(self.XX)-2):
+                    inds.append(range(np.shape(self.XX)[i]))
+                inds.append(self.subset)
+                inds.append(self.subset)
+                indices = np.ix_(*inds)
+                self.XX = self.XX[indices]
+                # from Xmu
+                self.Xmu = self.Xmu[...,self.subset]
+            # from alpha
+            if self.update_alpha:
+                if np.shape(self.a)[-1] > 1:
+                    self.a = self.a[...,self.subset]
+                if np.shape(self.a0)[-1] > 1:
+                    self.a0 = self.a0[...,self.subset]
+                if np.shape(self.b0)[-1] > 1:
+                    self.b0 = self.b0[...,self.subset]
+            else:
+                if np.shape(self.alpha)[-1] > 1:
+                    self.alpha = self.alpha[...,self.subset]
+
+            self.plates_alpha[-1] = min(self.plates_alpha[-1], len(self.subset))
+        ##     # from mu
+        ##     # from alpha
+        ##     alpha_mu = alpha_mu[...,self.subset]
+        ##     alpha_mu2 = alpha_mu2[...,self.subset]
+        ##     alpha = alpha[...,self.subset]
+        ##     dims = list(self.node_X.dims[0])
+        ##     dims[-1] = len(self.subset)
+        ## else:
+        ##     dims = list(self.node_X.dims[0])
+
 
     def _compute_bound(self, R, logdet=None, inv=None, Q=None, gradient=False, terms=False):
         """
@@ -630,6 +714,10 @@ class RotateGaussianARD():
         p(X|alpha) = prod_m N(x_m|0,diag(alpha))
         p(alpha) = prod_d G(a_d,b_d)
         """
+
+        ## R = self._full_rotation_matrix(R)
+        ## if inv is not None:
+        ##     inv = self._full_rotation_matrix(inv)
 
         #
         # Transform the distributions and moments
@@ -877,6 +965,10 @@ class RotateGaussianARD():
             + dlogH_alpha
                         )
 
+        if self.subset:
+            indices = np.ix_(self.subset, self.subset)
+            dR_bound = dR_bound[indices]
+
         if self.plate_axis is None:
             return (bound, dR_bound)
 
@@ -1080,8 +1172,13 @@ class RotateGaussianMarkovChain():
         self.A_rotator.rotate(inv.T, inv=R.T, logdet=-logdet, Q=R)
 
     def _computations_for_A_and_X(self, XpXn, XpXp):
-        # Get moments of A (and make sure they include time axis)
+        # Get moments of the state dynamics matrix
         (A, AA) = self.A_node.get_moments()
+        # Ignore axes that correspond to input signals
+        D = np.shape(A)[-2]
+        A = A[...,:D]
+        AA = AA[...,:D,:D]
+        # Make sure time axis is in the arrays
         A = misc.atleast_nd(A, 3)
         AA = misc.atleast_nd(AA, 4)
         CovA = AA - A[...,:,np.newaxis]*A[...,np.newaxis,:]
