@@ -49,6 +49,8 @@ def run(M=10, N=100, D=5, seed=42, maxiter=100, plot=True):
     Run deterministic annealing demo for 1-D Gaussian mixture.
     """
 
+    raise NotImplementedError("Black box variational inference not yet implemented, sorry")
+
     if seed is not None:
         np.random.seed(seed)
 
