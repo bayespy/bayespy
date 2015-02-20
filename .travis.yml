@@ -1,34 +1,31 @@
 language: python
-matrix:
-  include:
-    - python: 3.2
-      env:
-        - NUMPYSPEC===1.8.0
-        - SCIPYSPEC===0.13.0
-        - MATPLOTLIBSPEC===1.3.1
-    - python: 3.3
-      env:
-        - NUMPYSPEC=
-        - SCIPYSPEC=
-        - MATPLOTLIBSPEC=
-    - python: 3.4
-      env:
-        - NUMPYSPEC=
-        - SCIPYSPEC=
-        - MATPLOTLIBSPEC=
-# install dependencies
+
+# use the faster container-based architecture
+sudo: false
+
+# python versions to test
+python:
+  - 3.3
+  - 3.4
+
+# install Miniconda; use it to install dependencies
 install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq libatlas-dev libatlas-base-dev liblapack-dev gfortran hdf5-tools libhdf5-serial-dev
-  - travis_wait pip install numpy$NUMPYSPEC
-  - travis_wait pip install scipy$SCIPYSPEC
-  - travis_wait pip install matplotlib$MATPLOTLIBSPEC
-  - pip install h5py
-  - pip install coverage coveralls
+  - wget http://repo.continuum.io/miniconda/Miniconda3-3.8.3-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $(pwd)/miniconda
+  - export PATH="$(pwd)/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda info -a
+  - DEPS="pip nose coverage numpy scipy matplotlib h5py"
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION $DEPS
+  - source activate test-environment
+  - pip install coveralls
+
 # run tests (select a proper matplotlib backend)
 before_script:
   - "echo backend : Agg > matplotlibrc"
 script:  nosetests --with-doctest --with-coverage
+
 # check coverage
 after_success:
   - coveralls
