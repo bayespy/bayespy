@@ -216,6 +216,8 @@ class VB():
 
         if len(nodes) == 0:
             nodes = self.model
+        else:
+            nodes = [self[node] for node in nodes if node is not None]
 
         if self.iter == 0:
             # Check HDF5 version.
@@ -682,7 +684,7 @@ class VB():
         if (self.autosave_iterations > 0 
             and np.mod(self.iter, self.autosave_iterations) == 0):
 
-            self.save(self.autosave_filename)
+            self.save(filename=self.autosave_filename)
             if verbose:
                 print('Auto-saved to %s' % self.autosave_filename)
 
