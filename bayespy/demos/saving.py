@@ -107,7 +107,7 @@ def run(M=10, N=100, D_y=3, D=5):
     # Save the state into a HDF5 file
     filename = tempfile.NamedTemporaryFile(suffix='hdf5').name
     Q.update(X, W, alpha, tau, repeat=1)
-    Q.save(filename)
+    Q.save(filename=filename)
 
     # Inference loop.
     Q.update(X, W, alpha, tau, repeat=10)
