@@ -63,12 +63,12 @@ Advanced topics
 
 This section contains brief information on how to implement some advanced
 methods in BayesPy.  These methods include Riemannian conjugate gradient
-methods, pattern search, simulated annealing, collapsed variational inference,
-stochastic variational inference and black box variational inference.  In order
-to use these methods properly, the user should understand them to some extent.
-They are also considered experimental, thus you may encounter bugs or
-unimplemented features.  In any case, these methods may provide huge performance
-improvements easily compared to the standard VB-EM algorithm.
+methods, pattern search, simulated annealing, collapsed variational inference
+and stochastic variational inference.  In order to use these methods properly,
+the user should understand them to some extent.  They are also considered
+experimental, thus you may encounter bugs or unimplemented features.  In any
+case, these methods may provide huge performance improvements easily compared to
+the standard VB-EM algorithm.
 
 
 Gradient-based optimization
@@ -335,4 +335,4 @@ with gradient ascent using a proper learning rate.
 Black-box variational inference
 -------------------------------
 
-TODO
+NOT YET IMPLEMENTED.
