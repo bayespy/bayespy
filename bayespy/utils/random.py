@@ -116,7 +116,7 @@ def covariance(D, size=()):
         
     shape = tuple(size) + (D,D)
     C = np.random.randn(*shape)
-    C = linalg.dot(C, np.swapaxes(C, -1, -2))
+    C = linalg.dot(C, np.swapaxes(C, -1, -2)) / D
     return linalg.inv(C)
 #return np.linalg.inv(np.dot(C, C.T))
 
