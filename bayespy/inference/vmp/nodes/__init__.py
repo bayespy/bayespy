@@ -57,3 +57,5 @@ from .gate import Gate
 
 from .dot import Dot
 from .dot import SumMultiply
+
+from .logpdf import LogPDF
