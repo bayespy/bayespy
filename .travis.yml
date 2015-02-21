@@ -29,3 +29,8 @@ script:  nosetests --with-doctest --with-coverage --cover-erase --verbose --deta
 # check coverage
 after_success:
   - coveralls
+
+# if tests fail, upload images to imgur
+after_failure:
+  - wget http://imgur.com/tools/imgurbash.sh
+  - for img in result_images/test_plot/*.png; do echo -e "\n$img"; bash imgurbash.sh $img; done
