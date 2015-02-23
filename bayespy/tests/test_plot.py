@@ -30,7 +30,7 @@ strict unit tests.
 """
 
 import numpy as np
-from matplotlib.testing.decorators import image_comparison, cleanup
+from matplotlib.testing.decorators import image_comparison
 
 import bayespy.plot as bpplt
 from bayespy.nodes import Bernoulli, Beta, Categorical, Dirichlet, \
@@ -38,8 +38,7 @@ from bayespy.nodes import Bernoulli, Beta, Categorical, Dirichlet, \
 from bayespy.inference import VB
 from bayespy.utils import random
 
-@cleanup
-@image_comparison(baseline_images=['gaussian_mixture'], extensions=['png'])
+@image_comparison(baseline_images=['gaussian_mixture'], extensions=['png'], remove_text=True)
 def test_gaussian_mixture_plot():
     """
     Test the gaussian_mixture plotting function.
@@ -83,34 +82,29 @@ def test_gaussian_mixture_plot():
     bpplt.gaussian_mixture(Y, scale=2)
 
 
-@cleanup
-@image_comparison(baseline_images=['hinton_r'], extensions=['png'])
+@image_comparison(baseline_images=['hinton_r'], extensions=['png'], remove_text=True)
 def test_hinton_plot_dirichlet():
     (R,P,Z) = _setup_bernoulli_mixture()
     bpplt.hinton(R)
 
-@cleanup
-@image_comparison(baseline_images=['hinton_p'], extensions=['png'])
+@image_comparison(baseline_images=['hinton_p'], extensions=['png'], remove_text=True)
 def test_hinton_plot_beta():
     (R,P,Z) = _setup_bernoulli_mixture()
     bpplt.hinton(P)
 
-@cleanup
-@image_comparison(baseline_images=['hinton_z'], extensions=['png'])
+@image_comparison(baseline_images=['hinton_z'], extensions=['png'], remove_text=True)
 def test_hinton_plot_categorical():
     (R,P,Z) = _setup_bernoulli_mixture()
     bpplt.hinton(Z)
 
 
-@cleanup
-@image_comparison(baseline_images=['pdf'], extensions=['png'])
+@image_comparison(baseline_images=['pdf'], extensions=['png'], remove_text=True)
 def test_pdf_plot():
     data = _setup_linear_regression()
     bpplt.pdf(data['tau'], np.linspace(1e-6,1,100), color='k')
     bpplt.pyplot.axvline(data['s']**(-2), color='r')
 
-@cleanup
-@image_comparison(baseline_images=['contour'], extensions=['png'])
+@image_comparison(baseline_images=['contour'], extensions=['png'], remove_text=True)
 def test_contour_plot():
     data = _setup_linear_regression()
     bpplt.contour(data['B'], np.linspace(1,3,1000), np.linspace(1,9,1000),

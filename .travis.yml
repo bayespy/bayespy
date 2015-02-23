@@ -1,34 +1,61 @@
 language: python
+
+# use the faster container-based architecture
+sudo: false
+
+# versions to test
+# list of packages in miniconda:
+# http://repo.continuum.io/pkgs/free/linux-64/index.html
 matrix:
   include:
-    - python: 3.2
-      env:
-        - NUMPYSPEC===1.8.0
-        - SCIPYSPEC===0.13.0
-        - MATPLOTLIBSPEC===1.3.1
     - python: 3.3
       env:
-        - NUMPYSPEC=
-        - SCIPYSPEC=
-        - MATPLOTLIBSPEC=
+        - PYTHONVERSION==3.3.0
+        - NUMPYVERSION==1.8.0
+        - SCIPYVERSION==0.13.0
+        - MATPLOTLIBVERSION==1.3.0  # matplotlib 1.2.0 fails unit tests
+                                    # because of small offsets in plotting
+                                    # compared to more recent versions
+    - python: 3.3
+      env:
+        - PYTHONVERSION==3.3
+        - NUMPYVERSION=
+        - SCIPYVERSION=
+        - MATPLOTLIBVERSION=
     - python: 3.4
       env:
-        - NUMPYSPEC=
-        - SCIPYSPEC=
-        - MATPLOTLIBSPEC=
-# install dependencies
+        - PYTHONVERSION==3.4
+        - NUMPYVERSION=
+        - SCIPYVERSION=
+        - MATPLOTLIBVERSION=
+
+# install Miniconda; use it to install dependencies
 install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq libatlas-dev libatlas-base-dev liblapack-dev gfortran hdf5-tools libhdf5-serial-dev
-  - travis_wait pip install numpy$NUMPYSPEC
-  - travis_wait pip install scipy$SCIPYSPEC
-  - travis_wait pip install matplotlib$MATPLOTLIBSPEC
-  - pip install h5py
-  - pip install coverage coveralls
+  - wget http://repo.continuum.io/miniconda/Miniconda3-3.8.3-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $(pwd)/miniconda
+  - export PATH="$(pwd)/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda info -a
+  - DEPS="pip nose coverage"
+  - conda create -q -n test-environment python$PYTHONVERSION $DEPS
+  - conda install -n test-environment --yes numpy$NUMPYVERSION
+  - conda install -n test-environment --yes scipy$SCIPYVERSION
+  - conda install -n test-environment --yes matplotlib$MATPLOTLIBVERSION
+  - conda install -n test-environment --yes h5py
+  - source activate test-environment
+  - pip install coveralls
+
 # run tests (select a proper matplotlib backend)
 before_script:
   - "echo backend : Agg > matplotlibrc"
-script:  nosetests --with-doctest --with-coverage
+script:  nosetests --with-doctest --with-coverage --cover-erase --verbose --detailed-errors
+
 # check coverage
 after_success:
   - coveralls
+
+# if tests fail, upload images to imgur
+after_failure:
+  - wget http://imgur.com/tools/imgurbash.sh
+  - for img in result_images/test_plot/*.png; do echo -e "\n$img"; bash imgurbash.sh $img; done
