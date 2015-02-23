@@ -101,7 +101,7 @@ working properly.  Thus, install Nose and run the unit tests:
 Installing requirements
 -----------------------
 
-BayesPy requires Python 3.2 (or later) and the following packages:
+BayesPy requires Python 3.3 (or later) and the following packages:
 
 * NumPy (>=1.8.0), 
 * SciPy (>=0.13.0) 
