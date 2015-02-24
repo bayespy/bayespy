@@ -105,11 +105,13 @@ class TestWishart(TestCase):
         Lambda.update()
         u = Lambda.get_moments()
         self.assertAllClose(u[0],
-                            n*np.linalg.inv(V))
+                            n*np.linalg.inv(V),
+                            msg='Mean incorrect')
         self.assertAllClose(u[1],
                             (np.sum(special.digamma((n - np.arange(D))/2))
                              + D*np.log(2)
-                             - np.linalg.slogdet(V)[1]))
+                             - np.linalg.slogdet(V)[1]),
+                             msg='Log determinant incorrect')
         
 
         pass

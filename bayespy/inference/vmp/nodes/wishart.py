@@ -72,41 +72,95 @@ class WishartMoments(Moments):
 class WishartDistribution(ExponentialFamilyDistribution):
     """
     Sub-classes implement distribution specific computations.
+
+    Distribution for :math:`k \times k` symmetric positive definite matrix.
+
+    .. math::
+
+        \Lambda \sim \mathcal{W}(n, V)
+
+    Note: :math:`V` is inverse scale matrix.
+
+    .. math::
+
+        p(\Lambda | n, V) = ..
     """
 
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
         raise NotImplementedError()
 
-    def compute_phi_from_parents(self, *u_parents, mask=True):
-        return [-0.5 * u_parents[1][0],
-                0.5 * u_parents[0][0]]
+    def compute_phi_from_parents(self, u_n, u_V, mask=True):
+        r"""
+        Compute natural parameters
+
+        .. math::
+
+            \phi(n, V) =
+            \begin{bmatrix}
+              -\frac{1}{2} V
+              \\
+              \frac{1}{2} n
+            \end{bmatrix}
+        """
+        return [-0.5 * u_V[0],
+                0.5 * u_n[0]]
 
     def compute_moments_and_cgf(self, phi, mask=True):
+        r"""
+        Return moments and cgf for given natural parameters
+
+        .. math::
+
+            \langle u \rangle =
+            \begin{bmatrix}
+              \phi_2 (-\phi_1)^{-1}
+              \\
+              -\log|-\phi_1| + \psi_k(\phi_2)
+            \end{bmatrix}
+            \\
+            g(\phi) = \phi_2 \log|-\phi_1| - \log \Gamma_k(\phi_2)
+        """
         U = misc.m_chol(-phi[0])
         k = np.shape(phi[0])[-1]
         #k = self.dims[0][0]
         logdet_phi0 = misc.m_chol_logdet(U)
         u0 = phi[1][...,np.newaxis,np.newaxis] * misc.m_chol_inv(U)
-        u1 = -logdet_phi0 + misc.m_digamma(phi[1], k)
+        u1 = -logdet_phi0 + misc.multidigamma(phi[1], k)
         u = [u0, u1]
         g = phi[1] * logdet_phi0 - special.multigammaln(phi[1], k)
         return (u, g)
 
-    def compute_cgf_from_parents(self, *u_parents):
-        n = u_parents[0][0]
-        gammaln_n = u_parents[0][1]
-        V = u_parents[1][0]
-        logdet_V = u_parents[1][1]
+    def compute_cgf_from_parents(self, u_n, u_V):
+        r"""
+        CGF from parents
+
+        .. math::
+
+            g(n, V) = \frac{n}{2} \log|V| - \frac{nk}{2} \log 2 -
+            \log \Gamma_k(\frac{n}{2})
+        """
+        n = u_n[0]
+        gammaln_n = u_n[1]
+        V = u_V[0]
+        logdet_V = u_V[1]
         k = np.shape(V)[-1]
-        #k = self.dims[0][0]
-        # TODO: Check whether this is correct:
-        #g = 0.5*n*logdet_V - special.multigammaln(n/2, k)
-        g = 0.5*n*logdet_V - 0.5*k*n*np.log(2) - gammaln_n #special.multigammaln(n/2, k)
+        g = 0.5*n*logdet_V - 0.5*k*n*np.log(2) - gammaln_n
         return g
 
     def compute_fixed_moments_and_f(self, Lambda, mask=True):
-        """ Compute u(x) and f(x) for given x. """
+        r"""
+        Compute u(x) and f(x) for given x.
+
+        .. math:
+
+            u(\Lambda) =
+            \begin{bmatrix}
+              \Lambda
+              \\
+              \log |\Lambda|
+            \end{bmatrix}
+        """
         k = np.shape(Lambda)[-1]
         ldet = misc.m_chol_logdet(misc.m_chol(Lambda))
         u = [Lambda,

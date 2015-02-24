@@ -1028,11 +1028,14 @@ def m_chol_logdet(U):
     return 2*np.sum(np.log(np.einsum('...ii->...i', U)), axis=(-1,))
 
 
-def m_digamma(a, d):
-    y = 0
-    for i in range(d):
-        y += special.digamma(a + 0.5*(1-i))
-    return y
+def multidigamma(a, d):
+    """
+    Returns the derivative of the log of multivariate gamma.
+    """
+    return np.sum(special.digamma(a[...,None] - 0.5*np.arange(d)),
+                  axis=-1)
+
+m_digamma = multidigamma
 
 def m_outer(A,B):
     # Computes outer product over the last axes of A and B. The other
