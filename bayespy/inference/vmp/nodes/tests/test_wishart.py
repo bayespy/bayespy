@@ -41,19 +41,20 @@ from bayespy.utils import random
 
 from bayespy.utils.misc import TestCase
 
-class TestWishart(TestCase):
+def _student_logpdf(y, mu, Cov, nu):
+    D = np.shape(y)[-1]
+    return (special.gammaln((nu+D)/2)
+            - special.gammaln(nu/2)
+            - 0.5 * D * np.log(nu)
+            - 0.5 * D * np.log(np.pi)
+            - 0.5 * np.linalg.slogdet(Cov)[1]
+            - 0.5 * (nu+D) * np.log(1+1/nu*np.einsum('...i,...ij,...j->...',
+                                                     y-mu,
+                                                     np.linalg.inv(Cov),
+                                                     y-mu)))
 
-    def _student_logpdf(y, mu, Cov, nu):
-        D = np.shape(y)[-1]
-        return (special.gammaln((nu+D)/2)
-                - special.gammaln(nu/2)
-                - 0.5 * D * np.log(nu)
-                - 0.5 * D * np.log(np.pi)
-                - 0.5 * np.linalg.slogdet(Cov)[1]
-                - 0.5 * (nu+D) * np.log(1+1/nu*np.einsum('...i,...ij,...j->...',
-                                                         y-mu,
-                                                         np.linalg.inv(Cov),
-                                                         y-mu)))
+
+class TestWishart(TestCase):
 
     def test_lower_bound(self):
         """
