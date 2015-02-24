@@ -43,6 +43,18 @@ from bayespy.utils.misc import TestCase
 
 class TestWishart(TestCase):
 
+    def _student_logpdf(y, mu, Cov, nu):
+        D = np.shape(y)[-1]
+        return (special.gammaln((nu+D)/2)
+                - special.gammaln(nu/2)
+                - 0.5 * D * np.log(nu)
+                - 0.5 * D * np.log(np.pi)
+                - 0.5 * np.linalg.slogdet(Cov)[1]
+                - 0.5 * (nu+D) * np.log(1+1/nu*np.einsum('...i,...ij,...j->...',
+                                                         y-mu,
+                                                         np.linalg.inv(Cov),
+                                                         y-mu)))
+
     def test_lower_bound(self):
         """
         Test the Wishart VB lower bound
@@ -51,25 +63,14 @@ class TestWishart(TestCase):
         #
         # By having the Wishart node as the only latent node, VB will give exact
         # results, thus the VB lower bound is the true marginal log likelihood.
-        # Thus, check that they are equal. The true marginal likelihood
-        # is the multivariate Student-t distribution.
+        # Thus, check that they are equal. The true marginal likelihood is the
+        # multivariate Student-t distribution.
         #
-
-        def student_logpdf(y, mu, Cov, nu):
-            return (special.gammaln((nu+D)/2)
-                    - special.gammaln(nu/2)
-                    - 0.5 * D * np.log(nu)
-                    - 0.5 * D * np.log(np.pi)
-                    - 0.5 * np.linalg.slogdet(Cov)[1]
-                    - 0.5 * (nu+D) * (1+1/nu*np.einsum('i,ij,j',
-                                                       y-mu,
-                                                       np.linalg.inv(Cov),
-                                                       y-mu)))
 
         np.random.seed(42)
 
         D = 3
-        n = (D-1) + np.random.uniform(0.1,2)
+        n = (D-1) + np.random.uniform(0.1, 0.5)
         V = random.covariance(D)
         Lambda = Wishart(n, V)
         mu = np.random.randn(D)
@@ -82,10 +83,10 @@ class TestWishart(TestCase):
         nu = n + 1 - D
         Cov = V / nu
         self.assertAllClose(L,
-                            student_logpdf(y,
-                                           mu,
-                                           Cov,
-                                           nu))
+                            _student_logpdf(y,
+                                            mu,
+                                            Cov,
+                                            nu))
 
         pass
 
@@ -112,6 +113,29 @@ class TestWishart(TestCase):
                              + D*np.log(2)
                              - np.linalg.slogdet(V)[1]),
                              msg='Log determinant incorrect')
+
+        # Test posterior moments
+        D = 3
+        n = (D-1) + np.random.uniform(0.1,2)
+        V = random.covariance(D)
+        Lambda = Wishart(n, V)
+        mu = np.random.randn(D)
+        Y = Gaussian(mu, Lambda)
+        y = np.random.randn(D)
+        Y.observe(y)
+        Lambda.update()
+        u = Lambda.get_moments()
+        n = n + 1
+        V = V + np.outer(y-mu, y-mu) 
+        self.assertAllClose(u[0],
+                            n*np.linalg.inv(V),
+                            msg='Mean incorrect')
+        self.assertAllClose(u[1],
+                            (np.sum(special.digamma((n - np.arange(D))/2))
+                             + D*np.log(2)
+                             - np.linalg.slogdet(V)[1]),
+                             msg='Log determinant incorrect')
+
         
 
         pass
