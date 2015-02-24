@@ -113,14 +113,15 @@ class Bernoulli(ExponentialFamily):
                  cls._parent_moments)
 
 
-    def show(self):
+    def __str__(self):
         """
         Print the distribution using standard parameterization.
         """
         p = 1 / (1 + np.exp(-self.phi[0]))
-        print("%s ~ Bernoulli(p)" % self.name)
-        print("  p = ")
-        print(p)
+        return ("%s ~ Bernoulli(p)\n"
+                "  p = \n"
+                "%s\n"
+                % (self.name, p))
 
 
 from .deterministic import Deterministic

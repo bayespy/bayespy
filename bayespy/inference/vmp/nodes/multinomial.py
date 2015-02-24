@@ -237,14 +237,14 @@ class Multinomial(ExponentialFamily):
                 cls._parent_moments)
 
     
-    def show(self):
+    def __str__(self):
         """
         Print the distribution using standard parameterization.
         """
         logsum_p = misc.logsumexp(self.phi[0], axis=-1, keepdims=True)
         p = np.exp(self.phi[0] - logsum_p)
         p /= np.sum(p, axis=-1, keepdims=True)
-        print("%s ~ Multinomial(p)" % self.name)
-        print("  p = ")
-        print(p)
-        return
+        return ("%s ~ Multinomial(p)\n"
+                "  p = \n"
+                "%s\n"
+                % (self.name, p))

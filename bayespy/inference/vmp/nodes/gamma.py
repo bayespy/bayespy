@@ -240,15 +240,19 @@ class Gamma(ExponentialFamily):
         super().__init__(a, b, **kwargs)
 
 
-    def show(self):
+    def __str__(self):
         """
         Print the distribution using standard parameterization.
         """
         a = self.phi[1]
         b = -self.phi[0]
-        print("%s ~ Gamma(a, b)" % self.name)
-        print("  a =", a)
-        print("  b =", b)
+        return ("%s ~ Gamma(a, b)\n"
+                "  a =\n"
+                "%s\n"
+                "  b =\n"
+                "%s\n"
+                % (self.name, a, b))
+
 
     def as_diagonal_wishart(self):
         return _GammaToDiagonalWishart(self,

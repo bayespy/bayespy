@@ -170,14 +170,15 @@ class Beta(Dirichlet):
         return super()._constructor(alpha, **kwargs)
 
     
-    def show(self):
+    def __str__(self):
         """
         Print the distribution using standard parameterization.
         """
         a = self.phi[0][...,0]
         b = self.phi[0][...,1]
-        print("%s ~ Beta(a, b)" % self.name)
-        print("  a = ")
-        print(a)
-        print("  b = ")
-        print(b)
+        return ("%s ~ Beta(a, b)\n"
+                "  a = \n"
+                "%s\n"
+                "  b = \n"
+                "%s\n"
+                % (self.name, a, b))

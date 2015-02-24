@@ -178,11 +178,12 @@ class Poisson(ExponentialFamily):
         super().__init__(l, **kwargs)
 
         
-    def show(self):
+    def __str__(self):
         """
         Print the distribution using standard parameterization.
         """
         l = self.u[0]
-        print("%s ~ Categorical(lambda)" % self.name)
-        print("  lambda = ")
-        print(l)
+        return ("%s ~ Categorical(lambda)\n"
+                "  lambda =\n"
+                "%s\n"
+                % (self.name, l))

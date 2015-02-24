@@ -230,14 +230,15 @@ class Binomial(ExponentialFamily):
                  cls._parent_moments)
 
     
-    def show(self):
+    def __str__(self):
         """
         Print the distribution using standard parameterization.
         """
         p = 1 / (1 + np.exp(-self.phi[0]))
         n = self._distribution.N
-        print("%s ~ Binomial(n, p)" % self.name)
-        print("  n = ")
-        print(n)
-        print("  p = ")
-        print(p)
+        return ("%s ~ Binomial(n, p)\n"
+                "  n = \n"
+                "%s\n"
+                "  p = \n"
+                "%s\n"
+                % (self.name, n, p))

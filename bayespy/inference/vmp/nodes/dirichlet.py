@@ -266,11 +266,11 @@ class Dirichlet(ExponentialFamily):
                  cls._parent_moments)
 
                  
-    def show(self):
+    def __str__(self):
         """
-        Print the distribution using standard parameterization.
+        Show distribution as a string
         """
         alpha = self.phi[0]
-        print("%s ~ Dirichlet(alpha)" % self.name)
-        print("  alpha = ")
-        print(alpha)
+        return ("%s ~ Dirichlet(alpha)\n"
+                "  alpha =\n"
+                "%s" % (self.name, alpha))

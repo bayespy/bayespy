@@ -1175,14 +1175,16 @@ class Gaussian(ExponentialFamily):
         self._initialize_from_parent_moments(u)
 
         
-    def show(self):
+    def __str__(self):
         mu = self.u[0]
         Cov = self.u[1] - misc.m_outer(mu, mu)
-        print("%s ~ Gaussian(mu, Cov)" % self.name)
-        print("  mu = ")
-        print(mu)
-        print("  Cov = ")
-        print(str(Cov))
+        return ("%s ~ Gaussian(mu, Cov)\n"
+                "  mu = \n"
+                "%s\n"
+                "  Cov = \n"
+                "%s\n"
+                % (self.name, mu, Cov))
+
 
     def rotate(self, R, inv=None, logdet=None, Q=None):
 
@@ -1444,14 +1446,15 @@ class GaussianARD(ExponentialFamily):
         self._set_moments_and_cgf(u, np.nan, mask=mask)
         return
 
-    def show(self):
+    def __str__(self):
         mu = self.u[0]
         Cov = self.u[1] - misc.m_outer(mu, mu)
-        print("%s ~ Gaussian(mu, Cov)" % self.name)
-        print("  mu = ")
-        print(mu)
-        print("  Cov = ")
-        print(str(Cov))
+        return ("%s ~ Gaussian(mu, Cov)\n"
+                "  mu = \n"
+                "%s\n"
+                "  Cov = \n"
+                "%s\n"
+                % (self.name, mu, Cov))
 
 
     def rotate(self, R, inv=None, logdet=None, axis=-1, Q=None, subset=None):
@@ -1593,13 +1596,6 @@ class GaussianGammaISO(ExponentialFamily):
                 cls._parent_moments)
 
     
-    def show(self):
-        r"""
-        Print the distribution using standard parameterization.
-        """
-        raise NotImplementedError()
-
-
     def plotmatrix(self):
         r"""
         Creates a matrix of marginal plots.
@@ -1885,13 +1881,6 @@ class GaussianWishart(ExponentialFamily):
                 parent_moments)
 
     
-    def show(self):
-        r"""
-        Print the distribution using standard parameterization.
-        """
-        raise NotImplementedError()
-
-
 
 #
 # CONVERTERS

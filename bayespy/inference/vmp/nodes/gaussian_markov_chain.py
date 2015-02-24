@@ -178,9 +178,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
     _moments = GaussianMarkovChainMoments()
                                 
     
-    def show(self):
-        raise NotImplementedError()
-
     def rotate(self, R, inv=None, logdet=None):
 
         if inv is not None:

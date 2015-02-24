@@ -235,10 +235,13 @@ class Wishart(ExponentialFamily):
                 cls._moments, 
                 parent_moments)
 
-    def show(self):
-        print("%s ~ Wishart(n, A)" % self.name)
-        print("  n =")
-        print(2*self.phi[1])
-        print("  A =")
-        print(0.5 * self.u[0] / self.phi[1][...,np.newaxis,np.newaxis])
+    def __str__(self):
+        n = 2*self.phi[1]
+        A = 0.5 * self.u[0] / self.phi[1][...,np.newaxis,np.newaxis]
+        return ("%s ~ Wishart(n, A)\n"
+                "  n =\n"
+                "%s\n"
+                "  A =\n"
+                "%s\n"
+                % (self.name, n, A))
 

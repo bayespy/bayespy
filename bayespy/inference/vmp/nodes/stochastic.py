@@ -295,3 +295,18 @@ class Stochastic(Node):
         Draw a random sample from the distribution.
         """
         raise NotImplementedError()
+
+
+    def show(self):
+        """
+        Print the distribution using standard parameterization.
+        """
+        print(str(self))
+
+
+    def __str__(self):
+        """
+        
+        """
+        raise NotImplementedError("String representation not yet implemented for "
+                                  "node class %s" % (self.__class__.__name__))

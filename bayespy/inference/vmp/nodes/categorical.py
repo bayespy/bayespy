@@ -226,11 +226,12 @@ class Categorical(ExponentialFamily):
                 cls._parent_moments)
     
 
-    def show(self):
+    def __str__(self):
         """
         Print the distribution using standard parameterization.
         """
         p = self.u[0]
-        print("%s ~ Categorical(p)" % self.name)
-        print("  p = ")
-        print(p)
+        return ("%s ~ Categorical(p)\n"
+                "  p = \n"
+                "%s\n"
+                % (self.name, p))

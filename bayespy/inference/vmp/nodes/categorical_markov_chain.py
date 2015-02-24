@@ -351,13 +351,6 @@ class CategoricalMarkovChain(ExponentialFamily):
                 parent_moments)
 
         
-    def show(self):
-        """
-        Print the distribution using standard parameterization.
-        """
-        raise NotImplementedError()
-
-
 class CategoricalMarkovChainToCategorical(Deterministic):
     """
     A node for converting categorical MC moments to categorical moments.
