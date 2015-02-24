@@ -125,10 +125,10 @@ Before running the inference algorithm, we provide the data:
 Then, run VB iteration until convergence:
 
 >>> Q.update(repeat=1000)
-Iteration 1: loglike=-1.401968e+03 (... seconds)
+Iteration 1: loglike=-1.402345e+03 (... seconds)
 ...
-Iteration 48: loglike=-1.017893e+03 (... seconds)
-Converged at iteration 48.
+Iteration 61: loglike=-8.888464e+02 (... seconds)
+Converged at iteration 61.
 
 The algorithm converges very quickly.  Note that the default update order of the
 nodes was such that ``mu`` and ``Lambda`` were updated before ``Z``, which is
