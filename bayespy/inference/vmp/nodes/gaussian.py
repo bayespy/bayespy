@@ -1445,7 +1445,6 @@ class GaussianARD(ExponentialFamily):
         return
 
     def show(self):
-        raise NotImplementedError()
         mu = self.u[0]
         Cov = self.u[1] - misc.m_outer(mu, mu)
         print("%s ~ Gaussian(mu, Cov)" % self.name)
