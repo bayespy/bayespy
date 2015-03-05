@@ -65,3 +65,8 @@ Making releases
  * Publish in PyPI: ``python setup.py release_pypi``
 
  * Update the documentation web page: ``cd doc && make gh-pages``
+
+ * Publish in mloss.org.
+
+ * Announcements to bayespy@googlegroups.com, scipy-user@scipy.org and
+   numpy-discussion@scipy.org.
