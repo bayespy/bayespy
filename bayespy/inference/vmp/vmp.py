@@ -675,7 +675,8 @@ class VB():
             if tol is None:
                 tol = self.tol
             div = 0.5 * (abs(L0) + abs(L1))
-            if (L1 - L0) / div < tol or L1 - L0 <= 0:
+            if (L1 - L0) / div < tol:
+            #if (L1 - L0) / div < tol or L1 - L0 <= 0:
                 if verbose:
                     print("Converged at iteration %d." % (self.iter+1))
                 self.converged = True
