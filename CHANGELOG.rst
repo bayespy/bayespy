@@ -1,3 +1,24 @@
+Version 0.3 (2015-03-05)
+++++++++++++++++++++++++
+
+ * Add gradient-based optimization methods (Riemannian/natural gradient or normal)
+
+ * Add collapsed inference
+
+ * Add the pattern search method
+
+ * Add deterministic annealing
+
+ * Add stochastic variational inference
+
+ * Add optional input signals to Gaussian Markov chains
+
+ * Add unit tests for plotting functions (by Hannu Hartikainen)
+
+ * Add printing support to nodes
+
+ * Drop Python 3.2 support
+
 Version 0.2.3 (2014-12-03)
 ++++++++++++++++++++++++++
 
