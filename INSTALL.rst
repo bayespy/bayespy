@@ -131,9 +131,16 @@ dependencies:
      However, it is possible that these system packages are not recent enough
      for BayesPy.
 
-  3. Install the packages using Pip: ``pip install "numpy>=1.8.0"
-     "scipy>=0.13.0" "matplotlib>=1.2" h5py``.  However, this may require that
-     the system has the libraries needed for compiling (e.g., C compiler, Python
+  3. Install the packages using Pip:
+
+     .. code-block:: console
+
+        pip install "distribute>=0.6.28"
+        pip install "numpy>=1.8.0" "scipy>=0.13.0" "matplotlib>=1.2" h5py
+
+     This also makes sure you have recent enough version of Distribute (required
+     by Matplotlib).  However, this installation method may require that the
+     system has some libraries needed for compiling (e.g., C compiler, Python
      development files, BLAS/LAPACK).  For instance, on Ubuntu (>= 12.10), you
      may install the required system libraries for each package as:
 
@@ -144,9 +151,7 @@ dependencies:
         sudo apt-get build-dep python3-matplotlib
         sudo apt-get build-dep python-h5py
 
-     Then installation using Pip should work.  Also, make sure you have recent
-     enough version of Distribute (required by Matplotlib): ``pip install
-     "distribute>=0.6.28"``.
+     Then installation using Pip should work.  
 
 
 Compiling documentation
