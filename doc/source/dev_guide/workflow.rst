@@ -48,3 +48,20 @@ uses the following acronyms to start the commit message:
  * TST: addition or modification of tests
  * REL: related to releasing numpy
 
+
+Making releases
+---------------
+
+ * Commit any current changes to git.
+
+ * Edit version number in setup.py.
+
+ * Add changes to CHANGELOG.rst.
+
+ * Make a commit: ``git commit -am "REL: Version x.x.x"``
+
+ * Tag the release: ``git tag x.x.x``
+
+ * Publish in PyPI: ``python setup.py release_pypi``
+
+ * Update the documentation web page: ``cd doc && make gh-pages``
