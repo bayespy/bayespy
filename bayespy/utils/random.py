@@ -71,7 +71,7 @@ def mask(*shape, p=0.5):
     """
     return np.random.rand(*shape) < p
 
-def wishart_rand(nu, V):
+def wishart(nu, V):
     r"""
     Draw a random sample from the Wishart distribution.
 
@@ -87,11 +87,13 @@ def wishart_rand(nu, V):
     X = np.random.multivariate_normal(np.zeros(D), V, size=nu)
     return np.dot(X, X.T)
 
+wishart_rand = wishart
+
 def invwishart_rand(nu, V):
     # TODO/FIXME: Are these correct..
     return np.linalg.inv(wishart_rand(nu, V))
 
-def covariance(D, size=()):
+def covariance(D, size=(), nu=None):
     r"""
     Draw a random covariance matrix.
 
@@ -113,10 +115,16 @@ def covariance(D, size=()):
 
     if isinstance(size, int):
         size = (size,)
+
+    if nu is None:
+        nu = D
+
+    if nu < D:
+        raise ValueError("nu must be greater than or equal to D")
         
-    shape = tuple(size) + (D,D)
+    shape = tuple(size) + (D,nu)
     C = np.random.randn(*shape)
-    C = linalg.dot(C, np.swapaxes(C, -1, -2)) / D
+    C = linalg.dot(C, np.swapaxes(C, -1, -2)) / nu
     return linalg.inv(C)
 #return np.linalg.inv(np.dot(C, C.T))
 
