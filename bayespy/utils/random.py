@@ -113,16 +113,17 @@ def covariance(D, size=(), nu=None):
         Positive-definite symmetric :math:`D\times D` matrix.
     """
 
-    if isinstance(size, int):
-        size = (size,)
-
     if nu is None:
         nu = D
 
     if nu < D:
         raise ValueError("nu must be greater than or equal to D")
-        
-    shape = tuple(size) + (D,nu)
+
+    try:
+        size = tuple(size)
+    except TypeError:
+        size = (size,)
+    shape = size + (D,nu)
     C = np.random.randn(*shape)
     C = linalg.dot(C, np.swapaxes(C, -1, -2)) / nu
     return linalg.inv(C)
