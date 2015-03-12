@@ -1,3 +1,12 @@
+Version 0.3.1 (2015-03-12)
+++++++++++++++++++++++++++
+
+ * Gaussian mixture 2D plotting improvements
+
+ * Covariance matrix sampling improvements
+
+ * Minor documentation fixes
+
 Version 0.3 (2015-03-05)
 ++++++++++++++++++++++++
 
