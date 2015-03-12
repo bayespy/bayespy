@@ -261,9 +261,19 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         D = np.shape(u[0])[-1]
         
         if index == 0:   # mu
-            raise NotImplementedError()
+            Lambda = u_Lambda[0]
+            x0 = u[0][...,0,:]
+            m0 = np.einsum('...ik,...k->...i', Lambda, x0)
+            m1 = -0.5*Lambda
         elif index == 1: # Lambda
-            raise NotImplementedError()
+            x0 = u[0][...,0,:]
+            x0x0 = u[1][...,0,:,:]
+            mu = u_mu[0]
+            mumu = u_mu[1]
+            x0mu = np.einsum('...i,...j->...ij', x0, mu)
+            mux0 = np.swapaxes(x0mu, -1, -2)
+            m0 = -0.5*x0x0 + 0.5*x0mu + 0.5*mux0 - 0.5*mumu
+            m1 = 0.5
         elif index == 2: # A
             XnXn = u[1]
             XpXn = u[2]
@@ -299,17 +309,29 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
                                       
             #m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
         elif index == 3: # v
+            ## if len(u_inputs):
+            ##     raise NotImplementedError("Message to innovation not yet implemented "
+            ##                               "if using input signals")
             XnXn = u[1] # (...,N,D,D)
             XpXn = u[2] # (...,N-1,D,D)
-            A = u_A[0]  # (...,N-1,D,D)
-            AA = u_A[1] # (...,N-1,D,D,D)
+            A = u_A[0][...,:D]     # (..., N-1, D, D)
+            AA = u_A[1][...,:D,:D] # (..., N-1, D, D, D)
             m0 = (- 0.5*np.einsum('...ii->...i', XnXn[...,1:,:,:])
                   + np.einsum('...ik,...ki->...i', A, XpXn)
                   - 0.5*np.einsum('...ikl,...kl->...i', AA, XnXn[...,:-1,:,:]))
-            m1 = 0.5
             if len(u_inputs):
-                raise NotImplementedError("Message to innovation not yet implemented "
-                                          "if using input signals")
+                Xn = u[0]              # (..., N, D)
+                B = u_A[0][...,D:]     # (..., N-1, D, inputs)
+                BB = u_A[1][...,D:,D:] # (..., N-1, D, inputs, inputs)
+                AB = u_A[1][...,:D,D:] # (..., N-1, D, D, inputs)
+                Un = u_inputs[0][0]    # (..., N-1, inputs)
+                UnUn = u_inputs[0][1]  # (..., N-1, inputs, inputs)
+                BUn = np.einsum('...dk,...k->...d', B, Un)
+                m0 = m0 + (- 0.5*np.einsum('...ikl,...kl->...i', BB, UnUn)
+                           + BUn * Xn[...,1:,:]
+                           - np.einsum('...ijk,...j,...k', AB, Xn[...,:-1,:], Un))
+
+            m1 = 0.5
         elif index == 4: # input signals
             raise NotImplementedError()
 
