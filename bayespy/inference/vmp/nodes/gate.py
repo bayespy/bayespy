@@ -48,6 +48,20 @@ class Gate(Deterministic):
 
     def __init__(self, Z, X, gated_plate=-1, moments=None, **kwargs):
         """
+        Constructor for the gating node.
+
+        Parameters
+        ----------
+
+        Z : Categorical-like node
+           A variable which chooses the index along the gated plate axis
+
+        X : node
+           The node whose plate axis is gated
+
+        gated_plate : int (optional)
+           The index of the plate axis to be gated (by default, -1, that is,
+           the last axis).
         """
 
         if gated_plate >= 0:
