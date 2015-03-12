@@ -130,7 +130,7 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
 
         Child classes must implement this.
 
-        Parameters:
+        Parameters
         -----------
         index : int
             The index of the parent node to use.
@@ -240,8 +240,8 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         """
         Compute a message to a parent.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         index : int
             Index of the parent requesting the message.
         u : list of ndarrays
@@ -472,8 +472,8 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
           A:      (...,N-1,D)
           v:      (...,N-1,D)
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         index : int
             The index of the parent node to use.
         """
@@ -765,7 +765,7 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
         """
         Compute a message to a parent.
 
-        Parameters:
+        Parameters
         -----------
         index : int
             Index of the parent requesting the message.
@@ -971,7 +971,7 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
           A:      (...,N-1,D)
           v:      (...,N-1,D)
 
-        Parameters:
+        Parameters
         -----------
         index : int
             The index of the parent node to use.
@@ -1284,8 +1284,8 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
         """
         Compute a message to a parent.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         index : int
             Index of the parent requesting the message.
         u : list of ndarrays
@@ -1504,8 +1504,8 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
           A:      (...,N-1,D)
           v:      (...,N-1,D)
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         index : int
             The index of the parent node to use.
         """
@@ -1893,15 +1893,15 @@ class _MarkovChainToGaussian(Deterministic):
         we'll put the last/third message to None meaning that it is
         empty.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         index : int
             Index of the parent requesting the message.
         u_parents : list of list of ndarrays
             List of parents' moments.
 
-        Returns:
-        --------
+        Returns
+        -------
         m : list of ndarrays
             Message as a list of arrays.
         mask : boolean ndarray

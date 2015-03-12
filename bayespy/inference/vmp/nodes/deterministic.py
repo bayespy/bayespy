@@ -169,15 +169,15 @@ def tile(X, tiles):
     There should be no need to tile plates that have unit length because they
     are handled properly by the broadcasting rules already.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     X : Node
         Input node to be tiled.
     tiles : int, tuple
         Tiling of the plates (broadcasting rules for plates apply).
 
-    See also:
-    ---------
+    See also
+    --------
     numpy.tile
     """
     
