@@ -140,9 +140,9 @@ Results
 .. currentmodule:: bayespy.plot
 
 For two-dimensional Gaussian mixtures, the mixture components can be plotted
-using :func:`gaussian_mixture`:
+using :func:`gaussian_mixture_2d`:
 
->>> bpplt.gaussian_mixture(Y, scale=2)
+>>> bpplt.gaussian_mixture_2d(Y, alpha=alpha, scale=2)
 
 .. plot::
 
@@ -181,7 +181,7 @@ using :func:`gaussian_mixture`:
    Y.observe(y)
    Q.update(repeat=1000)
 
-   bpplt.gaussian_mixture(Y, scale=2)
+   bpplt.gaussian_mixture_2d(Y, alpha=alpha, scale=2)
    bpplt.pyplot.show()
 
 

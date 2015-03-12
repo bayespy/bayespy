@@ -36,7 +36,7 @@ Functions
    contour
    plot
    hinton
-   gaussian_mixture
+   gaussian_mixture_2d
 
 Plotters
 ========
@@ -440,9 +440,20 @@ def _rectangle(axes, x, y, width, height, **kwargs):
     return
 
 
-def gaussian_mixture(X, scale=1, fill=False, axes=None, **kwargs):
+def gaussian_mixture_2d(X, alpha=None, scale=2, fill=False, axes=None, **kwargs):
     """
     Plot Gaussian mixture as ellipses in 2-D
+
+    Parameters
+    ----------
+
+    X : Mixture node
+
+    alpha : Dirichlet-like node (optional)
+       Probabilities for the clusters
+
+    scale : float (optional)
+       Scale for the covariance ellipses (by default, 2)
     """
         
     if axes is None:
@@ -458,21 +469,50 @@ def gaussian_mixture(X, scale=1, fill=False, axes=None, **kwargs):
     
     K = mu_Lambda.plates[0]
 
+    width = np.zeros(K)
+    height = np.zeros(K)
+    angle = np.zeros(K)
+
     for k in range(K):
         m = mu[k]
         L = Lambda[k]
         (u, W) = scipy.linalg.eigh(L)
         u[0] = np.sqrt(1/u[0])
         u[1] = np.sqrt(1/u[1])
-        width = 2*u[0]
-        height = 2*u[1]
-        angle = np.arctan(W[0,1] / W[0,0])
-        angle = 180 * angle / np.pi
-        ell = mpl.patches.Ellipse(m, scale*width, scale*height,
-                                  angle=(180+angle),
+        width[k] = 2*u[0]
+        height[k] = 2*u[1]
+        angle[k] = np.arctan(W[0,1] / W[0,0])
+
+    angle = 180 * angle / np.pi
+    mode_height = 1 / (width * height)
+
+    # Use cluster probabilities to adjust alpha channel
+    if alpha is not None:
+        # Compute the normalized probabilities in a numerically stable way
+        logsum_p = misc.logsumexp(alpha.u[0], axis=-1, keepdims=True)
+        logp = alpha.u[0] - logsum_p
+        p = np.exp(logp)
+        # Visibility is based on cluster mode peak height
+        visibility = mode_height * p
+        visibility /= np.amax(visibility)
+    else:
+        visibility = np.ones(K)
+
+    for k in range(K):
+        ell = mpl.patches.Ellipse(mu[k], scale*width[k], scale*height[k],
+                                  angle=(180+angle[k]),
                                   fill=fill,
+                                  alpha=visibility[k],
                                   **kwargs)
         axes.add_artist(ell)
+
+    plt.axis('equal')
+
+    # If observed, plot the data too
+    if np.any(X.observed):
+        mask = np.array(X.observed) * np.ones(X.plates, dtype=np.bool)
+        y = X.u[0][mask]
+        plt.plot(y[:,0], y[:,1], 'r.')
 
     return
     

@@ -79,7 +79,7 @@ def test_gaussian_mixture_plot():
     Y.observe(y)
     Q.update(repeat=1000)
 
-    bpplt.gaussian_mixture(Y, scale=2)
+    bpplt.gaussian_mixture_2d(Y, scale=2)
 
 
 @image_comparison(baseline_images=['hinton_r'], extensions=['png'], remove_text=True)
