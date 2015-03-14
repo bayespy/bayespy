@@ -54,6 +54,7 @@ from .categorical_markov_chain import CategoricalMarkovChain
 
 from .mixture import Mixture
 from .gate import Gate
+from .concatenate import Concatenate
 
 from .dot import Dot
 from .dot import SumMultiply
