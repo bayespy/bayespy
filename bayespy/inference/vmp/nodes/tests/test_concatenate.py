@@ -30,7 +30,8 @@ import warnings
 import numpy as np
 
 from bayespy.nodes import (Concatenate,
-                           GaussianARD)
+                           GaussianARD,
+                           Gamma)
 
 from bayespy.utils import random
 
@@ -88,6 +89,21 @@ class TestConcatenate(TestCase):
         self.assertEqual(Y.plates, (9,))
         self.assertEqual(Y.dims, ( (), () ))
 
+        # Constant parent
+        X1 = [7.2, 3.5]
+        X2 = GaussianARD(0, 1, plates=(3,), shape=())
+        Y = Concatenate(X1, X2)
+        self.assertEqual(Y.plates, (5,))
+        self.assertEqual(Y.dims, ( (), () ))
+
+        # Different moments
+        X1 = GaussianARD(0, 1, plates=(3,))
+        X2 = Gamma(1, 1, plates=(4,))
+        self.assertRaises(ValueError,
+                          Concatenate,
+                          X1,
+                          X2)
+
         # Incompatible shapes
         X1 = GaussianARD(0, 1, plates=(3,), shape=(2,))
         X2 = GaussianARD(0, 1, plates=(2,), shape=())
@@ -119,14 +135,14 @@ class TestConcatenate(TestCase):
         u1 = X1.get_moments()
         u2 = X2.get_moments()
         u = Y.get_moments()
-        self.assertAllClose(u[0][:2] * np.ones((2,)),
-                            u1[0]    * np.ones((2,)))
-        self.assertAllClose(u[1][:2] * np.ones((2,)),
-                            u1[1]    * np.ones((2,)))
-        self.assertAllClose(u[0][2:] * np.ones((3,)),
-                            u2[0]    * np.ones((3,)))
-        self.assertAllClose(u[1][2:] * np.ones((3,)),
-                            u2[1]    * np.ones((3,)))
+        self.assertAllClose((u[0]*np.ones((5,)))[:2],
+                            u1[0]*np.ones((2,)))
+        self.assertAllClose((u[1]*np.ones((5,)))[:2],
+                            u1[1]*np.ones((2,)))
+        self.assertAllClose((u[0]*np.ones((5,)))[2:],
+                            u2[0]*np.ones((3,)))
+        self.assertAllClose((u[1]*np.ones((5,)))[2:],
+                            u2[1]*np.ones((3,)))
 
         # Two parents with shapes
         X1 = GaussianARD(0, 1, plates=(2,), shape=(4,))
@@ -143,6 +159,39 @@ class TestConcatenate(TestCase):
                             u2[0]*np.ones((3,4)))
         self.assertAllClose((u[1]*np.ones((5,4,4)))[2:],
                             u2[1]*np.ones((3,4,4)))
+
+        # Test with non-constant axis
+        X1 = GaussianARD(0, 1, plates=(2,4), shape=())
+        X2 = GaussianARD(0, 1, plates=(3,4), shape=())
+        Y = Concatenate(X1, X2, axis=-2)
+        u1 = X1.get_moments()
+        u2 = X2.get_moments()
+        u = Y.get_moments()
+        self.assertAllClose((u[0]*np.ones((5,4)))[:2],
+                            u1[0]*np.ones((2,4)))
+        self.assertAllClose((u[1]*np.ones((5,4)))[:2],
+                            u1[1]*np.ones((2,4)))
+        self.assertAllClose((u[0]*np.ones((5,4)))[2:],
+                            u2[0]*np.ones((3,4)))
+        self.assertAllClose((u[1]*np.ones((5,4)))[2:],
+                            u2[1]*np.ones((3,4)))
+
+        # Test with constant parent
+        X1 = np.random.randn(2, 4)
+        X2 = GaussianARD(0, 1, plates=(3,), shape=(4,))
+        Y = Concatenate(X1, X2)
+        u1 = Y.parents[0].get_moments()
+        u2 = X2.get_moments()
+        u = Y.get_moments()
+        self.assertAllClose((u[0]*np.ones((5,4)))[:2],
+                            u1[0]*np.ones((2,4)))
+        self.assertAllClose((u[1]*np.ones((5,4,4)))[:2],
+                            u1[1]*np.ones((2,4,4)))
+        self.assertAllClose((u[0]*np.ones((5,4)))[2:],
+                            u2[0]*np.ones((3,4)))
+        self.assertAllClose((u[1]*np.ones((5,4,4)))[2:],
+                            u2[1]*np.ones((3,4,4)))
+
 
         pass
 
@@ -207,6 +256,24 @@ class TestConcatenate(TestCase):
                             m2[0]*np.ones((3,4)))
         self.assertAllClose((m[1]*np.ones((5,4)))[2:],
                             m2[1]*np.ones((3,4)))
+
+        # Constant parent
+        X1 = np.random.randn(2,4,6)
+        X2 = GaussianARD(0, 1, plates=(3,), shape=(4,6))
+        Z = Concatenate(X1, X2)
+        Y = GaussianARD(Z, 1)
+        Y.observe(np.random.randn(*Y.get_shape(0)))
+        m1 = Z._message_to_parent(0)
+        m2 = X2._message_from_children()
+        m = Z._message_from_children()
+        self.assertAllClose((m[0]*np.ones((5,4,6)))[:2],
+                            m1[0]*np.ones((2,4,6)))
+        self.assertAllClose((m[1]*np.ones((5,4,6,4,6)))[:2],
+                            m1[1]*np.ones((2,4,6,4,6)))
+        self.assertAllClose((m[0]*np.ones((5,4,6)))[2:],
+                            m2[0]*np.ones((3,4,6)))
+        self.assertAllClose((m[1]*np.ones((5,4,6,4,6)))[2:],
+                            m2[1]*np.ones((3,4,6,4,6)))
 
         pass
 

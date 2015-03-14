@@ -26,6 +26,7 @@ import numpy as np
 from bayespy.utils import misc
 
 from .deterministic import Deterministic
+from .node import Moments
 
 class Concatenate(Deterministic):
     """
@@ -58,8 +59,11 @@ class Concatenate(Deterministic):
         self._parent_moments = (parent_moments,) * len(nodes)
         self._moments = parent_moments
         # Convert nodes
-        nodes = [self._ensure_moments(node, self._parent_moments[0])
-                 for node in nodes]
+        try:
+            nodes = [self._ensure_moments(node, self._parent_moments[0])
+                     for node in nodes]
+        except Moments.NoConverterError:
+            raise ValueError("Parents have different moments")
         # Dimensionality of the node
         dims = tuple([dim for dim in nodes[0].dims])
         for node in nodes:
