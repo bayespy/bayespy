@@ -28,6 +28,7 @@ Unit tests for bayespy.utils.misc module.
 import unittest
 
 import warnings
+warnings.simplefilter("error")
 
 import numpy as np
 
@@ -364,18 +365,23 @@ class TestLogSumExp(misc.TestCase):
         self.assertAllClose(misc.logsumexp(3),
                             np.log(np.sum(np.exp(3))))
 
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
             self.assertAllClose(misc.logsumexp(-np.inf),
                                 -np.inf)
 
         self.assertAllClose(misc.logsumexp(np.inf),
                             np.inf)
 
-        self.assertAllClose(misc.logsumexp(np.nan),
-                            np.nan)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            self.assertAllClose(misc.logsumexp(np.nan),
+                                np.nan)
 
-        self.assertAllClose(misc.logsumexp([-np.inf, -np.inf]),
-                            -np.inf)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            self.assertAllClose(misc.logsumexp([-np.inf, -np.inf]),
+                                -np.inf)
 
         self.assertAllClose(misc.logsumexp([[1e10,  1e-10],
                                              [-1e10, -np.inf]], axis=-1),
@@ -405,7 +411,8 @@ class TestMean(misc.TestCase):
 
         self.assertAllClose(misc.mean(3),
                             3)
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
             self.assertAllClose(misc.mean(np.nan),
                                 np.nan)
 

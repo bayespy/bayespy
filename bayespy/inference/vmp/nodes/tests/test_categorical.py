@@ -26,6 +26,9 @@ Unit tests for `categorical` module.
 """
 
 import warnings
+warnings.simplefilter("error")
+
+import warnings
 
 import numpy as np
 import scipy
@@ -226,7 +229,9 @@ class TestCategorical(TestCase):
         """
 
         # Test initialization from random
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+
             Z = Categorical([[0.0, 1.0, 0.0],
                              [0.0, 0.0, 1.0]])
             Z.initialize_from_random()

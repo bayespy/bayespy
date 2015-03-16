@@ -26,6 +26,7 @@ Unit tests for `concatenate` module.
 """
 
 import warnings
+warnings.simplefilter("error")
 
 import numpy as np
 
@@ -201,8 +202,6 @@ class TestConcatenate(TestCase):
         Test the message to parents of Concatenate node.
         """
 
-        warnings.simplefilter("ignore", FutureWarning)
-
         # Two parents without shapes
         X1 = GaussianARD(0, 1, plates=(2,), shape=())
         X2 = GaussianARD(0, 1, plates=(3,), shape=())
@@ -222,58 +221,61 @@ class TestConcatenate(TestCase):
                             m2[1]*np.ones((3,)))
 
         # Two parents with shapes
-        X1 = GaussianARD(0, 1, plates=(2,), shape=(4,6))
-        X2 = GaussianARD(0, 1, plates=(3,), shape=(4,6))
-        Z = Concatenate(X1, X2)
-        Y = GaussianARD(Z, 1)
-        Y.observe(np.random.randn(*Y.get_shape(0)))
-        m1 = X1._message_from_children()
-        m2 = X2._message_from_children()
-        m = Z._message_from_children()
-        self.assertAllClose((m[0]*np.ones((5,4,6)))[:2],
-                            m1[0]*np.ones((2,4,6)))
-        self.assertAllClose((m[1]*np.ones((5,4,6,4,6)))[:2],
-                            m1[1]*np.ones((2,4,6,4,6)))
-        self.assertAllClose((m[0]*np.ones((5,4,6)))[2:],
-                            m2[0]*np.ones((3,4,6)))
-        self.assertAllClose((m[1]*np.ones((5,4,6,4,6)))[2:],
-                            m2[1]*np.ones((3,4,6,4,6)))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
 
-        # Two parents with non-default concatenation axis
-        X1 = GaussianARD(0, 1, plates=(2,4), shape=())
-        X2 = GaussianARD(0, 1, plates=(3,4), shape=())
-        Z = Concatenate(X1, X2, axis=-2)
-        Y = GaussianARD(Z, 1)
-        Y.observe(np.random.randn(*Y.get_shape(0)))
-        m1 = X1._message_from_children()
-        m2 = X2._message_from_children()
-        m = Z._message_from_children()
-        self.assertAllClose((m[0]*np.ones((5,4)))[:2],
-                            m1[0]*np.ones((2,4)))
-        self.assertAllClose((m[1]*np.ones((5,4)))[:2],
-                            m1[1]*np.ones((2,4)))
-        self.assertAllClose((m[0]*np.ones((5,4)))[2:],
-                            m2[0]*np.ones((3,4)))
-        self.assertAllClose((m[1]*np.ones((5,4)))[2:],
-                            m2[1]*np.ones((3,4)))
+            X1 = GaussianARD(0, 1, plates=(2,), shape=(4,6))
+            X2 = GaussianARD(0, 1, plates=(3,), shape=(4,6))
+            Z = Concatenate(X1, X2)
+            Y = GaussianARD(Z, 1)
+            Y.observe(np.random.randn(*Y.get_shape(0)))
+            m1 = X1._message_from_children()
+            m2 = X2._message_from_children()
+            m = Z._message_from_children()
+            self.assertAllClose((m[0]*np.ones((5,4,6)))[:2],
+                                m1[0]*np.ones((2,4,6)))
+            self.assertAllClose((m[1]*np.ones((5,4,6,4,6)))[:2],
+                                m1[1]*np.ones((2,4,6,4,6)))
+            self.assertAllClose((m[0]*np.ones((5,4,6)))[2:],
+                                m2[0]*np.ones((3,4,6)))
+            self.assertAllClose((m[1]*np.ones((5,4,6,4,6)))[2:],
+                                m2[1]*np.ones((3,4,6,4,6)))
 
-        # Constant parent
-        X1 = np.random.randn(2,4,6)
-        X2 = GaussianARD(0, 1, plates=(3,), shape=(4,6))
-        Z = Concatenate(X1, X2)
-        Y = GaussianARD(Z, 1)
-        Y.observe(np.random.randn(*Y.get_shape(0)))
-        m1 = Z._message_to_parent(0)
-        m2 = X2._message_from_children()
-        m = Z._message_from_children()
-        self.assertAllClose((m[0]*np.ones((5,4,6)))[:2],
-                            m1[0]*np.ones((2,4,6)))
-        self.assertAllClose((m[1]*np.ones((5,4,6,4,6)))[:2],
-                            m1[1]*np.ones((2,4,6,4,6)))
-        self.assertAllClose((m[0]*np.ones((5,4,6)))[2:],
-                            m2[0]*np.ones((3,4,6)))
-        self.assertAllClose((m[1]*np.ones((5,4,6,4,6)))[2:],
-                            m2[1]*np.ones((3,4,6,4,6)))
+            # Two parents with non-default concatenation axis
+            X1 = GaussianARD(0, 1, plates=(2,4), shape=())
+            X2 = GaussianARD(0, 1, plates=(3,4), shape=())
+            Z = Concatenate(X1, X2, axis=-2)
+            Y = GaussianARD(Z, 1)
+            Y.observe(np.random.randn(*Y.get_shape(0)))
+            m1 = X1._message_from_children()
+            m2 = X2._message_from_children()
+            m = Z._message_from_children()
+            self.assertAllClose((m[0]*np.ones((5,4)))[:2],
+                                m1[0]*np.ones((2,4)))
+            self.assertAllClose((m[1]*np.ones((5,4)))[:2],
+                                m1[1]*np.ones((2,4)))
+            self.assertAllClose((m[0]*np.ones((5,4)))[2:],
+                                m2[0]*np.ones((3,4)))
+            self.assertAllClose((m[1]*np.ones((5,4)))[2:],
+                                m2[1]*np.ones((3,4)))
+
+            # Constant parent
+            X1 = np.random.randn(2,4,6)
+            X2 = GaussianARD(0, 1, plates=(3,), shape=(4,6))
+            Z = Concatenate(X1, X2)
+            Y = GaussianARD(Z, 1)
+            Y.observe(np.random.randn(*Y.get_shape(0)))
+            m1 = Z._message_to_parent(0)
+            m2 = X2._message_from_children()
+            m = Z._message_from_children()
+            self.assertAllClose((m[0]*np.ones((5,4,6)))[:2],
+                                m1[0]*np.ones((2,4,6)))
+            self.assertAllClose((m[1]*np.ones((5,4,6,4,6)))[:2],
+                                m1[1]*np.ones((2,4,6,4,6)))
+            self.assertAllClose((m[0]*np.ones((5,4,6)))[2:],
+                                m2[0]*np.ones((3,4,6)))
+            self.assertAllClose((m[1]*np.ones((5,4,6,4,6)))[2:],
+                                m2[1]*np.ones((3,4,6,4,6)))
 
         pass
 

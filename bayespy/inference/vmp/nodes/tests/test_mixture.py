@@ -26,6 +26,7 @@ Unit tests for mixture module.
 """
 
 import warnings
+warnings.simplefilter("error")
 
 import numpy as np
 
@@ -290,7 +291,9 @@ class TestMixture(TestCase):
         self.assertAllClose(u[0],
                             [1, 9])
         
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            warnings.simplefilter("ignore", UserWarning)
             p0 = [0.1, 0.9]
             p1 = [1.0, 0.0]
             X = Mixture(0, Multinomial, 10, [p0, p1])

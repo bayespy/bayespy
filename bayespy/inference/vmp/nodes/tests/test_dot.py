@@ -25,6 +25,9 @@
 Unit tests for `dot` module.
 """
 
+import warnings
+warnings.simplefilter("error")
+
 import unittest
 
 

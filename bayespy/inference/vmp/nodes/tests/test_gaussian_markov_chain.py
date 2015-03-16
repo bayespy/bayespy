@@ -25,6 +25,9 @@
 Unit tests for gaussian_markov_chain module.
 """
 
+import warnings
+warnings.simplefilter("error")
+
 import numpy as np
 
 from ..gaussian_markov_chain import GaussianMarkovChain

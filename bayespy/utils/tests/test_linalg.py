@@ -25,6 +25,9 @@
 Unit tests for bayespy.utils.linalg module.
 """
 
+import warnings
+warnings.simplefilter("error")
+
 import numpy as np
 
 from .. import misc
@@ -142,7 +145,7 @@ class TestBandedSolve(misc.TestCase):
         # Random sizes of the blocks
         #D = np.random.randint(5, 10, size=N)
         # Fixed sizes of the blocks
-        D = 5*np.ones(N)
+        D = 5*np.ones(N, dtype=np.int)
 
         # Some helpful variables to create the covariances
         W = [np.random.randn(D[i], 2*D[i])

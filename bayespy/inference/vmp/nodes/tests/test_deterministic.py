@@ -25,6 +25,9 @@
 Unit tests for `deterministic` module.
 """
 
+import warnings
+warnings.simplefilter("error")
+
 import unittest
 
 import numpy as np
