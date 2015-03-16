@@ -1,3 +1,10 @@
+Version 0.3.2 (2015-03-16)
+++++++++++++++++++++++++++
+
+ * Concatenate node added
+
+ * Unit tests for plotting fixed
+
 Version 0.3.1 (2015-03-12)
 ++++++++++++++++++++++++++
 
