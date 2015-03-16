@@ -71,8 +71,8 @@ class Concatenate(Deterministic):
                 raise ValueError("Parents have different dimensionalities")
         super().__init__(*nodes, dims=dims, **kwargs)
         # Compute start indices for each parent on the concatenated plate axis
-        self._indices = np.zeros(len(nodes)+1)
-        self._indices[1:] = np.cumsum([parent.plates[axis]
+        self._indices = np.zeros(len(nodes)+1, dtype=np.int)
+        self._indices[1:] = np.cumsum([int(parent.plates[axis])
                                        for parent in self.parents])
         self._lengths = [parent.plates[axis] for parent in self.parents]
         return
