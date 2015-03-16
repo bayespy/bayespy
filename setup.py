@@ -51,6 +51,7 @@ if __name__ == "__main__":
                               'h5py'],
           
           packages         = find_packages(),
+          package_data     = {NAME: ["tests/baseline_images/test_plot/*.png"]},
           name             = NAME,
           version          = VERSION,
           author           = AUTHOR,
