@@ -75,7 +75,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = setupfile.NAME
-copyright = u'2011-2014, Jaakko Luttinen, GPLv3'
+copyright = u'2011-2015, Jaakko Luttinen, GPLv3'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
