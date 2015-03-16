@@ -34,7 +34,9 @@ Installing BayesPy
 
 BayesPy can be installed easily by using Pip if the system has been properly set
 up.  If you have problems with the following methods, see the following section
-for some help on installing the requirements.
+for some help on installing the requirements.  For instance, a bug in recent
+versions of h5py and pip may require you to install some of the requirements
+manually.
 
 For users
 +++++++++
