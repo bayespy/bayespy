@@ -24,7 +24,7 @@
 import numpy as np
 import scipy.special as special
 
-from bayespy.utils import misc
+from bayespy.utils import misc, linalg
 
 from .expfamily import ExponentialFamily
 from .expfamily import ExponentialFamilyDistribution
@@ -52,7 +52,7 @@ class WishartMoments(Moments):
 
     def compute_fixed_moments(self, Lambda):
         """ Compute moments for fixed x. """
-        ldet = misc.m_chol_logdet(misc.m_chol(Lambda))
+        ldet = linalg.chol_logdet(linalg.chol(Lambda))
         u = [Lambda,
              ldet]
         return u
@@ -121,11 +121,11 @@ class WishartDistribution(ExponentialFamilyDistribution):
             \\
             g(\phi) = \phi_2 \log|-\phi_1| - \log \Gamma_k(\phi_2)
         """
-        U = misc.m_chol(-phi[0])
+        U = linalg.chol(-phi[0])
         k = np.shape(phi[0])[-1]
         #k = self.dims[0][0]
-        logdet_phi0 = misc.m_chol_logdet(U)
-        u0 = phi[1][...,np.newaxis,np.newaxis] * misc.m_chol_inv(U)
+        logdet_phi0 = linalg.chol_logdet(U)
+        u0 = phi[1][...,np.newaxis,np.newaxis] * linalg.chol_inv(U)
         u1 = -logdet_phi0 + misc.multidigamma(phi[1], k)
         u = [u0, u1]
         g = phi[1] * logdet_phi0 - special.multigammaln(phi[1], k)
@@ -162,7 +162,7 @@ class WishartDistribution(ExponentialFamilyDistribution):
             \end{bmatrix}
         """
         k = np.shape(Lambda)[-1]
-        ldet = misc.m_chol_logdet(misc.m_chol(Lambda))
+        ldet = linalg.chol_logdet(linalg.chol(Lambda))
         u = [Lambda,
              ldet]
         f = -(k+1)/2 * ldet

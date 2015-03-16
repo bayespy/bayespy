@@ -80,7 +80,7 @@ def chol_solve(U, b, out=None, matrix=False):
         l_b = len(sh_b)
 
         # Check which axis are iterated over with B along with U
-        ind_b = [Ellipsis] * l_b
+        ind_b = [slice(None)] * l_b
         l_min = min(l_u, l_b)
         jnd_b = tuple(i for i in range(-l_min,0) if sh_b[i]==sh_u[i])
 
@@ -102,19 +102,19 @@ def chol_solve(U, b, out=None, matrix=False):
                 ind_b[j] = i[j]
 
             # Collect all the axes for which U is singleton
-            b = B[tuple(ind_b) + (Ellipsis,)]
+            b = B[tuple(ind_b) + (slice(None),)]
 
             # Reshape it to a 2-D (or 1-D) array
             orig_shape = b.shape
             if b.ndim > 1:
                 b = b.reshape((-1, b.shape[-1]))
 
-            # Ellipsis to all preceeding axes and ellipsis for the last
+            # slice(None) to all preceeding axes and ellipsis for the last
             # axis:
             if len(ind_b) < len(sh):
-                ind_out = (Ellipsis,) + tuple(ind_b) + (Ellipsis,)
+                ind_out = (slice(None),) + tuple(ind_b) + (slice(None),)
             else:
-                ind_out = tuple(ind_b) + (Ellipsis,)
+                ind_out = tuple(ind_b) + (slice(None),)
 
             out[ind_out] = linalg.cho_solve((U[i], False),
                                             b.T).T.reshape(orig_shape)
@@ -186,7 +186,7 @@ def solve_triangular(U, B, **kwargs):
     l_b = len(sh_b)
 
     # Check which axis are iterated over with B along with U
-    ind_b = [Ellipsis] * l_b
+    ind_b = [slice(None)] * l_b
     l_min = min(l_u, l_b)
     jnd_b = tuple(i for i in range(-l_min,0) if sh_b[i]==sh_u[i])
 
@@ -206,19 +206,19 @@ def solve_triangular(U, B, **kwargs):
             ind_b[j] = i[j]
             
         # Collect all the axes for which U is singleton
-        b = B[tuple(ind_b) + (Ellipsis,)]
+        b = B[tuple(ind_b) + (slice(None),)]
 
         # Reshape it to a 2-D (or 1-D) array
         orig_shape = b.shape
         if b.ndim > 1:
             b = b.reshape((-1, b.shape[-1]))
 
-        # Ellipsis to all preceeding axes and ellipsis for the last
+        # slice(None) to all preceeding axes and ellipsis for the last
         # axis:
         if len(ind_b) < len(sh):
-            ind_out = (Ellipsis,) + tuple(ind_b) + (Ellipsis,)
+            ind_out = (slice(None),) + tuple(ind_b) + (slice(None),)
         else:
-            ind_out = tuple(ind_b) + (Ellipsis,)
+            ind_out = tuple(ind_b) + (slice(None),)
 
         out[ind_out] = linalg.solve_triangular(U[i],
                                                b.T,

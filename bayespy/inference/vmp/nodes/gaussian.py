@@ -427,15 +427,15 @@ class GaussianDistribution(ExponentialFamilyDistribution):
            + \frac{1}{2} \log | -2 \boldsymbol{\phi}_2 |
         """
         # TODO: Compute -2*phi[1] and simplify the formulas
-        L = misc.m_chol(-2*phi[1])
+        L = linalg.chol(-2*phi[1])
         k = np.shape(phi[0])[-1]
         # Moments
-        u0 = misc.m_chol_solve(L, phi[0])
-        u1 = misc.m_outer(u0, u0) + misc.m_chol_inv(L)
+        u0 = linalg.chol_solve(L, phi[0])
+        u1 = misc.m_outer(u0, u0) + linalg.chol_inv(L)
         u = [u0, u1]
         # G
         g = (-0.5 * np.einsum('...i,...i', u[0], phi[0])
-             + 0.5 * misc.m_chol_logdet(L))
+             + 0.5 * linalg.chol_logdet(L))
              #+ 0.5 * np.log(2) * self.dims[0][0])
         return (u, g)
 
@@ -554,8 +554,8 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         # observed/fixed elements!
 
         # Note that phi[1] is -0.5*inv(Cov)
-        U = misc.m_chol(-2*phi[1])
-        mu = misc.m_chol_solve(U, phi[0])
+        U = linalg.chol(-2*phi[1])
+        mu = linalg.chol_solve(U, phi[0])
         z = np.random.normal(0, 1, plates + np.shape(mu)[-1:])
         # Compute mu + U'*z
         z = misc.m_solve_triangular(U, z, trans='T', lower=False)

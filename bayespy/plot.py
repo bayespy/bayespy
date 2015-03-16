@@ -1085,7 +1085,7 @@ def gaussian_mixture_logpdf(x, w, mu, Sigma):
     D = np.shape(x)[-1]
 
     # Cholesky decomposition of the covariance matrix
-    U = misc.m_chol(Sigma)
+    U = linalg.chol(Sigma)
 
     # Reshape x:
     # Shape(x)     = (N, 1, D)
@@ -1095,11 +1095,11 @@ def gaussian_mixture_logpdf(x, w, mu, Sigma):
     # Shape(v)     = (N, K, D)
     # Shape(z)     = (N, K)
     v = x - mu
-    z = np.einsum('...i,...i', v, misc.m_chol_solve(U, v))
+    z = np.einsum('...i,...i', v, linalg.chol_solve(U, v))
 
     # Log-determinant of Sigma:
     # Shape(ldet)  = (K,)
-    ldet = misc.m_chol_logdet(U)
+    ldet = linalg.chol_logdet(U)
 
     # Compute log pdf for each cluster:
     # Shape(lpdf)  = (N, K)
