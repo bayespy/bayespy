@@ -29,7 +29,7 @@ license or visit http://www.gnu.org/copyleft/gpl.html.
     
     * http://bayespy.org
 
-    * `PDF file <_static/BayesPy.pdf>`_
+    * `PDF file <http://www.bayespy.org/_static/BayesPy.pdf>`_
 
     * RST format in ``doc`` directory
 
