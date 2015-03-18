@@ -24,7 +24,7 @@
 ######################################################################
 
 NAME         = 'bayespy'
-DESCRIPTION  = 'Bayesian inference tools for Python'
+DESCRIPTION  = 'Variational Bayesian inference tools for Python'
 AUTHOR       = 'Jaakko Luttinen'
 AUTHOR_EMAIL = 'jaakko.luttinen@iki.fi'
 URL          = 'http://bayespy.org'
@@ -61,10 +61,20 @@ if __name__ == "__main__":
           license          = LICENSE,
           url              = URL,
           long_description = read('README.rst'),
+          keywords         =
+            [
+              'variational Bayes',
+              'probabilistic programming',
+              'Bayesian networks',
+              'graphical models',
+              'variational message passing'
+            ],
           classifiers =
             [ 
-              'Programming Language :: Python :: 3',
-              'Development Status :: 3 - Alpha',
+              'Programming Language :: Python :: 3 :: Only',
+              'Programming Language :: Python :: 3.3',
+              'Programming Language :: Python :: 3.4',
+              'Development Status :: 4 - Beta',
               'Environment :: Console',
               'Intended Audience :: Developers',
               'Intended Audience :: Science/Research',
