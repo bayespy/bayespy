@@ -143,8 +143,8 @@ class VB():
                 X = self[node]
                 if hasattr(X, 'update') and callable(X.update):
                     X.update()
-                    if plot:
-                        self.plot(X)
+                if plot:
+                    self.plot(X)
 
             cputime = time.clock() - t
             if self._end_iteration_step(None, cputime, tol=tol, verbose=verbose):
