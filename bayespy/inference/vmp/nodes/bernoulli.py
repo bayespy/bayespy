@@ -31,6 +31,7 @@ from .binomial import (BinomialMoments,
                        BinomialDistribution)
 from .expfamily import ExponentialFamily
 from .beta import BetaMoments
+from .node import Moments
 
 
 class BernoulliMoments(BinomialMoments):
@@ -141,8 +142,8 @@ class CategoricalToBernoulli(Deterministic):
         Z = Z._convert(CategoricalMoments)
         K = Z.dims[0][-1]
         if K != 2:
-            raise ValueError("Only 2-class categorical can be converted to "
-                             "Bernoulli")
+            raise Moments.NoConverterError("Only 2-class categorical can be converted to "
+                                           "Bernoulli")
         dims = ( (), )
         self._moments = BernoulliMoments()
         self._parent_moments = (CategoricalMoments(2),)
