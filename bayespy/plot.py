@@ -82,7 +82,8 @@ from bayespy.inference.vmp.nodes.beta import BetaMoments
 from bayespy.inference.vmp.nodes.beta import DirichletMoments
 from bayespy.inference.vmp.nodes.bernoulli import BernoulliMoments
 from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
-from bayespy.inference.vmp.nodes.node import Node
+from bayespy.inference.vmp.nodes.gamma import GammaMoments
+from bayespy.inference.vmp.nodes.node import Node, Moments
 
 from bayespy.utils import (misc,
                            random,
@@ -122,7 +123,7 @@ def interactive(function):
     return new_function
 
 
-def _subplots(plotfunc, *args, fig=None, kwargs={}):
+def _subplots(plotfunc, *args, fig=None, kwargs=None):
     """Create a collection of subplots
 
     Each subplot is created with the same plotting function.
@@ -139,6 +140,9 @@ def _subplots(plotfunc, *args, fig=None, kwargs={}):
     functions with this function in order to generate subplots for
     plates.
     """
+
+    if kwargs is None:
+        kwargs = {}
 
     if fig is None:
         fig = plt.gcf()
@@ -677,6 +681,77 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
         _subplots(plotfunc, (x, 2), (scale*std, 2), fig=fig, kwargs=dict(vmax=vmax))
 
 
+def _hinton_figure(x, rows=None, cols=None, fig=None, square=True):
+    """
+    Plot the Hinton diagram of a Gaussian node
+    """
+
+    scale = 0
+    std = 0
+
+    if fig is None:
+        fig = plt.gcf()
+
+    # Get mean and second moment
+    shape = np.shape(x)
+    size = np.ndim(x)
+
+    if rows is None:
+        rows = np.nan
+    if cols is None:
+        cols = np.nan
+
+    # Preprocess the axes to 0,...,ndim
+    if rows < 0:
+        rows += size
+    if cols < 0:
+        cols += size
+    if rows < 0 or rows >= size:
+        raise ValueError("Row axis invalid")
+    if cols < 0 or cols >= size:
+        raise ValueError("Column axis invalid")
+
+    # Remove non-row and non-column axes that have length 1
+    squeezed_shape = list(shape)
+    for i in reversed(range(len(shape))):
+        if shape[i] == 1 and i != rows and i != cols:
+            squeezed_shape.pop(i)
+            if i < cols:
+                cols -= 1
+            if i < rows:
+                rows -= 1
+    x = np.reshape(x, squeezed_shape)
+
+    size = np.ndim(x)
+    if np.isnan(cols):
+        if rows != size - 1:
+            cols = size - 1
+        else:
+            cols = size - 2
+    if np.isnan(rows):
+        if cols != size - 1:
+            rows = size - 1
+        else:
+            rows = size - 2
+
+    # Put the row and column axes to the end
+    if np.ndim(x) >= 2:
+        axes = [i for i in range(size) if i not in (rows, cols)] + [rows, cols]
+        x = np.transpose(x, axes=axes)
+        #std = np.transpose(std, axes=axes)
+
+    vmax = np.max(np.abs(x) + scale*std)
+
+    kw = dict(vmax=vmax, square=square)
+    if scale == 0:
+        _subplots(_hinton, (x, 2), fig=fig, kwargs=kw)
+    else:
+        def plotfunc(z, e, **kwargs):
+            return _hinton(z, error=e, **kwargs)
+
+        _subplots(plotfunc, (x, 2), (scale*std, 2), fig=fig, kwargs=kw)
+
+
 # For backwards compatibility:
 gaussian_array = gaussian_hinton
 
@@ -704,6 +779,24 @@ def timeseries_categorical_mc(Z, fig=None):
         for j in range(N):
             axes = fig.add_subplot(M, N, i*N+j+1)
             _hinton(z[i,j].T, vmax=1.0, square=False, axes=axes)
+
+
+def gamma_hinton(alpha, square=True, **kwargs):
+    """
+    Plot a beta distributed random variable as a Hinton diagram
+    """
+
+    # Make sure that the node is beta
+    alpha = alpha._convert(GammaMoments)
+
+    # Compute exp( <log p> )
+    x = alpha.get_moments()[0]
+
+    # Explicit broadcasting
+    x = x * np.ones(alpha.plates)
+
+    # Plot Hinton diagram
+    return _hinton_figure(x, square=square, **kwargs)
 
 
 def beta_hinton(P, square=True):
@@ -795,40 +888,47 @@ def hinton(X, **kwargs):
 
     try:
         X = X._convert(GaussianMoments)
-    except:
+    except Moments.NoConverterError:
         pass
     else:
         return gaussian_hinton(X, **kwargs)
 
     try:
+        X = X._convert(GammaMoments)
+    except Moments.NoConverterError:
+        pass
+    else:
+        return gamma_hinton(X, **kwargs)
+
+    try:
         X = X._convert(BetaMoments)
-    except:
+    except Moments.NoConverterError:
         pass
     else:
         return beta_hinton(X, **kwargs)
 
     try:
         X = X._convert(DirichletMoments)
-    except:
+    except Moments.NoConverterError:
         pass
     else:
         return dirichlet_hinton(X, **kwargs)
 
     try:
         X = X._convert(BernoulliMoments)
-    except:
+    except Moments.NoConverterError:
         pass
     else:
         return bernoulli_hinton(X, **kwargs)
 
     try:
         X = X._convert(CategoricalMoments)
-    except:
+    except Moments.NoConverterError:
         pass
     else:
         return categorical_hinton(X, **kwargs)
 
-    return _hinton(X, **kwargs)
+    return _hinton_figure(X, **kwargs)
     
 
 class Plotter():
