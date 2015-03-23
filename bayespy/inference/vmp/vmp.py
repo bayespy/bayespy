@@ -264,7 +264,7 @@ class VB():
             # Close file
             h5f.close()
 
-    def load(self, *nodes, filename=None):
+    def load(self, *nodes, filename=None, nodes_only=False):
 
         # By default, use the same file as for auto-saving
         if not filename:
@@ -297,16 +297,17 @@ class VB():
                         raise Exception("File does not contain variable %s"
                                         % node.name)
             # Read iteration statistics
-            self.L = h5f['L'][...]
-            self.cputime = h5f['cputime'][...]
-            self.iter = h5f['iter'][...]
-            self.converged = h5f['converged'][...]
-            for node in nodes:
-                self.l[node] = h5f['boundterms'][node.name][...]
-            try:
-                self.callback_output = h5f['callback_output'][...]
-            except KeyError:
-                pass
+            if not nodes_only:
+                self.L = h5f['L'][...]
+                self.cputime = h5f['cputime'][...]
+                self.iter = h5f['iter'][...]
+                self.converged = h5f['converged'][...]
+                for node in nodes:
+                    self.l[node] = h5f['boundterms'][node.name][...]
+                try:
+                    self.callback_output = h5f['callback_output'][...]
+                except KeyError:
+                    pass
 
         finally:
             # Close file
