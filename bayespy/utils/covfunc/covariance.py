@@ -29,6 +29,7 @@ import scipy.sparse as sp # prefer CSC format
 
 from bayespy.utils import misc
 #from bayespy.utils.covfunc import distance
+from scipy.spatial import distance
 
 # Covariance matrices can be either arrays or matrices so be careful
 # with products and powers! Use explicit multiply or dot instead of
@@ -126,6 +127,7 @@ def squared_distance(x1, x2):
         D2 = np.empty((m1,m2))
     else:
         D2 = distance.cdist(x1, x2, metric='sqeuclidean')
+        #D2 = distance.cdist(x1, x2, metric='sqeuclidean')
     #D2 = np.asmatrix(D2)
     # Reshape the result
     #D2 = np.reshape(D2, sh1 + sh2)
