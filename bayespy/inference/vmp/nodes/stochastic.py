@@ -25,6 +25,8 @@ import numpy as np
 
 from bayespy.utils import misc
 
+import h5py
+
 from .node import Node
 
 class Distribution():
@@ -259,22 +261,43 @@ class Stochastic(Node):
         raise NotImplementedError()
 
 
+    def save(self, filename):
+        # Open HDF5 file
+        h5f = h5py.File(filename, 'w')
+        try:
+            # Write each node
+            nodegroup = h5f.create_group('nodes')
+            if self.name == '':
+                    raise Exception("In order to save nodes, they must have "
+                                    "(unique) names.")
+            self._save(nodegroup.create_group(node.name))
+        finally:
+            # Close file
+            h5f.close()
 
-    def save(self, group):
+
+    def _save(self, group):
         """
         Save the state of the node into a HDF5 file.
 
         group can be the root
         """
-        ## if name is None:
-        ##     name = self.name
-        ## subgroup = group.create_group(name)
-        
         for i in range(len(self.u)):
             misc.write_to_hdf5(group, self.u[i], 'u%d' % i)
         misc.write_to_hdf5(group, self.observed, 'observed')
+        return
 
-    def load(self, group):
+
+    def load(self, filename):
+        h5f = h5py.File(filename, 'r')
+        try:
+            self._load(h5f['nodes'][self.name])
+        finally:
+            h5f.close()
+        return
+
+
+    def _load(self, group):
         """
         Load the state of the node from a HDF5 file.
         """
@@ -288,7 +311,7 @@ class Stochastic(Node):
         # Update masks if necessary
         if np.any(old_observed != self.observed):
             self._update_mask()
-            
+
 
     def random(self):
         """

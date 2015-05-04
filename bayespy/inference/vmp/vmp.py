@@ -246,8 +246,8 @@ class VB():
                 if node.name == '':
                     raise Exception("In order to save nodes, they must have "
                                     "(unique) names.")
-                if hasattr(node, 'save') and callable(node.save):
-                    node.save(nodegroup.create_group(node.name))
+                if hasattr(node, '_save') and callable(node._save):
+                    node._save(nodegroup.create_group(node.name))
             # Write iteration statistics
             misc.write_to_hdf5(h5f, self.L, 'L')
             misc.write_to_hdf5(h5f, self.cputime, 'cputime')
@@ -291,7 +291,7 @@ class VB():
                                     "(unique) names.")
                 if hasattr(node, 'load') and callable(node.load):
                     try:
-                        node.load(h5f['nodes'][node.name])
+                        node._load(h5f['nodes'][node.name])
                     except KeyError:
                         h5f.close()
                         raise Exception("File does not contain variable %s"

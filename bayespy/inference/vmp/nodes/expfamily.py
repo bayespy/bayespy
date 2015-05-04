@@ -531,7 +531,7 @@ class ExponentialFamily(Stochastic):
         return np.exp(self.logpdf(X, mask=mask))
         
 
-    def save(self, group):
+    def _save(self, group):
         """
         Save the state of the node into a HDF5 file.
 
@@ -545,9 +545,10 @@ class ExponentialFamily(Stochastic):
             misc.write_to_hdf5(group, self.phi[i], 'phi%d' % i)
         misc.write_to_hdf5(group, self.f, 'f')
         misc.write_to_hdf5(group, self.g, 'g')
-        super().save(group)
+        super()._save(group)
+
     
-    def load(self, group):
+    def _load(self, group):
         """
         Load the state of the node from a HDF5 file.
         """
@@ -558,9 +559,9 @@ class ExponentialFamily(Stochastic):
             
         self.f = group['f'][...]
         self.g = group['g'][...]
-        super().load(group)
+        super()._load(group)
 
-        
+
     def random(self):
         """
         Draw a random sample from the distribution.
