@@ -1,34 +1,18 @@
 #!/usr/bin/env python
 
-######################################################################
-# Copyright (C) 2011,2012,2014 Jaakko Luttinen
+################################################################################
+# Copyright (C) 2011-2015 Jaakko Luttinen
 #
-# This file is licensed under Version 3.0 of the GNU General Public
-# License. See LICENSE for a text of the license.
-######################################################################
+# This file is licensed under the MIT License.
+################################################################################
 
-######################################################################
-# This file is part of BayesPy.
-#
-# BayesPy is free software: you can redistribute it and/or modify it
-# under the terms of the GNU General Public License version 3 as
-# published by the Free Software Foundation.
-#
-# BayesPy is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
-######################################################################
 
 NAME         = 'bayespy'
 DESCRIPTION  = 'Variational Bayesian inference tools for Python'
 AUTHOR       = 'Jaakko Luttinen'
 AUTHOR_EMAIL = 'jaakko.luttinen@iki.fi'
 URL          = 'http://bayespy.org'
-LICENSE      = 'GPLv3'
+LICENSE      = 'MIT'
 VERSION      = '0.3.2'
 
 if __name__ == "__main__":
@@ -78,7 +62,7 @@ if __name__ == "__main__":
               'Environment :: Console',
               'Intended Audience :: Developers',
               'Intended Audience :: Science/Research',
-              'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+              'License :: OSI Approved :: MIT License',
               'Operating System :: OS Independent',
               'Topic :: Scientific/Engineering',
               'Topic :: Scientific/Engineering :: Information Analysis'
