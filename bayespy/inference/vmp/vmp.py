@@ -67,7 +67,7 @@ class VB():
 
         self._figures = {}
         
-        self.iter = -1
+        self.iter = 0
         self.annealing_changed = False
         self.converged = False
         self.L = np.array(())
@@ -611,12 +611,10 @@ class VB():
         return
 
 
-    def _end_iteration_step(self, method, cputime, tol=None, verbose=True):
+    def _end_iteration_step(self, method, cputime, tol=None, verbose=True, bound_cpu_time=True):
         """
         Do some routines after each iteration step
         """
-
-        self.iter += 1
 
         if self.iter >= len(self.L):
             self._append_iterations(100)
@@ -632,7 +630,10 @@ class VB():
                     self.callback_output = np.concatenate((self.callback_output,z),
                                                           axis=-1)
 
+        t = time.clock()
         L = self.loglikelihood_lowerbound()
+        if bound_cpu_time:
+            cputime += time.clock() - t
 
         self.cputime[self.iter] = cputime
         self.L[self.iter] = L
@@ -675,5 +676,7 @@ class VB():
                 print('Auto-saved to %s' % self.autosave_filename)
 
         self.annealing_changed = False
+
+        self.iter += 1
 
         return self.converged
