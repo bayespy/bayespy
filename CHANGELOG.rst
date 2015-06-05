@@ -1,3 +1,14 @@
+Version 0.3.3 (2015-06-05)
+++++++++++++++++++++++++++
+
+ * Change license to the MIT license
+
+ * Improve SumMultiply efficiency
+
+ * Hinton diagrams for gamma variables
+
+ * Possible to load only nodes from HDF5 results
+
 Version 0.3.2 (2015-03-16)
 ++++++++++++++++++++++++++
 
