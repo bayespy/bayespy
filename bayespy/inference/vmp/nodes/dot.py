@@ -336,6 +336,9 @@ class SumMultiply(Deterministic):
         # message. However, in this node we want to avoid computing huge message
         # arrays so we sum some axes already here. Thus, we need to apply the
         # mask.
+        #
+        # Actually, we don't need to care about masks because the message from
+        # children has already been masked.
 
         parent = self.parents[index]
 
@@ -351,9 +354,6 @@ class SumMultiply(Deterministic):
             # The total number of keys for the non-plate dimensions
             N = (ind+1) * self.N_keys
 
-            # Add an array of ones to ensure proper shape and number of
-            # plates. Note that this adds an axis for each plate. At the end, we
-            # want to remove axes that were created only because of this
             parent_num_dims = len(parent.dims[ind])
             parent_num_plates = len(parent.plates)
             parent_plate_keys = list(range(N + parent_num_plates,
@@ -365,8 +365,6 @@ class SumMultiply(Deterministic):
                                     for key in self.in_keys[index]]
                                    + parent_dim_keys)
             args = []
-            args.append(np.ones((1,)*parent_num_plates + parent.dims[ind]))
-            args.append(parent_plate_keys + parent_dim_keys)
 
             # This variable counts the maximum number of plates of the
             # arguments, thus it will tell the number of plates in the result
@@ -384,8 +382,6 @@ class SumMultiply(Deterministic):
                                     mask_num_plates)
             result_plates = misc.broadcasted_shape(result_plates,
                                                    mask_plates)
-            args.append(mask)
-            args.append(mask_plate_keys)
 
             # Moments and keys of other parents
             for (k, u) in enumerate(u_parents):
@@ -435,6 +431,8 @@ class SumMultiply(Deterministic):
             # keys corresponding to unit length axes in parent[index] so that
             # einsum sums over those axes. After computations, these axes must
             # be added back in order to get the correct shape for the message.
+            # Also, remove axes/keys that are in output (parent[index]) but not in
+            # any inputs (children and other parents).
 
             parent_shape = parent.get_shape(ind)
             removed_axes = []
@@ -444,6 +442,13 @@ class SumMultiply(Deterministic):
                     # have already been removed)
                     del parent_keys[j-len(removed_axes)]
                     removed_axes.append(j)
+                else:
+                    # Remove the key if it doesn't appear in any of the
+                    # messages from children or other parents.
+                    if not np.any([parent_keys[j-len(removed_axes)] in keys
+                                   for keys in args[1::2]]):
+                        del parent_keys[j-len(removed_axes)]
+                        removed_axes.append(j)
 
             args.append(parent_keys)
 
@@ -465,6 +470,11 @@ class SumMultiply(Deterministic):
             # Then, the actual reshaping
             msg[ind] = np.reshape(msg[ind], message_shape)
 
+            # Broadcasting is not supported for variable dimensions, thus force
+            # explicit correct shape for variable dimensions
+            var_dims = parent.dims[ind]
+            msg[ind] = msg[ind] * np.ones(var_dims)
+
             # Apply plate multiplier: If this node has non-unit plates that are
             # unit plates in the parent, those plates are summed. However, if
             # the message has unit axis for that plate, it should be first
@@ -483,11 +493,11 @@ class SumMultiply(Deterministic):
                       for i in range(len(u_parents)) if i != index]
             ## logalphas = [u_parents[i][3]
             ##              for i in range(len(u_parents)) if i != index]
-            m2 = self._compute_message(mask, m[2], *alphas,
+            m2 = self._compute_message(m[2], *alphas,
                                        ndim=0,
                                        plates_from=self.plates,
                                        plates_to=parent.plates)
-            m3 = self._compute_message(mask, m[3],#*logalphas,
+            m3 = self._compute_message(m[3],#*logalphas,
                                        ndim=0,
                                        plates_from=self.plates,
                                        plates_to=parent.plates)
