@@ -121,6 +121,7 @@ if __name__ == '__main__':
         elif opt in ("--words",):
             kwargs["words"] = int(arg)
 
+    raise NotImplementedError("Work in progress.. This demo is not yet finished")
     run(**kwargs)
     plt.show()
 
