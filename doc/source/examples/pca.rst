@@ -114,8 +114,8 @@ inference until convergence:
 >>> Q.update(repeat=1000)
 Iteration 1: loglike=-2.339710e+03 (... seconds)
 ...
-Iteration 23: loglike=6.500706e+02 (... seconds)
-Converged at iteration 23.
+Iteration 22: loglike=6.500...e+02 (... seconds)
+Converged at iteration 2...
 
 
 
