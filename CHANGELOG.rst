@@ -1,3 +1,10 @@
+Version 0.3.5 (2015-06-09)
+++++++++++++++++++++++++++
+
+ * Fix indexing bug in VB optimization (not VB-EM)
+
+ * Fix demos
+
 Version 0.3.4 (2015-06-09)
 ++++++++++++++++++++++++++
 
