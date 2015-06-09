@@ -144,9 +144,24 @@ class DirichletDistribution(ExponentialFamilyDistribution):
         return u_alpha[1]
 
     
-    def compute_fixed_moments_and_f(self, x, mask=True):
+    def compute_fixed_moments_and_f(self, p, mask=True):
         r"""
         Compute the moments and :math:`f(x)` for a fixed value.
+
+        .. math::
+
+           u(p) =
+           \begin{bmatrix}
+             \log(p_1)
+             \\
+             \vdots
+             \\
+             \log(p_D)
+           \end{bmatrix}
+
+        .. math::
+
+           f(p) = - \sum_d \log(p_d)
         """
         # Check that probabilities are non-negative
         p = np.asanyarray(p)
@@ -161,8 +176,7 @@ class DirichletDistribution(ExponentialFamilyDistribution):
         # Message is log-probabilities
         logp = np.log(p)
         u = [logp]
-        f = np.nan
-        raise NotImplementedError("Check formula for f")
+        f = - np.sum(logp, axis=-1)
         return (u, f)
 
     
