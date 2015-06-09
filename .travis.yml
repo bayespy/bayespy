@@ -49,7 +49,7 @@ install:
 # run tests (select a proper matplotlib backend)
 before_script:
   - "echo backend : Agg > matplotlibrc"
-script:  nosetests --with-doctest --with-coverage --cover-erase --verbose --detailed-errors
+script:  nosetests --with-doctest  --doctest-options="+ELLIPSIS" --with-coverage --cover-erase --verbose --detailed-errors
 
 # check coverage
 after_success:

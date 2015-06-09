@@ -166,16 +166,16 @@ class Binomial(ExponentialFamily):
     Examples
     --------
 
-    .. code-block:: python
-
-        from bayespy.nodes import Binomial, Beta
-        p = Beta([1e-3, 1e-3])
-        x = Binomial(10, p)
-        x.observe(7)
-        p.update()
-        import bayespy.plot as bpplt
-        import numpy as np
-        bpplt.pdf(p, np.linspace(0, 1, num=100))
+    >>> import warnings
+    >>> warnings.filterwarnings('ignore', category=RuntimeWarning)
+    >>> from bayespy.nodes import Binomial, Beta
+    >>> p = Beta([1e-3, 1e-3])
+    >>> x = Binomial(10, p)
+    >>> x.observe(7)
+    >>> p.update()
+    >>> import bayespy.plot as bpplt
+    >>> import numpy as np
+    >>> bpplt.pdf(p, np.linspace(0, 1, num=100))
 
     See also
     --------

@@ -22,25 +22,38 @@ class SumMultiply(Deterministic):
     The node is similar to `numpy.einsum`, which is a very general
     function for computing dot products, sums, products and other sums
     of products of arrays.
-    
-    For instance, the equivalent of
 
-    .. code-block:: python
+    For instance, consider the following arrays:
+
+    >>> import numpy as np
+    >>> X = np.random.randn(2, 3, 4)
+    >>> Y = np.random.randn(3, 5)
+    >>> Z = np.random.randn(4, 2)
     
-        np.einsum('abc,bd,ca->da', X, Y, Z)
+    Then, the Einstein summation can be used as:
+
+    >>> np.einsum('abc,bd,ca->da', X, Y, Z)
+    array([[...]])
+
+    SumMultiply node can be used similarly for Gaussian nodes.  For instance,
+    consider the following Gaussian nodes:
+
+    >>> from bayespy.nodes import GaussianARD
+    >>> X = GaussianARD(0, 1, shape=(2, 3, 4))
+    >>> Y = GaussianARD(0, 1, shape=(3, 5))
+    >>> Z = GaussianARD(0, 1, shape=(4, 2))
         
-    would be given as
+    Then, similarly to `numpy.einsum`, SumMultiply could be used as:
 
-    .. code-block:: python
+    >>> SumMultiply('abc,bd,ca->da', X, Y, Z)
+    <bayespy.inference.vmp.nodes.dot.SumMultiply object at 0x...>
     
-        SumMultiply('abc,bd,ca->da', X, Y, Z)
     or
 
-    .. code-block:: python
-    
-        SumMultiply(X, [0,1,2], Y, [1,3], Z, [2,0], [3,0])
+    >>> SumMultiply(X, [0,1,2], Y, [1,3], Z, [2,0], [3,0])
+    <bayespy.inference.vmp.nodes.dot.SumMultiply object at 0x...>
         
-    which is similar to the other syntax of numpy.einsum.
+    which is similar to the alternative syntax of numpy.einsum.
 
     This node operates similarly as numpy.einsum. However, you must use all the
     elements of each node, that is, an operation like np.einsum('ii->i',X) is
@@ -88,10 +101,8 @@ class SumMultiply(Deterministic):
     into multiple nodes. For instance, the example above could probably be
     computed faster by
 
-    .. code-block:: python
-    
-        XZ = SumMultiply(X, [0,1,2], Z, [2,0], [0,1])
-        F = SumMultiply(XZ, [0,1], Y, [1,2], [2,0])
+    >>> XZ = SumMultiply(X, [0,1,2], Z, [2,0], [0,1])
+    >>> F = SumMultiply(XZ, [0,1], Y, [1,2], [2,0])
 
     because the third axis ('c') could be summed out already in the first
     operation. This same effect applies also to numpy.einsum in general.

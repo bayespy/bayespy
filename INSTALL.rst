@@ -175,4 +175,4 @@ or in the docstrings:
 
 .. code-block:: console
 
-    nosetests --with-doctest bayespy
+    nosetests --with-doctest --doctest-options="+ELLIPSIS" bayespy

@@ -57,16 +57,17 @@ class Bernoulli(ExponentialFamily):
     Examples
     --------
 
-    .. code-block:: python
-
-        from bayespy.nodes import Bernoulli, Beta
-        p = Beta([1e-3, 1e-3])
-        z = Bernoulli(p, plates=(10,))
-        z.observe([0, 1, 1, 1, 0, 1, 1, 1, 0, 1])
-        p.update()
-        import bayespy.plot as bpplt
-        import numpy as np
-        bpplt.pdf(p, np.linspace(0, 1, num=100))
+    >>> import warnings
+    >>> warnings.filterwarnings('ignore', category=RuntimeWarning)
+    >>> from bayespy.nodes import Bernoulli, Beta
+    >>> p = Beta([1e-3, 1e-3])
+    >>> z = Bernoulli(p, plates=(10,))
+    >>> z.observe([0, 1, 1, 1, 0, 1, 1, 1, 0, 1])
+    >>> p.update()
+    >>> import bayespy.plot as bpplt
+    >>> import numpy as np
+    >>> bpplt.pdf(p, np.linspace(0, 1, num=100))
+    >>> import matplotlib.pyplot as plt
     """
 
     _moments = BernoulliMoments()
