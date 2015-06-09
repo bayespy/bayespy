@@ -176,6 +176,7 @@ class Binomial(ExponentialFamily):
     >>> import bayespy.plot as bpplt
     >>> import numpy as np
     >>> bpplt.pdf(p, np.linspace(0, 1, num=100))
+    [<matplotlib.lines.Line2D object at 0x...>]
 
     See also
     --------
