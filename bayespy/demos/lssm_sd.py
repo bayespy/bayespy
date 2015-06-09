@@ -194,7 +194,7 @@ def infer(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
         Q.plot()
     for n in range(maxiter):
         if n < update_hyper:
-            Q.update('X', 'C', 'A', 'tau', plot=monitor)
+            Q.update('X', 'C', 'A', 'tau', 'Z', plot=monitor)
             if rotate:
                 R_init.rotate(**rotate_kwargs)
         else:
