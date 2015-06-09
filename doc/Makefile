@@ -52,7 +52,7 @@ clean:
 	rm -rf source/*/*_files
 
 gh-pages:
-	rm -rf build/html
+	make clean
 	cd build && git clone https://github.com/bayespy/bayespy.git -b gh-pages html
 	make html
 	cd build/html && git add -f *.png *.html *.txt *.js *.pdf *.py *.css * && git commit -a && git push
