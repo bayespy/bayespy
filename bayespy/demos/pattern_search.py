@@ -47,7 +47,7 @@ def run(M=40, N=100, D_y=6, D=8, seed=42, rotate=False, maxiter=1000, debug=Fals
     y = f + np.random.normal(0, 0.2, size=(M,N))
 
     # Construct model
-    Q = VB(*(pca.model(M, N, D)))
+    Q = pca.model(M, N, D)
 
     # Data with missing values
     mask = random.mask(M, N, p=0.5) # randomly missing
