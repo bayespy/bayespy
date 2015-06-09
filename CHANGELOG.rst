@@ -1,3 +1,10 @@
+Version 0.3.4 (2015-06-09)
+++++++++++++++++++++++++++
+
+ * Fix computation of probability density of Dirichlet nodes
+
+ * Use unit tests for all code snippets in docstrings and documentation
+
 Version 0.3.3 (2015-06-05)
 ++++++++++++++++++++++++++
 
