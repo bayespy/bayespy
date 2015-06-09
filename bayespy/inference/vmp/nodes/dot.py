@@ -22,7 +22,7 @@ class SumMultiply(Deterministic):
     The node is similar to `numpy.einsum`, which is a very general
     function for computing dot products, sums, products and other sums
     of products of arrays.
-
+    
     For instance, consider the following arrays:
 
     >>> import numpy as np
@@ -45,6 +45,7 @@ class SumMultiply(Deterministic):
         
     Then, similarly to `numpy.einsum`, SumMultiply could be used as:
 
+    >>> from bayespy.nodes import SumMultiply
     >>> SumMultiply('abc,bd,ca->da', X, Y, Z)
     <bayespy.inference.vmp.nodes.dot.SumMultiply object at 0x...>
     
