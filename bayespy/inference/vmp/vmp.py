@@ -512,7 +512,7 @@ class VB():
 
                 L = self.compute_lowerbound()
 
-                if L < self.L[self.iter] and not np.allclose(L, self.L[self.iter], rtol=1e-8):
+                if L < self.L[self.iter-1] and not np.allclose(L, self.L[self.iter-1], rtol=1e-8):
                     print("WARNING! CG decreased lower bound to %e, use gradient and reset CG" % L)
                     s = g2
                     continue
