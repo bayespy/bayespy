@@ -45,11 +45,16 @@ install:
   - conda install -n test-environment --yes h5py
   - source activate test-environment
   - pip install coveralls
+  - pip install pip install "sphinx>=1.2.3" sphinxcontrib-tikz sphinxcontrib-bayesnet sphinxcontrib-bibtex "numpydoc>=0.5"
 
-# run tests (select a proper matplotlib backend)
+# Select a proper matplotlib backend
 before_script:
   - "echo backend : Agg > matplotlibrc"
-script:  nosetests --with-doctest  --doctest-options="+ELLIPSIS" --with-coverage --cover-erase --verbose --detailed-errors
+
+# Run unit tests for the code, docstrings and documentation
+script:
+  - nosetests --with-doctest  --doctest-options="+ELLIPSIS" --with-coverage --cover-erase --verbose --detailed-errors
+  - cd doc && make doctest
 
 # check coverage
 after_success:
