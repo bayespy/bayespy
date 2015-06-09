@@ -45,7 +45,7 @@ http://opensource.org/licenses/MIT.
 
 * Latest release: 
 
-  .. image:: https://pypip.in/v/bayespy/badge.png
+  .. image:: https://badge.fury.io/py/bayespy.svg
      :target: https://pypi.python.org/pypi/bayespy
 
 * Build status:
