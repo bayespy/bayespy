@@ -870,47 +870,49 @@ def hinton(X, **kwargs):
 
     """
 
-    try:
-        X = X._convert(GaussianMoments)
-    except Moments.NoConverterError:
-        pass
-    else:
-        return gaussian_hinton(X, **kwargs)
+    if hasattr(X, "_convert"):
 
-    try:
-        X = X._convert(GammaMoments)
-    except Moments.NoConverterError:
-        pass
-    else:
-        return gamma_hinton(X, **kwargs)
+        try:
+            X = X._convert(GaussianMoments)
+        except Moments.NoConverterError:
+            pass
+        else:
+            return gaussian_hinton(X, **kwargs)
 
-    try:
-        X = X._convert(BetaMoments)
-    except Moments.NoConverterError:
-        pass
-    else:
-        return beta_hinton(X, **kwargs)
+        try:
+            X = X._convert(GammaMoments)
+        except Moments.NoConverterError:
+            pass
+        else:
+            return gamma_hinton(X, **kwargs)
 
-    try:
-        X = X._convert(DirichletMoments)
-    except Moments.NoConverterError:
-        pass
-    else:
-        return dirichlet_hinton(X, **kwargs)
+        try:
+            X = X._convert(BetaMoments)
+        except Moments.NoConverterError:
+            pass
+        else:
+            return beta_hinton(X, **kwargs)
 
-    try:
-        X = X._convert(BernoulliMoments)
-    except Moments.NoConverterError:
-        pass
-    else:
-        return bernoulli_hinton(X, **kwargs)
+        try:
+            X = X._convert(DirichletMoments)
+        except Moments.NoConverterError:
+            pass
+        else:
+            return dirichlet_hinton(X, **kwargs)
 
-    try:
-        X = X._convert(CategoricalMoments)
-    except Moments.NoConverterError:
-        pass
-    else:
-        return categorical_hinton(X, **kwargs)
+        try:
+            X = X._convert(BernoulliMoments)
+        except Moments.NoConverterError:
+            pass
+        else:
+            return bernoulli_hinton(X, **kwargs)
+
+        try:
+            X = X._convert(CategoricalMoments)
+        except Moments.NoConverterError:
+            pass
+        else:
+            return categorical_hinton(X, **kwargs)
 
     return _hinton_figure(X, **kwargs)
     
