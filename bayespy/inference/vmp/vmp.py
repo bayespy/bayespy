@@ -669,7 +669,7 @@ class VB():
 
         # Auto-save, if requested
         if (self.autosave_iterations > 0 
-            and np.mod(self.iter, self.autosave_iterations) == 0):
+            and np.mod(self.iter+1, self.autosave_iterations) == 0):
 
             self.save(filename=self.autosave_filename)
             if verbose:
