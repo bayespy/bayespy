@@ -637,6 +637,12 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
     x = np.reshape(x, squeezed_shape)
     std = np.reshape(std, squeezed_shape)
 
+    if np.ndim(x) < 2:
+        cols += 2 - np.ndim(x)
+        rows += 2 - np.ndim(x)
+        x = np.atleast_2d(x)
+        std = np.atleast_2d(std)
+
     size = np.ndim(x)
     if np.isnan(cols):
         if rows != size - 1:
