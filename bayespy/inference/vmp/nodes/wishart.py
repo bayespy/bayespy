@@ -53,6 +53,7 @@ class WishartMoments(Moments):
         d = np.shape(x)[-1]
         return ( (d,d), () )
 
+
 class WishartDistribution(ExponentialFamilyDistribution):
     """
     Sub-classes implement distribution specific computations.
@@ -71,8 +72,18 @@ class WishartDistribution(ExponentialFamilyDistribution):
     """
 
 
-    def compute_message_to_parent(self, parent, index, u_self, *u_parents):
-        raise NotImplementedError()
+    def compute_message_to_parent(self, parent, index, u_self, u_n, u_V):
+        if index == 0:
+            raise NotImplementedError("Message from Wishart to degrees of "
+                                      "freedom parameter (first parent) "
+                                      "not yet implemented")
+        elif index == 1:
+            Lambda = u_self[0]
+            n = u_n[0]
+            return [-0.5 * Lambda,
+                    0.5 * n]
+        else:
+            raise ValueError("Invalid parent index {0}".format(index))
 
     def compute_phi_from_parents(self, u_n, u_V, mask=True):
         r"""
