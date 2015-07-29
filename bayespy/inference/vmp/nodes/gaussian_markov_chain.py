@@ -1201,7 +1201,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
             raise ValueError("Second parent has wrong dimensionality")
         # Check B
         if B.dims != ( (D,K), (D,K,D,K) ):
-            raise ValueError("Third parent has wrong dimensionality")
+            raise ValueError("Third parent has wrong dimensionality {0}. Should be {1}.".format(B.dims[0], (D,K)))
         if len(B.plates) == 0 or B.plates[-1] != D:
             raise ValueError("Third parent should have a last plate "
                              "equal to the dimensionality of the "
