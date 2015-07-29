@@ -49,6 +49,8 @@ Making releases
 
  * Tag the release: ``git tag x.x.x``
 
+ * Push to GitHub: ``git push && git push --tags``
+
  * Publish in PyPI: ``python setup.py release_pypi``
 
  * Update the documentation web page: ``cd doc && make gh-pages``
