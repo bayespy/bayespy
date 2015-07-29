@@ -44,3 +44,5 @@ from .dot import Dot
 from .dot import SumMultiply
 
 from .logpdf import LogPDF
+
+from .constant import Constant
