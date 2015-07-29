@@ -82,15 +82,21 @@ class GammaDistribution(ExponentialFamilyDistribution):
     """    
     
 
-    def compute_message_to_parent(self, parent, index, u_self, *u_parents):
+    def compute_message_to_parent(self, parent, index, u_self, u_a, u_b):
         r"""
         Compute the message to a parent node.
         """
+        x = u_self[0]
+        logx = u_self[1]
+
         if index == 0:
+            b = u_b[0]
+            logb = u_b[1]
             raise Exception("No analytic solution exists")
         elif index == 1:
-            return [-u[0],
-                    u_parents[0][0]]
+            a = u_a[0]
+            return [-x,
+                    a]
         else:
             raise ValueError("Index out of bounds")
 
