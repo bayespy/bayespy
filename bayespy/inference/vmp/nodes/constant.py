@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from .node import Node
+from .node import Node, Moments
 
 class Constant(Node):
     r"""
@@ -17,6 +17,8 @@ class Constant(Node):
     """
 
     def __init__(self, moments, x, **kwargs):
+        if not isinstance(moments, Moments) and issubclass(moments, Moments):
+            raise ValueError("Give moments as an object instance instead of a class")
         self._moments = moments
         x = np.asanyarray(x)
         # Compute moments
