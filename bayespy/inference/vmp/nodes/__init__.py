@@ -24,7 +24,7 @@ from .exponential import Exponential
 
 from .gaussian import Gaussian, GaussianARD
 from .wishart import Wishart
-from .gamma import Gamma
+from .gamma import Gamma, GammaShape
 
 from .gaussian import (GaussianGammaISO,
                        GaussianGammaARD,
