@@ -75,6 +75,7 @@ class VB():
         self.l = dict(zip(self.model, 
                           len(self.model)*[np.array([])]))
         self.autosave_iterations = autosave_iterations
+        self.autosave_nodes = None
         if not autosave_filename:
             date = datetime.datetime.today().strftime('%Y%m%d%H%M%S')
             prefix = 'vb_autosave_%s_' % date
@@ -95,9 +96,10 @@ class VB():
         self.callback_output = None
         self.tol = tol
 
-    def set_autosave(self, filename, iterations=None):
+    def set_autosave(self, filename, iterations=None, nodes=None):
         self.autosave_filename = filename
         self.filename = filename
+        self.autosave_nodes = nodes
         if iterations is not None:
             self.autosave_iterations = iterations
 
@@ -671,7 +673,10 @@ class VB():
         if (self.autosave_iterations > 0 
             and np.mod(self.iter+1, self.autosave_iterations) == 0):
 
-            self.save(filename=self.autosave_filename)
+            if self.autosave_nodes is not None:
+                self.save(*self.autosave_nodes, filename=self.autosave_filename)
+            else:
+                self.save(filename=self.autosave_filename)
             if verbose:
                 print('Auto-saved to %s' % self.autosave_filename)
 
