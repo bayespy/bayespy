@@ -14,6 +14,7 @@ import scipy.special as special
 
 from .node import Node
 from .deterministic import Deterministic
+from .stochastic import Stochastic
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
 from .node import Moments
@@ -92,7 +93,8 @@ class GammaDistribution(ExponentialFamilyDistribution):
         if index == 0:
             b = u_b[0]
             logb = u_b[1]
-            raise Exception("No analytic solution exists")
+            return [logx + logb,
+                    -1]
         elif index == 1:
             a = u_a[0]
             return [-x,
@@ -247,6 +249,59 @@ class Gamma(ExponentialFamily):
     def as_diagonal_wishart(self):
         return _GammaToDiagonalWishart(self,
                                        name=self.name + " as Wishart")
+
+
+class GammaShape(Stochastic):
+    """
+    ML point estimator for the shape parameter of the gamma distribution
+    """
+
+    dims = ( (), () )
+    _moments = GammaPriorMoments()
+    _parent_moments = ()
+
+
+    def __init__(self, **kwargs):
+        """
+        Create gamma random variable node
+        """
+        super().__init__(dims=self.dims, initialize=False, **kwargs)
+
+
+    def _update_distribution_and_lowerbound(self, m):
+        r"""
+        Find maximum likelihood estimate for the shape parameter
+
+        Messages from children appear in the lower bound as
+
+        .. math::
+
+           m_0 \cdot x +  m_1 \cdot \log(\Gamma(x))
+
+        Take derivative, put it zero and solve:
+
+        .. math::
+
+           m_0 + m_1 \cdot d\log(\Gamma(x)) &= 0
+           \\
+           m_0 + m_1 \cdot \psi(x) &= 0
+           \\
+           x &= \psi^{-1}(-\frac{m_0}{m_1})
+
+        where :math:`\psi^{-1}` is the inverse digamma function.
+        """
+
+        # Maximum likelihood estimate
+        x = misc.invpsi(-m[0]/m[1])
+
+        # Compute moments
+        self.u = self._moments.compute_fixed_moments(x)
+
+        return
+
+
+    def lower_bound_contribution(self):
+        return 0
 
 
 class _GammaToDiagonalWishart(Deterministic):
