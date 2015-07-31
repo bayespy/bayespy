@@ -102,6 +102,9 @@ class Moments():
         """
 
         # Check if there is no need for a conversion
+        #
+        # TODO/FIXME: This isn't sufficient. Moments can have attributes that
+        # make them incompatible (e.g., ndim in GaussianMoments).
         if isinstance(self, moments_to):
             return lambda X: X
 
@@ -300,6 +303,7 @@ class Node():
 
     @staticmethod
     def _ensure_moments(node, moments):
+
         if isinstance(node, Node):
             # Convert to correct type
             return node._convert(moments.__class__)
