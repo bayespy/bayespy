@@ -1239,6 +1239,40 @@ def logsumexp(X, axis=None, keepdims=False):
 
     return np.log(np.sum(np.exp(X), axis=axis, keepdims=keepdims)) + maxX
 
+
+def invpsi(x):
+    r"""
+    Inverse digamma (psi) function.
+
+    The digamma function is the derivative of the log gamma function.
+    This calculates the value Y > 0 for a value X such that digamma(Y) = X.
+
+    See: http://www4.ncsu.edu/~pfackler/
+    """
+    if x < -10:
+        # Ad hoc by Jaakko
+        return -1/x
+    L = 1.0
+    y = np.exp(x)
+    while (L > 1e-10):
+        y += L*np.sign(x-special.psi(y))
+        L /= 2
+    return y
+
+
+def invgamma(x):
+    r"""
+    Inverse gamma function.
+
+    See: http://mathoverflow.net/a/28977
+    """
+    k = 1.461632
+    c = 0.036534
+    L = np.log((x+c)/np.sqrt(2*np.pi))
+    W = special.lambertw(L/np.exp(1))
+    return L/W + 0.5
+
+
 def mean(X, axis=None, keepdims=False):
     """
     Compute the mean, ignoring NaNs.
