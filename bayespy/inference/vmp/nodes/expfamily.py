@@ -248,32 +248,6 @@ class ExponentialFamily(Stochastic):
         return
 
 
-    def _compute_gradient(self, m_children, *u_parents):
-        r"""
-        Computes the Riemannian/natural gradient for exponential family.
-
-        d = phi_p - phi_q
-
-        where phi_p is phi from log p(all) and phi_q is from log q(self).
-        """
-
-        # Compute the gradient
-        phi = self._compute_phi_from_parents(*u_parents)
-        for i in range(len(self.phi)):
-            phi[i] = (phi[i] + m_children[i] - self.phi[i])
-
-        # Allow using reparameterization (e.g., log for positive parameters)
-        phi = self._parameters_gradient(phi)
-
-        # Explicit broadcasting
-        #for i in range(len(self.phi)):
-        #    phi[i] = phi[i] * np.ones(self.get_shape(i))
-
-        # Vectorize
-
-        return phi
-
-
     def get_riemannian_gradient(self):
         r"""
         Computes the Riemannian/natural gradient.
@@ -288,18 +262,7 @@ class ExponentialFamily(Stochastic):
             phi[i] = self.annealing * (phi[i] + m_children[i]) - self.phi[i]
             phi[i] = phi[i] * np.ones(self.get_shape(i))
 
-        # Allow using reparameterization (e.g., log for positive parameters)
-        #phi = self._parameters_gradient(phi)
-
-        # Explicit broadcasting
-        #for i in range(len(self.phi)):
-        #    phi[i] = phi[i] * np.ones(self.get_shape(i))
-
-        # Vectorize
-        
-
         return phi
-        #return self._compute_gradient(m_children, *u_parents)
 
 
     def get_gradient(self, rg):
