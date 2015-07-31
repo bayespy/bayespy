@@ -1249,14 +1249,13 @@ def invpsi(x):
 
     See: http://www4.ncsu.edu/~pfackler/
     """
-    if x < -10:
-        # Ad hoc by Jaakko
-        return -1/x
     L = 1.0
     y = np.exp(x)
     while (L > 1e-10):
         y += L*np.sign(x-special.psi(y))
         L /= 2
+    # Ad hoc by Jaakko
+    y[x<-10] = -1/x[x<-10]
     return y
 
 

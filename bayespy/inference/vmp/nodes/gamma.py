@@ -300,6 +300,11 @@ class GammaShape(Stochastic):
         return
 
 
+    def initialize_from_value(self, x):
+        self.u = self._moments.compute_fixed_moments(x)
+        return
+
+
     def lower_bound_contribution(self):
         return 0
 
