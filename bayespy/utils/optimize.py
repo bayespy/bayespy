@@ -20,7 +20,7 @@ def minimize(f, x0, maxiter=None, verbose=False):
     opt = optimize.minimize(f, x0, jac=True, method='CG', options=options)
     return opt.x
 
-def check_gradient(f, x0, verbose=True):
+def check_gradient(f, x0, verbose=True, epsilon=optimize.optimize._epsilon):
     """
     Simple wrapper for SciPy's gradient checker.
 
@@ -31,7 +31,7 @@ def check_gradient(f, x0, verbose=True):
     df = f(x0)[1]
     df_num = optimize.approx_fprime(x0, 
                                     lambda x: f(x)[0], 
-                                    optimize.optimize._epsilon)
+                                    epsilon)
     abserr = np.linalg.norm(df-df_num)
     norm_num = np.linalg.norm(df_num)
     if abserr == 0 and norm_num == 0:
