@@ -12,6 +12,9 @@ General numerical functions and methods.
 import functools
 import itertools
 
+import sys
+import getopt
+
 import numpy as np
 import scipy as sp
 import scipy.linalg as linalg
@@ -23,6 +26,147 @@ import tempfile as tmp
 
 import unittest
 from numpy import testing
+
+def parse_command_line_arguments(mandatory_args, optional_args, argv=None):
+    """
+    Parse command line arguments of style "--parameter=value".
+
+    Parameter specification is tuple: (name, converter, description). If
+    converter is None, the command line should not accept any value for
+    it, but instead use either "--option" to enable or
+    "--no-option" to disable.
+
+    Parameters
+    ----------
+
+    mandatory_args : list of tuples
+        Specs for mandatory arguments
+
+    optional_args : list of tuples
+        Specs for optional arguments
+
+    argv : list of strings (optional)
+        The command line arguments. By default, read sys.argv.
+
+    Returns
+    -------
+
+    args : dictionary
+        The parsed mandatory arguments
+
+    kwargs : dictionary
+        The parsed optional arguments
+
+    Examples
+    --------
+
+    parse_command_line_arguments(
+        # Mandatory arguments
+        [
+            ('site', str, "Name of the site"),
+            ('d', int, "Number of hidden state dimensions"),
+        ],
+        # Optional arguments
+        [
+            ('begin', str, "Begin datetime of the used data"),
+            ('end', str, "End datetime of the used data")
+        ]
+    )
+    """
+
+    if argv is None:
+        argv = sys.argv[1:]
+
+    mandatory_arg_names = [arg[0] for arg in mandatory_args]
+    #optional_arg_names = [arg[0] for arg in optional_args]
+
+    all_args = mandatory_args + optional_args
+
+    # Create a list of arg names for the getopt parser
+    arg_list = []
+    for ls in [mandatory_args, optional_args]:
+        for arg in ls:
+            arg_name = arg[0].lower()
+            if arg[1] is None:
+                arg_list.append(arg_name)
+                arg_list.append("no-" + arg_name)
+            else:
+                arg_list.append(arg_name + "=")
+
+    if len(set(arg_list)) < len(arg_list):
+        raise Exception("Argument names are not unique")
+
+    # Use getopt parser
+    try:
+        (cl_opts, cl_args) = getopt.getopt(argv, "", arg_list)
+    except getopt.GetoptError as err:
+        print(err)
+        print("Usage:")
+        for ls in [mandatory_args, optional_args]:
+            for arg in ls:
+                if arg[1] is None:
+                    print("--{0}\t{1}".format(arg[0].lower(),
+                                              arg[2]))
+                else:
+                    print("--{0}=<{1}>\t{2}".format(arg[0].lower(),
+                                                   str(arg[1].__name__).upper(),
+                                                   arg[2]))
+        sys.exit(2)
+
+    # A list of all valid flag names: ["--first-argument", "--another-argument"]
+    valid_flags = []
+    valid_flag_arg_indices = []
+    for (ind, arg) in enumerate(all_args):
+        valid_flags.append("--" + arg[0].lower())
+        valid_flag_arg_indices.append(ind)
+        if arg[1] is None:
+            valid_flags.append("--no-" + arg[0].lower())
+            valid_flag_arg_indices.append(ind)
+
+    # Store the arguments in a dictionary
+    args = dict()
+    kwargs = dict()
+    handled_arg_names = []
+    for (cl_opt, cl_arg) in cl_opts:
+
+        # Get the index of the argument
+        try:
+            ind = valid_flag_arg_indices[valid_flags.index(cl_opt.lower())]
+        except ValueError:
+            print("Invalid command line argument: {0}".format(cl_opt))
+            raise Exception("Invalid argument given")
+
+        # Check that the argument wasn't already given and then mark the
+        # argument as handled
+        if all_args[ind][0] in handled_arg_names:
+            raise Exception("Same argument given multiple times")
+        else:
+            handled_arg_names.append(all_args[ind][0])
+
+        # Check whether to add the argument to the mandatory or optional
+        # argument dictionary
+        if ind < len(mandatory_args):
+            dict_to = args
+        else:
+            dict_to = kwargs
+
+        # Convert and store the argument
+        convert_function = all_args[ind][1]
+        arg_name = all_args[ind][0].replace('-', '_')
+        if convert_function is None:
+            if cl_opt[:5] == "--no-":
+                dict_to[arg_name] = False
+            else:
+                dict_to[arg_name] = True
+        else:
+            dict_to[arg_name] = convert_function(cl_arg)
+
+    # Check if some mandatory argument was not given
+    for arg_name in mandatory_arg_names:
+        if arg_name not in handled_arg_names:
+            raise Exception("Mandatory argument not given")
+
+    return (args, kwargs)
 
 
 def composite_function(function_list):
