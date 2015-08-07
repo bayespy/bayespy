@@ -31,10 +31,16 @@ def parse_command_line_arguments(mandatory_args, optional_args, argv=None):
     """
     Parse command line arguments of style "--parameter=value".
 
-    Parameter specification is tuple: (name, converter, description). If
-    converter is None, the command line should not accept any value for
-    it, but instead use either "--option" to enable or
-    "--no-option" to disable.
+    Parameter specification is tuple: (name, converter, description).
+
+    Some special handling:
+
+    * If converter is None, the command line does not accept any value
+      for it, but instead use either "--option" to enable or
+      "--no-option" to disable.
+
+    * If argument name contains hyphens, those are converted to
+      underscores in the keys of the returned dictionaries.
 
     Parameters
     ----------
@@ -60,18 +66,28 @@ def parse_command_line_arguments(mandatory_args, optional_args, argv=None):
     Examples
     --------
 
-    parse_command_line_arguments(
-        # Mandatory arguments
-        [
-            ('site', str, "Name of the site"),
-            ('d', int, "Number of hidden state dimensions"),
-        ],
-        # Optional arguments
-        [
-            ('begin', str, "Begin datetime of the used data"),
-            ('end', str, "End datetime of the used data")
-        ]
-    )
+    >>> from pprint import pprint as print
+    >>> (args, kwargs) = parse_command_line_arguments(
+    ...     # Mandatory arguments
+    ...     [
+    ...         ('name',     str,  "Full name"),
+    ...         ('age',      int,  "Age (years)"),
+    ...         ('employed', None, "Working"),
+    ...     ],
+    ...     # Optional arguments
+    ...     [
+    ...         ('phone',          str, "Phone number"),
+    ...         ('favorite-color', str, "Favorite color")
+    ...     ],
+    ...     argv=['--name=John Doe',
+    ...           '--age=42',
+    ...           '--no-employed',
+    ...           '--favorite-color=pink']
+    ... )
+    >>> print(args)
+    {'age': 42, 'employed': False, 'name': 'John Doe'}
+    >>> print(kwargs)
+    {'favorite_color': 'pink'}
     """
 
     if argv is None:
