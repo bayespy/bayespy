@@ -11,6 +11,7 @@ General numerical functions and methods.
 """
 import functools
 import itertools
+import operator
 
 import sys
 import getopt
@@ -27,7 +28,25 @@ import tempfile as tmp
 import unittest
 from numpy import testing
 
-def parse_command_line_arguments(mandatory_args, optional_args, argv=None):
+
+def find_set_index(index, set_lengths):
+    """
+    Given set sizes and an index, returns the index of the set
+
+    The given index is for the concatenated list of the sets.
+    """
+    # Negative indices to positive
+    if index < 0:
+        index += np.sum(set_lengths)
+
+    # Indices must be on range (0, N-1)
+    if index >= np.sum(set_lengths) or index < 0:
+        raise Exception("Index out bounds")
+
+    return np.searchsorted(np.cumsum(set_lengths), index, side='right')
+
+
+def parse_command_line_arguments(mandatory_args, *optional_args_list, argv=None):
     """
     Parse command line arguments of style "--parameter=value".
 
@@ -48,8 +67,8 @@ def parse_command_line_arguments(mandatory_args, optional_args, argv=None):
     mandatory_args : list of tuples
         Specs for mandatory arguments
 
-    optional_args : list of tuples
-        Specs for optional arguments
+    optional_args_list : list of lists of tuples
+        Specs for each optional arguments set
 
     argv : list of strings (optional)
         The command line arguments. By default, read sys.argv.
@@ -88,26 +107,57 @@ def parse_command_line_arguments(mandatory_args, optional_args, argv=None):
     {'age': 42, 'employed': False, 'name': 'John Doe'}
     >>> print(kwargs)
     {'favorite_color': 'pink'}
+
+    It is possible to have several optional argument sets:
+
+    >>> (args, kw_info, kw_fav) = parse_command_line_arguments(
+    ...     # Mandatory arguments
+    ...     [
+    ...         ('name',     str,  "Full name"),
+    ...     ],
+    ...     # Optional arguments (contact information)
+    ...     [
+    ...         ('phone', str, "Phone number"),
+    ...         ('email', str, "E-mail address")
+    ...     ],
+    ...     # Optional arguments (preferences)
+    ...     [
+    ...         ('favorite-color', str, "Favorite color"),
+    ...         ('favorite-food',  str, "Favorite food")
+    ...     ],
+    ...     argv=['--name=John Doe',
+    ...           '--favorite-color=pink',
+    ...           '--email=john.doe@email.com',
+    ...           '--favorite-food=spaghetti']
+    ... )
+    >>> print(args)
+    {'name': 'John Doe'}
+    >>> print(kw_info)
+    {'email': 'john.doe@email.com'}
+    >>> print(kw_fav)
+    {'favorite_color': 'pink', 'favorite_food': 'spaghetti'}
+
     """
 
     if argv is None:
         argv = sys.argv[1:]
 
     mandatory_arg_names = [arg[0] for arg in mandatory_args]
-    #optional_arg_names = [arg[0] for arg in optional_args]
 
-    all_args = mandatory_args + optional_args
+    # Sizes of each optional argument list
+    optional_args_lengths = [len(opt_args) for opt_args in optional_args_list]
+
+    all_args = mandatory_args + functools.reduce(operator.add, optional_args_list)
 
     # Create a list of arg names for the getopt parser
     arg_list = []
-    for ls in [mandatory_args, optional_args]:
-        for arg in ls:
-            arg_name = arg[0].lower()
-            if arg[1] is None:
-                arg_list.append(arg_name)
-                arg_list.append("no-" + arg_name)
-            else:
-                arg_list.append(arg_name + "=")
+    for arg in all_args:
+        arg_name = arg[0].lower()
+        if arg[1] is None:
+            arg_list.append(arg_name)
+            arg_list.append("no-" + arg_name)
+        else:
+            arg_list.append(arg_name + "=")
 
     if len(set(arg_list)) < len(arg_list):
         raise Exception("Argument names are not unique")
@@ -118,15 +168,14 @@ def parse_command_line_arguments(mandatory_args, optional_args, argv=None):
     except getopt.GetoptError as err:
         print(err)
         print("Usage:")
-        for ls in [mandatory_args, optional_args]:
-            for arg in ls:
-                if arg[1] is None:
-                    print("--{0}\t{1}".format(arg[0].lower(),
-                                              arg[2]))
-                else:
-                    print("--{0}=<{1}>\t{2}".format(arg[0].lower(),
-                                                   str(arg[1].__name__).upper(),
-                                                   arg[2]))
+        for arg in all_args:
+            if arg[1] is None:
+                print("--{0}\t{1}".format(arg[0].lower(),
+                                          arg[2]))
+            else:
+                print("--{0}=<{1}>\t{2}".format(arg[0].lower(),
+                                               str(arg[1].__name__).upper(),
+                                               arg[2]))
         sys.exit(2)
 
     # A list of all valid flag names: ["--first-argument", "--another-argument"]
@@ -139,9 +188,10 @@ def parse_command_line_arguments(mandatory_args, optional_args, argv=None):
             valid_flags.append("--no-" + arg[0].lower())
             valid_flag_arg_indices.append(ind)
 
-    # Store the arguments in a dictionary
+    # Go through all the given command line arguments and store them in the
+    # correct dictionaries
     args = dict()
-    kwargs = dict()
+    kwargs_list = [dict() for i in range(len(optional_args_list))]
     handled_arg_names = []
     for (cl_opt, cl_arg) in cl_opts:
 
@@ -164,7 +214,9 @@ def parse_command_line_arguments(mandatory_args, optional_args, argv=None):
         if ind < len(mandatory_args):
             dict_to = args
         else:
-            dict_to = kwargs
+            dict_index = find_set_index(ind - len(mandatory_args),
+                                        optional_args_lengths)
+            dict_to = kwargs_list[dict_index]
 
         # Convert and store the argument
         convert_function = all_args[ind][1]
@@ -182,7 +234,7 @@ def parse_command_line_arguments(mandatory_args, optional_args, argv=None):
         if arg_name not in handled_arg_names:
             raise Exception("Mandatory argument not given")
 
-    return (args, kwargs)
+    return tuple([args] + kwargs_list)
 
 
 def composite_function(function_list):
