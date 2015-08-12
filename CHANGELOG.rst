@@ -1,3 +1,14 @@
+Version 0.3.6 (2015-08-12)
+++++++++++++++++++++++++++
+
+ * Add maximum likelihood node for the shape parameter of Gamma
+
+ * Fix Hinton diagrams for 1-D and 0-D Gaussians
+
+ * Fix autosave interval counter
+
+ * Fix bugs in constant nodes
+
 Version 0.3.5 (2015-06-09)
 ++++++++++++++++++++++++++
 
