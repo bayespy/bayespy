@@ -232,7 +232,7 @@ def parse_command_line_arguments(mandatory_args, *optional_args_list, argv=None)
     # Check if some mandatory argument was not given
     for arg_name in mandatory_arg_names:
         if arg_name not in handled_arg_names:
-            raise Exception("Mandatory argument not given")
+            raise Exception("Mandatory argument --{0} not given".format(arg_name))
 
     return tuple([args] + kwargs_list)
 
