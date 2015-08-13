@@ -17,3 +17,4 @@ Examples
    hmm
    pca
    lssm
+   lda
