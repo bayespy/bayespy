@@ -33,7 +33,10 @@ uses the following acronyms to start the commit message:
  * REV: revert an earlier commit
  * STY: style fix (whitespace, PEP8)
  * TST: addition or modification of tests
- * REL: related to releasing numpy
+ * REL: related to releasing
+
+We follow `Vincent Driessen's branching model
+<http://danielkummer.github.io/git-flow-cheatsheet/>`_ in how git is used.
 
 
 Making releases
