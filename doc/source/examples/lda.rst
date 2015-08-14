@@ -256,6 +256,7 @@ Run the inference:
 ...     step = (n + delay) ** (-forgetting_rate)
 ...     # Stochastic gradient for the global variables
 ...     Q.gradient_step('p_topic', 'p_word', scale=step)
+Iteration 1: ...
 
 If one is interested, the lower bound values during the SVI algorithm can be plotted as:
 
