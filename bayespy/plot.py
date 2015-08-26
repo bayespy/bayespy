@@ -990,7 +990,7 @@ class Plotter():
         self._plotter = plotter
 
 
-    def __call__(self, X, fig=None):
+    def __call__(self, X, fig=None, **kwargs):
         """
         Plot the node using the specified plotting function
 
@@ -1001,7 +1001,9 @@ class Plotter():
 
             The plotted node
         """
-        return self._plotter(X, *self._args, fig=fig, **self._kwargs)
+        kwargs_all = self._kwargs.copy()
+        kwargs_all.update(kwargs)
+        return self._plotter(X, *self._args, fig=fig, **kwargs_all)
 
         
 class PDFPlotter(Plotter):
