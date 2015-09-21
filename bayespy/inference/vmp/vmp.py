@@ -307,7 +307,7 @@ class VB():
             dictionary = {node.name: node for node in self.model}
             return dictionary[name]        
 
-    def plot(self, *nodes):
+    def plot(self, *nodes, **kwargs):
         """
         Plot the distribution of the given nodes (or all nodes)
         """
@@ -328,7 +328,7 @@ class VB():
                     fig = plt.figure(num=fignum)
 
                 fig.clf()
-                node.plot(fig=fig)
+                node.plot(fig=fig, **kwargs)
                 fig.canvas.draw()
 
 
