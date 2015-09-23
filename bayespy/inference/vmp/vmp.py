@@ -13,6 +13,7 @@ import h5py
 import datetime
 import tempfile
 import scipy
+import logging
 
 from bayespy.utils import misc
 
@@ -53,12 +54,20 @@ class VB():
                  *nodes, 
                  tol=1e-5, 
                  autosave_filename=None,
-                 autosave_iterations=0, 
+                 autosave_iterations=0,
+                 use_logging=False,
                  callback=None):
 
         for (ind, node) in enumerate(nodes):
             if not isinstance(node, Node):
                 raise ValueError("Argument number %d is not a node" % (ind+1))
+
+        if use_logging:
+            logger = logging.getLogger(__name__)
+            self.print = logger.info
+        else:
+            # By default, don't use logging, just print stuff
+            self.print = print
             
         # Remove duplicate nodes
         self.model = misc.unique(nodes)
@@ -95,6 +104,17 @@ class VB():
         self.callback = callback
         self.callback_output = None
         self.tol = tol
+
+
+    def use_logging(self, use):
+        if use_logging:
+            logger = logging.getLogger(__name__)
+            self.print = logger.info
+        else:
+            # By default, don't use logging, just print stuff
+            self.print = print
+        return
+
 
     def set_autosave(self, filename, iterations=None, nodes=None):
         self.autosave_filename = filename
@@ -504,7 +524,7 @@ class VB():
                 try:
                     self.set_parameters(p_new, *nodes)
                 except:
-                    print("WARNING! CG update was unsuccessful, use gradient and reset CG")
+                    self.print("CG update was unsuccessful, using gradient and resetting CG")
                     s = g2
                     continue
 
@@ -515,7 +535,7 @@ class VB():
                 L = self.compute_lowerbound()
 
                 if L < self.L[self.iter-1] and not np.allclose(L, self.L[self.iter-1], rtol=1e-8):
-                    print("WARNING! CG decreased lower bound to %e, use gradient and reset CG" % L)
+                    self.print("CG decreased lower bound to %e, using gradient and resetting CG" % L)
                     s = g2
                     continue
 
@@ -642,11 +662,11 @@ class VB():
 
         if verbose:
             if method:
-                print("Iteration %d (%s): loglike=%e (%.3f seconds)"
-                      % (self.iter+1, method, L, cputime))
+                self.print("Iteration %d (%s): loglike=%e (%.3f seconds)"
+                           % (self.iter+1, method, L, cputime))
             else:
-                print("Iteration %d: loglike=%e (%.3f seconds)"
-                      % (self.iter+1, L, cputime))
+                self.print("Iteration %d: loglike=%e (%.3f seconds)"
+                           % (self.iter+1, L, cputime))
 
         # Check the progress of the iteration
         self.converged = False
@@ -666,7 +686,7 @@ class VB():
             if (L1 - L0) / div < tol:
             #if (L1 - L0) / div < tol or L1 - L0 <= 0:
                 if verbose:
-                    print("Converged at iteration %d." % (self.iter+1))
+                    self.print("Converged at iteration %d." % (self.iter+1))
                 self.converged = True
 
         # Auto-save, if requested
@@ -678,7 +698,7 @@ class VB():
             else:
                 self.save(filename=self.autosave_filename)
             if verbose:
-                print('Auto-saved to %s' % self.autosave_filename)
+                self.print('Auto-saved to %s' % self.autosave_filename)
 
         self.annealing_changed = False
 
