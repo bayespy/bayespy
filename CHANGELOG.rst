@@ -1,3 +1,10 @@
+Version 0.3.7 (2015-09-23)
+++++++++++++++++++++++++++
+
+ * Enable keyword arguments when plotting via the inference engine
+
+ * Add initial support for logging
+
 Version 0.3.6 (2015-08-12)
 ++++++++++++++++++++++++++
 
