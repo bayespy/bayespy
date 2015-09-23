@@ -250,15 +250,13 @@ Run the inference:
 ...     subset = np.random.choice(n_words, subset_size)
 ...     Q['words'].observe(corpus[subset])
 ...     Q['document_indices'].set_value(word_documents[subset])
-
 ...     # Learn intermediate variables
 ...     Q.update('topics')
-
 ...     # Set step length
 ...     step = (n + delay) ** (-forgetting_rate)
-
 ...     # Stochastic gradient for the global variables
 ...     Q.gradient_step('p_topic', 'p_word', scale=step)
+Iteration 1: ...
 
 If one is interested, the lower bound values during the SVI algorithm can be plotted as:
 
