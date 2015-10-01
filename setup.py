@@ -15,9 +15,16 @@ URL          = 'http://bayespy.org'
 LICENSE      = 'MIT'
 VERSION      = '0.3.7'
 
+
 if __name__ == "__main__":
 
     import os
+    import sys
+
+    python_version = int(sys.version.split('.')[0])
+    if python_version < 3:
+        raise RuntimeError("BayesPy requires Python 3. You are running Python "
+                           "{0}.".format(python_version))
 
     # Utility function to read the README file.
     # Used for the long_description.  It's nice, because now 1) we have a top level
