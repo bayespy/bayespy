@@ -540,9 +540,11 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         # Note that phi[1] is -0.5*inv(Cov)
         U = linalg.chol(-2*phi[1])
         mu = linalg.chol_solve(U, phi[0])
-        z = np.random.normal(0, 1, plates + np.shape(mu)[-1:])
-        # Compute mu + U'*z
-        z = misc.m_solve_triangular(U, z, trans='T', lower=False)
+        shape = plates + np.shape(mu)[-1:]
+        z = np.random.randn(*shape)
+        # Note: Cov = inv(Phi) = inv(U'*U) = inv(U) * inv(U')
+        # Thus, compute mu + U\z
+        z = misc.m_solve_triangular(U, z, trans='N', lower=False)
         return mu + z
             
 
