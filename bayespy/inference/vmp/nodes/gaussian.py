@@ -542,7 +542,8 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         mu = linalg.chol_solve(U, phi[0])
         shape = plates + np.shape(mu)[-1:]
         z = np.random.randn(*shape)
-        # Note: Cov = inv(Phi) = inv(U'*U) = inv(U) * inv(U')
+        # Denote Lambda = -2*phi[1]
+        # Then, Cov = inv(Lambda) = inv(U'*U) = inv(U) * inv(U')
         # Thus, compute mu + U\z
         z = misc.m_solve_triangular(U, z, trans='N', lower=False)
         return mu + z
@@ -818,7 +819,8 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
             var = -0.5 / phi1
             std = np.sqrt(var)
             mu = var * phi[0]
-            z = np.random.normal(0, 1, plates + dims)
+            shape = plates + dims
+            z = np.random.randn(*shape)
             x = mu + std * z
         else:
             N = np.prod(dims)
@@ -832,10 +834,14 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
             plates_phi0 = np.shape(phi[0])[:-D]
             phi0 = np.reshape(phi[0], plates_phi0 + (N,))
             mu = linalg.chol_solve(U, phi0)
-            # Compute mu + U'*z
-            z = np.random.normal(0, 1, plates + (N,))
+            # Compute mu + U\z
+            shape = plates + (N,)
+            z = np.random.randn(*shape)
+            # Denote Lambda = -2*phi[1]
+            # Then, Cov = inv(Lambda) = inv(U'*U) = inv(U) * inv(U')
+            # Thus, compute mu + U\z
             x = mu + linalg.solve_triangular(U, z,
-                                             trans='T', 
+                                             trans='N',
                                              lower=False)
             x = np.reshape(x, plates + dims)
         return x
