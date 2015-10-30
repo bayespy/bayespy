@@ -13,9 +13,6 @@ capabilities relies on image comparisons, it's difficult to create
 strict unit tests.
 """
 
-import warnings
-warnings.simplefilter("error")
-
 import numpy as np
 from matplotlib.testing.decorators import image_comparison
 

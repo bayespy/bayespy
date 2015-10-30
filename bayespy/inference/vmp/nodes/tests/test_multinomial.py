@@ -9,9 +9,6 @@
 Unit tests for `multinomial` module.
 """
 
-import warnings
-warnings.simplefilter("error")
-
 import numpy as np
 import scipy
 

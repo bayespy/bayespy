@@ -9,9 +9,6 @@
 Unit tests for `gate` module.
 """
 
-import warnings
-warnings.simplefilter("error")
-
 import numpy as np
 
 from bayespy.nodes import (Gate,

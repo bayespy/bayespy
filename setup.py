@@ -85,7 +85,7 @@ if __name__ == "__main__":
         ],
         entry_points = {
             'nose.plugins': [
-                'warnaserr = bayespy.testing:WarningAsError',
+                'warnaserror = bayespy.testing:WarnAsError',
             ]
         },
     )

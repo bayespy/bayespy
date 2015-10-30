@@ -9,9 +9,6 @@
 Unit tests for `transformations` module.
 """
 
-import warnings
-warnings.simplefilter("error")
-
 import numpy as np
 
 from bayespy.inference.vmp.nodes.gaussian import GaussianARD
