@@ -152,7 +152,7 @@ class RotationOptimizer():
         if check_gradient:
             R = np.random.randn(self.D, self.D)
             err = optimize.check_gradient(cost, np.ravel(R), 
-                                                verbose=verbose)
+                                          verbose=verbose)[1]
             if err > 1e-5:
                 warnings.warn("Rotation gradient has relative error %g" % err)
 

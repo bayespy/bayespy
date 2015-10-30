@@ -371,7 +371,7 @@ class TestRotateGaussianARD(TestCase):
                 # Check gradient with respect to R
                 err = optimize.check_gradient(f_r, 
                                               np.ravel(R), 
-                                              verbose=False)
+                                              verbose=False)[1]
                 self.assertAllClose(err, 0, 
                                     atol=1e-4,
                                     msg="Gradient incorrect for R")
@@ -380,7 +380,7 @@ class TestRotateGaussianARD(TestCase):
                 if plate_axis is not None:
                     err = optimize.check_gradient(f_q, 
                                                   np.ravel(Q), 
-                                                  verbose=False)
+                                                  verbose=False)[1]
                     self.assertAllClose(err, 0,
                                         atol=1e-4,
                                         msg="Gradient incorrect for Q")
@@ -875,7 +875,7 @@ class TestRotateGaussianMarkovChain(TestCase):
 
             err = optimize.check_gradient(cost, 
                                           np.ravel(R), 
-                                          verbose=False)
+                                          verbose=False)[1]
             self.assertAllClose(err, 0, 
                                 atol=1e-5,
                                 msg="Gradient incorrect")
@@ -1148,7 +1148,7 @@ class TestRotateVaryingMarkovChain(TestCase):
 
             err = optimize.check_gradient(cost, 
                                           np.ravel(R), 
-                                          verbose=False)
+                                          verbose=False)[1]
             self.assertAllClose(err, 0, 
                                 atol=1e-6,
                                 msg="Gradient incorrect")

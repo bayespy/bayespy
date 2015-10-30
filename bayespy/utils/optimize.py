@@ -20,13 +20,13 @@ def minimize(f, x0, maxiter=None, verbose=False):
     opt = optimize.minimize(f, x0, jac=True, method='CG', options=options)
     return opt.x
 
-def check_gradient(f, x0, verbose=True, epsilon=optimize.optimize._epsilon):
+def check_gradient(f, x0, verbose=True, epsilon=optimize.optimize._epsilon, return_abserr=False):
     """
     Simple wrapper for SciPy's gradient checker.
 
     The given function must return a tuple: (value, gradient).
 
-    Returns relative
+    Returns absolute and relative errors
     """
     df = f(x0)[1]
     df_num = optimize.approx_fprime(x0, 
@@ -44,5 +44,6 @@ def check_gradient(f, x0, verbose=True, epsilon=optimize.optimize._epsilon):
         print("Gradient relative error = %g and absolute error = %g" % 
               (err,
                abserr))
-    return err
+
+    return (abserr, err)
 
