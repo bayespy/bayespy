@@ -25,8 +25,13 @@ class Add(Deterministic):
     >>> X = nodes.Gaussian(np.zeros(2), np.identity(2), plates=(3,))
     >>> Y = nodes.Gaussian(np.ones(2), np.identity(2))
     >>> Z = nodes.Add(X, Y)
-    >>> print("Mean:", Z.get_moments()[0])
-    >>> print("Second moment:", Z.get_moments()[1])
+    >>> print("Mean:\n", Z.get_moments()[0])
+    Mean:
+     [[ 1.  1.]]
+    >>> print("Second moment:\n", Z.get_moments()[1])
+    Second moment:
+     [[[ 3.  1.]
+      [ 1.  3.]]]
 
     Notes
     -----
