@@ -53,7 +53,7 @@ before_script:
 
 # Run unit tests for the code, docstrings and documentation
 script:
-  - nosetests --with-doctest  --doctest-options="+ELLIPSIS" --with-coverage --cover-erase --verbose --detailed-errors
+  - python -m nose -c nose.cfg
   - cd doc && make doctest
 
 # check coverage
