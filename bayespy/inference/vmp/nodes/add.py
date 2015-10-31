@@ -16,7 +16,7 @@ from bayespy.utils import linalg
 
 class Add(Deterministic):
     r"""
-    Node for computing sums Gaussian nodes: :math:`X+Y+Z`.
+    Node for computing sums of Gaussian nodes: :math:`X+Y+Z`.
 
     Examples
     --------
@@ -37,6 +37,19 @@ class Add(Deterministic):
     -----
 
     Shapes of the nodes must be identical. Plates are broadcasted.
+
+    This node sums nodes that are independent in the posterior
+    approximation. However, summing variables puts a strong coupling among the
+    variables, which is lost in this construction.  Thus, it is usually better
+    to use a single Gaussian node to represent the set of the summed variables
+    and use SumMultiply node to compute the sum.  In that way, the correlation
+    between the variables is not lost. However, in some cases it is necessary or
+    useful to use Add node.
+
+    See also
+    --------
+
+    Dot, SumMultiply
     """
 
     def __init__(self, *nodes, **kwargs):
