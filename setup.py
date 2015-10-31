@@ -11,7 +11,8 @@
 # See: https://packaging.python.org/en/latest/single_source_version/#single-sourcing-the-version
 import os
 version = {}
-with open(os.path.join('bayespy', 'version.py')) as fp:
+base_dir = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(base_dir, 'bayespy', 'version.py')) as fp:
     exec(fp.read(), version)
 __version__ = version['__version__']
 
