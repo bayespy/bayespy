@@ -4,6 +4,8 @@
 # This file is licensed under the MIT License.
 ################################################################################
 
+from .version import __version__
+
 
 from . import utils
 from . import inference

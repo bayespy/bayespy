@@ -46,6 +46,7 @@ install:
   - source activate test-environment
   - pip install coveralls
   - pip install "sphinx>=1.2.3" sphinxcontrib-tikz sphinxcontrib-bayesnet sphinxcontrib-bibtex "numpydoc>=0.5"
+  - pip install -e .
 
 # Select a proper matplotlib backend
 before_script:
@@ -53,7 +54,7 @@ before_script:
 
 # Run unit tests for the code, docstrings and documentation
 script:
-  - nosetests --with-doctest  --doctest-options="+ELLIPSIS" --with-coverage --cover-erase --verbose --detailed-errors
+  - python -m nose -c nose.cfg
   - cd doc && make doctest
 
 # check coverage

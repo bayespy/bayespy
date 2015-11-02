@@ -338,7 +338,7 @@ def timeseries(*args, center=True, **kwargs):
     return plot(*args, center=center, **kwargs)
 
 
-def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, fig=None, **kwargs):
+def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, fig=None, axes=None, **kwargs):
     # TODO/FIXME: You must multiply by ones(plates) in order to plot
     # broadcasted plates properly
 
@@ -375,21 +375,26 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, fig=None, **
         N = 1
 
     # Plot each timeseries
-    ax0 = fig.add_subplot(M, N, 1)
+    if axes is None:
+        ax0 = fig.add_subplot(M, N, 1)
     for i in range(M*N):
-        if i > 0:
-            # Share x axis between all subplots
-            ax = fig.add_subplot(M, N, i+1, sharex=ax0)
+        if axes is None:
+            if i > 0:
+                # Share x axis between all subplots
+                ax = fig.add_subplot(M, N, i+1, sharex=ax0)
+            else:
+                ax = ax0
+
+            # Autoscale the axes to data and use tight y and x axes
+            ax.autoscale(enable=True, tight=True)
+            ax.set_ylim(auto=True)
+
+            if i < (M-1)*N:
+                # Remove x tick labels from other than the last row
+                plt.setp(ax.get_xticklabels(), visible=False)
+
         else:
-            ax = ax0
-
-        # Autoscale the axes to data and use tight y and x axes
-        ax.autoscale(enable=True, tight=True)
-        ax.set_ylim(auto=True)
-
-        if i < (M-1)*N:
-            # Remove x tick labels from other than the last row
-            plt.setp(ax.get_xticklabels(), visible=False)
+            ax = axes[i]
 
         if std is None:
             errorplot(y=y[:,i], axes=ax, **kwargs)
@@ -404,8 +409,10 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, fig=None, **
             vmax = np.max(np.abs(ylim))
             ax.set_ylim([-vmax, vmax])
 
-    # Remove height space between subplots
-    fig.subplots_adjust(hspace=0)
+    if axes is None:
+        # Remove height space between subplots
+        fig.subplots_adjust(hspace=0)
+
 
 def _blob(axes, x, y, area, colour):
     """

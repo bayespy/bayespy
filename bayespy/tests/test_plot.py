@@ -13,9 +13,6 @@ capabilities relies on image comparisons, it's difficult to create
 strict unit tests.
 """
 
-import warnings
-warnings.simplefilter("error")
-
 import numpy as np
 from matplotlib.testing.decorators import image_comparison
 
@@ -67,6 +64,11 @@ def test_gaussian_mixture_plot():
     Q.update(repeat=1000)
 
     bpplt.gaussian_mixture_2d(Y, scale=2)
+
+    # Have to define these limits because on some particular environments these
+    # may otherwise differ and thus result in an image comparsion failure
+    bpplt.pyplot.xlim([-3, 6])
+    bpplt.pyplot.ylim([-3, 5])
 
 
 @image_comparison(baseline_images=['hinton_r'], extensions=['png'], remove_text=True)

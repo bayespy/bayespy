@@ -160,6 +160,10 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
     """
 
     _moments = GaussianMarkovChainMoments()
+
+
+    def random(self, *phi, plates=None):
+        raise NotImplementedError()
                                 
     
     def rotate(self, R, inv=None, logdet=None):

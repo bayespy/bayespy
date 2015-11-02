@@ -9,9 +9,6 @@
 Unit tests for `gaussian` module.
 """
 
-import warnings
-warnings.simplefilter("error")
-
 import numpy as np
 
 from scipy import special

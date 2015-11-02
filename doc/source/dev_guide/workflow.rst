@@ -35,8 +35,8 @@ uses the following acronyms to start the commit message:
  * TST: addition or modification of tests
  * REL: related to releasing
 
-We follow `Vincent Driessen's branching model
-<http://danielkummer.github.io/git-flow-cheatsheet/>`_ in how git is used.
+Since version 0.3.7, we have started following `Vincent Driessen's branching
+model <http://danielkummer.github.io/git-flow-cheatsheet/>`_ in how git is used.
 
 
 Making releases
@@ -44,13 +44,16 @@ Making releases
 
  * Commit any current changes to git.
 
- * Edit version number in setup.py.
+ * Start a release branch: ``git flow release start x.y.z``
 
- * Add changes to CHANGELOG.rst.
+ * Edit version number in setup.py and commit.
 
- * Make a commit: ``git commit -am "REL: Version x.x.x"``
+ * Add changes to CHANGELOG.rst and commit.
 
- * Tag the release: ``git tag x.x.x``
+ * Publish the release branch: ``git flow release publish x.y.z``
+
+ * Finish the release: ``git flow release finish x.y.z``. Write the following
+   commit message: ``REL: Version x.y.z``.
 
  * Push to GitHub: ``git push && git push --tags``
 

@@ -9,9 +9,6 @@
 Unit tests for bayespy.utils.random module.
 """
 
-import warnings
-warnings.simplefilter("error")
-
 import numpy as np
 
 from .. import misc

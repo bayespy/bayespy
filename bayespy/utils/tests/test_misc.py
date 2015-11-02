@@ -12,7 +12,6 @@ Unit tests for bayespy.utils.misc module.
 import unittest
 
 import warnings
-warnings.simplefilter("error")
 
 import numpy as np
 

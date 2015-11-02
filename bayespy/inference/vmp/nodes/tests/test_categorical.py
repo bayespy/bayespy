@@ -10,9 +10,6 @@ Unit tests for `categorical` module.
 """
 
 import warnings
-warnings.simplefilter("error")
-
-import warnings
 
 import numpy as np
 import scipy

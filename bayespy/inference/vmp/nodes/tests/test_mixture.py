@@ -10,7 +10,6 @@ Unit tests for mixture module.
 """
 
 import warnings
-warnings.simplefilter("error")
 
 import numpy as np
 

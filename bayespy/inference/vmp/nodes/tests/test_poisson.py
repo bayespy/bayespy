@@ -9,9 +9,6 @@
 Unit tests for `poisson` module.
 """
 
-import warnings
-warnings.simplefilter("error")
-
 import numpy as np
 import scipy
 

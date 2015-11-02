@@ -1,3 +1,14 @@
+Version 0.4.0 (2015-11-02)
++++++++++++++++++++++++++++
+
+ * Implement Add node for Gaussian nodes
+
+ * Raise error if attempting to install on Python 2
+
+ * Return both relative and absolute errors from numerical gradient checking
+
+ * Add nose plugin to filter unit test warnings appropriately
+
 Version 0.3.9 (2015-10-16)
 ++++++++++++++++++++++++++
 

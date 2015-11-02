@@ -10,7 +10,6 @@ Unit tests for bayespy.inference.vmp.nodes.categorical_markov_chain module.
 """
 
 import warnings
-warnings.simplefilter("error")
 
 import numpy as np
 from bayespy.utils import misc
