@@ -65,6 +65,11 @@ def test_gaussian_mixture_plot():
 
     bpplt.gaussian_mixture_2d(Y, scale=2)
 
+    # Have to define these limits because on some particular environments these
+    # may otherwise differ and thus result in an image comparsion failure
+    bpplt.pyplot.xlim([-3, 6])
+    bpplt.pyplot.ylim([-3, 5])
+
 
 @image_comparison(baseline_images=['hinton_r'], extensions=['png'], remove_text=True)
 def test_hinton_plot_dirichlet():
