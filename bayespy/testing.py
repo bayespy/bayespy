@@ -60,5 +60,13 @@ class WarnAsErrorTestRunner(object):
                 category=DeprecationWarning,
                 module="nose|scipy"
             )
+            # Filter out some deprecation warnings inside matplotlib on Python
+            # 3.4
+            warnings.filterwarnings(
+                "ignore",
+                message=".*elementwise.*",
+                category=DeprecationWarning,
+                module="matplotlib"
+            )
 
             return self.runner.run(test)
