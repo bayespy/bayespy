@@ -1,3 +1,8 @@
+Version 0.4.1 (2015-11-02)
+++++++++++++++++++++++++++
+
+ * Define extra dependencies needed to build the documentation
+
 Version 0.4.0 (2015-11-02)
 +++++++++++++++++++++++++++
 
