@@ -52,6 +52,15 @@ if __name__ == "__main__":
             'matplotlib>=1.2.0',
             'h5py'
         ],
+        extras_require = {
+            'doc': [
+                'sphinx>=1.2.3',
+                'sphinxcontrib-tikz',
+                'sphinxcontrib-bayesnet',
+                'sphinxcontrib-bibtex',
+                'numpydoc>=0.5',
+            ],
+        },
         packages         = find_packages(),
         package_data     = {
             NAME: ["tests/baseline_images/test_plot/*.png"]
