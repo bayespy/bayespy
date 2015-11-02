@@ -86,6 +86,7 @@ Deterministic nodes
 
    Dot
    SumMultiply
+   Add
    Gate
 """
 
