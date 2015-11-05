@@ -37,6 +37,11 @@ http://opensource.org/licenses/MIT.
 
 * Bug reports: https://github.com/bayespy/bayespy/issues
 
+* Chat:
+
+  .. image:: https://badges.gitter.im/Join%20Chat.svg
+     :target: https://gitter.im/bayespy/bayespy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
+
 * Mailing list: bayespy@googlegroups.com
 
 * IRC: #bayespy @ `freenode <http://freenode.net/>`_
