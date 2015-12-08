@@ -432,3 +432,75 @@ class TestMean(misc.TestCase):
                             [[2.5]])
         
         pass
+
+
+class TestPutSimple(misc.TestCase):
+
+    def test_put_simple(self):
+
+        # Scalar indices
+        self.assertAllClose(
+            misc.put_simple(
+                42,
+                2,
+            ),
+            [0, 0, 42],
+        )
+
+        # Simple vectors, automatic length
+        self.assertAllClose(
+            misc.put_simple(
+                [1, 0.1, 0.01, 0.001, 0.0001],
+                [3, 3, 1, 3, 0],
+            ),
+            [0.0001, 0.01, 0, 1.101],
+        )
+
+        # Matrix indices
+        self.assertAllClose(
+            misc.put_simple(
+                [[1, 0.1], [0.01, 0.001]],
+                [[4, 1], [1, 3]],
+            ),
+            [0, 0.11, 0, 0.001, 1],
+        )
+
+        # Test axis
+        self.assertAllClose(
+            misc.put_simple(
+                [[1, 0.1], [0.01, 0.001], [0.0001, 0.00001]],
+                [3, 3, 0],
+                axis=-2,
+            ),
+            [[0.0001, 0.00001], [0, 0], [0, 0], [1.01, 0.101]],
+        )
+
+        # Test explicit length
+        self.assertAllClose(
+            misc.put_simple(
+                [1, 0.1, 0.01, 0.001, 0.0001],
+                [3, 3, 1, 3, 0],
+                length=6,
+            ),
+            [0.0001, 0.01, 0, 1.101, 0, 0],
+        )
+
+        # Test broadcasting
+        self.assertAllClose(
+            misc.put_simple(
+                2,
+                [3, 3, 1, 3, 0],
+            ),
+            [2, 2, 0, 6],
+        )
+
+        # Test leading axes in y
+        self.assertAllClose(
+            misc.put_simple(
+                [[1, 0.1], [0.01, 0.001], [0.0001, 0.00001]],
+                [2, 0],
+            ),
+            [[0.1, 0, 1], [0.001, 0, 0.01], [0.00001, 0, 0.0001]],
+        )
+
+        pass
