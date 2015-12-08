@@ -438,9 +438,16 @@ class TestSlice(misc.TestCase):
 
         # Integer index
         X = MyNode(plates=(3,4), dims=((),))
+        Y = X[2]
+        self.assertEqual(Y.plates, (4,))
+        X = MyNode(plates=(3,4), dims=((),))
+        Y = X[(2,)]
+        self.assertEqual(Y.plates, (4,))
+
+        X = MyNode(plates=(3,4), dims=((),))
         Y = X[2,-4]
         self.assertEqual(Y.plates, ())
-        
+
         X = MyNode(plates=(3,4,5), dims=((),))
         Y = X[2,1]
         self.assertEqual(Y.plates, (5,))
