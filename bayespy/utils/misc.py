@@ -361,6 +361,105 @@ def array_to_scalar(x):
 
 #def diag(x):
 
+
+def put(x, indices, y, axis=-1, ufunc=np.add):
+    """A kind of inverse mapping of `np.take`
+
+    In a simple, the operation can be thought as:
+
+    .. code-block:: python
+
+       x[indices] += y
+
+    with the exception that all entries of `y` are used instead of just the
+    first occurence corresponding to a particular element. That is, the results
+    are accumulated, and the accumulation function can be changed by providing
+    `ufunc`. For instance, `np.multiply` corresponds to:
+
+    .. code-block:: python
+
+       x[indices] *= y
+
+    Whereas `np.take` picks indices along an axis and returns the resulting
+    array, `put` similarly picks indices along an axis but accumulates the
+    given values to those entries.
+
+    Example
+    -------
+
+    .. code-block:: python
+
+       >>> x = np.zeros(3)
+       >>> put(x, [2, 2, 0, 2, 2], 1)
+       array([ 1.,  0.,  4.])
+
+    `y` must broadcast to the shape of `np.take(x, indices)`:
+
+    .. code-block:: python
+
+       >>> x = np.zeros((3,4))
+       >>> put(x, [[2, 2, 0, 2, 2], [1, 2, 1, 2, 1]], np.ones((2,1,4)), axis=0)
+       array([[ 1.,  1.,  1.,  1.],
+              [ 3.,  3.,  3.,  3.],
+              [ 6.,  6.,  6.,  6.]])
+
+    """
+    #x = np.copy(x)
+    ndim = np.ndim(x)
+    if not isinstance(axis, int):
+        raise ValueError("Axis must be an integer")
+
+    # Make axis index positive: [0, ..., ndim-1]
+    if axis < 0:
+        axis = axis + ndim
+    if axis < 0 or axis >= ndim:
+        raise ValueError("Axis out of bounds")
+
+    indices = axis*(slice(None),) + (indices,) + (ndim-axis-1)*(slice(None),)
+    #y = add_trailing_axes(y, ndim-axis-1)
+    ufunc.at(x, indices, y)
+    return x
+
+
+def put_simple(y, indices, axis=-1, length=None):
+    """An inverse operation of `np.take` with accumulation and broadcasting.
+
+    Compared to `put`, the difference is that the result array is initialized
+    with an array of zeros whose shape is determined automatically and `np.add`
+    is used as the accumulator.
+
+    """
+
+    if length is None:
+        # Try to determine the original length of the axis by finding the
+        # largest index. It is more robust to give the length explicitly.
+        indices = np.copy(indices)
+        indices[indices<0] = np.abs(indices[indices<0]) - 1
+        length = np.amax(indices) + 1
+
+    if not isinstance(axis, int):
+        raise ValueError("Axis must be an integer")
+
+    # Make axis index negative: [-ndim, ..., -1]
+    if axis >= 0:
+        raise ValueError("Axis index must be negative")
+
+    y = atleast_nd(y, abs(axis)-1)
+    shape_y = np.shape(y)
+    end_before = axis - np.ndim(indices) + 1
+    start_after = axis + 1
+    if end_before == 0:
+        shape_x = shape_y + (length,)
+    elif start_after == 0:
+        shape_x = shape_y[:end_before] + (length,)
+    else:
+        shape_x = shape_y[:end_before] + (length,) + shape_y[start_after:]
+
+    x = np.zeros(shape_x)
+
+    return put(x, indices, y, axis=axis)
+
+
 def grid(x1, x2):
     """ Returns meshgrid as a (M*N,2)-shape array. """
     (X1, X2) = np.meshgrid(x1, x2)
@@ -465,6 +564,11 @@ def is_numeric(a):
     return (np.isscalar(a) or
             isinstance(a, list) or
             isinstance(a, np.ndarray))
+
+def is_scalar_integer(x):
+    t = np.asanyarray(x).dtype.type
+    return np.ndim(x) == 0 and issubclass(t, np.integer)
+
 
 def isinteger(x):
     t = np.asanyarray(x).dtype.type
