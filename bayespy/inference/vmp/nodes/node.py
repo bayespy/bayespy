@@ -828,7 +828,7 @@ class Slice(Deterministic):
         ellipsis_index = None
         for (k, s) in enumerate(slices):
 
-            if isinstance(s, int) or isinstance(s, slice):
+            if misc.is_scalar_integer(s) or isinstance(s, slice):
                 num_axis += 1
 
             elif s is None:
@@ -846,7 +846,7 @@ class Slice(Deterministic):
                     slices[k] = slice(None)
                     
             else:
-                raise TypeError("Invalid argument type.")
+                raise TypeError("Invalid argument type: {0}".format(s.__class__))
 
         if num_axis > len(X.plates):
             raise IndexError("Too many indices")
@@ -877,7 +877,7 @@ class Slice(Deterministic):
         
         for (k, s) in enumerate(slices):
 
-            if isinstance(s, int):
+            if misc.is_scalar_integer(s):
                 # Index is an integer, e.g., [3]
                 
                 if s < 0:
@@ -931,9 +931,11 @@ class Slice(Deterministic):
                 plates = plates[:k] + [1] + plates[k:]
                 k += 1
                 
-            elif isinstance(s, int):
+            elif misc.is_scalar_integer(s):
                 # Integer, e.g., [3]
                 del plates[k]
+            else:
+                raise RuntimeError("BUG: Unknown index type. Should capture earlier.")
 
         return tuple(plates)
 
@@ -958,7 +960,7 @@ class Slice(Deterministic):
 
         for s in reversed(slices):
 
-            if isinstance(s, int):
+            if misc.is_scalar_integer(s):
                 # Case: integer
                 parent_slices = (s,) + parent_slices
                 msg_plates = (plates[j],) + msg_plates
@@ -968,7 +970,7 @@ class Slice(Deterministic):
                 if -i <= len(m_plates):
                     child_slices = (0,) + child_slices
                 i -= 1
-            else:
+            elif isinstance(s, slice):
                 # Case: slice
                 if -i <= len(m_plates):
                     child_slices = (slice(None),) + child_slices
@@ -984,6 +986,8 @@ class Slice(Deterministic):
                     msg_plates = (plates[j],) + msg_plates
                 j -= 1
                 i -= 1
+            else:
+                raise RuntimeError("BUG: Unknown index type. Should capture earlier.")
 
         # Set the elements of the message
         m_parent = np.zeros(msg_plates + dims)

@@ -43,6 +43,7 @@ from .concatenate import Concatenate
 from .dot import Dot
 from .dot import SumMultiply
 from .add import Add
+from .take import Take
 
 from .logpdf import LogPDF
 
