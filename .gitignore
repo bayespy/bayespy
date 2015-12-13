@@ -31,3 +31,4 @@ ENV
 # test artifacts
 /.coverage
 result_images
+.coverage
