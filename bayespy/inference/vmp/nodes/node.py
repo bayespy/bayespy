@@ -201,7 +201,7 @@ class Node():
 
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
-       _compute_mask_to_parent(index, mask)
+       _compute_weights_to_parent(index, weights)
        _plates_to_parent(self, index)
        _plates_from_parent(self, index)
     """
@@ -288,7 +288,11 @@ class Node():
             try:
                 return misc.broadcasted_shape(*parent_plates)
             except ValueError:
-                raise ValueError("The plates of the parents do not broadcast.")
+                raise ValueError(
+                    "The plates of the parents do not broadcast: {0}".format(
+                        parent_plates
+                    )
+                )
         else:
             # Check that the parent_plates are a subset of plates.
             for (ind, p) in enumerate(parent_plates):
@@ -404,24 +408,20 @@ class Node():
         for parent in self.parents:
             parent._update_mask()
 
-    ## @staticmethod
-    ## def _compute_mask_to_parent(index, mask):
-    ##     # Sub-classes may want to overwrite this if they do something to plates.
-    ##     return mask
 
-    # TODO: Rename to _compute_message_mask_to_parent(index, mask)
-    def _compute_mask_to_parent(self, index, mask):
-        """
-        Compute the mask used for messages sent to parent[index].
+    def _compute_weights_to_parent(self, index, weights):
+        """Compute the mask used for messages sent to parent[index].
 
         The mask tells which plates in the messages are active. This method is
         used for obtaining the mask which is used to set plates in the messages
         to parent to zero.
-        
+
         Sub-classes may want to overwrite this method if they do something to
-        plates so that the mask is somehow altered. 
+        plates so that the mask is somehow altered.
+
         """
-        return mask
+        return weights
+
 
     def _mask_to_parent(self, index):
         """
@@ -432,7 +432,7 @@ class Node():
         can't be used for masking messages, because some plates have been summed
         already. This method is used for propagating the mask to parents.
         """
-        mask = self._compute_mask_to_parent(index, self.mask)
+        mask = self._compute_weights_to_parent(index, self.mask) != 0
 
         # Check the shape of the mask
         plates_to_parent = self._plates_to_parent(index)
@@ -443,7 +443,7 @@ class Node():
                              "the node with respect to the parent %s. It could "
                              "be that this node (%s) is manipulating plates "
                              "but has not overwritten the method "
-                             "_compute_mask_to_parent."
+                             "_compute_weights_to_parent."
                              % (self.name,
                                 index,
                                 self.parents[index].name,
@@ -458,12 +458,11 @@ class Node():
         mask = np.any(mask, axis=s, keepdims=True)
         mask = misc.squeeze_to_dim(mask, len(parent_plates))
         return mask
-    #return self._compute_mask_to_parent(index, self.get_mask())
 
     def _message_to_child(self):
 
         u = self.get_moments()
-        
+
         # Debug: Check that the message has appropriate shape
         for (ui, dim) in zip(u, self.dims):
             ndim = len(dim)
@@ -1002,21 +1001,22 @@ class Slice(Deterministic):
 
         return m_parent
 
-    
-    def _compute_mask_to_parent(self, index, mask):
+
+    def _compute_weights_to_parent(self, index, weights):
         """
         Compute the mask to the parent node.
         """
         if index != 0:
             raise ValueError("Invalid index")
         parent = self.parents[0]
-        
+
         return self.__reverse_indexing(self.slices,
-                                       self.mask, 
-                                       parent.plates, 
+                                       weights,
+                                       parent.plates,
                                        ())
 
-    def _compute_message_and_mask_to_parent(self, index, m, u):
+
+    def _compute_message_to_parent(self, index, m, u):
         """
         Compute the message to a parent node.
         """
@@ -1032,10 +1032,7 @@ class Slice(Deterministic):
                                        dims)
                for (m_child, dims) in zip(m, parent.dims)]
 
-        # Apply reverse indexing for the mask
-        mask = self._compute_mask_to_parent(0, self.mask)
-
-        return (msg, mask)
+        return msg
 
     def _compute_moments(self, u):
         """
@@ -1135,28 +1132,23 @@ def AddPlateAxis(to_plate):
             plates.insert(len(plates)-to_plate+1, 1)
             return tuple(plates)
 
-        def _compute_mask_to_parent(self, index, mask):
+
+        def _compute_weights_to_parent(self, index, weights):
             # Remove the added mask plate
-            if abs(to_plate) <= np.ndim(mask):
-                sh_mask = list(np.shape(mask))
-                sh_mask.pop(to_plate)
-                mask = np.reshape(mask, sh_mask)
-            return mask
+            if abs(to_plate) <= np.ndim(weights):
+                sh_weighs = list(np.shape(weights))
+                sh_weights.pop(to_plate)
+                weights = np.reshape(weights, sh_weights)
+            return weights
 
 
-        def _compute_message_and_mask_to_parent(self, index, m, *u_parents):
+        def _compute_message_to_parent(self, index, m, *u_parents):
             """
             Compute the message to a parent node.
             """
 
-            # Get the message from children
-            #(m, mask) = self.message_from_children()
-
             # Remove the added message plate
             for i in range(len(m)):
-                # Make sure the message has all the axes
-                #diff = len(self.plates) + len(self.dims[i]) - np.ndim(m[i])
-                #m[i] = misc.add_leading_axes(m[i], diff)
                 # Remove the axis
                 if np.ndim(m[i]) >= abs(to_plate) + len(self.dims[i]):
                     axis = to_plate - len(self.dims[i])
@@ -1164,9 +1156,7 @@ def AddPlateAxis(to_plate):
                     sh_m.pop(axis)
                     m[i] = np.reshape(m[i], sh_m)
 
-            mask = self._compute_mask_to_parent(index, self.mask)
-
-            return (m, mask)
+            return m
 
         def _compute_moments(self, u):
             """

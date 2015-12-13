@@ -85,14 +85,14 @@ class Concatenate(Deterministic):
         return ()
 
 
-    def _compute_mask_to_parent(self, index, mask):
+    def _compute_weights_to_parent(self, index, weights):
         axis = self._axis
         indices = self._indices[index:(index+1)]
-        if np.ndim(mask) >= abs(axis) and np.shape(mask)[axis] > 1:
+        if np.ndim(weights) >= abs(axis) and np.shape(weights)[axis] > 1:
             # Take the middle one of the returned three arrays
-            return np.split(mask, indices, axis=axis)[1]
+            return np.split(weights, indices, axis=axis)[1]
         else:
-            return mask
+            return weights
 
 
     def _compute_message_to_parent(self, index, m, *u_parents):

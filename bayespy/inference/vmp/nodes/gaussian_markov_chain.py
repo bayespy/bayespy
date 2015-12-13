@@ -51,7 +51,7 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
         raise NotImplementedError()
 
-    def compute_mask_to_parent(self, index, mask):
+    def compute_weights_to_parent(self, index, weights):
         raise NotImplementedError()
 
     def compute_phi_from_parents(self, *u_parents, mask=True):
@@ -325,18 +325,18 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
         return [m0, m1]
 
-    def compute_mask_to_parent(self, index, mask):
+    def compute_weights_to_parent(self, index, weights):
 
         if index == 0:   # mu
-            return mask
+            return weights
         elif index == 1: # Lambda
-            return mask
+            return weights
         elif index == 2: # A
-            return mask[...,np.newaxis,np.newaxis]
+            return weights[...,np.newaxis,np.newaxis]
         elif index == 3: # v
-            return mask[...,np.newaxis,np.newaxis]
+            return weights[...,np.newaxis,np.newaxis]
         elif index == 4: # input signals
-            return mask[...,np.newaxis]
+            return weights[...,np.newaxis]
         else:
             raise ValueError("Index out of bounds")
 
@@ -832,20 +832,20 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
         return [m0, m1]
 
 
-    def compute_mask_to_parent(self, index, mask):
+    def compute_weights_to_parent(self, index, weights):
 
         if index == 0: # mu
-            return mask
+            return weights
         elif index == 1: # Lambda
-            return mask
+            return weights
         elif index == 2: # B
-            return mask[...,np.newaxis] # new plate axis for D
+            return weights[...,np.newaxis] # new plate axis for D
         elif index == 3: # S
-            return mask[...,np.newaxis] # new plate axis for N
+            return weights[...,np.newaxis] # new plate axis for N
         elif index == 4: # v
-            return mask[...,np.newaxis,np.newaxis] # new plate axis for N and D
+            return weights[...,np.newaxis,np.newaxis] # new plate axis for N and D
         elif index == 5: # N
-            return mask
+            return weights
         else:
             raise ValueError("Invalid index")
 
@@ -1370,18 +1370,18 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
 
 
 
-    def compute_mask_to_parent(self, index, mask):
+    def compute_weights_to_parent(self, index, weights):
 
         if index == 0: # mu: (...)x(N,D) -> (...)x(D)
-            return mask
+            return weights
         elif index == 1: # Lambda: (...)x(N,D) -> (...)x(D,D)
-            return mask
+            return weights
         elif index == 2: # B: (...)x(N,D) -> (...,K,D)x(D)
-            return mask[...,None,None]
+            return weights[...,None,None]
         elif index == 3: # Z: (...)x(N,D) -> (...,N-1)x(K)
-            return mask[...,None]
+            return weights[...,None]
         elif index == 4: # v: (...)x(N,D) -> (...,N-1,D)x()
-            return mask[...,None,None]
+            return weights[...,None,None]
         else:
             raise ValueError("Invalid index")
 
@@ -1857,12 +1857,13 @@ class _MarkovChainToGaussian(Deterministic):
         # Send only moments <X(n)> and <X(n)X(n)> but not <X(n-1)X(n)>
         return u[:2]
 
-    def _compute_mask_to_parent(self, index, mask):
+
+    def _compute_weights_to_parent(self, index, weights):
         # Remove the last axis of the mask
-        if np.ndim(mask) >= 1:
-            mask = np.any(mask, axis=-1)
-        return mask
-        
+        if np.ndim(weights) >= 1:
+            weights = np.sum(weights, axis=-1)
+        return weights
+
 
     @staticmethod
     def _compute_message_to_parent(index, m_children, *u_parents):

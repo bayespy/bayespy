@@ -81,16 +81,16 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         else:
             raise ValueError("Parent index out of bounds")
 
-    def compute_mask_to_parent(self, index, mask):
+    def compute_weights_to_parent(self, index, weights):
         """
         Maps the mask to the plates of a parent.
         """
         if index == 0:
-            return mask
+            return weights
         elif index == 1:
             # Add plate axis for the time axis and row axis of the transition
             # matrix
-            return np.asanyarray(mask)[...,None,None]
+            return np.asanyarray(weights)[...,None,None]
         else:
             raise ValueError("Parent index out of bounds")
 
@@ -382,18 +382,20 @@ class CategoricalMarkovChainToCategorical(Deterministic):
         m0 = m[0][...,0,:]
         m1 = m[0][...,1:,None,:]
         return [m0, m1]
-    
-    def _compute_mask_to_parent(self, index, mask):
+
+
+    def _compute_weights_to_parent(self, index, weights):
         """
         Compute the mask used for messages sent to a parent.
         """
         if index == 0:
             # "Sum" over the last axis
             # TODO/FIXME: Check this. BUG I THINK.
-            return np.any(mask, axis=-1)
+            return np.sum(mask, axis=-1)
         else:
             raise ValueError("Parent index out of bounds")
-    
+
+
     def _plates_to_parent(self, index):
         if index == 0:
             return self.plates[:-1]

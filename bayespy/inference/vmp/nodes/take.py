@@ -93,15 +93,14 @@ class Take(Deterministic):
         return m
 
 
-    def _compute_mask_to_parent(self, index, mask):
+    def _compute_weights_to_parent(self, index, weights):
 
-        mask = misc.put_simple(
-            mask,
+        return misc.put_simple(
+            weights,
             self._indices,
             axis=self._plate_axis,
             length=self._original_length,
         )
-        return mask > 0
 
 
     def _compute_plates_to_parent(self, index, plates):

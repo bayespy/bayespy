@@ -161,17 +161,17 @@ class Gate(Deterministic):
             raise ValueError("Invalid parent index")
 
 
-    def _compute_mask_to_parent(self, index, mask):
+    def _compute_weights_to_parent(self, index, weights):
         """
         """
         if index == 0:
-            return mask
+            return weights
         elif index == 1:
             if self.gated_plate >= 0:
                 raise ValueError("Gated plate axis must be negative")
-            if np.ndim(mask) >= abs(self.gated_plate):
-                mask = np.expand_dims(mask, axis=self.gated_plate)
-            return mask
+            if np.ndim(weights) >= abs(self.gated_plate):
+                mask = np.expand_dims(weights, axis=self.gated_plate)
+            return weights
         else:
             raise ValueError("Invalid parent index")
 

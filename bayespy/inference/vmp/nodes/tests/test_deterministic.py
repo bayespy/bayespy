@@ -259,7 +259,7 @@ class TestTile(unittest.TestCase):
         X = Dummy(dims=[()], plates=plates_parent, initialize=False)
         Y = tile(X, tiles)
 
-        mask = Y._compute_mask_to_parent(0, mask_child)
+        mask = Y._compute_weights_to_parent(0, mask_child) != 0
 
         self.assertEqual(np.shape(mask), np.shape(mask_true),
                          msg="Incorrect shape.")
