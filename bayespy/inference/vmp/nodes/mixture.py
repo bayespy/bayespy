@@ -521,3 +521,23 @@ class Mixture(ExponentialFamily):
             return lpdf
 
         raise NotImplementedError()
+
+
+def MultiMixture(thetas, *mixture_args, **kwargs):
+    """Creates a mixture over several axes using as many categorical variables.
+
+    The mixings are assumed to be separate, that is, inner mixings don't affect
+    the parameters of outer mixings.
+    """
+    thetas = list(thetas)
+    N = len(thetas)
+    # Add trailing plate axes to thetas because you assume that each
+    # mixed axis is separate from the others.
+    thetas = [theta[(Ellipsis,) + i*(None,)]
+              for (i, theta) in enumerate(thetas)]
+    args = (
+        thetas[:1]
+        + list(misc.zipper_merge((N-1) * [Mixture], thetas[1:]))
+        + list(mixture_args)
+    )
+    return Mixture(*args, **kwargs)
