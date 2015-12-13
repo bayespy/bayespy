@@ -18,7 +18,10 @@ from bayespy.nodes import (GaussianARD,
                            Mixture,
                            Categorical,
                            Bernoulli,
-                           Multinomial)
+                           Multinomial,
+                           Beta,
+                           Gate,
+                           Dirichlet)
 
 from bayespy.utils import random
 from bayespy.utils import linalg
@@ -206,6 +209,72 @@ class TestMixture(TestCase):
         Z = Categorical([0.3, 0.5, 0.2])
         X = Mixture(Z, Categorical, [[0.2,0.8], [0.1,0.9], [0.3,0.7]])
         m = Z._message_from_children()
+
+        #
+        # Test nested mixtures
+        #
+        t1 = [1, 1, 0, 3, 3]
+        t2 = [2]
+        p = Dirichlet([1, 1], plates=(4, 3))
+        X = Mixture(t1, Mixture, t2, Categorical, p)
+        X.observe([1, 1, 0, 0, 0])
+        p.update()
+        self.assertAllClose(
+            p.phi[0],
+            [
+                [[1, 1], [1, 1], [2, 1]],
+                [[1, 1], [1, 1], [1, 3]],
+                [[1, 1], [1, 1], [1, 1]],
+                [[1, 1], [1, 1], [3, 1]],
+            ]
+        )
+
+        # Test sample plates in nested mixtures
+        t1 = Categorical([0.3, 0.7], plates=(5,))
+        t2 = [[1], [1], [0], [3], [3]]
+        t3 = 2
+        p = Dirichlet([1, 1], plates=(2, 4, 3))
+        X = Mixture(t1, Mixture, t2, Mixture, t3, Categorical, p)
+        X.observe([1, 1, 0, 0, 0])
+        p.update()
+        self.assertAllClose(
+            p.phi[0],
+            [
+                [
+                    [[1, 1], [1, 1], [1.3, 1]],
+                    [[1, 1], [1, 1], [1, 1.6]],
+                    [[1, 1], [1, 1], [1, 1]],
+                    [[1, 1], [1, 1], [1.6, 1]],
+                ],
+                [
+                    [[1, 1], [1, 1], [1.7, 1]],
+                    [[1, 1], [1, 1], [1, 2.4]],
+                    [[1, 1], [1, 1], [1, 1]],
+                    [[1, 1], [1, 1], [2.4, 1]],
+                ]
+            ]
+        )
+
+        # Check that Gate and nested Mixture are equal
+        t1 = Categorical([0.3, 0.7], plates=(5,))
+        t2 = Categorical([0.1, 0.3, 0.6], plates=(5, 1))
+        p = Dirichlet([1, 2, 3, 4], plates=(2, 3))
+        X = Mixture(t1, Mixture, t2, Categorical, p)
+        X.observe([3, 3, 1, 2, 2])
+        t1_msg = t1._message_from_children()
+        t2_msg = t2._message_from_children()
+        p_msg = p._message_from_children()
+        t1 = Categorical([0.3, 0.7], plates=(5,))
+        t2 = Categorical([0.1, 0.3, 0.6], plates=(5, 1))
+        p = Dirichlet([1, 2, 3, 4], plates=(2, 3))
+        X = Categorical(Gate(t1, Gate(t2, p)))
+        X.observe([3, 3, 1, 2, 2])
+        t1_msg2 = t1._message_from_children()
+        t2_msg2 = t2._message_from_children()
+        p_msg2 = p._message_from_children()
+        self.assertAllClose(t1_msg[0], t1_msg2[0])
+        self.assertAllClose(t2_msg[0], t2_msg2[0])
+        self.assertAllClose(p_msg[0], p_msg2[0])
 
         pass
 
