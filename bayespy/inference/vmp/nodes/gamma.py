@@ -350,8 +350,8 @@ class _GammaToDiagonalWishart(Deterministic):
         return self.parents[index].plates[:-1]
 
     @staticmethod
-    def _compute_mask_to_parent(index, mask):
-        return mask[..., np.newaxis]
+    def _compute_weights_to_parent(index, weights):
+        return weights[..., np.newaxis]
 
     def get_moments(self):
         u = self.parents[0].get_moments()
@@ -368,24 +368,3 @@ class _GammaToDiagonalWishart(Deterministic):
         m1 = np.reshape(m_children[1], np.shape(m_children[1]) + (1,))
 
         return [m0, m1]
-        
-
-    ## def _compute_message_and_mask_to_parent(self, index, m_children, *u_parents):
-        
-    ##     m = self._message_from_children()
-    ##     #(m, mask) = self.message_from_children()
-
-    ##     # Take the diagonal
-    ##     m[0] = np.einsum('...ii->...i', m[0])
-    ##     # TODO/FIXME: I think m[1] is wrong..
-    ##     m[1] = np.reshape(m[1], np.shape(m[1]) + (1,))
-    ##     # m[1] is ok
-
-    ##     mask = self._compute_mask_to_parent(index, self.mask)
-    ##     #mask = mask[...,np.newaxis]
-
-    ##     return (m, mask)
-    ##     #return m
-        
-
-

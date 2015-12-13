@@ -22,7 +22,7 @@ class Distribution():
     If a sub-class maps the plates differently, it needs to overload the
     following methods:
 
-        * compute_mask_to_parent
+        * compute_weights_to_parent
 
         * plates_to_parent
 
@@ -36,12 +36,14 @@ class Distribution():
         """
         raise NotImplementedError()
 
-    def compute_mask_to_parent(self, index, mask):
+
+    def compute_weights_to_parent(self, index, weights):
         """
         Maps the mask to the plates of a parent.
         """
         # Sub-classes may need to overwrite this method
-        return mask
+        return weights
+
 
     def plates_to_parent(self, index, plates):
         """
@@ -89,7 +91,7 @@ class Stochastic(Node):
 
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
-       _compute_mask_to_parent(index, mask)
+       _compute_weights_to_parent(index, weights)
        _compute_plates_to_parent(self, index, plates)
        _compute_plates_from_parent(self, index, plates)
     
@@ -144,9 +146,11 @@ class Stochastic(Node):
 
     def _compute_plates_from_parent(self, index, plates):
         return self._distribution.plates_from_parent(index, plates)
-    
-    def _compute_mask_to_parent(self, index, mask):
-        return self._distribution.compute_mask_to_parent(index, mask)
+
+
+    def _compute_weights_to_parent(self, index, weights):
+        return self._distribution.compute_weights_to_parent(index, weights)
+
 
     def get_moments(self):
         # Just for safety, do not return a reference to the moment list of this
@@ -159,9 +163,7 @@ class Stochastic(Node):
                                                          index, 
                                                          self.u, 
                                                          *u_parents)
-        mask = self._distribution.compute_mask_to_parent(index, self.mask)
-        ## m = self._compute_message_to_parent(self.parents[index], index, self.u, *u_parents)
-        ## mask = self._compute_mask_to_parent(index, self.mask)
+        mask = self._distribution.compute_weights_to_parent(index, self.mask) != 0
         return (m, mask)
 
     def _set_mask(self, mask):

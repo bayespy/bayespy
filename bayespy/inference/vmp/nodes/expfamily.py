@@ -102,7 +102,7 @@ class ExponentialFamily(Stochastic):
 
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
-       _compute_mask_to_parent(index, mask)
+       _compute_weights_to_parent(index, weights)
        _compute_plates_to_parent(self, index, plates)
        _compute_plates_from_parent(self, index, plates)
     

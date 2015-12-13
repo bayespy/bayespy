@@ -306,7 +306,7 @@ irregularly, it is important to implement the following methods:
    Given the plates of the child, return the plates of the parent that would
    have resulted them.
 
- * :func:`Deterministic._compute_mask_to_parent`
+ * :func:`Deterministic._compute_weights_to_parent`
 
    Given the mask array, convert it to a plate mask of the parent.
 

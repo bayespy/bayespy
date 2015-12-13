@@ -36,7 +36,7 @@ from .gaussian_markov_chain import SwitchingGaussianMarkovChain
 
 from .categorical_markov_chain import CategoricalMarkovChain
 
-from .mixture import Mixture
+from .mixture import Mixture, MultiMixture
 from .gate import Gate
 from .concatenate import Concatenate
 

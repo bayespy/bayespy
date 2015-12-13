@@ -646,16 +646,16 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
             raise ValueError("Invalid parent index")
 
 
-    def compute_mask_to_parent(self, index, mask):
+    def compute_weights_to_parent(self, index, weights):
         r"""
         Maps the mask to the plates of a parent.
         """
         if index == 0:
             if self.ndim_mu == self.ndim:
-                return mask
+                return weights
             elif self.ndim_mu < self.ndim:
                 diff = self.ndim - self.ndim_mu
-                return misc.add_trailing_axes(mask, diff)
+                return misc.add_trailing_axes(weights, diff)
             else:
                 raise RuntimeError("Parent's ndim is larger")
         else:
@@ -1879,131 +1879,6 @@ class GaussianWishart(ExponentialFamily):
 #
 
 
-## class GaussianToGaussianARD(Deterministic):
-##     """
-##     Converter for Gaussian moments to Gaussian ARD moments
-##     """
-
-
-##     def __init__(self, X, **kwargs):
-##         """
-##         """
-##         self.ndim = X._moments.ndim
-        
-##         self._moments = GaussianARDMoments()
-##         self._parent_moments = [GaussianMoments(self.ndim)]
-    
-##         dims = ( (), () )
-##         super().__init__(X, dims=dims, **kwargs)
-            
-
-##     def _compute_moments(self, u_X):
-##         """
-##         """
-##         x = u_X[0]
-##         xx = u_X[1]
-##         u0 = x
-##         u1 = misc.get_diag(xx, ndim=self.ndim)
-##         u = [u0, u1]
-##         return u
-    
-
-##     def _compute_message_to_parent(self, index, m_child, u_X):
-##         """
-##         """
-##         if index == 0:
-##             m0 = m_child[0]
-##             m1 = misc.diag(m_child[1], ndim=self.ndim)
-##             m = [m0, m1]
-##             return m
-##         else:
-##             raise ValueError("Invalid parent index")
-
-
-##     def _compute_mask_to_parent(self, index, mask):
-##         """
-##         """
-##         if index == 0:
-##             if ndim == 0:
-##                 return mask
-##             else:
-##                 axes = tuple(range(-self.ndim, 0))
-##                 return np.any(mask, axis=axes)
-##         else:
-##             raise ValueError("Invalid parent index")
-
-
-##     def _plates_to_parent(self, index):
-##         """
-##         """
-##         if index == 0:
-##             if ndim == 0:
-##                 return self.plates
-##             else:
-##                 return self.plates[:-self.ndim]
-##         else:
-##             raise ValueError("Invalid parent index")
-
-
-##     def _plates_from_parent(self, index):
-##         """
-##         """
-##         if index == 0:
-##             shape = self.parents[0].dims[0]
-##             return self.parents[0].plates + shape
-##         else:
-##             raise ValueError("Invalid parent index")
-
-
-## GaussianMoments.add_converter(GaussianARDMoments,
-##                               GaussianToGaussianARD)
-
-
-## class GaussianARDToGaussianISO(Deterministic):
-##     """
-##     Converter for Gaussian moments to Gaussian-gamma isotropic moments
-
-##     Combines the Gaussian moments with gamma moments for a fixed value 1.
-##     """
-
-
-
-##     def __init__(self, X, **kwargs):
-##         """
-##         """
-##         self.ndim = X._moments.ndim
-        
-##         self._moments = GaussianISOMoments(self.ndim)
-##         self._parent_moments = [GaussianARDMoments()]
-    
-##         shape = X.dims[0]
-##         dims = ( shape, 2*shape, (), () )
-##         super().__init__(X, dims=dims, **kwargs)
-            
-
-##     def _compute_moments(self, u_X):
-##         """
-##         """
-##         x = u_X[0]
-##         xx = u_X[1]
-##         u = [x, xx, 1, 0]
-##         return u
-    
-
-##     def _compute_message_to_parent(self, index, m_child, u_X):
-##         """
-##         """
-##         if index == 0:
-##             m = m_child[:2]
-##             return m
-##         else:
-##             raise ValueError("Invalid parent index")
-
-
-## GaussianARDMoments.add_converter(GaussianISOMoments,
-##                                  GaussianARDToGaussianISO)
-
-
 class GaussianToGaussianGammaISO(Deterministic):
     r"""
     Converter for Gaussian moments to Gaussian-gamma isotropic moments
@@ -2213,7 +2088,7 @@ class WrapToGaussianGammaISO(Deterministic):
             raise ValueError("Invalid parent index")
 
 
-    def _compute_mask_to_parent(self, index, mask):
+    def _compute_weights_to_parent(self, index, weights):
         r"""
         """
         if index == 0:
@@ -2383,13 +2258,13 @@ class WrapToGaussianGammaARD(Deterministic):
             raise ValueError("Invalid parent index")
 
 
-    def _compute_mask_to_parent(self, index, mask):
+    def _compute_weights_to_parent(self, index, weights):
         r"""
         """
         if index == 0:
-            return mask
+            return weights
         elif index == 1:
-            return misc.add_trailing_axes(mask, self.ndim)
+            return misc.add_trailing_axes(weights, self.ndim)
         else:
             raise ValueError("Invalid parent index")
 

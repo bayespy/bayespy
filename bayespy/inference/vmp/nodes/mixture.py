@@ -106,7 +106,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             # Parent index for the distribution used for the
             # mixture.
-            index = index - 1
+            index_for_parent = index - 1
 
             # Reshape u:
             # Shape(u)      = [Nn,..1,..,N0,Dd,..,D0]
@@ -115,73 +115,58 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                 if self.cluster_plate < 0:
                     cluster_axis = self.cluster_plate - self.ndims[ind]
                 else:
-                    cluster_axis = self.cluster_plate
+                    raise ValueError("Cluster plate axis must be negative")
                 u_self.append(np.expand_dims(u[ind], axis=cluster_axis))
 
             # Message from the mixed distribution
             m = self.distribution.compute_message_to_parent(parent,
-                                                            index, 
-                                                            u_self, 
+                                                            index_for_parent,
+                                                            u_self,
                                                             *(u_parents[1:]))
 
-            # Weigh the messages with the responsibilities
-            for i in range(len(m)):
+            # Note: The cluster assignment probabilities can be considered as
+            # weights to plate elements. These weights need to mapped properly
+            # via the plate mapping of self.distribution. Otherwise, nested
+            # mixtures won't work, or possibly not any distribution that does
+            # something to the plates. Thus, use compute_weights_to_parent to
+            # compute the transformations to the weight array properly.
+            #
+            # See issue #39 for more details.
 
-                # Shape(m)      = [Nn,..,K,..,N0,Dd,..,D0]
-                # Shape(p)      = [Nn,..,N0,K]
-                # Shape(result) = [Nn,..,K,..,N0,Dd,..,D0]
+            # Compute weights (i.e., cluster assignment probabilities) and map
+            # the plates properly.
+            p = misc.atleast_nd(u_parents[0][0], abs(self.cluster_plate))
+            p = misc.moveaxis(p, -1, self.cluster_plate)
+            p = self.distribution.compute_weights_to_parent(
+                index_for_parent,
+                p,
+            )
 
-                # Number of axes for the variable dimensions for
-                # the parent message.
-                D = self.ndims_parents[index][i]
-
-                # Responsibilities for clusters are the first
-                # parent's first moment:
-                # Shape(p)      = [Nn,..,N0,K]
-                p = u_parents[0][0]
-                # Move the cluster axis to the proper place:
-                # Shape(p)      = [Nn,..,K,..,N0]
-                p = misc.atleast_nd(p, abs(self.cluster_plate))
-                p = misc.moveaxis(p, -1, self.cluster_plate)
-                # Add axes for variable dimensions to the contributions
-                # Shape(p)      = [Nn,..,K,..,N0,1,..,1]
-                p = misc.add_trailing_axes(p, D)
-
-                if self.cluster_plate < 0:
-                    # Add the variable dimensions
-                    cluster_axis = self.cluster_plate - D
-
-                # Add axis for clusters:
-                # Shape(m)      = [Nn,..,1,..,N0,Dd,..,D0]
-                #m[i] = np.expand_dims(m[i], axis=cluster_axis)
-
-                #
-                # TODO: You could do summing here already so that
-                # you wouldn't compute huge matrices as
-                # intermediate result. Use einsum.
-
-                # Compute the message contributions for each
-                # cluster:
-                # Shape(result) = [Nn,..,K,..,N0,Dd,..,D0]
-                m[i] = m[i] * p
+            # Weigh the elements in the message array
+            m = [mi * misc.add_trailing_axes(p, ndim)
+                 #for (mi, ndim) in zip(m, self.ndims)]
+                 for (mi, ndim) in zip(m, self.ndims_parents[index_for_parent])]
 
             return m
 
-        
-    def compute_mask_to_parent(self, index, mask):
+
+    def compute_weights_to_parent(self, index, weights):
         """
         Maps the mask to the plates of a parent.
         """
         if index == 0:
-            return mask
+            return weights
         else:
             if self.cluster_plate >= 0:
                 raise ValueError("Cluster plate axis must be negative")
-            if np.ndim(mask) >= abs(self.cluster_plate):
-                mask = np.expand_dims(mask, axis=self.cluster_plate)
-            return self.distribution.compute_mask_to_parent(index-1, mask)
+            if np.ndim(weights) >= abs(self.cluster_plate):
+                weights = np.expand_dims(weights, axis=self.cluster_plate)
+            return self.distribution.compute_weights_to_parent(
+                index-1,
+                weights
+            )
 
-        
+
     def compute_phi_from_parents(self, *u_parents, mask=True):
         """
         Compute the natural parameter vector given parent moments.
@@ -536,3 +521,23 @@ class Mixture(ExponentialFamily):
             return lpdf
 
         raise NotImplementedError()
+
+
+def MultiMixture(thetas, *mixture_args, **kwargs):
+    """Creates a mixture over several axes using as many categorical variables.
+
+    The mixings are assumed to be separate, that is, inner mixings don't affect
+    the parameters of outer mixings.
+    """
+    thetas = list(thetas)
+    N = len(thetas)
+    # Add trailing plate axes to thetas because you assume that each
+    # mixed axis is separate from the others.
+    thetas = [theta[(Ellipsis,) + i*(None,)]
+              for (i, theta) in enumerate(thetas)]
+    args = (
+        thetas[:1]
+        + list(misc.zipper_merge((N-1) * [Mixture], thetas[1:]))
+        + list(mixture_args)
+    )
+    return Mixture(*args, **kwargs)
