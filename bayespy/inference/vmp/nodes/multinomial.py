@@ -20,6 +20,8 @@ from .node import Moments, ensureparents
 
 from bayespy.utils import random
 from bayespy.utils import misc
+from bayespy.utils import linalg
+
 
 class MultinomialMoments(Moments):
     """
@@ -93,8 +95,17 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
 
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
+
+        .. math::
+
+           \overline{\mathbf{u}}
+           = \mathrm{E}[x]
+           = N \cdot \begin{bmatrix}
+             \frac{e^{\phi_1}}{\sum_i e^{\phi_i}}
+             & \cdots &
+             \frac{e^{\phi_D}}{\sum_i e^{\phi_i}} \end{bmatrix}
         """
         # Compute the normalized probabilities in a numerically stable way
         logsum_p = misc.logsumexp(phi[0], axis=-1, keepdims=True)
@@ -108,16 +119,16 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         g = -np.squeeze(N * logsum_p, axis=-1)
         return (u, g)
 
-    
+
     def compute_cgf_from_parents(self, u_p):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         return 0
 
-    
+
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
 
@@ -135,17 +146,72 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         u = [u0]
 
         f = special.gammaln(self.N+1) - np.sum(special.gammaln(x+1), axis=-1)
-        
+
         return (u, f)
 
-    
+
     def random(self, *phi):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         raise NotImplementedError()
 
-    
+
+    def compute_gradient(self, g, u, phi):
+        r"""
+        Compute the Euclidean gradient.
+
+        In order to compute the Euclidean gradient, we first need to derive the
+        gradient of the moments with respect to the variational parameters:
+
+        .. math::
+
+           \mathrm{d}\overline{u}_i
+           = N \cdot \frac {e^{\phi_i} \mathrm{d}\phi_i \sum_j e^{\phi_j}}
+                           {(\sum_k e^{\phi_k})^2}
+             - N \cdot \frac {e^{\phi_i} \sum_j e^\phi_j \mathrm{d}\phi_j}
+                             {(\sum_k e^{\phi_k})^2}
+           = \overline{u}_i \mathrm{d}\phi_i
+             - \overline{u}_i \sum_j \frac{\overline{u}_j}{N} \mathrm{d}\phi_j
+
+
+        Now we can make use of the chain rule. Given the Riemannian gradient
+        :math:`\tilde{\nabla}` of the variational lower bound
+        :math:`\mathcal{L}` with respect to the variational parameters
+        :math:`\phi`, put the above result to the derivative term and
+        re-organize the terms to get the Euclidean gradient :math:`\nabla`:
+
+        .. math::
+
+           \mathrm{d}\mathcal{L}
+           = \tilde{\nabla}^T \mathrm{d}\overline{\mathbf{u}}
+           = \sum_i \tilde{\nabla}_i \mathrm{d}\overline{u}_i
+           = \sum_i \tilde{\nabla}_i (
+                 \overline{u}_i \mathrm{d}\phi_i
+                 - \overline{u}_i \sum_j \frac {\overline{u}_j} {N} \mathrm{d}\phi_j
+             )
+           = \sum_i \left(\tilde{\nabla}_i \overline{u}_i \mathrm{d}\phi_i
+             - \frac{\overline{u}_i}{N} \mathrm{d}\phi_i \sum_j \tilde{\nabla}_j \overline{u}_j \right)
+           \equiv \nabla^T \mathrm{d}\phi
+
+        Thus, the Euclidean gradient is:
+
+        .. math::
+
+           \nabla_i = \tilde{\nabla}_i \overline{u}_i - \frac{\overline{u}_i}{N}
+                      \sum_j \tilde{\nabla}_j \overline{u}_j
+
+        See also
+        --------
+
+        compute_moments_and_cgf : Computes the moments
+            :math:`\overline{\mathbf{u}}` given the variational parameters
+            :math:`\phi`.
+
+        """
+        return u[0] * (g - linalg.inner(g, u[0])[...,None] / self.N)
+
+
 class Multinomial(ExponentialFamily):
     r"""
     Node for multinomial random variables.
