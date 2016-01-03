@@ -149,11 +149,12 @@ class GammaDistribution(ExponentialFamilyDistribution):
         g = a * log_b - gammaln_a
         return g
 
-            
+
     def compute_fixed_moments_and_f(self, x, mask=True):
         r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
+        x = np.asanyarray(x)
         if np.any(x < 0):
             raise ValueError("Values must be positive")
         logx = np.log(x)
