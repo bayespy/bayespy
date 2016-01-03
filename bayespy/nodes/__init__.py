@@ -88,6 +88,7 @@ Deterministic nodes
    SumMultiply
    Add
    Gate
+   Take
 """
 
 # Currently, model construction and the inference network are not separated so
