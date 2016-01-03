@@ -124,6 +124,10 @@ class DirichletDistribution(ExponentialFamilyDistribution):
            &=
            TODO
         """
+
+        if np.any(np.asanyarray(phi) <= 0):
+            raise ValueError("Natural parameters should be positive")
+
         sum_gammaln = np.sum(special.gammaln(phi[0]), axis=-1)
         gammaln_sum = special.gammaln(np.sum(phi[0], axis=-1))
         psi_sum = special.psi(np.sum(phi[0], axis=-1, keepdims=True))
