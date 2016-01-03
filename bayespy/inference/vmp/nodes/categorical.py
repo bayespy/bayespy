@@ -81,35 +81,7 @@ class CategoricalDistribution(MultinomialDistribution):
             raise ValueError("Number of categoriess must be non-negative")
         self.D = categories
         super().__init__(1)
-        
 
-    def compute_message_to_parent(self, parent, index, u, u_p):
-        """
-        Compute the message to a parent node.
-        """
-        return super().compute_message_to_parent(parent, index, u, u_p)
-
-
-    def compute_phi_from_parents(self, u_p, mask=True):
-        """
-        Compute the natural parameter vector given parent moments.
-        """
-        return super().compute_phi_from_parents(u_p, mask=mask)
-
-
-    def compute_moments_and_cgf(self, phi, mask=True):
-        """
-        Compute the moments and :math:`g(\phi)`.
-        """
-        return super().compute_moments_and_cgf(phi, mask=mask)
-
-        
-    def compute_cgf_from_parents(self, u_p):
-        """
-        Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
-        """
-        return super().compute_cgf_from_parents(u_p)
-    
 
     def compute_fixed_moments_and_f(self, x, mask=True):
         """
@@ -134,7 +106,7 @@ class CategoricalDistribution(MultinomialDistribution):
 
         return (u, f)
 
-    
+
     def random(self, *phi, plates=None):
         """
         Draw a random sample from the distribution.
@@ -144,7 +116,7 @@ class CategoricalDistribution(MultinomialDistribution):
         p = np.exp(logp)
         return random.categorical(p, size=plates)
 
-    
+
 class Categorical(ExponentialFamily):
     r"""
     Node for categorical random variables.

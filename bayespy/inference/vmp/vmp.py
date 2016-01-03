@@ -445,19 +445,20 @@ class VB():
 
         # Current parameters
         p = self.get_parameters(*nodes)
-        
+
         # Get gradients
         if riemannian and method == 'gradient':
             rg = self.get_gradients(*nodes, euclidian=False)
-        else:
-            (rg, g) = self.get_gradients(*nodes, euclidian=True)
-
-        if riemannian:
-            g1 = g
+            g1 = rg
             g2 = rg
         else:
-            g1 = g
-            g2 = g
+            (rg, g) = self.get_gradients(*nodes, euclidian=True)
+            if riemannian:
+                g1 = g
+                g2 = rg
+            else:
+                g1 = g
+                g2 = g
 
         if method == 'gradient':
             pass
@@ -479,8 +480,8 @@ class VB():
 
         s = g2
         cputime = time.clock() - t
-        
-        self._end_iteration_step('OPT', cputime, tol=tol)
+
+        self._end_iteration_step('OPT', cputime, tol=tol, verbose=verbose)
 
         for i in range(maxiter-1):
 
@@ -489,15 +490,16 @@ class VB():
             # Get gradients
             if riemannian and method == 'gradient':
                 rg = self.get_gradients(*nodes, euclidian=False)
-            else:
-                (rg, g) = self.get_gradients(*nodes, euclidian=True)
-
-            if riemannian:
-                g1 = g
+                g1 = rg
                 g2 = rg
             else:
-                g1 = g
-                g2 = g
+                (rg, g) = self.get_gradients(*nodes, euclidian=True)
+                if riemannian:
+                    g1 = g
+                    g2 = rg
+                else:
+                    g1 = g
+                    g2 = g
 
             if method == 'gradient':
                 b = 0
@@ -517,34 +519,65 @@ class VB():
                 s = g2
 
             success = False
+            scale = 1.0
             while not success:
 
-                p_new = self.add(p, s)
+                p_new = self.add(p, s, scale=scale)
 
                 try:
                     self.set_parameters(p_new, *nodes)
                 except:
-                    self.print("CG update was unsuccessful, using gradient and resetting CG")
+                    if verbose:
+                        self.print("CG update was unsuccessful, using gradient and resetting CG")
+                    if s is g2:
+                        scale = scale / 2
+                    dd_prev = 0
                     s = g2
                     continue
 
                 # Update collapsed variables
+                collapsed_params = self.get_parameters(*collapsed)
                 for node in collapsed:
                     self[node].update()
 
                 L = self.compute_lowerbound()
 
-                if L < self.L[self.iter-1] and not np.allclose(L, self.L[self.iter-1], rtol=1e-8):
-                    self.print("CG decreased lower bound to %e, using gradient and resetting CG" % L)
+                if np.isnan(L) or (
+                        L < self.L[self.iter-1] and
+                        not np.allclose(L, self.L[self.iter-1], rtol=1e-8)):
+
+                    # Restore the state of the collapsed nodes to what it was
+                    # before updating them
+                    self.set_parameters(collapsed_params, *collapsed)
+                    if s is g2:
+                        scale = scale / 2
+                        if verbose:
+                            self.print(
+                                "Gradient ascent decreased lower bound from {0} to {1}, halfing step length"
+                                .format(
+                                    self.L[self.iter-1],
+                                    L,
+                                )
+                            )
+                    else:
+                        if verbose:
+                            self.print(
+                                "CG decreased lower bound from {0} to {1}, using gradient and resetting CG"
+                                .format(
+                                    self.L[self.iter-1],
+                                    L,
+                                )
+                            )
+                    dd_prev = 0
                     s = g2
                     continue
 
                 success = True
 
             p = p_new
-            
+
             cputime = time.clock() - t
-            if self._end_iteration_step('OPT', cputime, tol=tol):
+            if self._end_iteration_step('OPT', cputime, tol=tol, verbose=verbose):
                 break
 
 
