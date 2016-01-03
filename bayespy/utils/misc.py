@@ -1486,3 +1486,7 @@ def mean(X, axis=None, keepdims=False):
     m = (np.sum(X, axis=axis, keepdims=keepdims) / 
          np.sum(~nans, axis=axis, keepdims=keepdims))
     return m
+
+
+def gradient(f, x, epsilon=1e-6):
+    return optimize.approx_fprime(x, f, epsilon)
