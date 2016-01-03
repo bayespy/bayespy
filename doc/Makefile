@@ -46,18 +46,21 @@ help:
 	@echo "  linkcheck  to check all external links for integrity"
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 
-clean:
-	rm -rf $(BUILDDIR)/*
+cleangenerated:
 	rm -rf source/*/generated
+
+clean: cleangenerated
+	rm -rf $(BUILDDIR)/*
 	rm -rf source/*/*_files
 
 gh-pages:
 	make clean
 	cd build && git clone https://github.com/bayespy/bayespy.git -b gh-pages html
+	make latexpdf
 	make html
 	cd build/html && git add -f *.png *.html *.txt *.js *.pdf *.py *.css * && git commit -a && git push
 
-html: latexpdf
+html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	cp $(BUILDDIR)/latex/BayesPy.pdf $(BUILDDIR)/html/_static/
 	cp -r build/latex/user_guide/* build/html/user_guide/
