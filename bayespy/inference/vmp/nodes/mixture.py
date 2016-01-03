@@ -335,6 +335,13 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         return self.distribution.random(*phi, plates=plates)
 
 
+    def compute_gradient(self, g, u, phi):
+        r"""
+        Compute the standard gradient with respect to the natural parameters.
+        """
+        return self.distribution.compute_gradient(g, u, phi)
+
+
 class Mixture(ExponentialFamily):
     r"""
     Node for exponential family mixture variables.
