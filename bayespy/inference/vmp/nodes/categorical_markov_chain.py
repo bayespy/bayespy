@@ -391,7 +391,7 @@ class CategoricalMarkovChainToCategorical(Deterministic):
         if index == 0:
             # "Sum" over the last axis
             # TODO/FIXME: Check this. BUG I THINK.
-            return np.sum(mask, axis=-1)
+            return np.sum(weights, axis=-1)
         else:
             raise ValueError("Parent index out of bounds")
 
