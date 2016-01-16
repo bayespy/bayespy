@@ -254,9 +254,9 @@ class Stochastic(Node):
             # Write each node
             nodegroup = h5f.create_group('nodes')
             if self.name == '':
-                    raise Exception("In order to save nodes, they must have "
-                                    "(unique) names.")
-            self._save(nodegroup.create_group(node.name))
+                raise ValueError("In order to save nodes, they must have "
+                                 "(unique) names.")
+            self._save(nodegroup.create_group(self.name))
         finally:
             # Close file
             h5f.close()
