@@ -14,6 +14,7 @@ import unittest
 import warnings
 
 import numpy as np
+from scipy.special import psi
 
 from numpy import testing
 
@@ -431,6 +432,24 @@ class TestMean(misc.TestCase):
                                        keepdims=True),
                             [[2.5]])
         
+        pass
+
+
+class TestInvPsi(misc.TestCase):
+
+    def test_invpsi(self):
+        x = 1000
+        y = psi(x)
+        self.assertAllClose(misc.invpsi(y), x)
+
+        x = 1/1000
+        y = psi(x)
+        self.assertAllClose(misc.invpsi(y), x, rtol=1e-3)
+
+        x = 50*np.random.rand(5)
+        y = psi(x)
+        self.assertAllClose(misc.invpsi(y), x)
+
         pass
 
 

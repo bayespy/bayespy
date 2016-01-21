@@ -1448,13 +1448,14 @@ def invpsi(x):
 
     See: http://www4.ncsu.edu/~pfackler/
     """
+    x = np.asanyarray(x)
     L = 1.0
     y = np.exp(x)
     while (L > 1e-10):
         y += L*np.sign(x-special.psi(y))
         L /= 2
     # Ad hoc by Jaakko
-    y[x<-10] = -1/x[x<-10]
+    y = np.where(x < -100, -1 / x, y)
     return y
 
 
