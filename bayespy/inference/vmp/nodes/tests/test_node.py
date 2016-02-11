@@ -411,15 +411,38 @@ class TestNode(misc.TestCase):
                                                   ndim=1),
                             [1*4*5, 2*4*5, 3*4*5])
 
+        # Bugfix: Check that plate keys are mapped correctly
+        self.assertAllClose(
+            Node._compute_message(
+                [[1], [2], [3]],
+                plates_from=(3,2),
+                plates_to=(1,2),
+                ndim=0
+            ),
+            [[6]]
+        )
+
+        # Bugfix: Check plate key mapping when plates_to is shorter than shape
+        # of the array
+        self.assertAllClose(
+            Node._compute_message(
+                [[1, 2, 3], [4, 5, 6]],
+                plates_from=(2,3),
+                plates_to=(3,),
+                ndim=0
+            ),
+            [5, 7, 9]
+        )
+
         # Complex example
         x1 = np.random.randn(5,4,1,2,1)
         x2 = np.random.randn(    1,2,1)
         x3 = np.random.randn(5,1,1,1,1)
         self.assertAllClose(Node._compute_message(x1, x2, x3,
                                                   plates_from=(6,5,4,3),
-                                                  plates_to=(5,1,3),
+                                                  plates_to=(5,1,1),
                                                   ndim=2),
-                            6*np.sum(x1*x2*x3, axis=(-4,), keepdims=True))
+                            3*6*np.sum(x1*x2*x3, axis=(-4,-3), keepdims=True))
 
         pass
 
