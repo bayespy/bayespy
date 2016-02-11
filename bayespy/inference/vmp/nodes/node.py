@@ -616,10 +616,10 @@ class Node():
         """
         Delete this node and the children
         """
-        for child in self.children:
-            child.delete()
         for (ind, parent) in enumerate(self.parents):
             parent._remove_child(self, ind)
+        for (child, _) in self.children:
+            child.delete()
 
     @staticmethod
     def broadcasting_multiplier(plates, *args):
