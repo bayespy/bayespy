@@ -1491,3 +1491,88 @@ def mean(X, axis=None, keepdims=False):
 
 def gradient(f, x, epsilon=1e-6):
     return optimize.approx_fprime(x, f, epsilon)
+
+
+def broadcast(*arrays, ignore_axis=None):
+    """
+    Explicitly broadcast arrays to same shapes.
+
+    It is possible ignore some axes so that the arrays are not broadcasted
+    along those axes.
+    """
+
+    shapes = [np.shape(array) for array in arrays]
+
+    if ignore_axis is None:
+        full_shape = broadcasted_shape(*shapes)
+
+    else:
+        try:
+            ignore_axis = tuple(ignore_axis)
+        except TypeError:
+            ignore_axis = (ignore_axis,)
+
+        if len(ignore_axis) != len(set(ignore_axis)):
+            raise ValueError("Indices must be unique")
+
+        if any(i >= 0 for i in ignore_axis):
+            raise ValueError("Indices must be negative")
+
+        # Put lengths of ignored axes to 1
+        cut_shapes = [
+            tuple(
+                1
+                if i in ignore_axis else
+                shape[i]
+                for i in range(-len(shape), 0)
+            )
+            for shape in shapes
+        ]
+
+        full_shape = broadcasted_shape(*cut_shapes)
+
+    return [np.ones(full_shape) * array for array in arrays]
+
+
+def block_diag(*arrays):
+    """
+    Form a block diagonal array from the given arrays.
+
+    Compared to SciPy's block_diag, this utilizes broadcasting and accepts more
+    than dimensions in the input arrays.
+
+    """
+
+    arrays = broadcast(*arrays, ignore_axis=(-1, -2))
+
+    plates = np.shape(arrays[0])[:-2]
+
+    M = sum(np.shape(array)[-2] for array in arrays)
+    N = sum(np.shape(array)[-1] for array in arrays)
+
+    Y = np.zeros(plates + (M, N))
+
+    i_start = 0
+    j_start = 0
+    for array in arrays:
+        i_end = i_start + np.shape(array)[-2]
+        j_end = j_start + np.shape(array)[-1]
+        Y[...,i_start:i_end,j_start:j_end] = array
+        i_start = i_end
+        j_start = j_end
+
+    return Y
+
+
+def concatenate(*arrays, axis=-1):
+    """
+    Concatenate arrays along a given axis.
+
+    Compared to NumPy's concatenate, this utilizes broadcasting.
+    """
+
+    # numpy.concatenate doesn't do broadcasting, so we need to do it explicitly
+    return np.concatenate(
+        broadcast(*arrays, ignore_axis=axis),
+        axis=axis
+    )
