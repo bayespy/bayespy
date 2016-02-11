@@ -41,6 +41,9 @@ class GammaPriorMoments(Moments):
         """
         Compute the moments for a fixed value
         """
+        a = np.asanyarray(a)
+        if np.any(a <= 0):
+            raise ValueError("Shape parameter must be positive")
         u0 = a
         u1 = special.gammaln(a)
         return [u0, u1]
