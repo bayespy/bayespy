@@ -920,19 +920,129 @@ class GaussianGammaISODistribution(ExponentialFamilyDistribution):
     Class for the VMP formulas of Gaussian-Gamma-ISO variables.
 
     Currently, supports only vector variables.
-    """    
+
+    Log pdf:
+
+    .. math::
+
+       \log p(\mathbf{x}, \tau | \boldsymbol{\mu}, \mathbf{\Lambda}, a, b) =&
+       - \frac{1}{2} \tau \mathbf{x}^T \mathbf{\Lambda} \mathbf{x}
+       + \frac{1}{2} \tau \mathbf{x}^T \mathbf{\Lambda} \boldsymbol{\mu}
+       + \frac{1}{2} \tau \boldsymbol{\mu}^T \mathbf{\Lambda} \mathbf{x}
+       - \frac{1}{2} \tau \boldsymbol{\mu}^T \mathbf{\Lambda} \boldsymbol{\mu}
+       + \frac{1}{2} \log|\mathbf{\Lambda}|
+       + \frac{D}{2} \log\tau
+       - \frac{D}{2} \log(2\pi)
+       \\ &
+       - b \tau
+       + a \log\tau
+       - \log\tau
+       + a \log b
+       - \log \Gamma(a)
+
+    """
 
 
     def compute_message_to_parent(self, parent, index, u, u_mu_Lambda, u_a, u_b):
         r"""
         Compute the message to a parent node.
+
+        - Parent :math:`(\boldsymbol{\mu}, \mathbf{\Lambda})`
+
+          Moments:
+
+          .. math::
+
+             \begin{bmatrix}
+               \mathbf{\Lambda}\boldsymbol{\mu}
+               \\
+               \boldsymbol{\mu}^T\mathbf{\Lambda}\boldsymbol{\mu}
+               \\
+               \mathbf{\Lambda}
+               \\
+               \log|\mathbf{\Lambda}|
+             \end{bmatrix}
+
+          Message:
+
+          .. math::
+
+             \begin{bmatrix}
+               \langle \tau \mathbf{x} \rangle
+               \\
+               - \frac{1}{2} \langle \tau \rangle
+               \\
+               - \frac{1}{2} \langle \tau \mathbf{xx}^T \rangle
+               \\
+               \frac{1}{2}
+             \end{bmatrix}
+
+        - Parent :math:`a`:
+
+          Moments:
+
+          .. math::
+
+             \begin{bmatrix}
+               a
+               \\
+               \log \Gamma(a)
+             \end{bmatrix}
+
+          Message:
+
+          .. math::
+
+             \begin{bmatrix}
+               \langle \log\tau \rangle + \langle \log b \rangle
+               \\
+               -1
+             \end{bmatrix}
+
+        - Parent :math:`b`:
+
+          Moments:
+
+          .. math::
+
+             \begin{bmatrix}
+               b
+               \\
+               \log b
+             \end{bmatrix}
+
+          Message:
+
+          .. math::
+
+             \begin{bmatrix}
+               - \langle \tau \rangle
+               \\
+               \langle a \rangle
+             \end{bmatrix}
+
         """
+        x_tau = u[0]
+        xx_tau = u[1]
+        tau = u[2]
+        logtau = u[3]
+
         if index == 0:
-            raise NotImplementedError()
+            m0 = x_tau
+            m1 = -0.5 * tau
+            m2 = -0.5 * xx_tau
+            m3 = 0.5
+            return [m0, m1, m2, m3]
         elif index == 1:
-            raise NotImplementedError()
+            logb = u_b[1]
+            m0 = logtau + logb
+            m1 = -1
+            return [m0, m1]
         elif index == 2:
-            raise NotImplementedError()
+            a = u_a[0]
+            m0 = -tau
+            m1 = a
+            return [m0, m1]
         else:
             raise ValueError("Index out of bounds")
 
