@@ -1619,7 +1619,7 @@ class RotateSwitchingMarkovChain(RotateGaussianMarkovChain):
 class RotateMultiple():
     r"""
     Identical parameter expansion for several nodes simultaneously
-    
+
     Performs the same rotation for multiple nodes and combines the cost
     effect.
     """
@@ -1628,9 +1628,10 @@ class RotateMultiple():
         self.rotators = rotators
 
     def nodes(self):
-        return [node
-                for node in rotator.nodes()
-                for rotator in self.rotators]
+        nodes = []
+        for rotator in self.rotators:
+            nodes += rotator.nodes()
+        return nodes
 
     def rotate(self, R, inv=None, logdet=None):
         for rotator in self.rotators:
@@ -1639,11 +1640,11 @@ class RotateMultiple():
     def setup(self):
         for rotator in self.rotators:
             rotator.setup()
-    
+
     def bound(self, R, logdet=None, inv=None):
         bound = 0
         dbound = 0
-        
+
         for rotator in self.rotators:
             (b, db) = rotator.bound(R, logdet=logdet, inv=inv)
             bound = bound + b
@@ -1651,7 +1652,8 @@ class RotateMultiple():
 
         return (bound, dbound)
 
-    def get_bound_terms(self, R, logdet=None, inv=None):
-        return {node: terms 
-                for (node, terms) in rotator.items()
-                for rotator in self.rotators}
+    def get_bound_terms(self, *args, **kwargs):
+        d = dict()
+        for rotator in self.rotators:
+            d.update(rotator.get_bound_terms(*args, **kwargs))
+        return d
