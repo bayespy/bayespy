@@ -501,21 +501,19 @@ class SumMultiply(Deterministic):
                 msg[ind] *= r
 
         if self.gaussian_gamma:
-            alphas = [u_parents[i][2] 
+            alphas = [u_parents[i][2]
                       for i in range(len(u_parents)) if i != index]
-            ## logalphas = [u_parents[i][3]
-            ##              for i in range(len(u_parents)) if i != index]
-            m2 = self._compute_message(m[2], *alphas,
+            m2 = self._compute_message(m[2], mask, *alphas,
                                        ndim=0,
                                        plates_from=self.plates,
                                        plates_to=parent.plates)
-            m3 = self._compute_message(m[3],#*logalphas,
+            m3 = self._compute_message(m[3], mask,
                                        ndim=0,
                                        plates_from=self.plates,
                                        plates_to=parent.plates)
 
             msg = msg + [m2, m3]
-            
+
         return msg
 
 
