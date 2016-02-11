@@ -124,7 +124,7 @@ pygments_style = 'sphinx'
 # -- Options for HTML output ---------------------------------------------------
 
 # Sphinx-TikZ extension
-tikz_latex_preamble = """
+tikz_latex_preamble = r"""
 \usepackage{amsmath}
 """
 
