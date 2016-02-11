@@ -2319,6 +2319,8 @@ class WrapToGaussianWishart(Deterministic):
         except Moments.NoConverterError:
             pass
 
+        D = X.dims[0][0]
+
         try:
             # Try combo Gaussian-Gamma and Wishart
             X = self._ensure_moments(X, GaussianGammaISOMoments(1))
@@ -2326,17 +2328,33 @@ class WrapToGaussianWishart(Deterministic):
             # Have to use Gaussian-Wishart and Gamma
             self._parent_moments = [GaussianWishartMoments(),
                                     GammaMoments()]
-            X = self._ensure_moments(X, GaussianWishartMoments())
+            Lambda = self._ensure_moments(Lambda, GammaMoments())
+            if Lambda.dims != ((), ()):
+                raise ValueError(
+                    "Mean and precision have inconsistent shapes: {0} and {1}"
+                    .format(
+                        X.dims,
+                        Lambda.dims
+                    )
+                )
             self.wishart = False
         else:
             self._parent_moments = [GaussianGammaISOMoments(1),
                                     WishartMoments()]
+            Lambda = self._ensure_moments(Lambda, WishartMoments())
+            if Lambda.dims != ((D, D), ()):
+                raise ValueError(
+                    "Mean and precision have inconsistent shapes: {0} and {1}"
+                    .format(
+                        X.dims,
+                        Lambda.dims
+                    )
+                )
             self.wishart = True
 
-        D = X.dims[0][0]
         dims = ( (D,), (), (D,D), () )
         super().__init__(X, Lambda, dims=dims, **kwargs)
-            
+
 
     def _compute_moments(self, u_X_alpha, u_Lambda):
         r"""
