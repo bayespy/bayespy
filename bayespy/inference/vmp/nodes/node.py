@@ -744,13 +744,13 @@ class Node():
 
         # For simplicity, make the arrays equal ndim
         arrays = misc.make_equal_ndim(*arrays)
-        
+
         # Keys for the input plates: (N-1, N-2, ..., 0)
         nplates = len(arrays_plates)
-        in_plate_keys = list(range(nplates))
+        in_plate_keys = list(range(nplates-1, -1, -1))
 
         # Keys for the output plates
-        out_plate_keys = [key 
+        out_plate_keys = [key
                           for key in in_plate_keys
                           if key < len(plates_to) and plates_to[-key-1] != 1]
 
@@ -772,10 +772,10 @@ class Node():
         else:
             plates_result = [min(plates_to[ind], arrays_plates[ind])
                              for ind in range(-nplates_result, 0)]
+
         y = np.reshape(y, plates_result + list(dims))
 
         return y
-    
 
 
 from .deterministic import Deterministic
