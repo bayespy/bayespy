@@ -137,6 +137,12 @@ class VB():
         # By default, update all nodes
         if len(nodes) == 0:
             nodes = self.model
+        if plot is True:
+            plot_nodes = self.model
+        elif plot is False:
+            plot_nodes = []
+        else:
+            plot_nodes = [self[x] for x in plot]
 
         converged = False
 
@@ -149,7 +155,7 @@ class VB():
                 X = self[node]
                 if hasattr(X, 'update') and callable(X.update):
                     X.update()
-                if plot:
+                if X in plot_nodes:
                     self.plot(X)
 
             cputime = time.clock() - t
