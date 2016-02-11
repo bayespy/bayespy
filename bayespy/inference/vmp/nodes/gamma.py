@@ -255,6 +255,10 @@ class Gamma(ExponentialFamily):
                                        name=self.name + " as Wishart")
 
 
+    def diag(self):
+        return self.as_diagonal_wishart()
+
+
 class GammaShape(Stochastic):
     """
     ML point estimator for the shape parameter of the gamma distribution
