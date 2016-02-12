@@ -921,7 +921,7 @@ class GaussianGammaISODistribution(ExponentialFamilyDistribution):
 
     Currently, supports only vector variables.
 
-    Log pdf:
+    Log pdf of the prior:
 
     .. math::
 
@@ -939,6 +939,18 @@ class GaussianGammaISODistribution(ExponentialFamilyDistribution):
        - \log\tau
        + a \log b
        - \log \Gamma(a)
+
+    Log pdf of the posterior approximation:
+
+    .. math::
+
+       \log q(\mathbf{x}, \tau) =&
+       \tau \mathbf{x}^T \boldsymbol{\phi}_1
+       + \tau \mathbf{x}^T \mathbf{\Phi}_2 \mathbf{x}
+       + \tau \phi_3
+       + \log\tau \phi_4
+       + g(\boldsymbol{\phi}_1, \mathbf{\Phi}_2, \phi_3, \phi_4)
+       + f(x, \tau)
 
     """
 
