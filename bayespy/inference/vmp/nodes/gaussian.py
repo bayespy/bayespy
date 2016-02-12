@@ -1876,16 +1876,25 @@ class GaussianGammaISO(ExponentialFamily):
         return axes
 
 
+    def get_gaussian_location(self):
+        r"""
+        Return the mean and variance of the distribution
+        """
+        tau = self.u[2]
+        tau_mu = self.u[0]
+        return tau_mu / tau[...,None]
+
+
     def get_gaussian_mean_and_variance(self):
         r"""
         Return the mean and variance of the distribution
         """
         a = self.phi[3]
         nu = 2*a
-        
-        if nu <= 1:
+
+        if np.any(nu <= 1):
             raise ValueError("Mean not defined for degrees of freedom <= 1")
-        if nu <= 2:
+        if np.any(nu <= 2):
             raise ValueError("Variance not defined if degrees of freedom <= 2")
 
         tau = self.u[2]
