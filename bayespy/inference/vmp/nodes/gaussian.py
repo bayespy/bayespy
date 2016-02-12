@@ -1210,7 +1210,68 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
 #
 
 
-class Gaussian(ExponentialFamily):
+class _GaussianTemplate(ExponentialFamily):
+
+
+    def add(self, b):
+        """
+        Transforms the current posterior by adding a bias to the mean
+
+        Parameters
+        ----------
+
+        b : array
+        Constant to add
+        """
+
+        ndim = len(self.dims[0])
+
+        if ndim > 0 and np.shape(b)[-ndim:] != self.dims[0]:
+            raise ValueError("Bias has incorrect shape")
+
+        x = self.u[0]
+        xb = linalg.outer(x, b, ndim=ndim)
+        bx = linalg.transpose(xb, ndim=ndim)
+        bb = linalg.outer(b, b, ndim=ndim)
+        uh = [
+            self.u[0] + b,
+            self.u[1] + xb + bx + bb
+        ]
+
+        Lambda = -2 * self.phi[1]
+        Lambda_b = linalg.mvdot(Lambda, b, ndim=ndim)
+
+        dg = -0.5 * (
+            linalg.inner(b, Lambda_b, ndim=ndim)
+            + 2 * linalg.inner(x, Lambda_b, ndim=ndim)
+        )
+
+        phih = [
+            self.phi[0] + Lambda_b,
+            self.phi[1]
+        ]
+
+        self._check_shape(uh)
+        self._check_shape(phih)
+
+        self.u = uh
+        self.phi = phih
+        self.g = self.g + dg
+
+        # TODO: This is all just debugging stuff and can be removed
+        if False:
+            uh = [ui.copy() for ui in uh]
+            gh = self.g.copy()
+            self._update_moments_and_cgf()
+            if any(not np.allclose(uih, ui) for (uih, ui) in zip(uh, self.u)):
+                raise RuntimeError("BUG")
+            if not np.allclose(self.g, gh):
+                raise RuntimeError("BUG")
+
+        return
+
+
+class Gaussian(_GaussianTemplate):
     r"""
     Node for Gaussian variables.
 
@@ -1399,7 +1460,7 @@ class Gaussian(ExponentialFamily):
         self._update_moments_and_cgf()
 
 
-class GaussianARD(ExponentialFamily):
+class GaussianARD(_GaussianTemplate):
     r"""
     Node for Gaussian variables with ARD prior.
 
@@ -1709,7 +1770,50 @@ class GaussianGammaISO(ExponentialFamily):
                 cls._moments, 
                 cls._parent_moments)
 
-    
+
+    def add(self, b):
+
+        tau = self.u[2]
+
+        x = self.u[0] / tau[...,None]
+        xb = linalg.outer(x, b, ndim=1)
+        bx = linalg.transpose(xb, ndim=1)
+        bb = linalg.outer(b, b, ndim=1)
+
+        uh = [
+            self.u[0] + tau[...,None] * b,
+            self.u[1] + tau[...,None,None] * (xb + bx + bb),
+            self.u[2],
+            self.u[3]
+        ]
+
+        Lambda = -2 * self.phi[1]
+        dtau = -0.5 * (
+            np.einsum('...ij,...i,...j->...', Lambda, b, b)
+            + 2 * np.einsum('...ij,...i,...j->...', Lambda, b, x)
+        )
+        phih = [
+            self.phi[0] + np.einsum('...ij,...j->...i', Lambda, b),
+            self.phi[1],
+            self.phi[2] + dtau,
+            self.phi[3]
+        ]
+
+        self._check_shape(uh)
+        self._check_shape(phih)
+
+        self.phi = phih
+        self.u = uh
+
+        # This is just debugging test
+        uh = [ui.copy() for ui in uh]
+        self._update_moments_and_cgf()
+        if any(not np.allclose(uih, ui) for (uih, ui) in zip(uh, self.u)):
+            raise RuntimeError("BUG")
+
+        return
+
+
     def plotmatrix(self):
         r"""
         Creates a matrix of marginal plots.
