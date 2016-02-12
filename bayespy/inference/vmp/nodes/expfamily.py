@@ -349,7 +349,8 @@ class ExponentialFamily(Stochastic):
                                                             mask=update_mask)
         # ... and store them
         self._set_moments_and_cgf(u, g, mask=update_mask)
-            
+
+
     def observe(self, x, *args, mask=True):
         """
         Fix moments, compute f and propagate mask.
@@ -359,21 +360,22 @@ class ExponentialFamily(Stochastic):
         (u, f) = self._distribution.compute_fixed_moments_and_f(x, *args,
                                                                 mask=mask)
 
-        # Check the dimensionality of the observations
-        for (i,v) in enumerate(u):
-            # This is what the dimensionality "should" be
-            s = self.plates + self.dims[i]
-            t = np.shape(v)
-            if s != t:
-                msg = "Dimensionality of the observations incorrect."
-                msg += "\nShape of input: " + str(t)
-                msg += "\nExpected shape: " + str(s)
-                msg += "\nCheck plates."
-                raise Exception(msg)
+        # # Check the dimensionality of the observations
+        # self._check_shape()
+        # for (i,v) in enumerate(u):
+        #     # This is what the dimensionality "should" be
+        #     s = self.plates + self.dims[i]
+        #     t = np.shape(v)
+        #     if s != t:
+        #         msg = "Dimensionality of the observations incorrect."
+        #         msg += "\nShape of input: " + str(t)
+        #         msg += "\nExpected shape: " + str(s)
+        #         msg += "\nCheck plates."
+        #         raise Exception(msg)
 
-        # Set the moments
-        self._set_moments(u, mask=mask)
-        
+        # Set the moments. Shape checking is done there.
+        self._set_moments(u, mask=mask, broadcast=False)
+
         self.f = np.where(mask, f, self.f)
 
         # Observed nodes should not be ignored

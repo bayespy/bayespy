@@ -168,8 +168,44 @@ class Stochastic(Node):
 
     def _set_mask(self, mask):
         self.mask = np.logical_or(mask, self.observed)
-    
-    def _set_moments(self, u, mask=True):
+
+
+    def _check_shape(self, u, broadcast=True):
+
+        if len(u) != len(self.dims):
+            raise ValueError("Incorrect number of arrays")
+
+        for (dimsi, ui) in zip(self.dims, u):
+            sh_true = self.plates + dimsi
+            sh = np.shape(ui)
+            ndim = len(dimsi)
+            errmsg = (
+                "Shape of the given array not equal to the shape of the node.\n"
+                "Received shape: {0}\n"
+                "Expected shape: {1}\n"
+                "Check plates."
+                .format(sh, sh_true)
+            )
+            if not broadcast:
+                if sh != sh_true:
+                    raise ValueError(errmsg)
+            else:
+                if ndim == 0:
+                    if not misc.is_shape_subset(sh, sh_true):
+                        raise ValueError(errmsg)
+                else:
+                    plates_ok = misc.is_shape_subset(sh[:-ndim], self.plates)
+                    dims_ok = (sh[-ndim:] == dimsi)
+                    if not (plates_ok and dims_ok):
+                        raise ValueError(errmsg)
+
+        return
+
+
+    def _set_moments(self, u, mask=True, broadcast=True):
+
+        self._check_shape(u, broadcast=broadcast)
+
         # Store the computed moments u but do not change moments for
         # observations, i.e., utilize the mask.
         for ind in range(len(u)):
@@ -196,15 +232,16 @@ class Stochastic(Node):
                       where=u_mask)
 
             # Make sure u has the correct number of dimensions:
-            # TODO/FIXME: Maybe it would be good to also check that u has a
-            # shape that is a sub-shape of get_shape.
             shape = self.get_shape(ind)
             ndim = len(shape)
             ndim_u = np.ndim(self.u[ind])
             if ndim > ndim_u:
                 self.u[ind] = misc.add_leading_axes(u[ind], ndim - ndim_u)
             elif ndim < ndim_u:
+                # This should not ever happen because we already checked the
+                # shape at the beginning of the function.
                 raise RuntimeError(
+                    "This error should not happen. Fix shape checking."
                     "The size of the variable %s's %s-th moment "
                     "array is %s which is larger than it should "
                     "be, that is, %s, based on the plates %s and "
@@ -217,7 +254,7 @@ class Stochastic(Node):
                        self.plates,
                        self.dims[ind]))
 
-                
+
     def update(self, annealing=1.0):
         if not np.all(self.observed):
             u_parents = self._message_from_parents()
