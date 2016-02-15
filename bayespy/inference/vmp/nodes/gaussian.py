@@ -1826,11 +1826,57 @@ class GaussianGammaISO(ExponentialFamily):
         self.phi = phih
         self.u = uh
 
-        # This is just debugging test
-        uh = [ui.copy() for ui in uh]
-        self._update_moments_and_cgf()
-        if any(not np.allclose(uih, ui) for (uih, ui) in zip(uh, self.u)):
-            raise RuntimeError("BUG")
+        # TODO: This is all just debugging stuff and can be removed
+        if debug:
+            uh = [ui.copy() for ui in uh]
+            gh = self.g.copy()
+            self._update_moments_and_cgf()
+            if any(not np.allclose(uih, ui, atol=1e-6) for (uih, ui) in zip(uh, self.u)):
+                raise RuntimeError("BUG")
+            if not np.allclose(self.g, gh, atol=1e-6):
+                raise RuntimeError("BUG")
+
+        return
+
+
+    def rotate(self, R, inv=None, logdet=None, debug=False):
+
+        if inv is None:
+            inv = np.linalg.inv(R)
+
+        if logdet is None:
+            logdet = np.linalg.slogdet(R)[1]
+
+        uh = [
+            rotate_mean(self.u[0], R),
+            rotate_covariance(self.u[1], R),
+            self.u[2],
+            self.u[3]
+        ]
+
+        phih = [
+            rotate_mean(self.phi[0], inv.T),
+            rotate_covariance(self.phi[1], inv.T),
+            self.phi[2],
+            self.phi[3]
+        ]
+
+        self._check_shape(uh)
+        self._check_shape(phih)
+
+        self.phi = phih
+        self.u = uh
+        self.g = self.g - logdet
+
+        # TODO: This is all just debugging stuff and can be removed
+        if debug:
+            uh = [ui.copy() for ui in uh]
+            gh = self.g.copy()
+            self._update_moments_and_cgf()
+            if any(not np.allclose(uih, ui, atol=1e-6) for (uih, ui) in zip(uh, self.u)):
+                raise RuntimeError("BUG")
+            if not np.allclose(self.g, gh, atol=1e-6):
+                raise RuntimeError("BUG")
 
         return
 
