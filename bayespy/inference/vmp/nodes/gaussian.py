@@ -1213,7 +1213,7 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
 class _GaussianTemplate(ExponentialFamily):
 
 
-    def add(self, b):
+    def translate(self, b, debug=False):
         """
         Transforms the current posterior by adding a bias to the mean
 
@@ -1771,7 +1771,7 @@ class GaussianGammaISO(ExponentialFamily):
                 cls._parent_moments)
 
 
-    def add(self, b):
+    def translate(self, b, debug=False):
 
         tau = self.u[2]
 
