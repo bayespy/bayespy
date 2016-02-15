@@ -2194,14 +2194,14 @@ class GaussianToGaussianGammaISO(Deterministic):
         r"""
         """
         self.ndim = X._moments.ndim
-        
+
         self._moments = GaussianGammaISOMoments(self.ndim)
         self._parent_moments = [GaussianMoments(self.ndim)]
-    
+
         shape = X.dims[0]
         dims = ( shape, 2*shape, (), () )
         super().__init__(X, dims=dims, **kwargs)
-            
+
 
     def _compute_moments(self, u_X):
         r"""
@@ -2210,7 +2210,7 @@ class GaussianToGaussianGammaISO(Deterministic):
         xx = u_X[1]
         u = [x, xx, 1, 0]
         return u
-    
+
 
     def _compute_message_to_parent(self, index, m_child, u_X):
         r"""
@@ -2362,7 +2362,7 @@ class WrapToGaussianGammaISO(Deterministic):
     _moments = GaussianGammaISOMoments(1)
     _parent_moments = [GaussianGammaISOMoments(1),
                        GammaMoments()]
-    
+
 
     @ensureparents
     def __init__(self, X, alpha, **kwargs):
@@ -2370,55 +2370,41 @@ class WrapToGaussianGammaISO(Deterministic):
         """
         D = X.dims[0][0]
         dims = ( (D,), (D,D), (), () )
+        self.ndim = 1
         super().__init__(X, alpha, dims=dims, **kwargs)
-            
+
 
     def _compute_moments(self, u_X, u_alpha):
         r"""
         """
-        raise NotImplementedError()
-    
+        (tau_x, tau_xx, tau, logtau) = u_X
+        (alpha, logalpha) = u_alpha
+        u0 = tau_x * misc.add_trailing_axes(tau, self.ndim)
+        u1 = tau_xx * misc.add_trailing_axes(tau, 2 * self.ndim)
+        u2 = tau * alpha
+        u3 = logtau + logalpha
+        return [u0, u1, u2, u3]
+
 
     def _compute_message_to_parent(self, index, m_child, u_X, u_alpha):
         r"""
         """
         if index == 0:
-            raise NotImplementedError()
+            alpha = u_alpha[0]
+            m0 = m_child[0] * misc.add_trailing_axes(alpha, self.ndim)
+            m1 = m_child[1] * misc.add_trailing_axes(alpha, 2 * self.ndim)
+            m2 = m_child[2] * alpha
+            m3 = m_child[3]
+            return [m0, m1, m2, m3]
         elif index == 1:
-            raise NotImplementedError()
-        else:
-            raise ValueError("Invalid parent index")
-
-
-    def _compute_weights_to_parent(self, index, weights):
-        r"""
-        """
-        if index == 0:
-            raise NotImplementedError()
-        elif index == 1:
-            raise NotImplementedError()
-        else:
-            raise ValueError("Invalid parent index")
-
-
-    def _plates_to_parent(self, index):
-        r"""
-        """
-        if index == 0:
-            raise NotImplementedError()
-        elif index == 1:
-            raise NotImplementedError()
-        else:
-            raise ValueError("Invalid parent index")
-
-
-    def _plates_from_parent(self, index):
-        r"""
-        """
-        if index == 0:
-            raise NotImplementedError()
-        elif index == 1:
-            raise NotImplementedError()
+            (tau_x, tau_xx, tau, logtau) = u_X
+            m0 = (
+                linalg.inner(m_child[0], tau_x, ndim=self.ndim)
+                + linalg.inner(m_child[1], tau_xx, ndim=2*self.ndim)
+                + m_child[2] * tau
+            )
+            m1 = m_child[3]
+            return [m0, m1]
         else:
             raise ValueError("Invalid parent index")
 
