@@ -217,10 +217,178 @@ def _compute_cgf_for_gaussian_markov_chain(mumu, Lambda, logdet_Lambda,
         g1 = g1 + 0.5 * np.sum(logdet_v, axis=(-1,-2))
 
     return g0 + g1
-    
+
+
 class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
-    """
-    Sub-classes implement distribution specific computations.
+    r"""
+    Implementation of VMP formulas for Gaussian Markov chain
+
+    The log probability density function of the prior:
+
+    .. todo::  Fix inputs and their weight matrix in the equations.
+
+    .. math::
+
+       \log p(\mathbf{X} | \boldsymbol{\mu}, \mathbf{\Lambda},
+       \mathbf{A}, \mathbf{B}, \boldsymbol{\nu})
+       =& \log \mathcal{N}(\mathbf{x}_0|\boldsymbol{\mu}, \mathbf{\Lambda})
+       + \sum^N_{n=1} \log \mathcal{N}(
+         \mathbf{x}_n | \mathbf{Ax}_{n-1} + \mathbf{Bu}_n,
+                        \mathrm{diag}(\boldsymbol{\nu}))
+       \\
+       =&
+       - \frac{1}{2} \mathbf{x}_0^T \mathbf{\Lambda} \mathbf{x}_0
+       + \frac{1}{2} \mathbf{x}_0^T \mathbf{\Lambda} \boldsymbol{\mu}
+       + \frac{1}{2} \boldsymbol{\mu}^T \mathbf{\Lambda} \mathbf{x}_0
+       - \frac{1}{2} \boldsymbol{\mu}^T \mathbf{\Lambda} \boldsymbol{\mu}
+       + \frac{1}{2} \log|\mathbf{\Lambda}|
+       \\
+       &
+       - \frac{1}{2} \sum^N_{n=1} \mathbf{x}_n^T \mathrm{diag}(\boldsymbol{\nu}) \mathbf{x}_n
+       + \frac{1}{2} \sum^N_{n=1} \mathbf{x}_n^T \mathrm{diag}(\boldsymbol{\nu}) \mathbf{A} \mathbf{x}_{n-1}
+       + \frac{1}{2} \sum^N_{n=1} \mathbf{x}_{n-1}^T\mathbf{A}^T \mathrm{diag}(\boldsymbol{\nu}) \mathbf{x}_n
+       - \frac{1}{2} \sum^N_{n=1} \mathbf{x}_{n-1}^T\mathbf{A}^T \mathrm{diag}(\boldsymbol{\nu}) \mathbf{A} \mathbf{x}_{n-1}
+       \\ &
+       + \sum^N_{n=1} \sum^D_{d=1} \log\nu_d - \frac{1}{2} (N+1) D \log(2\pi)
+       \\
+       =&
+       \begin{bmatrix}
+         \mathbf{x}_0 \\ \mathbf{x}_1 \\ \vdots \\ \mathbf{x}_{N-1} \\ \mathbf{x}_N
+       \end{bmatrix}^T
+       \begin{bmatrix}
+         -\frac{1}{2}\mathbf{\Lambda} - \frac{1}{2}\mathbf{A}\mathrm{diag}(\boldsymbol{\nu})\mathbf{A}^T
+         &
+         \frac{1}{2} \mathbf{A}^T\mathrm{diag}(\boldsymbol{\nu})
+         &
+         &
+         &
+         \\
+         \frac{1}{2} \mathrm{diag}(\boldsymbol{\nu}) \mathbf{A}
+         &
+         -\frac{1}{2} \mathrm{diag}(\boldsymbol{\nu})
+         - \frac{1}{2}\mathbf{A}^T\mathrm{diag}(\boldsymbol{\nu})\mathbf{A}^T
+         &
+         \frac{1}{2} \mathbf{A}^T\mathrm{diag}(\boldsymbol{\nu})
+         &
+         &
+         \\
+         &
+         \ddots
+         &
+         \ddots
+         &
+         \ddots
+         &
+         \\
+         &
+         &
+         \frac{1}{2} \mathrm{diag}(\boldsymbol{\nu}) \mathbf{A}
+         &
+         -\frac{1}{2} \mathrm{diag}(\boldsymbol{\nu})
+         - \frac{1}{2}\mathbf{A}^T\mathrm{diag}(\boldsymbol{\nu})\mathbf{A}^T
+         &
+         \frac{1}{2} \mathbf{A}^T\mathrm{diag}(\boldsymbol{\nu})
+         \\
+         &
+         &
+         &
+         \frac{1}{2} \mathrm{diag}(\boldsymbol{\nu}) \mathbf{A}
+         &
+         -\frac{1}{2} \mathrm{diag}(\boldsymbol{\nu})
+       \end{bmatrix}
+       \begin{bmatrix}
+         \mathbf{x}_0 \\ \mathbf{x}_1 \\ \vdots \\ \mathbf{x}_{N-1} \\ \mathbf{x}_N
+       \end{bmatrix}
+       \\
+       &
+       + \frac{1}{2} \mathbf{x}_0^T \mathbf{\Lambda} \boldsymbol{\mu}
+       + \frac{1}{2} \boldsymbol{\mu}^T \mathbf{\Lambda} \mathbf{x}_0
+       - \frac{1}{2} \boldsymbol{\mu}^T \mathbf{\Lambda} \boldsymbol{\mu}
+       + \frac{1}{2} \log|\mathbf{\Lambda}|
+       + \sum^N_{n=1} \sum^D_{d=1} \log\nu_d - \frac{1}{2} (N+1) D \log(2\pi)
+
+
+    For simplicity, :math:`\boldsymbol{\nu}` and :math:`\mathbf{A}` are assumed
+    not to depend on :math:`n` in the above equation, but this distribution
+    class supports that dependency. One only needs to do the following
+    replacements in the equations: :math:`\boldsymbol{\nu} \leftarrow \boldsymbol{\nu}_n` and
+    :math:`\mathbf{A} \leftarrow \mathbf{A}_n`, where :math:`n=1,\ldots,N`.
+
+    .. math::
+
+       u(\mathbf{X}) &=
+       \begin{bmatrix}
+         \begin{bmatrix} \mathbf{x}_0 & \ldots & \mathbf{x}_N \end{bmatrix}
+         \\
+         \begin{bmatrix} \mathbf{x}_0\mathbf{x}_0^T & \ldots & \mathbf{x}_N\mathbf{x}_N^T \end{bmatrix}
+         \\
+         \begin{bmatrix} \mathbf{x}_0\mathbf{x}_1^T & \ldots & \mathbf{x}_{N-1}\mathbf{x}_N^T \end{bmatrix}
+       \end{bmatrix}
+       \\
+       \phi(\boldsymbol{\mu}, \mathbf{\Lambda}, \mathbf{A}, \boldsymbol{\nu}) &=
+       \begin{bmatrix}
+         \begin{bmatrix}
+           \mathbf{\Lambda} \boldsymbol{\mu} & \mathbf{0} & \ldots & \mathbf{0}
+         \end{bmatrix}
+         \\
+         \begin{bmatrix}
+           -\frac{1}{2}\mathbf{\Lambda} - \frac{1}{2} \mathbf{A}\mathrm{diag}(\boldsymbol{\nu})\mathbf{A}^T &
+           -\frac{1}{2}\mathrm{diag}(\boldsymbol{\nu}) - \frac{1}{2} \mathbf{A}\mathrm{diag}(\boldsymbol{\nu})\mathbf{A}^T &
+           \ldots &
+           -\frac{1}{2}\mathrm{diag}(\boldsymbol{\nu}) - \frac{1}{2} \mathbf{A}\mathrm{diag}(\boldsymbol{\nu})\mathbf{A}^T &
+           -\frac{1}{2}\mathrm{diag}(\boldsymbol{\nu})
+         \end{bmatrix}
+         \\
+         \begin{bmatrix}
+           \mathbf{A}^T \mathrm{diag}(\boldsymbol{\nu}) & \ldots & \mathbf{A}^T \mathrm{diag}(\boldsymbol{\nu}) 
+         \end{bmatrix}
+       \end{bmatrix}
+       \\
+       g(\boldsymbol{\mu}, \mathbf{\Lambda}, \mathbf{A}, \boldsymbol{\nu}) &=
+       \frac{1}{2}\log|\mathbf{\Lambda}| + \frac{1}{2} \sum^N_{n=1}\sum^D_{d=1}\log\nu_d
+       \\
+       f(\mathbf{X}) &= -\frac{1}{2} (N+1) D \log(2\pi)
+
+    The log probability denisty function of the posterior approximation:
+
+    .. math::
+
+       \log q(\mathbf{X}) &=
+       \begin{bmatrix}
+         \mathbf{x}_0
+         \\
+         \mathbf{x}_1
+         \\
+         \vdots
+         \\
+         \mathbf{x}_{N-1}
+         \\
+         \mathbf{x}_N
+       \end{bmatrix}^T
+       \begin{bmatrix}
+         \mathbf{\Phi}_0^{(2)} & \frac{1}{2}\mathbf{\Phi}_1^{(3)} & & &
+         \\
+         \frac{1}{2}{\mathbf{\Phi}_1^{(3)}}^T & \mathbf{\Phi}_1^{(2)} & \frac{1}{2}\mathbf{\Phi}_2^{(3)} & &
+         \\
+         & \ddots & \ddots & \ddots &
+         \\
+         & & \frac{1}{2}{\mathbf{\Phi}_{N-1}^{(3)}}^T & \mathbf{\Phi}_{N-1}^{(2)} & \frac{1}{2}\mathbf{\Phi}_N^{(3)}
+         \\
+         & & & \frac{1}{2}{\mathbf{\Phi}_N^{(3)}}^T & \mathbf{\Phi}_N^{(2)}
+       \end{bmatrix}
+       \begin{bmatrix}
+         \mathbf{x}_0
+         \\
+         \mathbf{x}_1
+         \\
+         \vdots
+         \\
+         \mathbf{x}_{N-1}
+         \\
+         \mathbf{x}_N
+       \end{bmatrix}
+       + \ldots
+
     """
 
 
@@ -519,7 +687,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
     .. bayesnet::
 
        \tikzstyle{latent} += [minimum size=30pt];
-       
+
        \node[latent] (x0) {$\mathbf{x}_0$};
        \node[latent, right=of x0] (x1) {$\mathbf{x}_1$};
        \node[right=of x1] (dots) {$\cdots$};
