@@ -20,7 +20,12 @@ from .deterministic import Deterministic
 from .expfamily import ExponentialFamily
 from .expfamily import ExponentialFamilyDistribution
 from .expfamily import useconstructor
-from .gaussian import Gaussian, GaussianMoments
+from .gaussian import (Gaussian,
+                       GaussianMoments,
+                       GaussianWishartMoments,
+                       GaussianGammaISOMoments,
+                       WrapToGaussianGammaISO,
+                       WrapToGaussianWishart)
 from .wishart import Wishart, WishartMoments
 from .gamma import Gamma, GammaMoments
 from .categorical import CategoricalMoments
@@ -199,22 +204,22 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
             self.u = [u0, u1, u2]
             self.g -= N*logdetR
 
-            
-def _compute_cgf_for_gaussian_markov_chain(mumu, Lambda, logdet_Lambda, 
-                                           logdet_v, N):
+
+def _compute_cgf_for_gaussian_markov_chain(mumu_Lambda, logdet_Lambda,
+                                           logdet_nu, N):
     """
     Compute CGF using the moments of the parents.
     """
-        
-    g0 = -0.5 * np.einsum('...ij,...ij->...', mumu, Lambda)
-        
+
+    g0 = -0.5 * mumu_Lambda #np.einsum('...ij,...ij->...', mumu, Lambda)
+
     g1 = 0.5 * logdet_Lambda
-    if np.ndim(logdet_v) == 1:
-        g1 = g1 + 0.5 * (N-1) * np.sum(logdet_v, axis=-1)
-    elif np.shape(logdet_v)[-2] == 1:
-        g1 = g1 + 0.5 * (N-1) * np.sum(logdet_v, axis=(-1,-2))
+    if np.ndim(logdet_nu) == 1:
+        g1 = g1 + 0.5 * (N-1) * np.sum(logdet_nu, axis=-1)
+    elif np.shape(logdet_nu)[-2] == 1:
+        g1 = g1 + 0.5 * (N-1) * np.sum(logdet_nu, axis=(-1,-2))
     else:
-        g1 = g1 + 0.5 * np.sum(logdet_v, axis=(-1,-2))
+        g1 = g1 + 0.5 * np.sum(logdet_nu, axis=(-1,-2))
 
     return g0 + g1
 
@@ -392,7 +397,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
     """
 
 
-    def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_A, u_v, *u_inputs):
+    def compute_message_to_parent(self, parent, index, u, u_mu_Lambda, u_A_nu, *u_inputs):
         """
         Compute a message to a parent.
 
@@ -402,114 +407,109 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             Index of the parent requesting the message.
         u : list of ndarrays
             Moments of this node.
-        u_mu : list of ndarrays
-            Moments of parent `mu`.
-        u_Lambda : list of ndarrays
-            Moments of parent `Lambda`.
-        u_A : list of ndarrays
-            Moments of parent `A`.
-        u_v : list of ndarrays
-            Moments of parent `v`.
+        u_mu_Lambda : list of ndarrays
+            Moments of parents :math:`(\boldsymbol{\mu}, \mathbf{\Lambda})`.
+        u_A_nu : list of ndarrays
+            Moments of parents :math:`(\mathbf{A}, \boldsymbol{\nu})`.
         u_inputs : list of ndarrays
             Moments of input signals.
         """
 
         D = np.shape(u[0])[-1]
-        
-        if index == 0:   # mu
-            Lambda = u_Lambda[0]
-            x0 = u[0][...,0,:]
-            m0 = np.einsum('...ik,...k->...i', Lambda, x0)
-            m1 = -0.5*Lambda
-        elif index == 1: # Lambda
+
+        if index == 0:   # (mu, Lambda) -- GaussianWishartMoments
             x0 = u[0][...,0,:]
             x0x0 = u[1][...,0,:,:]
-            mu = u_mu[0]
-            mumu = u_mu[1]
-            x0mu = np.einsum('...i,...j->...ij', x0, mu)
-            mux0 = np.swapaxes(x0mu, -1, -2)
-            m0 = -0.5*x0x0 + 0.5*x0mu + 0.5*mux0 - 0.5*mumu
-            m1 = 0.5
-        elif index == 2: # A
+            m0 = x0
+            m1 = -0.5
+            m2 = -0.5 * x0x0
+            m3 = 0.5
+            return [m0, m1, m2, m3]
+
+        elif index == 1: # (A, nu) -- GaussianGammaISOMoments
             XnXn = u[1]
             XpXn = u[2]
-            v = u_v[0]
-            m0 = v[...,np.newaxis] * XpXn.swapaxes(-1,-2)
-            # The following message matrix could be huge, so let's use a help
-            # function which computes sum(v*XnXn) without computing the huge
-            # v*XnXn explicitly.
-            m1 = -0.5 * message_sum_multiply(parent.plates,
-                                             (D, D), #parent.dims[1],
-                                             v[...,np.newaxis,np.newaxis],
-                                             XnXn[..., :-1, np.newaxis, :, :])
+
+            # (..., N-1, D, D)
+            m0 = XpXn.swapaxes(-1,-2)
+            # (..., N-1, D, D, D)
+            m1 = -0.5 * XnXn[..., :-1, None, :, :]
+            # (..., N-1, D)
+            m2 = -0.5 * np.einsum('...ii->...i', XnXn[...,1:,:,:])
+            # (..., N-1, D)
+            m3 = 0.5
+
             if len(u_inputs):
                 Xn = u[0]
                 z = u_inputs[0][0]
                 zz = u_inputs[0][1]
                 D_inputs = np.shape(z)[-1]
-                m0_B = v[...,None] * Xn[...,1:,:,None] * z[...,None,:]
-                m1_BB = -0.5 * message_sum_multiply(parent.plates,
-                                                    (D_inputs, D_inputs),
-                                                    zz[..., None,    :,    :],
-                                                    v[ ...,    :, None, None])
-                Xp_z = Xn[...,:-1,:,None] * z[...,None,:]
-                m1_AB = -0.5 * message_sum_multiply(parent.plates,
-                                                    (D, D_inputs),
-                                                    Xp_z[..., None,    :,    :],
-                                                    v[   ...,    :, None, None])
+                m0_B = Xn[...,1:,:,None] * z[...,None,:]
+                m1_BB = -0.5 * zz[..., None, :, :]
+                m1_AB = -0.5 * Xn[..., :-1, None, :, None] * z[..., None, None, :]
+
                 # Construct full message arrays from blocks
                 m0 = np.concatenate([m0, m0_B], axis=-1)
                 row1 = np.concatenate([m1, m1_AB], axis=-1)
                 row2 = np.concatenate([m1_AB.swapaxes(-1,-2), m1_BB], axis=-1)
                 m1 = np.concatenate([row1, row2], axis=-2)
-                                      
-            #m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
-        elif index == 3: # v
-            ## if len(u_inputs):
-            ##     raise NotImplementedError("Message to innovation not yet implemented "
-            ##                               "if using input signals")
-            XnXn = u[1] # (...,N,D,D)
-            XpXn = u[2] # (...,N-1,D,D)
-            A = u_A[0][...,:D]     # (..., N-1, D, D)
-            AA = u_A[1][...,:D,:D] # (..., N-1, D, D, D)
-            m0 = (- 0.5*np.einsum('...ii->...i', XnXn[...,1:,:,:])
-                  + np.einsum('...ik,...ki->...i', A, XpXn)
-                  - 0.5*np.einsum('...ikl,...kl->...i', AA, XnXn[...,:-1,:,:]))
-            if len(u_inputs):
-                Xn = u[0]              # (..., N, D)
-                B = u_A[0][...,D:]     # (..., N-1, D, inputs)
-                BB = u_A[1][...,D:,D:] # (..., N-1, D, inputs, inputs)
-                AB = u_A[1][...,:D,D:] # (..., N-1, D, D, inputs)
-                Un = u_inputs[0][0]    # (..., N-1, inputs)
-                UnUn = u_inputs[0][1]  # (..., N-1, inputs, inputs)
-                BUn = np.einsum('...dk,...k->...d', B, Un)
-                m0 = m0 + (- 0.5*np.einsum('...ikl,...kl->...i', BB, UnUn)
-                           + BUn * Xn[...,1:,:]
-                           - np.einsum('...ijk,...j,...k', AB, Xn[...,:-1,:], Un))
 
-            m1 = 0.5
-        elif index == 4: # input signals
+            return [m0, m1, m2, m3]
+
+
+                # m1_BB = -0.5 * message_sum_multiply(parent.plates,
+                #                                     (D_inputs, D_inputs),
+                #                                     zz[..., None,    :,    :],
+                #                                     v[ ...,    :, None, None])
+                # Xp_z = Xn[...,:-1,:,None] * z[...,None,:]
+                # m1_AB = -0.5 * message_sum_multiply(parent.plates,
+                #                                     (D, D_inputs),
+                #                                     Xp_z[..., None,    :,    :],
+                #                                     v[   ...,    :, None, None])
+            #m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
+        # elif index == 3: # v
+        #     ## if len(u_inputs):
+        #     ##     raise NotImplementedError("Message to innovation not yet implemented "
+        #     ##                               "if using input signals")
+        #     XnXn = u[1] # (...,N,D,D)
+        #     XpXn = u[2] # (...,N-1,D,D)
+        #     A = u_A[0][...,:D]     # (..., N-1, D, D)
+        #     AA = u_A[1][...,:D,:D] # (..., N-1, D, D, D)
+        #     m0 = (- 0.5*np.einsum('...ii->...i', XnXn[...,1:,:,:])
+        #           + np.einsum('...ik,...ki->...i', A, XpXn)
+        #           - 0.5*np.einsum('...ikl,...kl->...i', AA, XnXn[...,:-1,:,:]))
+        #     if len(u_inputs):
+        #         Xn = u[0]              # (..., N, D)
+        #         B = u_A[0][...,D:]     # (..., N-1, D, inputs)
+        #         BB = u_A[1][...,D:,D:] # (..., N-1, D, inputs, inputs)
+        #         AB = u_A[1][...,:D,D:] # (..., N-1, D, D, inputs)
+        #         Un = u_inputs[0][0]    # (..., N-1, inputs)
+        #         UnUn = u_inputs[0][1]  # (..., N-1, inputs, inputs)
+        #         BUn = np.einsum('...dk,...k->...d', B, Un)
+        #         m0 = m0 + (- 0.5*np.einsum('...ikl,...kl->...i', BB, UnUn)
+        #                    + BUn * Xn[...,1:,:]
+        #                    - np.einsum('...ijk,...j,...k', AB, Xn[...,:-1,:], Un))
+
+        #     m1 = 0.5
+        elif index == 2: # input signals
             raise NotImplementedError()
 
-        return [m0, m1]
+        raise IndexError("Parent index out of bounds")
+
 
     def compute_weights_to_parent(self, index, weights):
 
-        if index == 0:   # mu
+        if index == 0:   # mu_Lambda
             return weights
-        elif index == 1: # Lambda
-            return weights
-        elif index == 2: # A
+        elif index == 1: # A_nu
             return weights[...,np.newaxis,np.newaxis]
-        elif index == 3: # v
-            return weights[...,np.newaxis,np.newaxis]
-        elif index == 4: # input signals
+        elif index == 2: # input signals
             return weights[...,np.newaxis]
         else:
             raise ValueError("Index out of bounds")
 
 
-    def compute_phi_from_parents(self, u_mu, u_Lambda, u_A, u_v, *u_inputs, mask=True):
+    def compute_phi_from_parents(self, u_mu_Lambda, u_A_nu, *u_inputs, mask=True):
         """
         Compute the natural parameters using parents' moments.
 
@@ -528,20 +528,28 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         """
 
         # Dimensionality of the Gaussian states
-        D = np.shape(u_mu[0])[-1]
+        D = np.shape(u_mu_Lambda[0])[-1]
 
         # Number of time instances in the process
         N = self.N
-        
+
         # Helpful variables (show shapes in comments)
-        mu = u_mu[0]           # (..., D)
-        Lambda = u_Lambda[0]   # (..., D, D)
-        A = u_A[0][...,:D]     # (..., N-1, D, D)
-        AA = u_A[1][...,:D,:D] # (..., N-1, D, D, D)
-        B = u_A[0][...,D:]     # (..., N-1, D, inputs)
-        BB = u_A[1][...,D:,D:] # (..., N-1, D, inputs, inputs)
-        AB = u_A[1][...,:D,D:] # (..., N-1, D, D, inputs)
-        v = u_v[0]             # (..., N-1, D)
+        Lambda_mu = u_mu_Lambda[0]   # (..., D)
+        Lambda = u_mu_Lambda[2]      # (..., D, D)
+        nu_A = u_A_nu[0][...,:D]     # (..., N-1, D, D)
+        nu_AA = u_A_nu[1][...,:D,:D] # (..., N-1, D, D, D)
+        nu_B = u_A_nu[0][...,D:]     # (..., N-1, D, inputs)
+        nu_BB = u_A_nu[1][...,D:,D:] # (..., N-1, D, inputs, inputs)
+        nu_AB = u_A_nu[1][...,:D,D:] # (..., N-1, D, D, inputs)
+        nu = u_A_nu[2]               # (..., N-1, D)
+        # mu = u_mu[0]           # (..., D)
+        # Lambda = u_Lambda[0]   # (..., D, D)
+        # A = u_A[0][...,:D]     # (..., N-1, D, D)
+        # AA = u_A[1][...,:D,:D] # (..., N-1, D, D, D)
+        # B = u_A[0][...,D:]     # (..., N-1, D, inputs)
+        # BB = u_A[1][...,D:,D:] # (..., N-1, D, inputs, inputs)
+        # AB = u_A[1][...,:D,D:] # (..., N-1, D, D, inputs)
+        # v = u_v[0]             # (..., N-1, D)
         if len(u_inputs):
             inputs = u_inputs[0][0]
         else:
@@ -549,63 +557,66 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
         # Allocate memory (take into account effective plates)
         if inputs is not None:
-            plates_phi0 = misc.broadcasted_shape(np.shape(mu)[:-1],
-                                                 np.shape(Lambda)[:-2],
-                                                 np.shape(B)[:-3],
-                                                 np.shape(v)[:-2],
-                                                 np.shape(AB)[:-4])
+            plates_phi0 = misc.broadcasted_shape(np.shape(Lambda_mu)[:-1],
+                                                 np.shape(nu_B)[:-3],
+                                                 np.shape(nu_AB)[:-4])
         else:
-            plates_phi0 = misc.broadcasted_shape(np.shape(mu)[:-1],
-                                                 np.shape(Lambda)[:-2])
+            plates_phi0 = misc.broadcasted_shape(np.shape(Lambda_mu)[:-1])
+
         plates_phi1 = misc.broadcasted_shape(np.shape(Lambda)[:-2],
-                                             np.shape(v)[:-2],
-                                             np.shape(AA)[:-4])
-        plates_phi2 = misc.broadcasted_shape(np.shape(v)[:-2],
-                                             np.shape(A)[:-3])
-        
+                                             np.shape(nu_AA)[:-4])
+        plates_phi2 = misc.broadcasted_shape(np.shape(nu_A)[:-2])
+
         phi0 = np.zeros(plates_phi0+(N,D))
         phi1 = np.zeros(plates_phi1+(N,D,D))
         phi2 = np.zeros(plates_phi2+(N-1,D,D))
 
         # Parameters for x0
-        phi0[...,0,:] = np.einsum('...ik,...k->...i', Lambda, mu)
-        phi1[...,0,:,:] = Lambda
+        phi0[...,0,:] = Lambda_mu #np.einsum('...ik,...k->...i', Lambda, mu)
+        phi1[...,0,:,:] = -0.5 * Lambda
 
         # Effect of the input signals
         if inputs is not None:
-            phi0[...,1:,:] += np.einsum('...i,...ij,...j->...i', v, B, inputs)
-            AB_v = np.einsum('...dij,...d->...ij', AB, v)
-            phi0[...,:-1,:] -= np.einsum('...ij,...j->...i', AB_v, inputs)
+            phi0[...,1:,:] += np.einsum('...ij,...j->...i', nu_B, inputs)
+            phi0[...,:-1,:] -= np.einsum(
+                '...ij,...j->...i',
+                np.sum(nu_AB, axis=-3),
+                inputs
+            )
 
         # Diagonal blocks: -0.5 * (V_i + A_{i+1}' * V_{i+1} * A_{i+1})
-        phi1[..., 1:, :, :] = v[...,np.newaxis]*np.identity(D)
-        phi1[..., :-1, :, :] += np.einsum('...kij,...k->...ij', AA, v)
-        phi1 *= -0.5
+        phi1[..., 1:, :, :] = -0.5 * misc.diag(nu, ndim=1)
+        phi1[..., :-1, :, :] += -0.5 * np.sum(nu_AA, axis=-3) #np.einsum('...kij,...k->...ij', AA, v)
+        #phi1 *= -0.5
 
         # Super-diagonal blocks: 0.5 * A.T * V
         # However, don't multiply by 0.5 because there are both super- and
         # sub-diagonal blocks (sum them together)
-        phi2[..., :, :, :] = np.einsum('...ji,...j->...ij', A, v)
+        phi2[..., :, :, :] = linalg.transpose(nu_A, ndim=1) # np.einsum('...ji,...j->...ij', A, v)
 
         return (phi0, phi1, phi2)
 
-    def compute_cgf_from_parents(self, u_mu, u_Lambda, u_A, u_v, *u_inputs):
+    def compute_cgf_from_parents(self, u_mu_Lambda, u_A_nu, *u_inputs):
         """
         Compute CGF using the moments of the parents.
         """
-        g = _compute_cgf_for_gaussian_markov_chain(u_mu[1],
-                                                   u_Lambda[0],
-                                                   u_Lambda[1],
-                                                   u_v[1],
+        g = _compute_cgf_for_gaussian_markov_chain(u_mu_Lambda[1],
+                                                   u_mu_Lambda[3],
+                                                   u_A_nu[3],
                                                    self.N)
 
         if len(u_inputs):
-            D = np.shape(u_mu[0])[-1]
+            D = np.shape(u_mu_Lambda[0])[-1]
             uu = u_inputs[0][1]
-            BB = u_A[1][...,D:,D:]
-            v = u_v[0]
-            BB_v = np.einsum('...d,...dij->...ij', v, BB)
-            g_inputs = -0.5 * np.einsum('...ij,...ij->...', uu, BB_v)
+            nu_BB = u_A_nu[1][...,D:,D:]
+            nu = u_A_nu[2]
+            #BB_v = np.einsum('...d,...dij->...ij', v, BB)
+            g_inputs = -0.5 * np.einsum(
+                '...ij,...ij->...',
+                uu,
+                np.sum(nu_BB, axis=-3)
+                #BB_v
+            )
             # Sum over time axis
             if np.ndim(g_inputs) == 0 or np.shape(g_inputs)[-1] == 1:
                 g_inputs *= self.N
@@ -623,10 +634,8 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         If this node has plates (...), the latent dimensionality is D
         and the number of time instances is N, the plates with respect
         to the parents are:
-          mu:     (...)
-          Lambda: (...)
-          A:      (...,N-1,D)
-          v:      (...,N-1,D)
+          (mu, Lambda): (...)
+          (A, nu):      (...,N-1,D)
 
         Parameters
         ----------
@@ -634,15 +643,11 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             The index of the parent node to use.
         """
 
-        if index == 0:   # mu
+        if index == 0:   # (mu, Lambda)
             return plates
-        elif index == 1: # Lambda
-            return plates
-        elif index == 2: # A
+        elif index == 1: # (A, nu)
             return plates + (self.N-1, self.D)
-        elif index == 3: # v
-            return plates + (self.N-1, self.D)
-        elif index == 4: # input signals
+        elif index == 2: # input signals
             return plates + (self.N-1,)
         else:
             raise ValueError("Invalid parent index.")
@@ -652,11 +657,8 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         Compute the plates using information of a parent node.
 
         If the plates of the parents are:
-          mu:     (...)
-          Lambda: (...)
-          A:      (...,N-1,D)
-          v:      (...,N-1,D)
-          N:      ()
+          (mu, Lambda): (...)
+          (A, nu):      (...,N-1,D)
         the resulting plates of this node are (...)
 
         Parameters
@@ -664,15 +666,11 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         index : int
             Index of the parent to use.
         """
-        if index == 0:   # mu
+        if index == 0:   # (mu, Lambda)
             return plates
-        elif index == 1: # Lambda
-            return plates
-        elif index == 2: # A
+        elif index == 1: # (A, nu)
             return plates[:-2]
-        elif index == 3: # v
-            return plates[:-2]
-        elif index == 4: # input signals
+        elif index == 2: # input signals
             return plates[:-1]
         else:
             raise ValueError("Invalid parent index.")
@@ -765,7 +763,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
 
     @classmethod
-    def _constructor(cls, mu, Lambda, A, v, n=None, inputs=None, **kwargs):
+    def _constructor(cls, mu, Lambda, A, nu, n=None, inputs=None, **kwargs):
         """
         Constructs distribution and moments objects.
         
@@ -785,26 +783,25 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         matrix elements, thus the last plate should equal D.
         """
 
+        mu_Lambda = WrapToGaussianWishart(mu, Lambda)
+        A_nu = WrapToGaussianGammaISO(A, nu)
+
         # Check whether to use input signals or not
         if inputs is None:
-            _parent_moments = (GaussianMoments(1),
-                               WishartMoments(),
-                               GaussianMoments(1),
-                               GammaMoments())
+            _parent_moments = (GaussianWishartMoments(),
+                               GaussianGammaISOMoments(1))
         else:
-            _parent_moments = (GaussianMoments(1),
-                               WishartMoments(),
-                               GaussianMoments(1),
-                               GammaMoments(),
+            _parent_moments = (GaussianWishartMoments(),
+                               GaussianGammaISOMoments(1),
                                GaussianMoments(1))
 
         # Ensure that parent nodes are of proper type
-        mu = cls._ensure_moments(mu, _parent_moments[0])
-        Lambda = cls._ensure_moments(Lambda, _parent_moments[1])
-        A = cls._ensure_moments(A, _parent_moments[2])
-        v = cls._ensure_moments(v, _parent_moments[3])
+        # mu = cls._ensure_moments(mu, _parent_moments[0])
+        # Lambda = cls._ensure_moments(Lambda, _parent_moments[1])
+        # A = cls._ensure_moments(A, _parent_moments[2])
+        # v = cls._ensure_moments(v, _parent_moments[3])
         if inputs is not None:
-            inputs = cls._ensure_moments(inputs, _parent_moments[4])
+            inputs = cls._ensure_moments(inputs, _parent_moments[2])
 
         # Time instances from input signals
         if inputs is not None and len(inputs.plates) >= 1:
@@ -812,21 +809,14 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         else:
             n_inputs = 1
         # Time instances from state dynamics matrix
-        if len(A.plates) >= 2:
-            n_A = A.plates[-2]
+        if len(A_nu.plates) >= 2:
+            n_A_nu = A_nu.plates[-2]
         else:
-            n_A = 1
-        # Time instances from innovation noise
-        if len(v.plates) >= 2:
-            n_v = v.plates[-2]
-        else:
-            n_v = 1
+            n_A_nu = 1
         # Check consistency of the number of time instances
-        if ( (n_v != n_A and n_v != 1 and n_A != 1) or
-             (n_inputs != n_A and n_inputs != 1 and n_A != 1) or
-             (n_inputs != n_v and n_inputs != 1 and n_v != 1) ):
+        if n_inputs != n_A_nu and n_inputs != 1 and n_A_nu != 1:
             raise Exception("Plates of parents are giving different number of time instances")
-        n_parents = max(n_v, n_A, n_inputs)
+        n_parents = max(n_A_nu, n_inputs)
         if n is None:
             if n_parents == 1:
                 raise Exception("The number of time instances could not be "
@@ -839,7 +829,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
                             "%d != %d+1" % (n, n_parents))
 
         # Dimensionality of the states
-        D = mu.dims[0][0]
+        D = mu_Lambda.dims[0][0]
         # Number of states
         M = n
         # Dimensionality of the inputs
@@ -848,66 +838,45 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         else:
             D_inputs = inputs.dims[0][0]
 
-        # Check mu
-        if mu.dims != ( (D,), (D,D) ):
-            raise Exception("First parent has wrong dimensionality")
-        # Check Lambda
-        if Lambda.dims != ( (D,D), () ):
-            raise Exception("Second parent has wrong dimensionality")
-        # Check A
-        if A.dims != ( (D+D_inputs,), (D+D_inputs,D+D_inputs) ):
-            raise Exception("Third parent has wrong dimensionality")
-        if len(A.plates) == 0 or A.plates[-1] != D:
-            raise Exception("Third parent should have a last plate "
+        # Check (mu, Lambda)
+        if mu_Lambda.dims != ( (D,), (), (D, D), () ):
+            raise Exception("Initial state parameters have wrong dimensionality")
+        # Check (A, nu)
+        if A_nu.dims != ( (D+D_inputs,), (D+D_inputs,D+D_inputs), (), () ):
+            raise Exception("Dynamics matrix has wrong dimensionality")
+        if len(A_nu.plates) == 0 or A_nu.plates[-1] != D:
+            raise Exception("Dynamics matrix should have a last plate "
                             "equal to the dimensionality of the "
                             "system.")
-        if (len(A.plates) >= 2 
-            and A.plates[-2] != 1
-            and A.plates[-2] != M-1):
-            raise ValueError("The second last plate of the third "
-                             "parent should have length equal to one or "
+        if (len(A_nu.plates) >= 2
+            and A_nu.plates[-2] != 1
+            and A_nu.plates[-2] != M-1):
+            raise ValueError("The second last plate of the dynamics matrix "
+                             "should have length equal to one or "
                              "N-1, where N is the number of time "
-                             "instances.")
-        # Check v
-        if v.dims != ( (), () ):
-            raise Exception("Fourth parent has wrong dimensionality")
-        if len(v.plates) == 0 or v.plates[-1] != D:
-            raise Exception("Fourth parent should have a last plate "
-                            "equal to the dimensionality of the "
-                            "system.")
-        if (len(v.plates) >= 2 
-            and v.plates[-2] != 1
-            and v.plates[-2] != M-1):
-            raise ValueError("The second last plate of the fourth "
-                             "parent should have length equal to one or "
-                             "N-1 where N is the number of time "
                              "instances.")
         # Check input signals
         if inputs is not None:
             if inputs.dims != ( (D_inputs,), (D_inputs, D_inputs) ):
                 raise ValueError("Input signals have wrong dimensionality")
-        
+
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
         distribution = GaussianMarkovChainDistribution(M, D)
 
         if inputs is None:
-            parents = [mu, Lambda, A, v]
+            parents = [mu_Lambda, A_nu]
         else:
-            parents = [mu, Lambda, A, v, inputs]
+            parents = [mu_Lambda, A_nu, inputs]
 
         return ( parents,
                  kwargs,
                  dims,
                  cls._total_plates(kwargs.get('plates'),
-                                   distribution.plates_from_parent(0, mu.plates),
-                                   distribution.plates_from_parent(1, Lambda.plates),
-                                   distribution.plates_from_parent(2, A.plates),
-                                   distribution.plates_from_parent(3, v.plates)),
-                 distribution, 
-                 cls._moments, 
+                                   distribution.plates_from_parent(0, mu_Lambda.plates),
+                                   distribution.plates_from_parent(1, A_nu.plates)),
+                 distribution,
+                 cls._moments,
                  _parent_moments)
-
-    
 
 
 class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
