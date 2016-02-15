@@ -2379,8 +2379,8 @@ class WrapToGaussianGammaISO(Deterministic):
         """
         (tau_x, tau_xx, tau, logtau) = u_X
         (alpha, logalpha) = u_alpha
-        u0 = tau_x * misc.add_trailing_axes(tau, self.ndim)
-        u1 = tau_xx * misc.add_trailing_axes(tau, 2 * self.ndim)
+        u0 = tau_x * misc.add_trailing_axes(alpha, self.ndim)
+        u1 = tau_xx * misc.add_trailing_axes(alpha, 2 * self.ndim)
         u2 = tau * alpha
         u3 = logtau + logalpha
         return [u0, u1, u2, u3]
