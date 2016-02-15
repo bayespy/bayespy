@@ -1259,13 +1259,13 @@ class _GaussianTemplate(ExponentialFamily):
         self.g = self.g + dg
 
         # TODO: This is all just debugging stuff and can be removed
-        if False:
+        if debug:
             uh = [ui.copy() for ui in uh]
             gh = self.g.copy()
             self._update_moments_and_cgf()
-            if any(not np.allclose(uih, ui) for (uih, ui) in zip(uh, self.u)):
+            if any(not np.allclose(uih, ui, atol=1e-6) for (uih, ui) in zip(uh, self.u)):
                 raise RuntimeError("BUG")
-            if not np.allclose(self.g, gh):
+            if not np.allclose(self.g, gh, atol=1e-6):
                 raise RuntimeError("BUG")
 
         return
@@ -1362,6 +1362,9 @@ class Gaussian(_GaussianTemplate):
 
 
     def rotate(self, R, inv=None, logdet=None, Q=None):
+
+        # TODO/FIXME: Combine and refactor all these rotation transformations
+        # into _GaussianTemplate
 
         if inv is not None:
             invR = inv
@@ -1632,7 +1635,15 @@ class GaussianARD(_GaussianTemplate):
                 % (self.name, mu, Cov))
 
 
-    def rotate(self, R, inv=None, logdet=None, axis=-1, Q=None, subset=None):
+    def rotate(self, R, inv=None, logdet=None, axis=-1, Q=None, subset=None, debug=False):
+
+        if Q is not None:
+            raise NotImplementedError()
+        if subset is not None:
+            raise NotImplementedError()
+
+        # TODO/FIXME: Combine and refactor all these rotation transformations
+        # into _GaussianTemplate
 
         ndim = len(self._distribution.shape)
         
@@ -1661,6 +1672,16 @@ class GaussianARD(_GaussianTemplate):
         s = list(self.dims[0])
         s.pop(axis)
         self.g -= logdetR * np.prod(s)
+
+        # TODO: This is all just debugging stuff and can be removed
+        if debug:
+            uh = [ui.copy() for ui in self.u]
+            gh = self.g.copy()
+            self._update_moments_and_cgf()
+            if any(not np.allclose(uih, ui, atol=1e-6) for (uih, ui) in zip(uh, self.u)):
+                raise RuntimeError("BUG")
+            if not np.allclose(self.g, gh, atol=1e-6):
+                raise RuntimeError("BUG")
 
         return
 
