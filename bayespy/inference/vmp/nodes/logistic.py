@@ -211,7 +211,9 @@ class Logistic(ExponentialFamily):
     """
 
 
-    _parent_moments = [GaussianMoments(0)]
+    _parent_moments = (
+        GaussianMoments(()),
+    )
 
 
     def __init__(self, x, **kwargs):
@@ -239,10 +241,10 @@ class Logistic(ExponentialFamily):
                 ( (D,), ),
                 cls._total_plates(kwargs.get('plates'),
                                   distribution.plates_from_parent(0, p.plates)),
-                distribution, 
-                moments, 
+                distribution,
+                moments,
                 cls._parent_moments)
-    
+
 
     def __str__(self):
         """

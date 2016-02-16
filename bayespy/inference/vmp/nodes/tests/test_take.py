@@ -352,9 +352,6 @@ class TestTake(TestCase):
                 Xi = X[index_x]
                 zi = z[index_z]
                 Zi = GaussianARD(Xi, 1)
-                print("DEBUG Xi plates", X.plates, index_x, Xi.plates)
-                #print("DEBUG Xi", Xi.plates, np.shape(zi))
-                print("DEBUG zi shape", Z.get_shape(0), Zi.get_shape(0), index_z, zi.shape)
                 if use_mask:
                     maski = mask[index_z]
                 else:

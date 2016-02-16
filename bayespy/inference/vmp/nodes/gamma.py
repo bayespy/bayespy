@@ -12,12 +12,11 @@ Module for the gamma distribution node.
 import numpy as np
 import scipy.special as special
 
-from .node import Node
+from .node import Node, Moments, ensureparents
 from .deterministic import Deterministic
 from .stochastic import Stochastic
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
-from .node import Moments
 from .wishart import WishartMoments
 
 from bayespy.utils import misc
@@ -35,8 +34,11 @@ class GammaPriorMoments(Moments):
     """
     Class for the moments of the shape parameter in gamma distributions.
     """
-    
-    
+
+
+    dims = ( (), () )
+
+
     def compute_fixed_moments(self, a):
         """
         Compute the moments for a fixed value
@@ -47,21 +49,24 @@ class GammaPriorMoments(Moments):
         u0 = a
         u1 = special.gammaln(a)
         return [u0, u1]
-    
 
-    def compute_dims_from_values(self, a):
+
+    @classmethod
+    def from_values(cls, a):
         """
         Return the shape of the moments for a fixed value.
         """
-        return ( (), () )
-    
+        return cls()
+
 
 class GammaMoments(Moments):
     """
     Class for the moments of gamma variables.
     """
-    
-    
+
+    dims = ( (), () )
+
+
     def compute_fixed_moments(self, x):
         """
         Compute the moments for a fixed value
@@ -73,12 +78,13 @@ class GammaMoments(Moments):
         return [u0, u1]
 
 
-    def compute_dims_from_values(self, x):
+    @classmethod
+    def from_values(cls, x):
         """
         Return the shape of the moments for a fixed value.
         """
-        return ( (), () )
-    
+        return cls()
+
 
 class GammaDistribution(ExponentialFamilyDistribution):
     """
@@ -324,32 +330,31 @@ class _GammaToDiagonalWishart(Deterministic):
     The last plate is used as the diagonal dimension.
     """
 
-    _moments = WishartMoments()
+
     _parent_moments = [GammaMoments()]
-    
-    
+
+
+    @ensureparents
     def __init__(self, alpha, **kwargs):
 
         # Check for constant
         if misc.is_numeric(alpha):
             alpha = Constant(Gamma)(alpha)
 
-        # Remove the last plate...
-        #plates = alpha.plates[:-1]
-        # ... and use it as the dimensionality of the Wishart
-        # distribution
         if len(alpha.plates) == 0:
             raise Exception("Gamma variable needs to have plates in "
                             "order to be used as a diagonal Wishart.")
         D = alpha.plates[-1]
+
+        self._moments = WishartMoments()
         dims = ( (D,D), () )
 
         # Construct the node
         super().__init__(alpha,
-        #plates=plates,
-                         dims=dims,
+                         dims=self._moments.dims,
                          **kwargs)
-        
+
+
     def _plates_to_parent(self, index):
         D = self.dims[0][0]
         return self.plates + (D,)

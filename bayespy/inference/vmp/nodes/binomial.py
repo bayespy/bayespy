@@ -31,12 +31,12 @@ class BinomialMoments(PoissonMoments):
     Class for the moments of binomial variables
     """
 
-    
+
     def __init__(self, N):
         self.N = N
         super().__init__()
 
-    
+
     def compute_fixed_moments(self, x):
         """
         Compute the moments for a fixed value
@@ -47,13 +47,14 @@ class BinomialMoments(PoissonMoments):
             raise ValueError("Invalid count")
         return super().compute_fixed_moments()
 
-    
+
     def compute_dims_from_values(self, x):
         """
         Return the shape of the moments for a fixed value.
 
         The realizations are scalars, thus the shape of the moment is ().
         """
+        raise DeprecationWarning()
         return super().compute_dims_from_values()
 
 

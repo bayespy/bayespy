@@ -24,7 +24,13 @@ class DirichletPriorMoments(Moments):
     Class for the moments of Dirichlet conjugate-prior variables.
     """
 
-    
+
+    def __init__(self, categories):
+        self.categories = categories
+        self.dims = ( (categories,), () )
+        return
+
+
     def compute_fixed_moments(self, alpha):
         """
         Compute the moments for a fixed value
@@ -35,29 +41,35 @@ class DirichletPriorMoments(Moments):
             raise ValueError("The prior sample sizes must be a vector")
         if np.any(alpha < 0):
             raise ValueError("The prior sample sizes must be non-negative")
-        
+
         gammaln_sum = special.gammaln(np.sum(alpha, axis=-1))
         sum_gammaln = np.sum(special.gammaln(alpha), axis=-1)
         z = gammaln_sum - sum_gammaln
         return [alpha, z]
 
-    
-    def compute_dims_from_values(self, alpha):
+
+    @classmethod
+    def from_values(cls, alpha):
         """
         Return the shape of the moments for a fixed value.
         """
         if np.ndim(alpha) < 1:
             raise ValueError("The array must be at least 1-dimensional array.")
-        d = np.shape(alpha)[-1]
-        return [(d,), ()]
+        categories = np.shape(alpha)[-1]
+        return cls(categories)
 
-    
+
 class DirichletMoments(Moments):
     """
     Class for the moments of Dirichlet variables.
     """
 
-    
+
+    def __init__(self, categories):
+        self.categories = categories
+        self.dims = ( (categories,), )
+
+
     def compute_fixed_moments(self, p):
         """
         Compute the moments for a fixed value
@@ -77,15 +89,16 @@ class DirichletMoments(Moments):
         u = [logp]
         return u
 
-    
-    def compute_dims_from_values(self, x):
+
+    @classmethod
+    def from_values(cls, x):
         """
         Return the shape of the moments for a fixed value.
         """
         if np.ndim(x) < 1:
             raise ValueError("Probabilities must be given as a vector")
-        D = np.shape(x)[-1]
-        return ( (D,), )
+        categories = np.shape(x)[-1]
+        return cls(categories)
 
 
 class DirichletDistribution(ExponentialFamilyDistribution):
@@ -232,42 +245,45 @@ class Dirichlet(ExponentialFamily):
 
     Parameters
     ----------
-    
+
     alpha : (...,K)-shaped array
-    
+
         Prior counts :math:`\alpha_k`
 
     See also
     --------
-    
+
     Beta, Categorical, Multinomial, CategoricalMarkovChain
     """
 
-    _moments = DirichletMoments()
-    _parent_moments = (DirichletPriorMoments(),)
     _distribution = DirichletDistribution()
-    
+
 
     @classmethod
-    @ensureparents
     def _constructor(cls, alpha, **kwargs):
         """
         Constructs distribution and moments objects.
         """
         # Number of categories
-        D = alpha.dims[0][0]
+        alpha = cls._ensure_moments_class(alpha, DirichletPriorMoments)
+        parent_moments = (alpha._moments,)
 
         parents = [alpha]
-        
-        return ( parents,
-                 kwargs,
-                 ( (D,), ),
-                 cls._total_plates(kwargs.get('plates'), alpha.plates),
-                 cls._distribution, 
-                 cls._moments, 
-                 cls._parent_moments)
 
-                 
+        categories = alpha.dims[0][0]
+        moments = DirichletMoments(categories)
+
+        return (
+            parents,
+            kwargs,
+            moments.dims,
+            cls._total_plates(kwargs.get('plates'), alpha.plates),
+            cls._distribution,
+            moments,
+            parent_moments
+        )
+
+
     def __str__(self):
         """
         Show distribution as a string

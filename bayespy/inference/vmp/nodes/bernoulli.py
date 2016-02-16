@@ -81,7 +81,7 @@ class Bernoulli(ExponentialFamily):
         """
         super().__init__(p, **kwargs)
 
-    
+
     @classmethod
     def _constructor(cls, p, **kwargs):
         """
@@ -94,8 +94,8 @@ class Bernoulli(ExponentialFamily):
                  ( (), ),
                  cls._total_plates(kwargs.get('plates'),
                                    cls._distribution.plates_from_parent(0, p.plates)),
-                 cls._distribution, 
-                 cls._moments, 
+                 cls._distribution,
+                 cls._moments,
                  cls._parent_moments)
 
 

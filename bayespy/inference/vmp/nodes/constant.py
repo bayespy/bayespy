@@ -25,7 +25,7 @@ class Constant(Node):
         # Compute moments
         self.u = self._moments.compute_fixed_moments(x)
         # Dimensions of the moments
-        dims = self._moments.compute_dims_from_values(x)
+        dims = self._moments.dims
         # Resolve plates
         D = len(dims[0])
         if D > 0:

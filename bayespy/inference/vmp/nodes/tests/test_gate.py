@@ -89,7 +89,7 @@ class TestGate(TestCase):
         # Fixed X
         Z = Categorical(np.ones(3)/3)
         X = [1, 2, 3]
-        Y = Gate(Z, X, moments=GaussianMoments(0))
+        Y = Gate(Z, X, moments=GaussianMoments(()))
         self.assertEqual(Y.plates, ())
         self.assertEqual(Y.dims, ( (), () ))
 
@@ -138,7 +138,7 @@ class TestGate(TestCase):
         # Fixed X
         Z = 2
         X = [1, 2, 3]
-        Y = Gate(Z, X, moments=GaussianMoments(0))
+        Y = Gate(Z, X, moments=GaussianMoments(()))
         u = Y._message_to_child()
         self.assertEqual(len(u), 2)
         self.assertAllClose(u[0], 3)
@@ -233,7 +233,7 @@ class TestGate(TestCase):
         # Fixed X
         Z = 2
         X = [1,2,3]
-        F = Gate(Z, X, moments=GaussianMoments(0))
+        F = Gate(Z, X, moments=GaussianMoments(()))
         Y = GaussianARD(F, 1)
         Y.observe(10)
         m = F._message_to_parent(0)

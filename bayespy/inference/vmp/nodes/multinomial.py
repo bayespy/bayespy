@@ -27,8 +27,13 @@ class MultinomialMoments(Moments):
     """
     Class for the moments of multinomial variables.
     """
-    
-    
+
+
+    def __init__(self, categories):
+        self.categories = categories
+        self.dims = ( (categories,), )
+
+
     def compute_fixed_moments(self, x):
         """
         Compute the moments for a fixed value
@@ -46,20 +51,18 @@ class MultinomialMoments(Moments):
         # Moments is just the counts vector
         u0 = x.copy()
         return [u0]
-    
 
-    def compute_dims_from_values(self, x):
-        """
-        Return the shape of the moments for a fixed value.
-        """
+
+    @classmethod
+    def from_values(cls, x):
         D = np.shape(x)[-1]
-        return ( (D,), )
+        return cls( (D,) )
 
 
 class MultinomialDistribution(ExponentialFamilyDistribution):
     """
     Class for the VMP formulas of multinomial variables.
-    """    
+    """
 
 
     def __init__(self, trials):
@@ -244,9 +247,6 @@ class Multinomial(ExponentialFamily):
 
     Dirichlet, Binomial, Categorical
     """
-    
-    _moments = MultinomialMoments()
-    _parent_moments = (DirichletMoments(),)
 
 
     def __init__(self, n, p, **kwargs):
@@ -255,22 +255,25 @@ class Multinomial(ExponentialFamily):
         """
         super().__init__(n, p, **kwargs)
 
-    
+
     @classmethod
     def _constructor(cls, n, p, **kwargs):
         """
         Constructs distribution and moments objects.
 
         This method is called if useconstructor decorator is used for __init__.
-        
+
         Becase the distribution and moments object depend on the number of
         categories, that is, they depend on the parent node, this method can be
         used to construct those objects.
         """
 
         # Get the number of categories
-        p = cls._ensure_moments(p, cls._parent_moments[0])
+        p = cls._ensure_moments_class(p, DirichletMoments)
         D = p.dims[0][0]
+
+        moments = MultinomialMoments(D)
+        parent_moments = (p._moments,)
 
         parents = [p]
 
@@ -278,15 +281,15 @@ class Multinomial(ExponentialFamily):
 
         return (parents,
                 kwargs,
-                ( (D,), ),
+                moments.dims,
                 cls._total_plates(kwargs.get('plates'),
                                   distribution.plates_from_parent(0, p.plates),
                                   np.shape(n)),
-                distribution, 
-                cls._moments, 
-                cls._parent_moments)
+                distribution,
+                moments,
+                parent_moments)
 
-    
+
     def __str__(self):
         """
         Print the distribution using standard parameterization.

@@ -7,6 +7,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import functools
 
 from bayespy.utils import misc
 
@@ -161,15 +162,16 @@ class Moments():
         raise NotImplementedError("compute_fixed_moments not implemented for "
                                   "%s" 
                                   % (self.__class__.__name__))
-    
-    def compute_dims_from_values(self, x):
-        # This method can't be static because the computation of the moments may
-        # depend on, for instance, ndim in Gaussian arrays.
-        raise NotImplementedError("compute_dims_from_values not implemented "
+
+
+    @classmethod
+    def from_values(cls, x):
+        raise NotImplementedError("from_values not implemented "
                                   "for %s"
-                                  % (self.__class__.__name__))
+                                  % (cls.__name__))
 
 def ensureparents(func):
+    @functools.wraps(func)
     def new_func(self, *parents, **kwargs):
         # Convert parents to proper nodes
         parents = list(parents)
@@ -303,18 +305,45 @@ class Node():
                                      % (p,
                                         plates))
             return plates
-        
+
+
+    def _convert(self, moments_class):
+        converter = self._moments.get_converter(moments_class)
+        return converter(self)
+
+
+    @staticmethod
+    def _ensure_moments_class(node, moments_class, **kwargs):
+        try:
+            return node._convert(moments_class)
+        except AttributeError:
+            from .constant import Constant
+            return Constant(
+                moments_class.from_values(node, **kwargs),
+                node
+            )
+
 
     @staticmethod
     def _ensure_moments(node, moments):
 
-        if isinstance(node, Node):
-            # Convert to correct type
+        try:
             return node._convert(moments.__class__)
+        except AttributeError:
+            from .constant import Constant
+            return Constant(moments, node)
+        else:
+            instance_converter = moments.get_instance_converter(node._moments)
+            return instance_converter(node)
 
-        # Convert to constant node
-        from .constant import Constant
-        return Constant(moments, node)
+        # if isinstance(node, Node):
+        #     # Convert to correct type
+        #     x = node._convert(moments.__class__)
+        #     return moments.get_instance_converter(x._moments)(x)
+
+        # # Convert to constant node
+        # from .constant import Constant
+        # return Constant(moments, node)
 
 
     def _compute_plates_to_parent(self, index, plates):
@@ -704,12 +733,6 @@ class Node():
             return ax
         else:
             raise Exception("No plotter defined, can not plot")
-
-    def _convert(self, moments_class):
-        converter = self._moments.get_converter(moments_class)
-        return converter(self)
-    ## def convert(self, node_class):
-    ##     return self._convert(node_class._moments_class)
 
 
     @staticmethod

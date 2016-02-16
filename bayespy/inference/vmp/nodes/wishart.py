@@ -16,23 +16,38 @@ from .expfamily import useconstructor
 from .constant import Constant
 
 from .node import Moments, Node
+
+
 class WishartPriorMoments(Moments):
+
 
     def __init__(self, k):
         self.k = k
+        self.dims = ( (), () )
         return
-    
+
+
     def compute_fixed_moments(self, n):
         """ Compute moments for fixed x. """
         u0 = np.asanyarray(n)
         u1 = special.multigammaln(0.5*u0, self.k)
         return [u0, u1]
 
+
     def compute_dims_from_values(self, n):
         """ Compute the dimensions of phi or u. """
+        raise DeprecationWarning()
         return ( (), () )
 
+
 class WishartMoments(Moments):
+
+
+    def __init__(self, D):
+        self.D = D
+        self.dims = ( (D, D), () )
+        return
+
 
     def compute_fixed_moments(self, Lambda):
         """ Compute moments for fixed x. """
@@ -41,7 +56,9 @@ class WishartMoments(Moments):
              ldet]
         return u
 
-    def compute_dims_from_values(self, x):
+
+    @classmethod
+    def from_values(cls, x):
         """ Compute the dimensions of phi and u. """
         if np.ndim(x) < 2:
             raise ValueError("Values for Wishart distribution must be at least "
@@ -50,8 +67,8 @@ class WishartMoments(Moments):
             raise ValueError("Values for Wishart distribution must be square "
                              "matrices, thus the two last axes must have equal "
                              "length.")
-        d = np.shape(x)[-1]
-        return ( (d,d), () )
+        D = np.shape(x)[-1]
+        return cls(D)
 
 
 class WishartDistribution(ExponentialFamilyDistribution):
@@ -189,7 +206,6 @@ class Wishart(ExponentialFamily):
     """
 
     _distribution = WishartDistribution()
-    _moments = WishartMoments()
 
 
     def __init__(self, n, V, **kwargs):
@@ -198,7 +214,7 @@ class Wishart(ExponentialFamily):
         """
         super().__init__(n, V, **kwargs)
 
-        
+
     @classmethod
     def _constructor(cls, n, V, **kwargs):
         """
@@ -206,29 +222,30 @@ class Wishart(ExponentialFamily):
         """
 
         # Make V a proper parent node and get the dimensionality of the matrix
-        V = cls._ensure_moments(V, WishartMoments())
-        k = V.dims[0][-1]
+        V = cls._ensure_moments_class(V, WishartMoments)
+        D = V.dims[0][-1]
+
+        n = cls._ensure_moments(n, WishartPriorMoments(D))
+
+        moments = WishartMoments(D)
 
         # Parent node message types
-        parent_moments = (WishartPriorMoments(k), 
-                          WishartMoments())
-
-        # Dimensionality of the natural parameters
-        dims = ( (k,k), () )
-
-        n = cls._ensure_moments(n, parent_moments[0])
+        parent_moments = (n._moments, V._moments)
+        # parent_moments = (WishartPriorMoments(D),
+        #                   WishartMoments(D))
 
         parents = [n, V]
-        
+
         return (parents,
                 kwargs,
-                dims, 
+                moments.dims,
                 cls._total_plates(kwargs.get('plates'),
                                   cls._distribution.plates_from_parent(0, n.plates),
                                   cls._distribution.plates_from_parent(1, V.plates)),
-                cls._distribution, 
-                cls._moments, 
+                cls._distribution,
+                moments,
                 parent_moments)
+
 
     def __str__(self):
         n = 2*self.phi[1]
