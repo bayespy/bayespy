@@ -71,7 +71,6 @@ class Bernoulli(ExponentialFamily):
     """
 
     _moments = BernoulliMoments()
-    _parent_moments = (BetaMoments(),)
     _distribution = BernoulliDistribution()
 
 
@@ -87,7 +86,8 @@ class Bernoulli(ExponentialFamily):
         """
         Constructs distribution and moments objects.
         """
-        p = cls._ensure_moments(p, cls._parent_moments[0])
+        p = cls._ensure_moments(p, BetaMoments)
+        parent_moments = (p._moments,)
         parents = [p]
         return ( parents,
                  kwargs,
@@ -96,7 +96,7 @@ class Bernoulli(ExponentialFamily):
                                    cls._distribution.plates_from_parent(0, p.plates)),
                  cls._distribution,
                  cls._moments,
-                 cls._parent_moments)
+                 parent_moments)
 
 
     def __str__(self):
@@ -124,7 +124,8 @@ class CategoricalToBernoulli(Deterministic):
         Create a categorical MC moments to categorical moments conversion node.
         """
         # Convert parent to proper type. Z must be a node.
-        Z = Z._convert(CategoricalMoments)
+        if not isinstance(Z._moments, CategoricalMoments):
+            raise ValueError("Input node must be categorical")
         K = Z.dims[0][-1]
         if K != 2:
             raise Moments.NoConverterError("Only 2-class categorical can be converted to "

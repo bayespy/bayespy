@@ -439,14 +439,14 @@ class Mixture(ExponentialFamily):
         K = mixture_plates.pop(cluster_plate)
         
         # Convert a node to get the number of clusters
-        z = cls._ensure_moments(z, CategoricalMoments(K))
+        z = cls._ensure_moments(z, CategoricalMoments, categories=K)
         if z.dims[0][0] != K:
             raise ValueError("Inconsistent number of clusters")
 
         plates = cls._total_plates(kwargs.get('plates'), mixture_plates, z.plates)
 
         ndims = [len(dim) for dim in dims]
-        parents = [cls._ensure_moments(p_i, m_i) 
+        parents = [cls._ensure_moments(p_i, m_i.__class__, **m_i.get_instance_conversion_kwargs())
                    for (p_i, m_i) in zip(parents, parent_moments)]
         ndims_parents = [[len(dims_i) for dims_i in parent.dims]
                          for parent in parents]

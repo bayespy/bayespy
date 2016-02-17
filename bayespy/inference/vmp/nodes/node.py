@@ -47,6 +47,7 @@ def message_sum_multiply(plates_parent, dims_parent, *arrays):
     m = misc.squeeze_to_dim(m, len(shape_parent))
     return m
 
+
 class Moments():
     """
     Base class for defining the expectation of the sufficient statistics.
@@ -77,12 +78,35 @@ class Moments():
         pass
 
 
+    def get_instance_converter(self, **kwargs):
+        """Default converter within a moments class is an identity.
+
+        Override this method when moment class instances are not identical if
+        they have different attributes.
+
+        """
+        if len(kwargs) > 0:
+            raise NotImplementedError(
+                "get_instance_converter not implemented for class {0}"
+                .format(self.__class__.__name__)
+            )
+        return lambda x: x
+
+
+    def get_instance_conversion_kwargs(self):
+        """
+        Override this method when moment class instances are not identical if
+        they have different attributes.
+        """
+        return {}
+
+
     @classmethod
     def add_converter(cls, moments_to, converter):
         cls._converters = cls._converters.copy()
         cls._converters[moments_to] = converter
         return
-    
+
 
     def get_converter(self, moments_to):
         """
@@ -154,7 +178,7 @@ class Moments():
         raise self.NoConverterError("No conversion defined from %s to %s"
                                     % (self.__class__.__name__,
                                        moments_to.__name__))
-    
+
 
     def compute_fixed_moments(self, x):
         # This method can't be static because the computation of the moments may
@@ -172,18 +196,31 @@ class Moments():
 
 def ensureparents(func):
     @functools.wraps(func)
-    def new_func(self, *parents, **kwargs):
+    def wrapper(self, *parents, **kwargs):
         # Convert parents to proper nodes
-        parents = list(parents)
-        for (ind, parent) in enumerate(parents):
-            parents[ind] = self._ensure_moments(parent, 
-                                                self._parent_moments[ind])
+        if self._parent_moments is None:
+            raise ValueError(
+                "Parent moments must be defined for {0}"
+                .format(self.__class__.__name__)
+            )
+        parents = [
+            Node._ensure_moments(
+                parent,
+                moments.__class__,
+                **moments.get_instance_conversion_kwargs()
+            )
+            for (parent, moments) in zip(parents, self._parent_moments)
+        ]
+        # parents = list(parents)
+        # for (ind, parent) in enumerate(parents):
+        #     parents[ind] = self._ensure_moments(parent, 
+        #                                         self._parent_moments[ind])
         # Run the function
         return func(self, *parents, **kwargs)
-    
-    return new_func
 
-    
+    return wrapper
+
+
 class Node():
     """
     Base class for all nodes.
@@ -307,43 +344,20 @@ class Node():
             return plates
 
 
-    def _convert(self, moments_class):
-        converter = self._moments.get_converter(moments_class)
-        return converter(self)
-
-
     @staticmethod
-    def _ensure_moments_class(node, moments_class, **kwargs):
+    def _ensure_moments(node, moments_class, **kwargs):
         try:
-            return node._convert(moments_class)
+            converter = node._moments.get_converter(moments_class)
         except AttributeError:
             from .constant import Constant
             return Constant(
                 moments_class.from_values(node, **kwargs),
                 node
             )
-
-
-    @staticmethod
-    def _ensure_moments(node, moments):
-
-        try:
-            return node._convert(moments.__class__)
-        except AttributeError:
-            from .constant import Constant
-            return Constant(moments, node)
         else:
-            instance_converter = moments.get_instance_converter(node._moments)
-            return instance_converter(node)
-
-        # if isinstance(node, Node):
-        #     # Convert to correct type
-        #     x = node._convert(moments.__class__)
-        #     return moments.get_instance_converter(x._moments)(x)
-
-        # # Convert to constant node
-        # from .constant import Constant
-        # return Constant(moments, node)
+            node = converter(node)
+            converter = node._moments.get_instance_converter(**kwargs)
+            return converter(node)
 
 
     def _compute_plates_to_parent(self, index, plates):
@@ -829,11 +843,11 @@ class Slice(Deterministic):
     http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#basic-slicing
     """
 
-    _parent_moments = (Moments(),)
-    
+
     def __init__(self, X, slices, **kwargs):
 
         self._moments = X._moments
+        self._parent_moments = (X._moments,)
 
         # Force a list
         if not isinstance(slices, tuple):

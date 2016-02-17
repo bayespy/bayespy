@@ -269,7 +269,7 @@ class Multinomial(ExponentialFamily):
         """
 
         # Get the number of categories
-        p = cls._ensure_moments_class(p, DirichletMoments)
+        p = cls._ensure_moments(p, DirichletMoments)
         D = p.dims[0][0]
 
         moments = MultinomialMoments(D)

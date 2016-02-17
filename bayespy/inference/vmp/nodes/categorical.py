@@ -58,6 +58,19 @@ class CategoricalMoments(MultinomialMoments):
         return ( (self.D,), )
 
 
+    def get_instance_conversion_kwargs(self):
+        return dict(categories=self.categories)
+
+
+    def get_instance_converter(self, categories):
+        if categories is not None and categories != self.categories:
+            raise ValueError(
+                "No automatic conversion from CategoricalMoments to "
+                "CategoricalMoments with different number of categories"
+            )
+        return lambda x: x
+
+
 class CategoricalDistribution(MultinomialDistribution):
     """
     Class for the VMP formulas of categorical variables.
@@ -155,7 +168,7 @@ class Categorical(ExponentialFamily):
         """
 
         # Get the number of categories
-        p = cls._ensure_moments_class(p, DirichletMoments)
+        p = cls._ensure_moments(p, DirichletMoments)
         D = p.dims[0][0]
 
         parent_moments = (p._moments,)

@@ -178,7 +178,7 @@ class SumMultiply(Deterministic):
         self.gaussian_gamma = False
         try:
             nodes = [
-                self._ensure_moments_class(
+                self._ensure_moments(
                     node,
                     GaussianMoments,
                     ndim=len(keyset)
@@ -188,7 +188,7 @@ class SumMultiply(Deterministic):
         except GaussianMoments.NoConverterError:
             self.gaussian_gamma = True
             nodes = [
-                self._ensure_moments_class(
+                self._ensure_moments(
                     node,
                     GaussianGammaISOMoments,
                     ndim=len(keyset)

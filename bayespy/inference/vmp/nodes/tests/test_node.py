@@ -456,6 +456,7 @@ class TestSlice(misc.TestCase):
 
         class MyNode(Node):
             _moments = Moments()
+            _parent_moments = ()
             def _get_id_list(self):
                 return []
 
@@ -792,6 +793,7 @@ class TestSlice(misc.TestCase):
 
         class ParentNode(Node):
             _moments = Moments()
+            _parent_moments = ()
             def _get_id_list(self):
                 return []
             

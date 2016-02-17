@@ -185,9 +185,6 @@ class Binomial(ExponentialFamily):
     Bernoulli, Multinomial, Beta
     """
 
-    
-    _parent_moments = (BetaMoments(),)
-
 
     def __init__(self, n, p, **kwargs):
         """
@@ -201,9 +198,10 @@ class Binomial(ExponentialFamily):
         """
         Constructs distribution and moments objects.
         """
-        p = cls._ensure_moments(p, cls._parent_moments[0])
+        p = cls._ensure_moments(p, BetaMoments)
         parents = [p]
         moments = BinomialMoments(n)
+        parent_moments = (p._moments,)
         distribution = BinomialDistribution(n)
         return ( parents,
                  kwargs,
@@ -211,9 +209,9 @@ class Binomial(ExponentialFamily):
                  cls._total_plates(kwargs.get('plates'),
                                    distribution.plates_from_parent(0, p.plates),
                                    np.shape(n)),
-                 distribution, 
-                 moments, 
-                 cls._parent_moments)
+                 distribution,
+                 moments,
+                 parent_moments)
 
     
     def __str__(self):

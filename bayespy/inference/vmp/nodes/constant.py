@@ -33,6 +33,7 @@ class Constant(Node):
         else:
             plates = np.shape(self.u[0])
         kwargs.setdefault('plates', plates)
+        self._parent_moments = ()
         # Parent constructor
         super().__init__(dims=dims, **kwargs)
 

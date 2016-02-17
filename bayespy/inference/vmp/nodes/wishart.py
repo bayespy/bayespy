@@ -34,10 +34,10 @@ class WishartPriorMoments(Moments):
         return [u0, u1]
 
 
-    def compute_dims_from_values(self, n):
+    @classmethod
+    def from_values(cls, x, d):
         """ Compute the dimensions of phi or u. """
-        raise DeprecationWarning()
-        return ( (), () )
+        return cls(d)
 
 
 class WishartMoments(Moments):
@@ -222,10 +222,10 @@ class Wishart(ExponentialFamily):
         """
 
         # Make V a proper parent node and get the dimensionality of the matrix
-        V = cls._ensure_moments_class(V, WishartMoments)
+        V = cls._ensure_moments(V, WishartMoments)
         D = V.dims[0][-1]
 
-        n = cls._ensure_moments(n, WishartPriorMoments(D))
+        n = cls._ensure_moments(n, WishartPriorMoments, d=D)
 
         moments = WishartMoments(D)
 

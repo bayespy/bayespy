@@ -53,7 +53,11 @@ class Gate(Deterministic):
         self.gated_plate = gated_plate
 
         if moments is not None:
-            X = self._ensure_moments(X, moments)
+            X = self._ensure_moments(
+                X,
+                moments.__class__,
+                **moments.get_instance_conversion_kwargs()
+            )
 
         if not isinstance(X, Node):
             raise ValueError("X must be a node or moments should be provided")
@@ -66,10 +70,9 @@ class Gate(Deterministic):
                              "gated")
         K = X.plates[gated_plate]
 
-        self._parent_moments = [CategoricalMoments(K),
-                                X_moments]
+        Z = self._ensure_moments(Z, CategoricalMoments, categories=K)
 
-        Z = self._ensure_moments(Z, self._parent_moments[0])
+        self._parent_moments = (Z._moments, X_moments)
 
         if Z.dims != ( (K,), ):
             raise ValueError("Inconsistent number of clusters")

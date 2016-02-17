@@ -789,7 +789,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         D = mu_Lambda.dims[0][0]
 
         if inputs is not None:
-            inputs = cls._ensure_moments_class(inputs, GaussianMoments, ndim=1)
+            inputs = cls._ensure_moments(inputs, GaussianMoments, ndim=1)
 
         # Check whether to use input signals or not
         if inputs is None:
@@ -800,12 +800,6 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
             _parent_moments = (GaussianWishartMoments((D,)),
                                GaussianGammaISOMoments((D,)),
                                GaussianMoments((K,)))
-
-        # Ensure that parent nodes are of proper type
-        # mu = cls._ensure_moments(mu, _parent_moments[0])
-        # Lambda = cls._ensure_moments(Lambda, _parent_moments[1])
-        # A = cls._ensure_moments(A, _parent_moments[2])
-        # v = cls._ensure_moments(v, _parent_moments[3])
 
         # Time instances from input signals
         if inputs is not None and len(inputs.plates) >= 1:
@@ -1301,11 +1295,11 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         Check that the dimensionalities of the parents are proper.
         """
 
-        mu = cls._ensure_moments_class(mu, GaussianMoments, ndim=1)
-        Lambda = cls._ensure_moments_class(Lambda, WishartMoments)
-        B = cls._ensure_moments_class(B, GaussianMoments, ndim=2)
-        S = cls._ensure_moments_class(S, GaussianMoments, ndim=1)
-        v = cls._ensure_moments_class(v, GammaMoments)
+        mu = cls._ensure_moments(mu, GaussianMoments, ndim=1)
+        Lambda = cls._ensure_moments(Lambda, WishartMoments)
+        B = cls._ensure_moments(B, GaussianMoments, ndim=2)
+        S = cls._ensure_moments(S, GaussianMoments, ndim=1)
+        v = cls._ensure_moments(v, GammaMoments)
 
         (D, K) = B.dims[0]
 
@@ -1835,18 +1829,22 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         """
 
         # Infer the number of dynamic matrices
-        B = cls._ensure_moments(B, GaussianMoments(2))
+        B = cls._ensure_moments(B, GaussianMoments, ndim=2)
         K = B.plates[-2]
 
-        parent_moments = (GaussianMoments(1),
-                          WishartMoments(),
-                          GaussianMoments(1),
-                          CategoricalMoments(K),
-                          GammaMoments())
+        mu = cls._ensure_moments(mu, GaussianMoments, ndim=1)
+        Lambda = cls._ensure_moments(Lambda, WishartMoments)
+        Z = cls._ensure_moments(Z, CategoricalMoments, categories=K)
+        v = cls._ensure_moments(v, GammaMoments)
+
+        parent_moments = (
+            mu._moments,
+            Lambda._moments,
+            Z._moments,
+            v._moments
+        )
 
         # Infer the length of the chain
-        Z = cls._ensure_moments(Z, parent_moments[3])
-        v = cls._ensure_moments(v, parent_moments[4])
         n_Z = 1
         if len(Z.plates) == 0:
             raise ValueError("Z must have temporal axis on plates")
@@ -1873,7 +1871,6 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                 % (n, n_Z))
 
                                 
-        mu = cls._ensure_moments(mu, parent_moments[0])
         D = mu.dims[0][0]
         K = Z.dims[0][0]
         M = n #N.get_moments()[0]
@@ -1882,7 +1879,6 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         if mu.dims != ( (D,), (D,D) ):
             raise ValueError("First parent has wrong dimensionality")
         # Check Lambda
-        Lambda = cls._ensure_moments(Lambda, parent_moments[1])
         if Lambda.dims != ( (D,D), () ):
             raise ValueError("Second parent has wrong dimensionality")
         # Check B
@@ -1945,7 +1941,7 @@ class _MarkovChainToGaussian(Deterministic):
 
     def __init__(self, X, **kwargs):
 
-        X = self._ensure_moments_class(X, GaussianMarkovChainMoments)
+        X = self._ensure_moments(X, GaussianMarkovChainMoments)
 
         D = X.dims[0][-1]
 

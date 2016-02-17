@@ -162,12 +162,12 @@ class TestGaussianMarkovChain(TestCase):
                                     plates=plates,
                                     n=N)
             (u0, u1, u2) = X._message_to_child()
-            (mu, mumu) = Gaussian._ensure_moments_class(mu, GaussianMoments, ndim=1).get_moments()
-            (Lambda, _) = Wishart._ensure_moments_class(Lambda, WishartMoments).get_moments()
-            (a, aa) = Gaussian._ensure_moments_class(A, GaussianMoments, ndim=1).get_moments()
+            (mu, mumu) = Gaussian._ensure_moments(mu, GaussianMoments, ndim=1).get_moments()
+            (Lambda, _) = Wishart._ensure_moments(Lambda, WishartMoments).get_moments()
+            (a, aa) = Gaussian._ensure_moments(A, GaussianMoments, ndim=1).get_moments()
             a = a * np.ones((N-1,D,D))     # explicit broadcasting for simplicity
             aa = aa * np.ones((N-1,D,D,D)) # explicit broadcasting for simplicity
-            (v, _) = Gamma._ensure_moments_class(V, GammaMoments).get_moments()
+            (v, _) = Gamma._ensure_moments(V, GammaMoments).get_moments()
             v = v * np.ones((N-1,D))
             plates_C = X.plates
             plates_mu = X.plates

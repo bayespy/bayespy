@@ -287,8 +287,8 @@ class CategoricalMarkovChain(ExponentialFamily):
         used to construct those objects.
         """
 
-        p0 = cls._ensure_moments_class(p0, DirichletMoments)
-        P = cls._ensure_moments(P, p0._moments)
+        p0 = cls._ensure_moments(p0, DirichletMoments)
+        P = cls._ensure_moments(P, DirichletMoments)
 
         # Number of categories
         D = p0.dims[0][0]

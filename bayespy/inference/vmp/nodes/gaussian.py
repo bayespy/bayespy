@@ -69,6 +69,19 @@ class GaussianMoments(Moments):
             return cls(np.shape(x)[-ndim:])
 
 
+    def get_instance_conversion_kwargs(self):
+        return dict(ndim=self.ndim)
+
+
+    def get_instance_converter(self, ndim):
+        # FIXME/TODO: IMPLEMENT THIS CORRECTLY!
+        if ndim is not None and ndim != self.ndim:
+            raise NotImplementedError(
+                "Conversion to different ndim in GaussianMoments not yet "
+                "implemented."
+            )
+        return lambda x: x
+
 
 class GaussianGammaISOMoments(Moments):
     r"""
@@ -123,17 +136,19 @@ class GaussianGammaISOMoments(Moments):
             shape = np.shape(x)[-ndim:]
         return cls(shape)
 
-        # raise DeprecationWarning()
 
-        # x = np.asanyarray(x)
-        # alpha = np.asanyarray(alpha)
+    def get_instance_conversion_kwargs(self):
+        return dict(ndim=self.ndim)
 
-        # if self.ndim == 0:
-        #     return ( (), (), (), () )
 
-        # dims = np.shape(x)[-self.ndim:]
-
-        # return ( dims, 2*dims, (), () )
+    def get_instance_converter(self, ndim):
+        # FIXME/TODO: IMPLEMENT THIS CORRECTLY!
+        if ndim != self.ndim:
+            raise NotImplementedError(
+                "Conversion to different ndim in GaussianMoments not yet "
+                "implemented."
+            )
+        return lambda x: x
 
 
 class GaussianGammaARDMoments(Moments):
@@ -1468,85 +1483,121 @@ class GaussianARD(_GaussianTemplate):
         not-node specific code. The point of moments class is to define the
         messaging protocols.
         """
-        # Check consistency
-        if ndim is not None and shape is not None and ndim != len(shape):
-            raise ValueError("Given shape and ndim inconsistent")
-        if ndim is None and shape is not None:
-            ndim = len(shape)
 
-        # Infer shape of mu
-        try:
-            # Case: mu is a node
-            mu = mu._convert(GaussianGammaARDMoments)
-        except AttributeError:
-            # Case: mu is constant, we can use it as a scalar
-            shape_mu = ()
-            mu = cls._ensure_moments(mu, GaussianMoments(0))
-            mu = mu._convert(GaussianGammaARDMoments)
-        else:
-            shape_mu = mu.dims[0]
+        mu_alpha = WrapToGaussianGammaISO(mu, alpha, ndim=0)
 
-        ndim_mu = len(shape_mu)
-
-        # Infer dimensionality
         if ndim is None:
-            ndim = ndim_mu #max(ndim_mu, ndim_alpha)
-        elif ndim < ndim_mu: # or ndim < ndim_alpha:
-            raise ValueError("Parent mu has more axes")
-
-        # Infer shape of alpha
-        alpha = cls._ensure_moments(alpha, GammaMoments())
-        if ndim == 0:
-            shape_alpha = ()
+            if shape is not None:
+                ndim = len(shape)
+            else:
+                shape = ()
+                ndim = 0
         else:
-            shape_alpha = alpha.plates[-ndim:]
+            if shape is not None:
+                if ndim != len(shape):
+                    raise ValueError("Given shape and ndim inconsistent")
+            else:
+                if ndim == 0:
+                    shape = ()
+                else:
+                    shape = mu_alpha.plates[-ndim:]
 
-        # Infer shape of the node
-        #shape_bc = misc.broadcasted_shape(shape_mu, shape_alpha)
-        try:
-            shape_bc = misc.broadcasted_shape(mu.plates+shape_mu, alpha.plates)
-        except ValueError:
-            raise ValueError("Parent nodes have incompatible shapes")
-            
-        if ndim == 0:
-            shape_bc = ()
-        elif ndim > len(shape_bc):
-            shape_bc = (ndim-len(shape_bc))*(1,) + shape_bc
-        else:
-            shape_bc = shape_bc[-ndim:]
+        moments = GaussianMoments(shape)
+        parent_moments = [GaussianGammaISOMoments(())]
+        distribution = GaussianARDDistribution(shape, ndim)
 
-        # By default, use the broadcasted shape
-        if shape is None:
-            shape = shape_bc
-        
-        if not misc.is_shape_subset(shape_bc, shape):
-            raise ValueError("Broadcasted shape of the parents %s does not "
-                             "broadcast to the given shape %s" 
-                             % (shape_bc, shape))
-        
-        mu_alpha = WrapToGaussianGammaARD(mu, alpha)
-    
-        # Check shape consistency
-        shape_cov = shape[-ndim_mu:] + shape[-ndim_mu:]
-
-        moments = GaussianMoments(ndim)
-        parent_moments = [mu_alpha._moments]
-        distribution = GaussianARDDistribution(shape, ndim_mu)
-
-        dims = (shape, shape+shape)
         plates = cls._total_plates(kwargs.get('plates'),
                                    distribution.plates_from_parent(0, mu_alpha.plates))
 
         parents = [mu_alpha]
 
-        return (parents, 
+        return (parents,
                 kwargs,
-                dims,
+                moments.dims,
                 plates,
                 distribution,
                 moments,
                 parent_moments)
-        
+
+        # # Check consistency
+        # if ndim is not None and shape is not None and ndim != len(shape):
+        #     raise ValueError("Given shape and ndim inconsistent")
+        # if ndim is None and shape is not None:
+        #     ndim = len(shape)
+
+        # # Infer shape of mu
+        # try:
+        #     # Case: mu is a node
+        #     mu = mu._convert(GaussianGammaARDMoments)
+        # except AttributeError:
+        #     # Case: mu is constant, we can use it as a scalar
+        #     shape_mu = ()
+        #     mu = cls._ensure_moments(mu, GaussianMoments(0))
+        #     mu = mu._convert(GaussianGammaARDMoments)
+        # else:
+        #     shape_mu = mu.dims[0]
+
+        # ndim_mu = len(shape_mu)
+
+        # # Infer dimensionality
+        # if ndim is None:
+        #     ndim = ndim_mu #max(ndim_mu, ndim_alpha)
+        # elif ndim < ndim_mu: # or ndim < ndim_alpha:
+        #     raise ValueError("Parent mu has more axes")
+
+        # # Infer shape of alpha
+        # alpha = cls._ensure_moments(alpha, GammaMoments())
+        # if ndim == 0:
+        #     shape_alpha = ()
+        # else:
+        #     shape_alpha = alpha.plates[-ndim:]
+
+        # # Infer shape of the node
+        # #shape_bc = misc.broadcasted_shape(shape_mu, shape_alpha)
+        # try:
+        #     shape_bc = misc.broadcasted_shape(mu.plates+shape_mu, alpha.plates)
+        # except ValueError:
+        #     raise ValueError("Parent nodes have incompatible shapes")
+
+        # if ndim == 0:
+        #     shape_bc = ()
+        # elif ndim > len(shape_bc):
+        #     shape_bc = (ndim-len(shape_bc))*(1,) + shape_bc
+        # else:
+        #     shape_bc = shape_bc[-ndim:]
+
+        # # By default, use the broadcasted shape
+        # if shape is None:
+        #     shape = shape_bc
+
+        # if not misc.is_shape_subset(shape_bc, shape):
+        #     raise ValueError("Broadcasted shape of the parents %s does not "
+        #                      "broadcast to the given shape %s"
+        #                      % (shape_bc, shape))
+
+        # mu_alpha = WrapToGaussianGammaARD(mu, alpha)
+
+        # # Check shape consistency
+        # shape_cov = shape[-ndim_mu:] + shape[-ndim_mu:]
+
+        # moments = GaussianMoments(ndim)
+        # parent_moments = [mu_alpha._moments]
+        # distribution = GaussianARDDistribution(shape, ndim_mu)
+
+        # dims = (shape, shape+shape)
+        # plates = cls._total_plates(kwargs.get('plates'),
+        #                            distribution.plates_from_parent(0, mu_alpha.plates))
+
+        # parents = [mu_alpha]
+
+        # return (parents,
+        #         kwargs,
+        #         dims,
+        #         plates,
+        #         distribution,
+        #         moments,
+        #         parent_moments)
+
 
     def initialize_from_parameters(self, mu, alpha):
         # Explicit broadcasting so the shapes match
@@ -1701,8 +1752,8 @@ class GaussianGammaISO(ExponentialFamily):
 
         # Convert parent nodes
         mu_Lambda = WrapToGaussianWishart(mu, Lambda)
-        a = cls._ensure_moments(a, GammaPriorMoments())
-        b = cls._ensure_moments(b, GammaMoments())
+        a = cls._ensure_moments(a, GammaPriorMoments)
+        b = cls._ensure_moments(b, GammaMoments)
 
         shape = mu_Lambda.dims[0]
 
@@ -2090,12 +2141,14 @@ class GaussianWishart(ExponentialFamily):
         mu_alpha = WrapToGaussianGammaISO(mu, alpha)
         D = mu_alpha.dims[0][0]
 
-        parent_moments = (GaussianGammaISOMoments(1),
-                          WishartMoments(),
-                          WishartPriorMoments(D))
-        n = cls._ensure_moments(n, parent_moments[1])
-        V = cls._ensure_moments(V, parent_moments[2])
+        n = cls._ensure_moments(n, WishartPriorMoments)
+        V = cls._ensure_moments(V, WishartMoments)
 
+        parent_moments = (
+            mu_alpha._moments,
+            n._moments,
+            V._moments
+        )
 
         # Check shapes
         if mu_alpha.dims != ( (D,), (D,D), (), () ):
@@ -2139,7 +2192,8 @@ class GaussianToGaussianGammaISO(Deterministic):
     def __init__(self, X, **kwargs):
         r"""
         """
-        X = self._ensure_moments_class(X, GaussianMoments)
+        if not isinstance(X._moments, GaussianMoments):
+            raise ValueError("Wrong moments, should be Gaussian")
 
         shape = X._moments.shape
         self.ndim = X._moments.ndim
@@ -2314,20 +2368,19 @@ class WrapToGaussianGammaISO(Deterministic):
 
         # In case X is a numerical array, convert it to Gaussian first
         try:
-            #X = self._ensure_moments(X, GaussianMoments(ndim))
-            X = self._ensure_moments_class(X, GaussianMoments, ndim=ndim)
+            X = self._ensure_moments(X, GaussianMoments, ndim=ndim)
         except Moments.NoConverterError:
             pass
 
-        X = self._ensure_moments_class(X, GaussianGammaISOMoments)
+        try:
+            ndim = X._moments.ndim
+        except AttributeError as err:
+            raise TypeError("ndim needs to be given explicitly") from err
 
-        if ndim is not None:
-            shape = X._moments.shape
-            X = self._ensure_moments(X, GaussianGammaISOMoments(shape))
-            if len(X.dims[0]) != ndim:
-                raise RuntimeError("Conversion failed ndim.")
-        # else:
-        #     X = X._convert(GaussianGammaISOMoments)
+        X = self._ensure_moments(X, GaussianGammaISOMoments, ndim=ndim)
+
+        if len(X.dims[0]) != ndim:
+            raise RuntimeError("Conversion failed ndim.")
 
         shape = X.dims[0]
         dims = ( shape, 2 * shape, (), () )
@@ -2408,10 +2461,13 @@ class WrapToGaussianGammaARD(Deterministic):
         except AttributeError:
             raise ValueError("Mu must be a node")
 
+        tau = self._ensure_moments(tau, GammaMoments())
+
         # Parent moments
-        self._parent_moments = [mu_alpha._moments,
-                                GammaMoments()]
-        tau = self._ensure_moments(tau, self._parent_moments[1])
+        self._parent_moments = [
+            mu_alpha._moments,
+            tau._moments,
+        ]
 
         ndim = len(mu_alpha.dims[0])
 
@@ -2573,17 +2629,17 @@ class WrapToGaussianWishart(Deterministic):
 
         # Just in case X is an array, convert it to a Gaussian node first.
         try:
-            X = self._ensure_moments_class(X, GaussianMoments, ndim=1)
+            X = self._ensure_moments(X, GaussianMoments, ndim=1)
         except Moments.NoConverterError:
             pass
 
         try:
             # Try combo Gaussian-Gamma and Wishart
-            X = self._ensure_moments_class(X, GaussianGammaISOMoments)
+            X = self._ensure_moments(X, GaussianGammaISOMoments, ndim=1)
         except ValueError:
             # Have to use Gaussian-Wishart and Gamma
-            X = self._ensure_moments_class(X, GaussianWishartMoments)
-            Lambda = self._ensure_moments(Lambda, GammaMoments())
+            X = self._ensure_moments(X, GaussianWishartMoments)
+            Lambda = self._ensure_moments(Lambda, GammaMoments)
             D = X.dims[0][0]
             if Lambda.dims != ((), ()):
                 raise ValueError(
@@ -2595,7 +2651,7 @@ class WrapToGaussianWishart(Deterministic):
                 )
             self.wishart = False
         else:
-            Lambda = self._ensure_moments_class(Lambda, WishartMoments)
+            Lambda = self._ensure_moments(Lambda, WishartMoments)
             D = X.dims[0][0]
             if Lambda.dims != ((D, D), ()):
                 raise ValueError(
@@ -2940,8 +2996,9 @@ class ConcatGaussian(Deterministic):
 
         moments = GaussianMoments(shape)
 
-        self._parent_moments = N * (GaussianMoments(1),)
-        nodes = [self._ensure_moments(node, GaussianMoments(1)) for node in nodes]
+        nodes = [node._ensure_moments(GaussianMoments, ndim=1)
+                 for node in nodes]
+        self._parent_moments = [node._moments for node in nodes]
 
         # Make sure all parents are Gaussian vectors
         if any(len(node.dims[0]) != 1 for node in nodes):

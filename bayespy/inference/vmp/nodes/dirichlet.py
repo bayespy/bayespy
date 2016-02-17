@@ -265,7 +265,7 @@ class Dirichlet(ExponentialFamily):
         Constructs distribution and moments objects.
         """
         # Number of categories
-        alpha = cls._ensure_moments_class(alpha, DirichletPriorMoments)
+        alpha = cls._ensure_moments(alpha, DirichletPriorMoments)
         parent_moments = (alpha._moments,)
 
         parents = [alpha]

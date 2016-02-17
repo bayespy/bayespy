@@ -57,7 +57,17 @@ class Add(Deterministic):
         Add(X1, X2, ...)
         """
 
-        nodes = [self._ensure_moments_class(node, GaussianMoments)
+        ndim = None
+        for node in nodes:
+            try:
+                node = self._ensure_moments(node, GaussianMoments, ndim=None)
+            except ValueError:
+                pass
+            else:
+                ndim = node._moments.ndim
+                break
+
+        nodes = [self._ensure_moments(node, GaussianMoments, ndim=ndim)
                  for node in nodes]
 
         N = len(nodes)
