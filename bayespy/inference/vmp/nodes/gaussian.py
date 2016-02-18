@@ -563,9 +563,8 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         \end{bmatrix}
     """
 
-    def __init__(self, shape, ndim_mu):
+    def __init__(self, shape):
         self.shape = shape
-        self.ndim_mu = ndim_mu
         self.ndim = len(shape)
         super().__init__()
 
@@ -605,16 +604,9 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         r"""
         Maps the mask to the plates of a parent.
         """
-        if index == 0:
-            if self.ndim_mu == self.ndim:
-                return weights
-            elif self.ndim_mu < self.ndim:
-                diff = self.ndim - self.ndim_mu
-                return misc.add_trailing_axes(weights, diff)
-            else:
-                raise RuntimeError("Parent's ndim is larger")
-        else:
-            raise ValueError("Invalid parent index")
+        if index != 0:
+            raise IndexError()
+        return misc.add_trailing_axes(weights, self.ndim)
 
 
     def compute_phi_from_parents(self, u_mu_alpha, mask=True):
@@ -719,18 +711,10 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         Given the plates of the node's moments, this method returns the plates
         that the message to a parent has for the parent's distribution.
         """
-        if index == 0:
-            return plates + self.shape
-            # if self.ndim_mu == self.ndim:
-            #     return plates
-            # elif self.ndim_mu < self.ndim:
-            #     diff = self.ndim - self.ndim_mu
-            #     return plates + self.shape[:diff]
-            # else:
-            #     raise RuntimeError("Parent's ndim is larger")
-        else:
-            raise ValueError("Invalid parent index")
-            
+        if index != 0:
+            raise IndexError()
+        return plates + self.shape
+
 
     def plates_from_parent(self, index, plates):
         r"""
@@ -739,20 +723,13 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         Given the plates of a parent's moments, this method returns the plates
         that the moments has for this distribution.
         """
-        if index == 0:
-            if self.ndim == 0:
-                return plates
-            else:
-                return plates[:-self.ndim]
-            # if self.ndim_mu == self.ndim:
-            #     return plates
-            # elif self.ndim_mu < self.ndim:
-            #     diff = self.ndim - self.ndim_mu
-            #     return plates[:-diff]
-            # else:
-            #     raise RuntimeError("Parent's ndim is larger")
+        if index != 0:
+            raise IndexError()
+
+        if self.ndim == 0:
+            return plates
         else:
-            raise ValueError("Invalid parent index")
+            return plates[:-self.ndim]
 
 
     def random(self, *phi, plates=None):
@@ -1492,6 +1469,12 @@ class GaussianARD(_GaussianTemplate):
                 if ndim == 0:
                     shape = ()
                 else:
+                    if ndim > len(mu_alpha.plates):
+                        raise ValueError(
+                            "Cannot determine shape for ndim={0} because parent "
+                            "full shape has ndim={1}."
+                            .format(ndim, len(mu_alpha.plates))
+                        )
                     shape = mu_alpha.plates[-ndim:]
 
         moments = GaussianMoments(shape)
@@ -1510,85 +1493,6 @@ class GaussianARD(_GaussianTemplate):
                 distribution,
                 moments,
                 parent_moments)
-
-        # # Check consistency
-        # if ndim is not None and shape is not None and ndim != len(shape):
-        #     raise ValueError("Given shape and ndim inconsistent")
-        # if ndim is None and shape is not None:
-        #     ndim = len(shape)
-
-        # # Infer shape of mu
-        # try:
-        #     # Case: mu is a node
-        #     mu = mu._convert(GaussianGammaARDMoments)
-        # except AttributeError:
-        #     # Case: mu is constant, we can use it as a scalar
-        #     shape_mu = ()
-        #     mu = cls._ensure_moments(mu, GaussianMoments(0))
-        #     mu = mu._convert(GaussianGammaARDMoments)
-        # else:
-        #     shape_mu = mu.dims[0]
-
-        # ndim_mu = len(shape_mu)
-
-        # # Infer dimensionality
-        # if ndim is None:
-        #     ndim = ndim_mu #max(ndim_mu, ndim_alpha)
-        # elif ndim < ndim_mu: # or ndim < ndim_alpha:
-        #     raise ValueError("Parent mu has more axes")
-
-        # # Infer shape of alpha
-        # alpha = cls._ensure_moments(alpha, GammaMoments())
-        # if ndim == 0:
-        #     shape_alpha = ()
-        # else:
-        #     shape_alpha = alpha.plates[-ndim:]
-
-        # # Infer shape of the node
-        # #shape_bc = misc.broadcasted_shape(shape_mu, shape_alpha)
-        # try:
-        #     shape_bc = misc.broadcasted_shape(mu.plates+shape_mu, alpha.plates)
-        # except ValueError:
-        #     raise ValueError("Parent nodes have incompatible shapes")
-
-        # if ndim == 0:
-        #     shape_bc = ()
-        # elif ndim > len(shape_bc):
-        #     shape_bc = (ndim-len(shape_bc))*(1,) + shape_bc
-        # else:
-        #     shape_bc = shape_bc[-ndim:]
-
-        # # By default, use the broadcasted shape
-        # if shape is None:
-        #     shape = shape_bc
-
-        # if not misc.is_shape_subset(shape_bc, shape):
-        #     raise ValueError("Broadcasted shape of the parents %s does not "
-        #                      "broadcast to the given shape %s"
-        #                      % (shape_bc, shape))
-
-        # mu_alpha = WrapToGaussianGammaARD(mu, alpha)
-
-        # # Check shape consistency
-        # shape_cov = shape[-ndim_mu:] + shape[-ndim_mu:]
-
-        # moments = GaussianMoments(ndim)
-        # parent_moments = [mu_alpha._moments]
-        # distribution = GaussianARDDistribution(shape, ndim_mu)
-
-        # dims = (shape, shape+shape)
-        # plates = cls._total_plates(kwargs.get('plates'),
-        #                            distribution.plates_from_parent(0, mu_alpha.plates))
-
-        # parents = [mu_alpha]
-
-        # return (parents,
-        #         kwargs,
-        #         dims,
-        #         plates,
-        #         distribution,
-        #         moments,
-        #         parent_moments)
 
 
     def initialize_from_parameters(self, mu, alpha):

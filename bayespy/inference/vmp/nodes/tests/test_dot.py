@@ -777,7 +777,7 @@ class TestSumMultiply(TestCase):
         x1 = X1.get_moments()
         mask = np.array([True, False, True])
         F = SumMultiply('i->i', X1)
-        Y = GaussianARD(F, tau)                     
+        Y = GaussianARD(F, tau, ndim=1)
         Y.observe(data*np.ones((3,2)), mask=mask)
         m0 = tau * data * mask[:,np.newaxis] * np.ones(2)
         m1 = -0.5 * tau * mask[:,np.newaxis,np.newaxis] * np.identity(2)
@@ -805,7 +805,8 @@ class TestSumMultiply(TestCase):
         mask = np.array([True, False, True])
         F = SumMultiply('i,i->i', X1, X2)
         Y = GaussianARD(F, tau,
-                        plates=(3,))                     
+                        plates=(3,),
+                        ndim=1)
         Y.observe(data*np.ones((3,2)), mask=mask)
         m0 = tau * data * np.sum(mask[:,np.newaxis] * x2[0], axis=0)
         m1 = -0.5 * tau * np.sum(mask[:,np.newaxis,np.newaxis]
@@ -839,9 +840,10 @@ class TestSumMultiply(TestCase):
         mask = np.array([True, False, True])
         F = SumMultiply('i,i->i', X1, X2)
         Y = GaussianARD(F, tau,
-                        plates=(3,))
+                        plates=(3,),
+                        ndim=1)
         Y.observe(data*np.ones((3,2)), mask=mask)
-        m0 = tau * data * np.sum(mask[:,np.newaxis] * x2[0], 
+        m0 = tau * data * np.sum(mask[:,np.newaxis] * x2[0],
                                  axis=0,
                                  keepdims=True)
         m1 = -0.5 * tau * np.sum(mask[:,np.newaxis,np.newaxis]

@@ -178,7 +178,7 @@ class TestGaussianARD(TestCase):
         # Create from node parents
         #
 
-        # Infer ndim from parent mu
+        # ndim=0 by default
         check_init((3,),
                    (),
                    GaussianARD(0, 1,
@@ -186,9 +186,8 @@ class TestGaussianARD(TestCase):
                    Gamma(1, 1,
                          plates=(3,)))
 
-        # Infer ndim from mu, take broadcasted shape
-        check_init((4,),
-                   (2,2,3),
+        check_init((4,2,2,3),
+                   (),
                    GaussianARD(np.zeros((2,1,3)),
                                np.ones((2,1,3)),
                                ndim=3),
@@ -230,14 +229,26 @@ class TestGaussianARD(TestCase):
                    1,
                    ndim=1)
 
-        # Add axes if necessary
-        check_init((),
-                   (1,2,3),
-                   GaussianARD(np.zeros((2,3)),
-                               np.ones((2,3)),
-                               ndim=2),
-                   1,
-                   ndim=3)
+        # Parent mu has more axes
+        check_init(
+            (2,),
+            (3,),
+            GaussianARD(np.zeros((2,3)),
+                        np.ones((2,3)),
+                        ndim=2),
+            np.ones((2,3)),
+            ndim=1
+        )
+        # DO NOT add axes if necessary
+        self.assertRaises(
+            ValueError,
+            GaussianARD,
+            GaussianARD(np.zeros((2,3)),
+                        np.ones((2,3)),
+                        ndim=2),
+            1,
+            ndim=3
+        )
 
         #
         # Errors
@@ -271,14 +282,6 @@ class TestGaussianARD(TestCase):
                           np.zeros((2,3)),
                           np.ones((2,)),
                           shape=(2,3),
-                          ndim=1)
-        # Parent mu has more axes
-        self.assertRaises(ValueError,
-                          GaussianARD,
-                          GaussianARD(np.zeros((2,3)),
-                                      np.ones((2,3)),
-                                      ndim=2),
-                          np.ones((2,3)),
                           ndim=1)
         # Incorrect shape
         self.assertRaises(ValueError,
@@ -514,7 +517,7 @@ class TestGaussianARD(TestCase):
         alpha = np.array([3,4])
         Lambda = np.array([[1, 0.5],
                           [0.5, 1]])
-        X = GaussianARD(Mu, alpha)
+        X = GaussianARD(Mu, alpha, ndim=1)
         Y = Gaussian(X, Lambda)
         y = np.array([5,6])
         Y.observe(y)
@@ -702,6 +705,8 @@ class TestGaussianARD(TestCase):
                             np.ones(plates_mu + shape_mu),
                             shape=shape_mu,
                             plates=plates_mu)
+            if not ('ndim' in kwargs or 'shape' in kwargs):
+                kwargs['ndim'] = len(shape_mu)
             X = GaussianARD(M,
                             2*np.ones(shape_alpha),
                             **kwargs)

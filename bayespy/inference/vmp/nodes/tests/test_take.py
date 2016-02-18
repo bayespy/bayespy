@@ -314,7 +314,7 @@ class TestTake(TestCase):
             alpha = np.random.rand(*(plates+shape))
             X = GaussianARD(mu, alpha, shape=shape, plates=plates)
             Y = Take(X, indices, plate_axis=axis)
-            Z = GaussianARD(Y, 1)
+            Z = GaussianARD(Y, 1, shape=shape)
             z = np.random.randn(*(Z.get_shape(0)))
             if use_mask:
                 mask = np.mod(np.reshape(np.arange(np.prod(Z.plates)), Z.plates), 2) != 0
@@ -351,7 +351,7 @@ class TestTake(TestCase):
                 # print(index)
                 Xi = X[index_x]
                 zi = z[index_z]
-                Zi = GaussianARD(Xi, 1)
+                Zi = GaussianARD(Xi, 1, ndim=len(shape))
                 if use_mask:
                     maski = mask[index_z]
                 else:
