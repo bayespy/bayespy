@@ -42,11 +42,9 @@ class Take(Deterministic):
     """
 
 
-    _parent_moments = (Moments(),)
-
-
     def __init__(self, node, indices, plate_axis=-1, **kwargs):
         self._moments = node._moments
+        self._parent_moments = (node._moments,)
         self._indices = np.array(indices)
         self._plate_axis = plate_axis
         self._original_length = node.plates[plate_axis]

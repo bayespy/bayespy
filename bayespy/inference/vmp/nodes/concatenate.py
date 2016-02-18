@@ -39,13 +39,21 @@ class Concatenate(Deterministic):
                 pass
             else:
                 break
+        if parent_moments is None:
+            raise ValueError("Couldn't determine parent moments")
         # All parents must have same moments
         self._parent_moments = (parent_moments,) * len(nodes)
         self._moments = parent_moments
         # Convert nodes
         try:
-            nodes = [self._ensure_moments(node, self._parent_moments[0])
-                     for node in nodes]
+            nodes = [
+                self._ensure_moments(
+                    node,
+                    parent_moments.__class__,
+                    **parent_moments.get_instance_conversion_kwargs(),
+                )
+                for node in nodes
+            ]
         except Moments.NoConverterError:
             raise ValueError("Parents have different moments")
         # Dimensionality of the node

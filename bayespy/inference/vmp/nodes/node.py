@@ -7,6 +7,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import functools
 
 from bayespy.utils import misc
 
@@ -46,6 +47,7 @@ def message_sum_multiply(plates_parent, dims_parent, *arrays):
     m = misc.squeeze_to_dim(m, len(shape_parent))
     return m
 
+
 class Moments():
     """
     Base class for defining the expectation of the sufficient statistics.
@@ -76,12 +78,35 @@ class Moments():
         pass
 
 
+    def get_instance_converter(self, **kwargs):
+        """Default converter within a moments class is an identity.
+
+        Override this method when moment class instances are not identical if
+        they have different attributes.
+
+        """
+        if len(kwargs) > 0:
+            raise NotImplementedError(
+                "get_instance_converter not implemented for class {0}"
+                .format(self.__class__.__name__)
+            )
+        return None
+
+
+    def get_instance_conversion_kwargs(self):
+        """
+        Override this method when moment class instances are not identical if
+        they have different attributes.
+        """
+        return {}
+
+
     @classmethod
     def add_converter(cls, moments_to, converter):
         cls._converters = cls._converters.copy()
         cls._converters[moments_to] = converter
         return
-    
+
 
     def get_converter(self, moments_to):
         """
@@ -153,7 +178,7 @@ class Moments():
         raise self.NoConverterError("No conversion defined from %s to %s"
                                     % (self.__class__.__name__,
                                        moments_to.__name__))
-    
+
 
     def compute_fixed_moments(self, x):
         # This method can't be static because the computation of the moments may
@@ -161,27 +186,41 @@ class Moments():
         raise NotImplementedError("compute_fixed_moments not implemented for "
                                   "%s" 
                                   % (self.__class__.__name__))
-    
-    def compute_dims_from_values(self, x):
-        # This method can't be static because the computation of the moments may
-        # depend on, for instance, ndim in Gaussian arrays.
-        raise NotImplementedError("compute_dims_from_values not implemented "
+
+
+    @classmethod
+    def from_values(cls, x):
+        raise NotImplementedError("from_values not implemented "
                                   "for %s"
-                                  % (self.__class__.__name__))
+                                  % (cls.__name__))
 
 def ensureparents(func):
-    def new_func(self, *parents, **kwargs):
+    @functools.wraps(func)
+    def wrapper(self, *parents, **kwargs):
         # Convert parents to proper nodes
-        parents = list(parents)
-        for (ind, parent) in enumerate(parents):
-            parents[ind] = self._ensure_moments(parent, 
-                                                self._parent_moments[ind])
+        if self._parent_moments is None:
+            raise ValueError(
+                "Parent moments must be defined for {0}"
+                .format(self.__class__.__name__)
+            )
+        parents = [
+            Node._ensure_moments(
+                parent,
+                moments.__class__,
+                **moments.get_instance_conversion_kwargs()
+            )
+            for (parent, moments) in zip(parents, self._parent_moments)
+        ]
+        # parents = list(parents)
+        # for (ind, parent) in enumerate(parents):
+        #     parents[ind] = self._ensure_moments(parent, 
+        #                                         self._parent_moments[ind])
         # Run the function
         return func(self, *parents, **kwargs)
-    
-    return new_func
 
-    
+    return wrapper
+
+
 class Node():
     """
     Base class for all nodes.
@@ -303,18 +342,25 @@ class Node():
                                      % (p,
                                         plates))
             return plates
-        
+
 
     @staticmethod
-    def _ensure_moments(node, moments):
-
-        if isinstance(node, Node):
-            # Convert to correct type
-            return node._convert(moments.__class__)
-
-        # Convert to constant node
-        from .constant import Constant
-        return Constant(moments, node)
+    def _ensure_moments(node, moments_class, **kwargs):
+        try:
+            converter = node._moments.get_converter(moments_class)
+        except AttributeError:
+            from .constant import Constant
+            return Constant(
+                moments_class.from_values(node, **kwargs),
+                node
+            )
+        else:
+            node = converter(node)
+            converter = node._moments.get_instance_converter(**kwargs)
+            if converter is not None:
+                from .converters import NodeConverter
+                return NodeConverter(converter, node)
+            return node
 
 
     def _compute_plates_to_parent(self, index, plates):
@@ -327,6 +373,10 @@ class Node():
         return plates
 
 
+    def _compute_plates_multiplier_from_parent(self, index, plates_multiplier):
+        return self._compute_plates_from_parent(index, plates_multiplier)
+
+
     def _plates_to_parent(self, index):
         return self._compute_plates_to_parent(index, self.plates)
 
@@ -337,8 +387,10 @@ class Node():
 
 
     def _plates_multiplier_from_parent(self, index):
-        return self._compute_plates_from_parent(index,
-                                                self.parents[index].plates_multiplier)
+        return self._compute_plates_multiplier_from_parent(
+            index,
+            self.parents[index].plates_multiplier
+        )
 
 
     @property
@@ -705,12 +757,6 @@ class Node():
         else:
             raise Exception("No plotter defined, can not plot")
 
-    def _convert(self, moments_class):
-        converter = self._moments.get_converter(moments_class)
-        return converter(self)
-    ## def convert(self, node_class):
-    ##     return self._convert(node_class._moments_class)
-
 
     @staticmethod
     def _compute_message(*arrays, plates_from=(), plates_to=(), ndim=0):
@@ -806,11 +852,11 @@ class Slice(Deterministic):
     http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#basic-slicing
     """
 
-    _parent_moments = (Moments(),)
-    
+
     def __init__(self, X, slices, **kwargs):
 
         self._moments = X._moments
+        self._parent_moments = (X._moments,)
 
         # Force a list
         if not isinstance(slices, tuple):

@@ -27,9 +27,7 @@ user although they are often implicitly used:
    :toctree: generated/
 
    constant.Constant
-   gaussian.GaussianToGaussianGammaISO
-   gaussian.GaussianGammaISOToGaussianGammaARD
-   gaussian.GaussianGammaARDToGaussianWishart
-   gaussian.WrapToGaussianGammaISO
-   gaussian.WrapToGaussianGammaARD
+   gaussian.GaussianToGaussianGamma
+   gaussian.GaussianGammaToGaussianWishart
+   gaussian.WrapToGaussianGamma
    gaussian.WrapToGaussianWishart

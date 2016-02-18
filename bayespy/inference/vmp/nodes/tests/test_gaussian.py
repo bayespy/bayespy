@@ -18,7 +18,7 @@ from numpy import testing
 from .. import gaussian
 from bayespy.nodes import (Gaussian, 
                            GaussianARD,
-                           GaussianGammaISO,
+                           GaussianGamma,
                            Gamma,
                            Wishart)
 
@@ -178,7 +178,7 @@ class TestGaussianARD(TestCase):
         # Create from node parents
         #
 
-        # Infer ndim from parent mu
+        # ndim=0 by default
         check_init((3,),
                    (),
                    GaussianARD(0, 1,
@@ -186,9 +186,8 @@ class TestGaussianARD(TestCase):
                    Gamma(1, 1,
                          plates=(3,)))
 
-        # Infer ndim from mu, take broadcasted shape
-        check_init((4,),
-                   (2,2,3),
+        check_init((4,2,2,3),
+                   (),
                    GaussianARD(np.zeros((2,1,3)),
                                np.ones((2,1,3)),
                                ndim=3),
@@ -230,14 +229,26 @@ class TestGaussianARD(TestCase):
                    1,
                    ndim=1)
 
-        # Add axes if necessary
-        check_init((),
-                   (1,2,3),
-                   GaussianARD(np.zeros((2,3)),
-                               np.ones((2,3)),
-                               ndim=2),
-                   1,
-                   ndim=3)
+        # Parent mu has more axes
+        check_init(
+            (2,),
+            (3,),
+            GaussianARD(np.zeros((2,3)),
+                        np.ones((2,3)),
+                        ndim=2),
+            np.ones((2,3)),
+            ndim=1
+        )
+        # DO NOT add axes if necessary
+        self.assertRaises(
+            ValueError,
+            GaussianARD,
+            GaussianARD(np.zeros((2,3)),
+                        np.ones((2,3)),
+                        ndim=2),
+            1,
+            ndim=3
+        )
 
         #
         # Errors
@@ -271,14 +282,6 @@ class TestGaussianARD(TestCase):
                           np.zeros((2,3)),
                           np.ones((2,)),
                           shape=(2,3),
-                          ndim=1)
-        # Parent mu has more axes
-        self.assertRaises(ValueError,
-                          GaussianARD,
-                          GaussianARD(np.zeros((2,3)),
-                                      np.ones((2,3)),
-                                      ndim=2),
-                          np.ones((2,3)),
                           ndim=1)
         # Incorrect shape
         self.assertRaises(ValueError,
@@ -514,7 +517,7 @@ class TestGaussianARD(TestCase):
         alpha = np.array([3,4])
         Lambda = np.array([[1, 0.5],
                           [0.5, 1]])
-        X = GaussianARD(Mu, alpha)
+        X = GaussianARD(Mu, alpha, ndim=1)
         Y = Gaussian(X, Lambda)
         y = np.array([5,6])
         Y.observe(y)
@@ -702,6 +705,8 @@ class TestGaussianARD(TestCase):
                             np.ones(plates_mu + shape_mu),
                             shape=shape_mu,
                             plates=plates_mu)
+            if not ('ndim' in kwargs or 'shape' in kwargs):
+                kwargs['ndim'] = len(shape_mu)
             X = GaussianARD(M,
                             2*np.ones(shape_alpha),
                             **kwargs)
@@ -895,50 +900,50 @@ class TestGaussianARD(TestCase):
         pass
         
 
-class TestGaussianGammaISO(TestCase):
+class TestGaussianGamma(TestCase):
     """
-    Unit tests for GaussianGammaISO node.
+    Unit tests for GaussianGamma node.
     """
     
 
     def test_init(self):
         """
-        Test the creation of GaussianGammaISO node
+        Test the creation of GaussianGamma node
         """
 
         # Simple construction
-        X_alpha = GaussianGammaISO([1,2,3], np.identity(3), 2, 10)
+        X_alpha = GaussianGamma([1,2,3], np.identity(3), 2, 10)
         self.assertEqual(X_alpha.plates, ())
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
 
         # Plates
-        X_alpha = GaussianGammaISO([1,2,3], np.identity(3), 2, 10, plates=(4,))
+        X_alpha = GaussianGamma([1,2,3], np.identity(3), 2, 10, plates=(4,))
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
 
         # Plates in mu
-        X_alpha = GaussianGammaISO(np.ones((4,3)), np.identity(3), 2, 10)
+        X_alpha = GaussianGamma(np.ones((4,3)), np.identity(3), 2, 10)
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
         
         # Plates in Lambda
-        X_alpha = GaussianGammaISO(np.ones(3), np.ones((4,3,3))*np.identity(3), 2, 10)
+        X_alpha = GaussianGamma(np.ones(3), np.ones((4,3,3))*np.identity(3), 2, 10)
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
         
         # Plates in a
-        X_alpha = GaussianGammaISO(np.ones(3), np.identity(3), np.ones(4), 10)
+        X_alpha = GaussianGamma(np.ones(3), np.identity(3), np.ones(4), 10)
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
         
         # Plates in Lambda
-        X_alpha = GaussianGammaISO(np.ones(3), np.identity(3), 2, np.ones(4))
+        X_alpha = GaussianGamma(np.ones(3), np.identity(3), 2, np.ones(4))
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
 
         # Inconsistent plates
         self.assertRaises(ValueError,
-                          GaussianGammaISO,
+                          GaussianGamma,
                           np.ones((4,3)),
                           np.identity(3), 
                           2,
@@ -947,7 +952,7 @@ class TestGaussianGammaISO(TestCase):
         
         # Inconsistent plates
         self.assertRaises(ValueError,
-                          GaussianGammaISO,
+                          GaussianGamma,
                           np.ones((4,3)),
                           np.identity(3), 
                           2,
@@ -958,13 +963,13 @@ class TestGaussianGammaISO(TestCase):
         mu = Gaussian(np.zeros(3), np.identity(3))
         Lambda = Wishart(10, np.identity(3))
         b = Gamma(1, 1)
-        X_alpha = GaussianGammaISO(mu, Lambda, 2, b)
+        X_alpha = GaussianGamma(mu, Lambda, 2, b)
         self.assertEqual(X_alpha.plates, ())
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
 
         # mu is Gaussian-gamma
-        mu_tau = GaussianGammaISO(np.ones(3), np.identity(3), 5, 5)
-        X_alpha = GaussianGammaISO(mu_tau, np.identity(3), 5, 5)
+        mu_tau = GaussianGamma(np.ones(3), np.identity(3), 5, 5)
+        X_alpha = GaussianGamma(mu_tau, np.identity(3), 5, 5)
         self.assertEqual(X_alpha.plates, ())
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
         
@@ -973,7 +978,7 @@ class TestGaussianGammaISO(TestCase):
 
     def test_message_to_child(self):
         """
-        Test the message to child of GaussianGammaISO node.
+        Test the message to child of GaussianGamma node.
         """
 
         # Simple test
@@ -981,7 +986,7 @@ class TestGaussianGammaISO(TestCase):
         Lambda = np.identity(3)
         a = 2
         b = 10
-        X_alpha = GaussianGammaISO(mu, Lambda, a, b)
+        X_alpha = GaussianGamma(mu, Lambda, a, b)
         u = X_alpha._message_to_child()
         self.assertEqual(len(u), 4)
         tau = np.array(a/b)
@@ -1000,7 +1005,7 @@ class TestGaussianGammaISO(TestCase):
         Lambda = Wishart(10, np.identity(3))
         a = 2
         b = Gamma(3, 15)
-        X_alpha = GaussianGammaISO(mu, Lambda, a, b)
+        X_alpha = GaussianGamma(mu, Lambda, a, b)
         u = X_alpha._message_to_child()
         (mu, mumu) = mu._message_to_child()
         Cov_mu = mumu - linalg.outer(mu, mu)
@@ -1024,7 +1029,7 @@ class TestGaussianGammaISO(TestCase):
         Lambda = Wishart(10, np.identity(3))
         a = 2
         b = Gamma(3, 15)
-        X_alpha = GaussianGammaISO(mu, Lambda, a, b, plates=(4,))
+        X_alpha = GaussianGamma(mu, Lambda, a, b, plates=(4,))
         u = X_alpha._message_to_child()
         (mu, mumu) = mu._message_to_child()
         Cov_mu = mumu - linalg.outer(mu, mu)
@@ -1048,7 +1053,7 @@ class TestGaussianGammaISO(TestCase):
 
     def test_mask_to_parent(self):
         """
-        Test the mask handling in GaussianGammaISO node
+        Test the mask handling in GaussianGamma node
         """
 
         pass

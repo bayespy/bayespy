@@ -289,7 +289,7 @@ class TestMixture(TestCase):
         Z = Categorical([0.3, 0.5, 0.2])
         X = Mixture(Z, Categorical, [[0.2,0.8], [0.1,0.9], [0.3,0.7]])
         X.lower_bound_contribution()
-        
+
         pass
 
     def test_mask_to_parent(self):
@@ -299,25 +299,25 @@ class TestMixture(TestCase):
 
         K = 3
         Z = Categorical(np.ones(K)/K,
-                        plates=(4,5))
+                        plates=(4,5,1))
         Mu = GaussianARD(0, 1,
                          shape=(2,),
                          plates=(4,K,5))
         Alpha = Gamma(1, 1,
                       plates=(4,K,5,2))
-        X = Mixture(Z, GaussianARD, Mu, Alpha, cluster_plate=-2)
-        Y = GaussianARD(X, 1)
+        X = Mixture(Z, GaussianARD, Mu, Alpha, cluster_plate=-3)
+        Y = GaussianARD(X, 1, ndim=1)
         mask = np.reshape((np.mod(np.arange(4*5), 2) == 0),
                           (4,5))
-        Y.observe(np.ones((4,5,2)), 
+        Y.observe(np.ones((4,5,2)),
                   mask=mask)
         self.assertArrayEqual(Z.mask,
-                              mask)
+                              mask[:,:,None])
         self.assertArrayEqual(Mu.mask,
                               mask[:,None,:])
         self.assertArrayEqual(Alpha.mask,
                               mask[:,None,:,None])
-                         
+
         pass
 
 

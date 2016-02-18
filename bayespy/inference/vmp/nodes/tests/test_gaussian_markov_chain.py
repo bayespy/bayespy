@@ -13,10 +13,10 @@ import numpy as np
 
 from ..gaussian_markov_chain import GaussianMarkovChain
 from ..gaussian_markov_chain import VaryingGaussianMarkovChain
-from ..gaussian import Gaussian
+from ..gaussian import Gaussian, GaussianMoments
 from ..gaussian import GaussianARD
-from ..wishart import Wishart
-from ..gamma import Gamma
+from ..wishart import Wishart, WishartMoments
+from ..gamma import Gamma, GammaMoments
 
 from bayespy.utils import random
 from bayespy.utils import linalg
@@ -162,12 +162,12 @@ class TestGaussianMarkovChain(TestCase):
                                     plates=plates,
                                     n=N)
             (u0, u1, u2) = X._message_to_child()
-            (mu, mumu) = X.parents[0].get_moments()
-            (Lambda, _) = X.parents[1].get_moments()
-            (a, aa) = X.parents[2].get_moments()
+            (mu, mumu) = Gaussian._ensure_moments(mu, GaussianMoments, ndim=1).get_moments()
+            (Lambda, _) = Wishart._ensure_moments(Lambda, WishartMoments).get_moments()
+            (a, aa) = Gaussian._ensure_moments(A, GaussianMoments, ndim=1).get_moments()
             a = a * np.ones((N-1,D,D))     # explicit broadcasting for simplicity
             aa = aa * np.ones((N-1,D,D,D)) # explicit broadcasting for simplicity
-            (v, _) = X.parents[3].get_moments()
+            (v, _) = Gamma._ensure_moments(V, GammaMoments).get_moments()
             v = v * np.ones((N-1,D))
             plates_C = X.plates
             plates_mu = X.plates

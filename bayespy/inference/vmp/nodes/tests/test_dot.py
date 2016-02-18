@@ -19,7 +19,7 @@ from numpy import testing
 
 from ..dot import Dot, SumMultiply
 from ..gaussian import Gaussian, GaussianARD
-from bayespy.nodes import GaussianGammaISO
+from bayespy.nodes import GaussianGamma
 
 from ...vmp import VB
 
@@ -61,13 +61,13 @@ class TestSumMultiply(TestCase):
         self.assertEqual(A.dims, ((), ()))
 
         # Gaussian-gamma parents
-        C = GaussianGammaISO(np.ones(3), np.identity(3), 1, 1)
+        C = GaussianGamma(np.ones(3), np.identity(3), 1, 1)
         A = SumMultiply(Y, ['i'], C, ['i'], ['i'])
         self.assertEqual(A.dims, ((3,), (3,3), (), ()))
         A = SumMultiply('i,i->i', Y, C)
         self.assertEqual(A.dims, ((3,), (3,3), (), ()))
 
-        C = GaussianGammaISO(np.ones(3), np.identity(3), 1, 1)
+        C = GaussianGamma(np.ones(3), np.identity(3), 1, 1)
         A = SumMultiply(Y, ['i'], C, ['i'], [])
         self.assertEqual(A.dims, ((), (), (), ()))
         A = SumMultiply('i,i->', Y, C)
@@ -430,11 +430,13 @@ class TestSumMultiply(TestCase):
                          np.random.rand(2),
                          shape=(2,))
         x1 = X1.get_moments()
-        X2 = GaussianGammaISO(np.random.randn(6,1,2),
-                              random.covariance(2),
-                              np.random.rand(6,1),
-                              np.random.rand(6,1),
-                              plates=(6,1))
+        X2 = GaussianGamma(
+            np.random.randn(6,1,2),
+            random.covariance(2),
+            np.random.rand(6,1),
+            np.random.rand(6,1),
+            plates=(6,1)
+        )
         x2 = X2.get_moments()
         Y = SumMultiply('i,j->ij', X1, X2)
         u = Y._message_to_child()
@@ -775,7 +777,7 @@ class TestSumMultiply(TestCase):
         x1 = X1.get_moments()
         mask = np.array([True, False, True])
         F = SumMultiply('i->i', X1)
-        Y = GaussianARD(F, tau)                     
+        Y = GaussianARD(F, tau, ndim=1)
         Y.observe(data*np.ones((3,2)), mask=mask)
         m0 = tau * data * mask[:,np.newaxis] * np.ones(2)
         m1 = -0.5 * tau * mask[:,np.newaxis,np.newaxis] * np.identity(2)
@@ -803,7 +805,8 @@ class TestSumMultiply(TestCase):
         mask = np.array([True, False, True])
         F = SumMultiply('i,i->i', X1, X2)
         Y = GaussianARD(F, tau,
-                        plates=(3,))                     
+                        plates=(3,),
+                        ndim=1)
         Y.observe(data*np.ones((3,2)), mask=mask)
         m0 = tau * data * np.sum(mask[:,np.newaxis] * x2[0], axis=0)
         m1 = -0.5 * tau * np.sum(mask[:,np.newaxis,np.newaxis]
@@ -837,9 +840,10 @@ class TestSumMultiply(TestCase):
         mask = np.array([True, False, True])
         F = SumMultiply('i,i->i', X1, X2)
         Y = GaussianARD(F, tau,
-                        plates=(3,))
+                        plates=(3,),
+                        ndim=1)
         Y.observe(data*np.ones((3,2)), mask=mask)
-        m0 = tau * data * np.sum(mask[:,np.newaxis] * x2[0], 
+        m0 = tau * data * np.sum(mask[:,np.newaxis] * x2[0],
                                  axis=0,
                                  keepdims=True)
         m1 = -0.5 * tau * np.sum(mask[:,np.newaxis,np.newaxis]
@@ -858,15 +862,19 @@ class TestSumMultiply(TestCase):
                       F=F)
 
         # Check: Gaussian-gamma parents
-        X1 = GaussianGammaISO(np.random.randn(2),
-                              random.covariance(2),
-                              np.random.rand(),
-                              np.random.rand())
+        X1 = GaussianGamma(
+            np.random.randn(2),
+            random.covariance(2),
+            np.random.rand(),
+            np.random.rand()
+        )
         x1 = X1.get_moments()
-        X2 = GaussianGammaISO(np.random.randn(2),
-                              random.covariance(2),
-                              np.random.rand(),
-                              np.random.rand())
+        X2 = GaussianGamma(
+            np.random.randn(2),
+            random.covariance(2),
+            np.random.rand(),
+            np.random.rand()
+        )
         x2 = X2.get_moments()
         F = SumMultiply('i,i->i', X1, X2)
         V = random.covariance(2)

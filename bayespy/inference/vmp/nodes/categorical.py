@@ -27,15 +27,6 @@ class CategoricalMoments(MultinomialMoments):
     Class for the moments of categorical variables.
     """
 
-    
-    def __init__(self, categories):
-        """
-        Create moments object for categorical variables
-        """
-        self.D = categories
-        super().__init__()
-
-        
     def compute_fixed_moments(self, x):
         """
         Compute the moments for a fixed value
@@ -45,23 +36,39 @@ class CategoricalMoments(MultinomialMoments):
         x = np.asanyarray(x)
         if not misc.isinteger(x):
             raise ValueError("Values must be integers")
-        if np.any(x < 0) or np.any(x >= self.D):
+        if np.any(x < 0) or np.any(x >= self.categories):
             raise ValueError("Invalid category index")
 
-        u0 = np.zeros((np.size(x), self.D))
+        u0 = np.zeros((np.size(x), self.categories))
         u0[[np.arange(np.size(x)), np.ravel(x)]] = 1
-        u0 = np.reshape(u0, np.shape(x) + (self.D,))
+        u0 = np.reshape(u0, np.shape(x) + (self.categories,))
 
         return [u0]
-    
 
-    def compute_dims_from_values(self, x):
+
+    @classmethod
+    def from_values(cls, x, categories):
         """
         Return the shape of the moments for a fixed value.
 
         The observations are scalar.
         """
+        return cls(categories)
+        raise DeprecationWarning()
         return ( (self.D,), )
+
+
+    def get_instance_conversion_kwargs(self):
+        return dict(categories=self.categories)
+
+
+    def get_instance_converter(self, categories):
+        if categories is not None and categories != self.categories:
+            raise ValueError(
+                "No automatic conversion from CategoricalMoments to "
+                "CategoricalMoments with different number of categories"
+            )
+        return None
 
 
 class CategoricalDistribution(MultinomialDistribution):
@@ -120,28 +127,25 @@ class CategoricalDistribution(MultinomialDistribution):
 class Categorical(ExponentialFamily):
     r"""
     Node for categorical random variables.
-    
+
     The node models a categorical random variable :math:`x \in \{0,\ldots,K-1\}`
     with prior probabilities :math:`\{p_0, \ldots, p_{K-1}\}` for each category:
-    
+
     .. math::
 
         p(x=k) = p_k \quad \text{for } k\in \{0,\ldots,K-1\}.
 
     Parameters
     ----------
-    
+
     p : Dirichlet-like node or (...,K)-array
-    
+
         Probabilities for each category
 
     See also
     --------
     Bernoulli, Multinomial, Dirichlet
     """
-
-
-    _parent_moments = [DirichletMoments()]
 
 
     def __init__(self, p, **kwargs):
@@ -152,34 +156,36 @@ class Categorical(ExponentialFamily):
 
 
     @classmethod
-    @ensureparents
     def _constructor(cls, p, **kwargs):
         """
         Constructs distribution and moments objects.
 
         This method is called if useconstructor decorator is used for __init__.
-        
+
         Becase the distribution and moments object depend on the number of
         categories, that is, they depend on the parent node, this method can be
         used to construct those objects.
         """
 
         # Get the number of categories
+        p = cls._ensure_moments(p, DirichletMoments)
         D = p.dims[0][0]
 
+        parent_moments = (p._moments,)
+
         parents = [p]
-        moments = CategoricalMoments(D)
         distribution = CategoricalDistribution(D)
+        moments = CategoricalMoments(D)
 
         return (parents,
                 kwargs,
-                ( (D,), ),
+                moments.dims,
                 cls._total_plates(kwargs.get('plates'),
                                   distribution.plates_from_parent(0, p.plates)),
-                distribution, 
-                moments, 
-                cls._parent_moments)
-    
+                distribution,
+                moments,
+                parent_moments)
+
 
     def __str__(self):
         """

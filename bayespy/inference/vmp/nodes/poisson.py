@@ -27,6 +27,9 @@ class PoissonMoments(Moments):
     """
 
 
+    dims = ( (), )
+
+
     def compute_fixed_moments(self, x):
         """
         Compute the moments for a fixed value
@@ -38,20 +41,21 @@ class PoissonMoments(Moments):
         # Now, the moments are just the counts
         return [x]
 
-    
-    def compute_dims_from_values(self, x):
+
+    @classmethod
+    def from_values(cls, x):
         """
         Return the shape of the moments for a fixed value.
 
         The realizations are scalars, thus the shape of the moment is ().
         """
-        return ( (), )
+        return cls()
 
 
 class PoissonDistribution(ExponentialFamilyDistribution):
     """
     Class for the VMP formulas of Poisson variables.
-    """    
+    """
 
 
     def compute_message_to_parent(self, parent, index, u, u_lambda):

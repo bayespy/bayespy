@@ -57,6 +57,19 @@ class Add(Deterministic):
         Add(X1, X2, ...)
         """
 
+        ndim = None
+        for node in nodes:
+            try:
+                node = self._ensure_moments(node, GaussianMoments, ndim=None)
+            except ValueError:
+                pass
+            else:
+                ndim = node._moments.ndim
+                break
+
+        nodes = [self._ensure_moments(node, GaussianMoments, ndim=ndim)
+                 for node in nodes]
+
         N = len(nodes)
         if N < 2:
             raise ValueError("Give at least two parents")
@@ -69,9 +82,10 @@ class Add(Deterministic):
 
         ndim = len(nodes[0].dims[0])
         dims = tuple(nodes[0].dims)
-        
-        self._moments = GaussianMoments(ndim)
-        self._parent_moments = N * [GaussianMoments(ndim)]
+        shape = dims[0]
+
+        self._moments = GaussianMoments(shape)
+        self._parent_moments = N * [GaussianMoments(shape)]
 
         self.ndim = ndim
         self.N = N

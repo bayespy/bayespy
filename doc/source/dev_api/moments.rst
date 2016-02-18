@@ -16,8 +16,7 @@ Moments
    node.Moments
    gaussian.GaussianMoments
    gaussian_markov_chain.GaussianMarkovChainMoments
-   gaussian.GaussianGammaISOMoments
-   gaussian.GaussianGammaARDMoments
+   gaussian.GaussianGammaMoments
    gaussian.GaussianWishartMoments
    gamma.GammaMoments
    wishart.WishartMoments

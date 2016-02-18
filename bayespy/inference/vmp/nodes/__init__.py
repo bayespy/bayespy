@@ -26,8 +26,7 @@ from .gaussian import Gaussian, GaussianARD
 from .wishart import Wishart
 from .gamma import Gamma, GammaShape
 
-from .gaussian import (GaussianGammaISO,
-                       GaussianGammaARD,
+from .gaussian import (GaussianGamma,
                        GaussianWishart)
 
 from .gaussian_markov_chain import GaussianMarkovChain
