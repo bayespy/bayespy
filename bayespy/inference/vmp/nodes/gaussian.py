@@ -74,13 +74,9 @@ class GaussianMoments(Moments):
 
 
     def get_instance_converter(self, ndim):
-        # FIXME/TODO: IMPLEMENT THIS CORRECTLY!
-        if ndim is not None and ndim != self.ndim:
-            raise NotImplementedError(
-                "Conversion to different ndim in GaussianMoments not yet "
-                "implemented."
-            )
-        return lambda x: x
+        if ndim == self.ndim or ndim is None:
+            return None
+
 
 
 class GaussianGammaMoments(Moments):

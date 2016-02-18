@@ -68,7 +68,7 @@ class CategoricalMoments(MultinomialMoments):
                 "No automatic conversion from CategoricalMoments to "
                 "CategoricalMoments with different number of categories"
             )
-        return lambda x: x
+        return None
 
 
 class CategoricalDistribution(MultinomialDistribution):

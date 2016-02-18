@@ -90,7 +90,7 @@ class Moments():
                 "get_instance_converter not implemented for class {0}"
                 .format(self.__class__.__name__)
             )
-        return lambda x: x
+        return None
 
 
     def get_instance_conversion_kwargs(self):
@@ -357,7 +357,10 @@ class Node():
         else:
             node = converter(node)
             converter = node._moments.get_instance_converter(**kwargs)
-            return converter(node)
+            if converter is not None:
+                from .converters import NodeConverter
+                return NodeConverter(converter, node)
+            return node
 
 
     def _compute_plates_to_parent(self, index, plates):
