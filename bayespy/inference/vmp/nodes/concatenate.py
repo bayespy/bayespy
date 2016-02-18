@@ -50,7 +50,7 @@ class Concatenate(Deterministic):
                 self._ensure_moments(
                     node,
                     parent_moments.__class__,
-                    **parent_moments.get_instance_conversion_kwargs(),
+                    **parent_moments.get_instance_conversion_kwargs()
                 )
                 for node in nodes
             ]
