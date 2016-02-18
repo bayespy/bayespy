@@ -77,6 +77,82 @@ class GaussianMoments(Moments):
         if ndim == self.ndim or ndim is None:
             return None
 
+        return GaussianToGaussian(self, ndim)
+
+
+class GaussianToGaussian():
+
+
+    def __init__(self, moments_from, ndim_to):
+        if not isinstance(moments_from, GaussianMoments):
+            raise ValueError()
+
+        if ndim_to < 0:
+            return ValueError("ndim_to must be non-negative")
+
+        self.shape_from = moments_from.shape
+        self.ndim_from = moments_from.ndim
+        self.ndim_to = ndim_to
+
+        if self.ndim_to > self.ndim_from:
+            raise ValueError()
+
+        if self.ndim_to == 0:
+            self.moments = GaussianMoments(())
+        else:
+            self.moments = GaussianMoments(self.shape_from[-self.ndim_to:])
+
+        return
+
+
+    def compute_moments(self, u):
+        if self.ndim_to == self.ndim_from:
+            return u
+
+        u0 = u[0]
+        u1 = misc.get_diag(u[1], ndim=self.ndim_from, ndim_to=self.ndim_to)
+
+        return [u0, u1]
+
+
+    def compute_message_to_parent(self, m):
+        # Handle broadcasting in m_child
+        m0 = m[0] * np.ones(self.shape_from)
+        m1 = (
+            misc.make_diag(m[1], ndim=self.ndim_from, ndim_from=self.ndim_to)
+            * misc.identity(*self.shape_from)
+        )
+        return [m0, m1]
+
+
+    def compute_weights_to_parent(self, weights):
+        diff = self.ndim_from - self.ndim_to
+        if diff == 0:
+            return weights
+        return np.sum(
+            weights * np.ones(self.shape_from[:diff]),
+            #misc.atleast_nd(weights, diff),
+            axis=tuple(range(-diff, 0))
+        )
+
+
+    def plates_multiplier_from_parent(self, plates_multiplier):
+        diff = self.ndim_from - self.ndim_to
+        return plates_multiplier + diff * (1,)
+
+
+    def plates_from_parent(self, plates):
+        diff = self.ndim_from - self.ndim_to
+        if diff == 0:
+            return plates
+        return plates + self.shape_from[:diff]
+
+
+    def plates_to_parent(self, plates):
+        diff = self.ndim_from - self.ndim_to
+        if diff == 0:
+            return plates
+        return plates[:-diff]
 
 
 class GaussianGammaMoments(Moments):
@@ -144,9 +220,7 @@ class GaussianGammaMoments(Moments):
                 "Conversion to different ndim in GaussianMoments not yet "
                 "implemented."
             )
-        return lambda x: x
-
-
+        return None
 
 
 class GaussianWishartMoments(Moments):

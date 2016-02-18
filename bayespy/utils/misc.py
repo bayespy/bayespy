@@ -1145,17 +1145,71 @@ def m_outer(A,B):
 def diagonal(A):
     return np.diagonal(A, axis1=-2, axis2=-1)
 
-def get_diag(X, ndim=1):
+
+def make_diag(X, ndim=1, ndim_from=0):
+    """
+    Create a diagonal array given the diagonal elements.
+
+    The diagonal array can be multi-dimensional. By default, the last axis is
+    transformed to two axes (diagonal matrix) but this can be changed using ndim
+    keyword. For instance, an array with shape (K,L,M,N) can be transformed to a
+    set of diagonal 4-D tensors with shape (K,L,M,N,M,N) by giving ndim=2. If
+    ndim=3, the result has shape (K,L,M,N,L,M,N), and so on.
+
+    Diagonality means that for the resulting array Y holds:
+    Y[...,i_1,i_2,..,i_ndim,j_1,j_2,..,j_ndim] is zero if i_n!=j_n for any n.
+    """
+    if ndim < 0:
+        raise ValueError("Parameter ndim must be non-negative integer")
+
+    if ndim_from < 0:
+        raise ValueError("Parameter ndim_to must be non-negative integer")
+
+    if ndim_from > ndim:
+        raise ValueError("Parameter ndim_to must not be greater than ndim")
+
+    if ndim == 0:
+        return X
+
+    if np.ndim(X) < 2 * ndim_from:
+        raise ValueError("The array does not have enough axes")
+
+    if ndim_from > 0:
+        if np.shape(X)[-ndim_from:] != np.shape(X)[-2*ndim_from:-ndim_from]:
+            raise ValueError("The array X is not square")
+
+    if ndim == ndim_from:
+        return X
+
+    X = atleast_nd(X, ndim+ndim_from)
+
+    if ndim > 0:
+        if ndim_from > 0:
+            I = identity(*(np.shape(X)[-(ndim_from+ndim):-ndim_from]))
+        else:
+            I = identity(*(np.shape(X)[-ndim:]))
+        X = add_axes(X, axis=np.ndim(X)-ndim_from, num=ndim-ndim_from)
+        X = I * X
+    return X
+
+
+def get_diag(X, ndim=1, ndim_to=0):
     """
     Get the diagonal of an array.
 
     If ndim>1, take the diagonal of the last 2*ndim axes.
     """
-    if ndim == 0:
-        return X
-
     if ndim < 0:
         raise ValueError("Parameter ndim must be non-negative integer")
+
+    if ndim_to < 0:
+        raise ValueError("Parameter ndim_to must be non-negative integer")
+
+    if ndim_to > ndim:
+        raise ValueError("Parameter ndim_to must not be greater than ndim")
+
+    if ndim == 0:
+        return X
 
     if np.ndim(X) < 2*ndim:
         raise ValueError("The array does not have enough axes")
@@ -1163,10 +1217,27 @@ def get_diag(X, ndim=1):
     if np.shape(X)[-ndim:] != np.shape(X)[-2*ndim:-ndim]:
         raise ValueError("The array X is not square")
 
-    axes_out = tuple(range(np.ndim(X)-ndim, 0, -1))
-    axes_dim = tuple(range(ndim, 0, -1))
-    return np.einsum(X, axes_out+axes_dim, axes_out)
-    
+    if ndim == ndim_to:
+        return X
+
+    n_plate_axes = np.ndim(X) - 2 * ndim
+    n_diag_axes = ndim - ndim_to
+
+    axes = tuple(range(0, np.ndim(X) - ndim + ndim_to))
+
+    lengths = [0, n_plate_axes, n_diag_axes, ndim_to, ndim_to]
+    cutpoints = list(np.cumsum(lengths))
+
+    axes_plates = axes[cutpoints[0]:cutpoints[1]]
+    axes_diag= axes[cutpoints[1]:cutpoints[2]]
+    axes_dims1 = axes[cutpoints[2]:cutpoints[3]]
+    axes_dims2 = axes[cutpoints[3]:cutpoints[4]]
+
+    axes_input = axes_plates + axes_diag + axes_dims1 + axes_diag + axes_dims2
+    axes_output = axes_plates + axes_diag + axes_dims1 + axes_dims2
+
+    return np.einsum(X, axes_input, axes_output)
+
 
 def diag(X, ndim=1):
     """
