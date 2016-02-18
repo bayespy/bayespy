@@ -18,7 +18,7 @@ from numpy import testing
 from .. import gaussian
 from bayespy.nodes import (Gaussian, 
                            GaussianARD,
-                           GaussianGammaISO,
+                           GaussianGamma,
                            Gamma,
                            Wishart)
 
@@ -895,50 +895,50 @@ class TestGaussianARD(TestCase):
         pass
         
 
-class TestGaussianGammaISO(TestCase):
+class TestGaussianGamma(TestCase):
     """
-    Unit tests for GaussianGammaISO node.
+    Unit tests for GaussianGamma node.
     """
     
 
     def test_init(self):
         """
-        Test the creation of GaussianGammaISO node
+        Test the creation of GaussianGamma node
         """
 
         # Simple construction
-        X_alpha = GaussianGammaISO([1,2,3], np.identity(3), 2, 10)
+        X_alpha = GaussianGamma([1,2,3], np.identity(3), 2, 10)
         self.assertEqual(X_alpha.plates, ())
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
 
         # Plates
-        X_alpha = GaussianGammaISO([1,2,3], np.identity(3), 2, 10, plates=(4,))
+        X_alpha = GaussianGamma([1,2,3], np.identity(3), 2, 10, plates=(4,))
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
 
         # Plates in mu
-        X_alpha = GaussianGammaISO(np.ones((4,3)), np.identity(3), 2, 10)
+        X_alpha = GaussianGamma(np.ones((4,3)), np.identity(3), 2, 10)
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
         
         # Plates in Lambda
-        X_alpha = GaussianGammaISO(np.ones(3), np.ones((4,3,3))*np.identity(3), 2, 10)
+        X_alpha = GaussianGamma(np.ones(3), np.ones((4,3,3))*np.identity(3), 2, 10)
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
         
         # Plates in a
-        X_alpha = GaussianGammaISO(np.ones(3), np.identity(3), np.ones(4), 10)
+        X_alpha = GaussianGamma(np.ones(3), np.identity(3), np.ones(4), 10)
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
         
         # Plates in Lambda
-        X_alpha = GaussianGammaISO(np.ones(3), np.identity(3), 2, np.ones(4))
+        X_alpha = GaussianGamma(np.ones(3), np.identity(3), 2, np.ones(4))
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
 
         # Inconsistent plates
         self.assertRaises(ValueError,
-                          GaussianGammaISO,
+                          GaussianGamma,
                           np.ones((4,3)),
                           np.identity(3), 
                           2,
@@ -947,7 +947,7 @@ class TestGaussianGammaISO(TestCase):
         
         # Inconsistent plates
         self.assertRaises(ValueError,
-                          GaussianGammaISO,
+                          GaussianGamma,
                           np.ones((4,3)),
                           np.identity(3), 
                           2,
@@ -958,13 +958,13 @@ class TestGaussianGammaISO(TestCase):
         mu = Gaussian(np.zeros(3), np.identity(3))
         Lambda = Wishart(10, np.identity(3))
         b = Gamma(1, 1)
-        X_alpha = GaussianGammaISO(mu, Lambda, 2, b)
+        X_alpha = GaussianGamma(mu, Lambda, 2, b)
         self.assertEqual(X_alpha.plates, ())
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
 
         # mu is Gaussian-gamma
-        mu_tau = GaussianGammaISO(np.ones(3), np.identity(3), 5, 5)
-        X_alpha = GaussianGammaISO(mu_tau, np.identity(3), 5, 5)
+        mu_tau = GaussianGamma(np.ones(3), np.identity(3), 5, 5)
+        X_alpha = GaussianGamma(mu_tau, np.identity(3), 5, 5)
         self.assertEqual(X_alpha.plates, ())
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
         
@@ -973,7 +973,7 @@ class TestGaussianGammaISO(TestCase):
 
     def test_message_to_child(self):
         """
-        Test the message to child of GaussianGammaISO node.
+        Test the message to child of GaussianGamma node.
         """
 
         # Simple test
@@ -981,7 +981,7 @@ class TestGaussianGammaISO(TestCase):
         Lambda = np.identity(3)
         a = 2
         b = 10
-        X_alpha = GaussianGammaISO(mu, Lambda, a, b)
+        X_alpha = GaussianGamma(mu, Lambda, a, b)
         u = X_alpha._message_to_child()
         self.assertEqual(len(u), 4)
         tau = np.array(a/b)
@@ -1000,7 +1000,7 @@ class TestGaussianGammaISO(TestCase):
         Lambda = Wishart(10, np.identity(3))
         a = 2
         b = Gamma(3, 15)
-        X_alpha = GaussianGammaISO(mu, Lambda, a, b)
+        X_alpha = GaussianGamma(mu, Lambda, a, b)
         u = X_alpha._message_to_child()
         (mu, mumu) = mu._message_to_child()
         Cov_mu = mumu - linalg.outer(mu, mu)
@@ -1024,7 +1024,7 @@ class TestGaussianGammaISO(TestCase):
         Lambda = Wishart(10, np.identity(3))
         a = 2
         b = Gamma(3, 15)
-        X_alpha = GaussianGammaISO(mu, Lambda, a, b, plates=(4,))
+        X_alpha = GaussianGamma(mu, Lambda, a, b, plates=(4,))
         u = X_alpha._message_to_child()
         (mu, mumu) = mu._message_to_child()
         Cov_mu = mumu - linalg.outer(mu, mu)
@@ -1048,7 +1048,7 @@ class TestGaussianGammaISO(TestCase):
 
     def test_mask_to_parent(self):
         """
-        Test the mask handling in GaussianGammaISO node
+        Test the mask handling in GaussianGamma node
         """
 
         pass

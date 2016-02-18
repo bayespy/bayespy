@@ -17,8 +17,7 @@ Distributions
    expfamily.ExponentialFamilyDistribution
    gaussian.GaussianDistribution
    gaussian.GaussianARDDistribution
-   gaussian.GaussianGammaISODistribution
-   gaussian.GaussianGammaARDDistribution
+   gaussian.GaussianGammaDistribution
    gaussian.GaussianWishartDistribution
    gaussian_markov_chain.GaussianMarkovChainDistribution
    gaussian_markov_chain.SwitchingGaussianMarkovChainDistribution

@@ -12,7 +12,7 @@ from bayespy.utils import misc
 from .node import Node
 from .deterministic import Deterministic
 from .gaussian import Gaussian, GaussianMoments
-from .gaussian import GaussianGammaISOMoments
+from .gaussian import GaussianGammaMoments
 
 
 class SumMultiply(Deterministic):
@@ -190,7 +190,7 @@ class SumMultiply(Deterministic):
             nodes = [
                 self._ensure_moments(
                     node,
-                    GaussianGammaISOMoments,
+                    GaussianGammaMoments,
                     ndim=len(keyset)
                 )
                 for (node, keyset) in zip(nodes, keysets)
@@ -254,7 +254,7 @@ class SumMultiply(Deterministic):
         shape = tuple([broadcasted_size[key] for key in keys_out])
 
         if self.gaussian_gamma:
-            self._moments = GaussianGammaISOMoments(shape)
+            self._moments = GaussianGammaMoments(shape)
         else:
             self._moments = GaussianMoments(shape)
 

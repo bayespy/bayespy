@@ -36,8 +36,7 @@ for Gaussian nodes):
 .. autosummary::
    :toctree: generated/
 
-   GaussianGammaISO
-   GaussianGammaARD
+   GaussianGamma
    GaussianWishart
 
 Nodes for discrete count variables:

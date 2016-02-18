@@ -18,7 +18,7 @@ from numpy import testing
 from .. import gaussian
 from bayespy.nodes import (Gaussian, 
                            GaussianARD,
-                           GaussianGammaISO,
+                           GaussianGamma,
                            Gamma,
                            Wishart)
 

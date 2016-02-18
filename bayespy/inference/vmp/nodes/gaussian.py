@@ -83,7 +83,7 @@ class GaussianMoments(Moments):
         return lambda x: x
 
 
-class GaussianGammaISOMoments(Moments):
+class GaussianGammaMoments(Moments):
     r"""
     Class for the moments of Gaussian-gamma-ISO variables.
     """
@@ -151,74 +151,6 @@ class GaussianGammaISOMoments(Moments):
         return lambda x: x
 
 
-class GaussianGammaARDMoments(Moments):
-    r"""
-    Class for the moments of Gaussian-gamma-ARD variables.
-    """
-
-
-    def __init__(self, shape):
-        r"""
-        Create moments object for Gaussian-gamma isotropic variables
-
-        ndim=0: scalar
-        ndim=1: vector
-        ndim=2: matrix
-        ...
-        """
-        self.shape = shape
-        self.ndim = len(shape)
-        self.dims = (shape, shape, shape, shape)
-        super().__init__()
-
-
-    def compute_fixed_moments(self, x, alpha):
-        r"""
-        Compute the moments for a fixed value
-
-        `x` is a mean vector.
-        `alpha` is a precision scale
-        """
-
-        x = np.asanyarray(x)
-        alpha = np.asanyarray(alpha)
-
-        if np.ndim(x) < self.ndim:
-            raise ValueError("Not enough dimensions in x")
-        if np.ndim(alpha) < self.ndim:
-            raise ValueError("Not enough dimensions in alpha")
-        if np.shape(x) != np.shape(alpha):
-            raise ValueError("Mean and ARD scales have inconsistent shapes")
-
-        u0 = alpha * x
-        u1 = u0 * x
-        u2 = np.copy(alpha)
-        u3 = np.log(alpha)
-
-        u = [u0, u1, u2, u3]
-
-        return u
-
-
-    def compute_dims_from_values(self, x, alpha):
-        r"""
-        Return the shape of the moments for a fixed value.
-        """
-        raise DeprecationWarning()
-
-        if np.ndim(x) < self.ndim:
-            raise ValueError("Not enough dimensions in x")
-        if np.ndim(alpha) < self.ndim:
-            raise ValueError("Not enough dimensions in alpha")
-        if np.shape(x) != np.shape(alpha):
-            raise ValueError("Mean and ARD scales have inconsistent shapes")
-
-        if ndim > 0:
-           shape = np.shape(x)[-self.ndim:]
-        else:
-            shape = ()
-
-        return ( shape, shape, shape, shape )
 
 
 class GaussianWishartMoments(Moments):
@@ -873,7 +805,7 @@ class GaussianARDDistribution(ExponentialFamilyDistribution):
         return [d0, d1]
 
 
-class GaussianGammaISODistribution(ExponentialFamilyDistribution):
+class GaussianGammaDistribution(ExponentialFamilyDistribution):
     r"""
     Class for the VMP formulas of Gaussian-Gamma-ISO variables.
 
@@ -1094,21 +1026,12 @@ class GaussianGammaISODistribution(ExponentialFamilyDistribution):
         raise NotImplementedError()
 
 
-class GaussianGammaARDDistribution(ExponentialFamilyDistribution):
-    r"""
-    """
-
-
-    def __init__(self):
-        raise NotImplementedError()
-
-    
 class GaussianWishartDistribution(ExponentialFamilyDistribution):
     r"""
     Class for the VMP formulas of Gaussian-Wishart variables.
 
     Currently, supports only vector variables.
-    """    
+    """
 
 
     def compute_message_to_parent(self, parent, index, u, u_mu_alpha, u_V, u_n):
@@ -1253,7 +1176,7 @@ class Gaussian(_GaussianTemplate):
     Parameters
     ----------
 
-    mu : Gaussian-like node or GaussianGammaISO-like node or GaussianWishart-like node or array
+    mu : Gaussian-like node or GaussianGamma-like node or GaussianWishart-like node or array
         Mean vector
 
     Lambda : Wishart-like node or array
@@ -1262,7 +1185,7 @@ class Gaussian(_GaussianTemplate):
     See also
     --------
 
-    Wishart, GaussianARD, GaussianWishart, GaussianGammaARD, GaussianGammaISO
+    Wishart, GaussianARD, GaussianWishart, GaussianGamma
 
     """
 
@@ -1447,8 +1370,7 @@ class GaussianARD(_GaussianTemplate):
     Parameters
     ----------
 
-    mu : Gaussian-like node or GaussianGammaISO-like node or GaussianGammaARD-like node or array
-        Mean vector
+    mu : Gaussian-like node or GaussianGamma-like node or array Mean vector
 
     alpha : gamma-like node or array
         Diagonal elements of the precision matrix
@@ -1456,7 +1378,7 @@ class GaussianARD(_GaussianTemplate):
     See also
     --------
     
-    Gamma, Gaussian, GaussianGammaARD, GaussianGammaISO, GaussianWishart
+    Gamma, Gaussian, GaussianGamma, GaussianWishart
     """
 
 
@@ -1484,7 +1406,7 @@ class GaussianARD(_GaussianTemplate):
         messaging protocols.
         """
 
-        mu_alpha = WrapToGaussianGammaISO(mu, alpha, ndim=0)
+        mu_alpha = WrapToGaussianGamma(mu, alpha, ndim=0)
 
         if ndim is None:
             if shape is not None:
@@ -1503,8 +1425,8 @@ class GaussianARD(_GaussianTemplate):
                     shape = mu_alpha.plates[-ndim:]
 
         moments = GaussianMoments(shape)
-        parent_moments = [GaussianGammaISOMoments(())]
-        distribution = GaussianARDDistribution(shape, ndim)
+        parent_moments = [GaussianGammaMoments(())]
+        distribution = GaussianARDDistribution(shape)
 
         plates = cls._total_plates(kwargs.get('plates'),
                                    distribution.plates_from_parent(0, mu_alpha.plates))
@@ -1713,7 +1635,7 @@ class GaussianARD(_GaussianTemplate):
         return
 
 
-class GaussianGammaISO(ExponentialFamily):
+class GaussianGamma(ExponentialFamily):
     r"""
     Node for Gaussian-gamma (isotropic) random variables.
 
@@ -1734,7 +1656,7 @@ class GaussianGammaISO(ExponentialFamily):
     """
 
 
-    _distribution = GaussianGammaISODistribution()
+    _distribution = GaussianGammaDistribution()
 
 
     @classmethod
@@ -1757,7 +1679,7 @@ class GaussianGammaISO(ExponentialFamily):
 
         shape = mu_Lambda.dims[0]
 
-        moments = GaussianGammaISOMoments(shape)
+        moments = GaussianGammaMoments(shape)
         parent_moments = (
             mu_Lambda._moments,
             a._moments,
@@ -2066,45 +1988,12 @@ class GaussianGammaISO(ExponentialFamily):
             return logpdf
 
 
-class GaussianGammaARD(ExponentialFamily):
-    r"""
-    Node for Gaussian and gamma random variables with ARD form.
-
-    The prior:
-    
-    .. math::
-
-        p(x, \tau| \mu, \alpha, a, b) = p(x|\tau, \mu, \alpha) p(\tau|a, b)
-
-        p(x|\alpha, \mu, \alpha) = \mathcal{N}(x | \mu, \mathrm{diag}(
-        \boldsymbol{\alpha} \boldsymbol{\tau} ))
-
-        p(\tau|a, b) = \mathcal{G}(\tau | a, b)
-
-    The posterior approximation :math:`q(x, \tau)` has the same Gaussian-gamma
-    form.
-
-    .. warning:: Not yet implemented.
-
-    See also
-    --------
-    
-    Gaussian, GaussianARD, Gamma, GaussianGammaISO, GaussianWishart
-    """
-
-
-    def __init__(self, mu, alpha, a, b, **kwargs):
-        r"""
-        """
-        raise NotImplementedError()
-
-    
 class GaussianWishart(ExponentialFamily):
     r"""
     Node for Gaussian-Wishart random variables.
 
     The prior:
-    
+
     .. math::
 
         p(x, \Lambda| \mu, \alpha, V, n)
@@ -2138,7 +2027,7 @@ class GaussianWishart(ExponentialFamily):
         moments = GaussianWishartMoments(shape)
 
         # Convert parent nodes
-        mu_alpha = WrapToGaussianGammaISO(mu, alpha)
+        mu_alpha = WrapToGaussianGamma(mu, alpha)
         D = mu_alpha.dims[0][0]
 
         n = cls._ensure_moments(n, WishartPriorMoments)
@@ -2174,13 +2063,12 @@ class GaussianWishart(ExponentialFamily):
                 parent_moments)
 
 
-
 #
 # CONVERTERS
 #
 
 
-class GaussianToGaussianGammaISO(Deterministic):
+class GaussianToGaussianGamma(Deterministic):
     r"""
     Converter for Gaussian moments to Gaussian-gamma isotropic moments
 
@@ -2198,7 +2086,7 @@ class GaussianToGaussianGammaISO(Deterministic):
         shape = X._moments.shape
         self.ndim = X._moments.ndim
 
-        self._moments = GaussianGammaISOMoments(shape)
+        self._moments = GaussianGammaMoments(shape)
         self._parent_moments = [GaussianMoments(shape)]
 
         shape = X.dims[0]
@@ -2225,92 +2113,11 @@ class GaussianToGaussianGammaISO(Deterministic):
             raise ValueError("Invalid parent index")
 
 
-GaussianMoments.add_converter(GaussianGammaISOMoments,
-                              GaussianToGaussianGammaISO)
+GaussianMoments.add_converter(GaussianGammaMoments,
+                              GaussianToGaussianGamma)
 
 
-class GaussianGammaISOToGaussianGammaARD(Deterministic):
-    r"""
-    Converter for Gaussian-gamma ISO moments to Gaussian-gamma ARD moments
-    """
-
-
-    def __init__(self, X, **kwargs):
-        r"""
-        """
-        self.ndim = X._moments.ndim
-        
-        self._moments = GaussianGammaARDMoments(self.ndim)
-        self._parent_moments = [GaussianGammaISOMoments(self.ndim)]
-    
-        shape = X.dims[0]
-        dims = ( shape, shape, shape, shape )
-        super().__init__(X, dims=dims, **kwargs)
-            
-
-    def _compute_moments(self, u_X_alpha):
-        r"""
-        ...
-
-        .. math::
-
-            u_0 &= \alpha x
-            \\
-            u_1 &= \alpha \mathrm{diag}(xx^T)
-            \\
-            u_2 &= [\alpha, \ldots, \alpha]
-            \\
-            u_3 &= [\log(\alpha), \ldots, \log(\alpha)]
-        """
-        shape = self.dims[0]
-        alpha_x = u_X_alpha[0]
-        alpha_xx = misc.get_diag(u_X_alpha[1], ndim=self.ndim)
-        alpha = misc.add_trailing_axes(u_X_alpha[2], self.ndim) * np.ones(shape)
-        logalpha = misc.add_trailing_axes(u_X_alpha[3], self.ndim) * np.ones(shape)
-        u = [alpha_x, alpha_xx, alpha, logalpha]
-        return u
-    
-
-    def _compute_message_to_parent(self, index, m_child, u_X_alpha):
-        r"""
-        ...
-
-        Message from the child is :math:`[m_0, m_1, m_2, m_3]`:
-        
-        .. math::
-
-            \alpha m_0^T x + m_1 \alpha m_1^T \mathrm{diag}(xx^T) +
-            \alpha\mathrm{sum}(m_2) + \mathrm{sum}(m_3) \log|\alpha|
-
-        Thus, message to the first parent is (in case of Gaussian-gamma and
-        Wishart parents):
-
-        .. math::
-
-            \tilde{m_0} &= m_0
-            \\
-            \tilde{m_1} &= \mathrm{diag}(m_1)
-            \\
-            \tilde{m_2} &= \mathrm{sum}(m_2)
-            \\
-            \tilde{m_3} &= \mathrm{sum}(m_3)
-        """
-        if index == 0:
-            m0 = m_child[0]
-            m1 = misc.diag(m_child[1], ndim=self.ndim)
-            m2 = np.sum(m_child[2], axis=tuple(range(-self.ndim,0)))
-            m3 = np.sum(m_child[3], axis=tuple(range(-self.ndim,0)))
-            m = [m0, m1, m2, m3]
-            return m
-        else:
-            raise ValueError("Invalid parent index")
-
-
-GaussianGammaISOMoments.add_converter(GaussianGammaARDMoments,
-                                      GaussianGammaISOToGaussianGammaARD)
-
-
-class GaussianGammaARDToGaussianWishart(Deterministic):
+class GaussianGammaToGaussianWishart(Deterministic):
     r"""
     """
 
@@ -2319,35 +2126,8 @@ class GaussianGammaARDToGaussianWishart(Deterministic):
         raise NotImplementedError()
 
 
-GaussianGammaARDMoments.add_converter(GaussianWishartMoments,
-                                      GaussianGammaARDToGaussianWishart)
-
-
-## class GaussianGammaISOToGamma(Deterministic):
-##     """
-##     """
-
-
-##     def __init__(self):
-##         raise NotImplementedError()
-
-
-## class GaussianGammaARDToGamma(Deterministic):
-##     """
-##     """
-
-
-##     def __init__(self):
-##         raise NotImplementedError()
-
-
-## class GaussianWishartToWishart(Deterministic):
-##     """
-##     """
-
-
-##     def __init__(self):
-##         raise NotImplementedError()
+GaussianGammaMoments.add_converter(GaussianWishartMoments,
+                                   GaussianGammaToGaussianWishart)
 
 
 #
@@ -2357,7 +2137,7 @@ GaussianGammaARDMoments.add_converter(GaussianWishartMoments,
 #
 
 
-class WrapToGaussianGammaISO(Deterministic):
+class WrapToGaussianGamma(Deterministic):
     r"""
     """
 
@@ -2377,7 +2157,7 @@ class WrapToGaussianGammaISO(Deterministic):
         except AttributeError as err:
             raise TypeError("ndim needs to be given explicitly") from err
 
-        X = self._ensure_moments(X, GaussianGammaISOMoments, ndim=ndim)
+        X = self._ensure_moments(X, GaussianGammaMoments, ndim=ndim)
 
         if len(X.dims[0]) != ndim:
             raise RuntimeError("Conversion failed ndim.")
@@ -2385,17 +2165,14 @@ class WrapToGaussianGammaISO(Deterministic):
         shape = X.dims[0]
         dims = ( shape, 2 * shape, (), () )
 
+        self.shape = shape
         self.ndim = len(shape)
 
-        self._moments = GaussianGammaISOMoments(shape)
+        self._moments = GaussianGammaMoments(shape)
         self._parent_moments = [
-            GaussianGammaISOMoments(shape),
+            GaussianGammaMoments(shape),
             GammaMoments()
         ]
-
-        # D = X.dims[0][0]
-        # dims = ( (D,), (D,D), (), () )
-        # self.ndim = 1
 
         super().__init__(X, alpha, dims=dims, **kwargs)
 
@@ -2435,183 +2212,6 @@ class WrapToGaussianGammaISO(Deterministic):
             raise ValueError("Invalid parent index")
 
 
-class WrapToGaussianGammaARD(Deterministic):
-    r"""
-    """
-
-
-    def __init__(self, mu_alpha, tau, **kwargs):
-        r"""
-        """
-
-        # First, just in case mu_alpha is a numeric array, convert mu_alpha to
-        # (constant) Gaussian.
-        ## if not isinstance(mu_alpha, Node):
-        ##     raise ValueError("Mu must be a node")
-        ##     if ndim is None:
-        ##         raise ValueError("For non-node mu, provide ndim")
-        ##     try:
-        ##         mu_alpha = self._ensure_moments(mu_alpha, GaussianMoments(ndim))
-        ##     except Moments.NoConverterError:
-        ##         pass
-
-        # Ensure proper moments from parents
-        try:
-            mu_alpha = mu_alpha._convert(GaussianGammaARDMoments)
-        except AttributeError:
-            raise ValueError("Mu must be a node")
-
-        tau = self._ensure_moments(tau, GammaMoments())
-
-        # Parent moments
-        self._parent_moments = [
-            mu_alpha._moments,
-            tau._moments,
-        ]
-
-        ndim = len(mu_alpha.dims[0])
-
-        if ndim == 0:
-            shape = ()
-        else:
-            shape_mu = mu_alpha.dims[0]
-            shape_tau = tau.plates[-ndim:]
-            shape = misc.broadcasted_shape(shape_mu, shape_tau)
-            
-        self.ndim = len(shape)
-        dims = ( shape, shape, shape, shape )
-
-        self._moments = GaussianGammaARDMoments(self.ndim)
-        
-        super().__init__(mu_alpha, tau, dims=dims, **kwargs)
-
-
-    def _compute_moments(self, u_mu_alpha, u_tau):
-        r"""
-        """
-        mu_alpha = u_mu_alpha[0]
-        mu2_alpha = u_mu_alpha[1]
-        alpha = u_mu_alpha[2]
-        logalpha = u_mu_alpha[3]
-            
-        tau = u_tau[0]
-        logtau = u_tau[1]
-
-        u0 = mu_alpha * tau
-        u1 = mu2_alpha * tau
-        u2 = alpha * tau
-        u3 = logalpha + logtau
-        u = [u0, u1, u2, u3]
-
-        return u
-    
-
-    def _compute_message_to_parent(self, index, m_child, u_mu_alpha, u_tau):
-        r"""
-        ...
-        
-        Message from the child is :math:`[m_0, m_1, m_2, m_3]`:
-        
-        .. math::
-
-            m_0^T \mathrm{diag}(\alpha \circ \tau) \mu +  
-            m_1^T \mathrm{diag}(\alpha \circ \tau) (\mu \circ \mu) + 
-            m_2^T (\alpha \circ \tau) + 
-            m_3^T \circ (\log \alpha + \log \tau)
-
-        Thus, message to the first parent is:
-
-        .. math::
-
-            \tilde{m_0} &= m_0 \circ \tau
-            \\
-            \tilde{m_1} &= m_1 \circ \tau
-            \\
-            \tilde{m_2} &= m_2 \circ \tau
-            \\
-            \tilde{m_3} &= m_3
-
-        Sum those to proper shape of mu-alpha.
-
-        The message to the second parent is:
-
-        .. math::
-
-            \tilde{m_0} &= \alpha \circ (m_0 \circ \mu + m_1 \circ \mu \circ \mu + m_2)
-            \\
-            \tilde{m_1} &= m_3
-        """
-        if index == 0:
-            tau = u_tau[0]
-            m0 = m_child[0] * tau
-            m1 = m_child[1] * tau
-            m2 = m_child[2] * tau
-            m3 = m_child[3]
-            # Sum the broadcasted variable axes. Plate axes are handled by
-            # default.
-            shape_mu = self.parents[0].dims[0]
-            ndim_mu = len(shape_mu)
-            if ndim_mu > 0 and shape_mu != self.dims[0]:
-                plates_m0 = np.shape(m0)[:-ndim_mu]
-                plates_m1 = np.shape(m1)[:-ndim_mu]
-                plates_m2 = np.shape(m2)[:-ndim_mu]
-                plates_m3 = np.shape(m3)[:-ndim_mu]
-                m0 = misc.sum_to_shape(m0, plates_m0 + shape_mu)
-                m1 = misc.sum_to_shape(m1, plates_m1 + shape_mu)
-                m2 = misc.sum_to_shape(m2, plates_m2 + shape_mu)
-                m3 = misc.sum_to_shape(m3, plates_m3 + shape_mu)
-            m = [m0, m1, m2, m3]
-            return m
-        elif index == 1:
-            ndim_mu = len(self.parents[0].dims[0])
-            alpha_mu = u_mu_alpha[0]
-            alpha_mu2 = u_mu_alpha[1]
-            alpha = u_mu_alpha[2]
-            m0 = m_child[0]*alpha_mu + m_child[1]*alpha_mu2 + m_child[2]*alpha
-            m1 = m_child[3]
-            m = [m0, m1]
-            return m
-        else:
-            raise ValueError("Invalid parent index")
-
-
-    def _compute_weights_to_parent(self, index, weights):
-        r"""
-        """
-        if index == 0:
-            return weights
-        elif index == 1:
-            return misc.add_trailing_axes(weights, self.ndim)
-        else:
-            raise ValueError("Invalid parent index")
-
-
-    def _plates_to_parent(self, index):
-        r"""
-        """
-        if index == 0:
-            return self.plates
-        elif index == 1:
-            shape = self.dims[0]
-            return self.plates + shape
-        else:
-            raise ValueError("Invalid parent index")
-
-
-    def _plates_from_parent(self, index):
-        r"""
-        """
-        if index == 0:
-            return self.parents[0].plates
-        elif index == 1:
-            if self.ndim == 0:
-                return self.parents[1].plates
-            else:
-                return self.parents[1].plates[:-self.ndim]
-        else:
-            raise ValueError("Invalid parent index")
-
-
 class WrapToGaussianWishart(Deterministic):
     r"""
     Wraps Gaussian and Wishart nodes into a Gaussian-Wishart node.
@@ -2635,7 +2235,7 @@ class WrapToGaussianWishart(Deterministic):
 
         try:
             # Try combo Gaussian-Gamma and Wishart
-            X = self._ensure_moments(X, GaussianGammaISOMoments, ndim=1)
+            X = self._ensure_moments(X, GaussianGammaMoments, ndim=1)
         except ValueError:
             # Have to use Gaussian-Wishart and Gamma
             X = self._ensure_moments(X, GaussianWishartMoments)

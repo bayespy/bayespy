@@ -23,8 +23,8 @@ from .expfamily import useconstructor
 from .gaussian import (Gaussian,
                        GaussianMoments,
                        GaussianWishartMoments,
-                       GaussianGammaISOMoments,
-                       WrapToGaussianGammaISO,
+                       GaussianGammaMoments,
+                       WrapToGaussianGamma,
                        WrapToGaussianWishart)
 from .wishart import Wishart, WishartMoments
 from .gamma import Gamma, GammaMoments
@@ -426,7 +426,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             m3 = 0.5
             return [m0, m1, m2, m3]
 
-        elif index == 1: # (A, nu) -- GaussianGammaISOMoments
+        elif index == 1: # (A, nu) -- GaussianGammaMoments
             XnXn = u[1]
             XpXn = u[2]
 
@@ -784,7 +784,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         """
 
         mu_Lambda = WrapToGaussianWishart(mu, Lambda)
-        A_nu = WrapToGaussianGammaISO(A, nu, ndim=1)
+        A_nu = WrapToGaussianGamma(A, nu, ndim=1)
 
         D = mu_Lambda.dims[0][0]
 
@@ -794,11 +794,11 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
         # Check whether to use input signals or not
         if inputs is None:
             _parent_moments = (GaussianWishartMoments((D,)),
-                               GaussianGammaISOMoments((D,)))
+                               GaussianGammaMoments((D,)))
         else:
             K = inputs.dims[0][0]
             _parent_moments = (GaussianWishartMoments((D,)),
-                               GaussianGammaISOMoments((D,)),
+                               GaussianGammaMoments((D,)),
                                GaussianMoments((K,)))
 
         # Time instances from input signals
