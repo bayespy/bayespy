@@ -373,6 +373,10 @@ class Node():
         return plates
 
 
+    def _compute_plates_multiplier_from_parent(self, index, plates_multiplier):
+        return self._compute_plates_from_parent(index, plates_multiplier)
+
+
     def _plates_to_parent(self, index):
         return self._compute_plates_to_parent(index, self.plates)
 
@@ -383,8 +387,10 @@ class Node():
 
 
     def _plates_multiplier_from_parent(self, index):
-        return self._compute_plates_from_parent(index,
-                                                self.parents[index].plates_multiplier)
+        return self._compute_plates_multiplier_from_parent(
+            index,
+            self.parents[index].plates_multiplier
+        )
 
 
     @property
