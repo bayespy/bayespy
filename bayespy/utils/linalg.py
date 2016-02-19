@@ -27,11 +27,17 @@ import scipy.sparse as sparse
 
 from . import misc
 
-def chol(C):
+def chol(C, ndim=1):
     if sparse.issparse(C):
+        if ndim != 1:
+            raise NotImplementedError()
         # Sparse Cholesky decomposition (returns a Factor object)
         return cholmod.cholesky(C)
     else:
+        if ndim == 0:
+            return np.sqrt(C)
+        if ndim != 1:
+            raise NotImplementedError()
         # Computes Cholesky decomposition for a collection of matrices.
         # The last two axes of C are considered as the matrix.
         C = np.atleast_2d(C)
@@ -43,18 +49,23 @@ def chol(C):
                 raise Exception("Matrix not positive definite")
         return U
 
-def chol_solve(U, b, out=None, matrix=False):
+def chol_solve(U, b, out=None, matrix=False, ndim=1):
     if isinstance(U, np.ndarray):
         if sparse.issparse(b):
             b = b.toarray()
 
         if matrix:
-            if np.ndim(b) < 2:
+            if np.ndim(b) < 2 * ndim:
                 raise ValueError("b is not a matrix")
-            b = np.swapaxes(b, -1, -2)
+            b = transpose(b, ndim=ndim)
             U = U[...,None,:,:]
-            
-            
+
+        if np.ndim(U) < 2 * ndim:
+            raise ValueError("Cholesky factor has insufficient ndim")
+
+        if ndim != 1:
+            raise NotImplementedError()
+
         # Allocate memory
         U = np.atleast_2d(U)
         B = np.atleast_1d(b)
@@ -110,6 +121,8 @@ def chol_solve(U, b, out=None, matrix=False):
         return out
 
     elif isinstance(U, cholmod.Factor):
+        if ndim != 1:
+            raise NotImplementedError()
         if matrix:
             raise NotImplementedError()
         if sparse.issparse(b):
@@ -118,8 +131,10 @@ def chol_solve(U, b, out=None, matrix=False):
     else:
         raise ValueError("Unknown type of Cholesky factor")
 
-def chol_inv(U):
+def chol_inv(U, ndim=1):
     if isinstance(U, np.ndarray):
+        if ndim != 1:
+            raise NotImplementedError()
         # Allocate memory
         V = np.tile(np.identity(np.shape(U)[-1]), np.shape(U)[:-2]+(1,1))
         for i in misc.nested_iterator(np.shape(U)[:-2]):
@@ -130,27 +145,34 @@ def chol_inv(U):
         return V
     elif isinstance(U, cholmod.Factor):
         raise NotImplementedError
+        if ndim != 1:
+            raise NotImplementedError()
         ## if sparse.issparse(b):
         ##     b = b.toarray()
         ## return U.solve_A(b)
     else:
         raise ValueError("Unknown type of Cholesky factor")
 
-def chol_logdet(U):
+def chol_logdet(U, ndim=1):
     if isinstance(U, np.ndarray):
+        if ndim != 1:
+            raise NotImplementedError()
         return 2*np.sum(np.log(np.einsum('...ii->...i',U)), axis=-1)
     elif isinstance(U, cholmod.Factor):
+        if ndim != 1:
+            raise NotImplementedError()
         return np.sum(np.log(U.D()))
     else:
         raise ValueError("Unknown type of Cholesky factor")
-    
+
 def logdet_chol(U):
     if isinstance(U, np.ndarray):
         # Computes Cholesky decomposition for a collection of matrices.
         return 2*np.sum(np.log(np.einsum('...ii->...i', U)), axis=(-1,))
     elif isinstance(U, cholmod.Factor):
         return np.sum(np.log(U.D()))
-    
+
+
 def logdet_tri(R):
     """
     Logarithm of the absolute value of the determinant of a triangular matrix.

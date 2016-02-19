@@ -43,32 +43,49 @@ class WishartPriorMoments(Moments):
 class WishartMoments(Moments):
 
 
-    def __init__(self, D):
-        self.D = D
-        self.dims = ( (D, D), () )
+    def __init__(self, shape):
+        self.shape = shape
+        self.ndim = len(shape)
+        self.dims = ( 2 * shape, () )
         return
 
 
     def compute_fixed_moments(self, Lambda):
         """ Compute moments for fixed x. """
-        ldet = linalg.chol_logdet(linalg.chol(Lambda))
+        ldet = linalg.chol_logdet(
+            linalg.chol(Lambda, ndim=self.ndim),
+            ndim=self.ndim
+        )
         u = [Lambda,
              ldet]
         return u
 
 
+    def get_instance_conversion_kwargs(self):
+        return dict(ndim=self.ndim)
+
+
+    def get_instance_converter(self, ndim):
+        if ndim != self.ndim:
+            raise NotImplementedError(
+                "No conversion between different ndim implemented for "
+                "WishartMoments yet"
+            )
+        return None
+
+
     @classmethod
-    def from_values(cls, x):
+    def from_values(cls, x, ndim):
         """ Compute the dimensions of phi and u. """
-        if np.ndim(x) < 2:
+        if np.ndim(x) < 2 * ndim:
             raise ValueError("Values for Wishart distribution must be at least "
                              "2-D arrays.")
-        if np.shape(x)[-1] != np.shape(x)[-2]:
+        if np.shape(x)[-ndim:] != np.shape(x)[-2*ndim:-ndim]:
             raise ValueError("Values for Wishart distribution must be square "
                              "matrices, thus the two last axes must have equal "
                              "length.")
-        D = np.shape(x)[-1]
-        return cls(D)
+        shape = np.shape(x)[-ndim:]
+        return cls(shape)
 
 
 class WishartDistribution(ExponentialFamilyDistribution):
@@ -222,17 +239,15 @@ class Wishart(ExponentialFamily):
         """
 
         # Make V a proper parent node and get the dimensionality of the matrix
-        V = cls._ensure_moments(V, WishartMoments)
+        V = cls._ensure_moments(V, WishartMoments, ndim=1)
         D = V.dims[0][-1]
 
         n = cls._ensure_moments(n, WishartPriorMoments, d=D)
 
-        moments = WishartMoments(D)
+        moments = WishartMoments((D,))
 
         # Parent node message types
         parent_moments = (n._moments, V._moments)
-        # parent_moments = (WishartPriorMoments(D),
-        #                   WishartMoments(D))
 
         parents = [n, V]
 

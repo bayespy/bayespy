@@ -299,7 +299,7 @@ class TestGaussianMarkovChain(TestCase):
                                     n=N)
             (u0, u1, u2) = X._message_to_child()
             (mu, mumu) = Gaussian._ensure_moments(mu, GaussianMoments, ndim=1).get_moments()
-            (Lambda, _) = Wishart._ensure_moments(Lambda, WishartMoments).get_moments()
+            (Lambda, _) = Wishart._ensure_moments(Lambda, WishartMoments, ndim=1).get_moments()
             (a, aa) = Gaussian._ensure_moments(A, GaussianMoments, ndim=1).get_moments()
             a = a * np.ones((N-1,D,D))     # explicit broadcasting for simplicity
             aa = aa * np.ones((N-1,D,D,D)) # explicit broadcasting for simplicity

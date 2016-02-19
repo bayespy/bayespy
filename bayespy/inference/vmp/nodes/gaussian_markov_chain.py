@@ -1296,7 +1296,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         """
 
         mu = cls._ensure_moments(mu, GaussianMoments, ndim=1)
-        Lambda = cls._ensure_moments(Lambda, WishartMoments)
+        Lambda = cls._ensure_moments(Lambda, WishartMoments, ndim=1)
         B = cls._ensure_moments(B, GaussianMoments, ndim=2)
         S = cls._ensure_moments(S, GaussianMoments, ndim=1)
         v = cls._ensure_moments(v, GammaMoments)
@@ -1305,7 +1305,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
         parent_moments = (
             GaussianMoments((D,)),
-            WishartMoments(D),
+            WishartMoments((D,)),
             GaussianMoments((D, K)),
             GaussianMoments((K,)),
             GammaMoments()

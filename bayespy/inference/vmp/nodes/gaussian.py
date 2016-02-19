@@ -892,6 +892,11 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
     """
 
 
+    def __init__(self, ndim):
+        self.ndim = ndim
+        super().__init__()
+
+
     def compute_message_to_parent(self, parent, index, u, u_mu_Lambda, u_a, u_b):
         r"""
         Compute the message to a parent node.
@@ -1018,19 +1023,19 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
         """
         # Compute helpful variables
         V = -2*phi[1]
-        L_V = linalg.chol(V)
-        logdet_V = linalg.chol_logdet(L_V)
-        mu = linalg.chol_solve(L_V, phi[0])
-        Cov = linalg.chol_inv(L_V)
+        L_V = linalg.chol(V, ndim=self.ndim)
+        logdet_V = linalg.chol_logdet(L_V, ndim=self.ndim)
+        mu = linalg.chol_solve(L_V, phi[0], ndim=self.ndim)
+        Cov = linalg.chol_inv(L_V, ndim=self.ndim)
         a = phi[3]
-        b = -phi[2] - 0.5 * linalg.inner(mu, phi[0])
+        b = -phi[2] - 0.5 * linalg.inner(mu, phi[0], ndim=self.ndim)
         log_b = np.log(b)
 
         # Compute moments
         u2 = a / b
         u3 = -log_b + special.psi(a)
-        u0 = u2[...,None] * mu 
-        u1 = Cov + u2[...,None,None] * linalg.outer(mu, mu)
+        u0 = mu * misc.add_trailing_axes(u2, self.ndim)
+        u1 = Cov + linalg.outer(mu, mu) * misc.add_trailing_axes(u2, 2 * self.ndim)
         u = [u0, u1, u2, u3]
 
         # Compute g
@@ -1038,7 +1043,7 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
 
         return (u, g)
 
-    
+
     def compute_cgf_from_parents(self, u_mu_Lambda, u_a, u_b):
         r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
@@ -1050,22 +1055,25 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
         g = 0.5*logdet_Lambda + a*log_b - gammaln_a
         return g
 
-    
+
     def compute_fixed_moments_and_f(self, x, alpha, mask=True):
         r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         logalpha = np.log(alpha)
-        u0 = x * misc.add_trailing_axes(alpha, 1)
-        u1 = linalg.outer(x, x, ndim=1) * misc.add_trailing_axes(alpha, 2)
+        u0 = x * misc.add_trailing_axes(alpha, self.ndim)
+        u1 = linalg.outer(x, x, ndim=self.ndim) * misc.add_trailing_axes(alpha, self.ndim)
         u2 = alpha
         u3 = logalpha
         u = [u0, u1, u2, u3]
-        D = np.shape(x)[-1]
+        if self.ndim > 0:
+            D = np.prod(np.shape(x)[-ndim:])
+        else:
+            D = 1
         f = (D/2 - 1) * logalpha - D/2 * np.log(2*np.pi)
         return (u, f)
 
-    
+
     def random(self, *params, plates=None):
         r"""
         Draw a random sample from the distribution.
@@ -1630,11 +1638,8 @@ class GaussianGamma(ExponentialFamily):
     """
 
 
-    _distribution = GaussianGammaDistribution()
-
-
     @classmethod
-    def _constructor(cls, mu, Lambda, a, b, **kwargs):
+    def _constructor(cls, mu, Lambda, a, b, ndim=1, **kwargs):
         r"""
         Constructs distribution and moments objects.
 
@@ -1647,11 +1652,13 @@ class GaussianGamma(ExponentialFamily):
         """
 
         # Convert parent nodes
-        mu_Lambda = WrapToGaussianWishart(mu, Lambda)
+        mu_Lambda = WrapToGaussianWishart(mu, Lambda, ndim=ndim)
         a = cls._ensure_moments(a, GammaPriorMoments)
         b = cls._ensure_moments(b, GammaMoments)
 
         shape = mu_Lambda.dims[0]
+
+        distribution = GaussianGammaDistribution(ndim)
 
         moments = GaussianGammaMoments(shape)
         parent_moments = (
@@ -1660,10 +1667,8 @@ class GaussianGamma(ExponentialFamily):
             b._moments,
         )
 
-        D = shape[0]
-
         # Check shapes
-        if mu_Lambda.dims != ( (D,), (), (D,D), () ):
+        if mu_Lambda.dims != ( shape, (), 2*shape, () ):
             raise ValueError("mu and Lambda have wrong shape")
         if a.dims != ( (), () ):
             raise ValueError("a has wrong shape")
@@ -1677,15 +1682,18 @@ class GaussianGamma(ExponentialFamily):
                 kwargs,
                 moments.dims,
                 cls._total_plates(kwargs.get('plates'),
-                                  cls._distribution.plates_from_parent(0, mu_Lambda.plates),
-                                  cls._distribution.plates_from_parent(1, a.plates),
-                                  cls._distribution.plates_from_parent(2, b.plates)),
-                cls._distribution,
+                                  distribution.plates_from_parent(0, mu_Lambda.plates),
+                                  distribution.plates_from_parent(1, a.plates),
+                                  distribution.plates_from_parent(2, b.plates)),
+                distribution,
                 moments,
                 parent_moments)
 
 
     def translate(self, b, debug=False):
+
+        if self.ndim != 1:
+            raise NotImplementedError("Only ndim=1 supported at the moment")
 
         tau = self.u[2]
 
@@ -1733,6 +1741,9 @@ class GaussianGamma(ExponentialFamily):
 
 
     def rotate(self, R, inv=None, logdet=None, debug=False):
+
+        if self.ndim != 1:
+            raise NotImplementedError("Only ndim=1 supported at the moment")
 
         if inv is None:
             inv = np.linalg.inv(R)
@@ -1783,6 +1794,9 @@ class GaussianGamma(ExponentialFamily):
         """
         import bayespy.plot as bpplt
         
+        if self.ndim != 1:
+            raise NotImplementedError("Only ndim=1 supported at the moment")
+
         if np.prod(self.plates) != 1:
             raise ValueError("Currently, does not support plates in the node.")
 
@@ -1840,6 +1854,9 @@ class GaussianGamma(ExponentialFamily):
         r"""
         Return the mean and variance of the distribution
         """
+        if self.ndim != 1:
+            raise NotImplementedError("Only ndim=1 supported at the moment")
+
         tau = self.u[2]
         tau_mu = self.u[0]
         return tau_mu / tau[...,None]
@@ -1849,6 +1866,9 @@ class GaussianGamma(ExponentialFamily):
         r"""
         Return the mean and variance of the distribution
         """
+        if self.ndim != 1:
+            raise NotImplementedError("Only ndim=1 supported at the moment")
+
         a = self.phi[3]
         nu = 2*a
 
@@ -1884,6 +1904,9 @@ class GaussianGamma(ExponentialFamily):
         function
             A function which computes log-pdf
         """
+        if self.ndim != 1:
+            raise NotImplementedError("Only ndim=1 supported at the moment")
+
         if gaussian is None and not gamma:
             raise ValueError("Must give some variables")
 
@@ -2197,24 +2220,24 @@ class WrapToGaussianWishart(Deterministic):
     """
 
 
-    def __init__(self, X, Lambda, **kwargs):
+    def __init__(self, X, Lambda, ndim=1, **kwargs):
         r"""
         """
 
         # Just in case X is an array, convert it to a Gaussian node first.
         try:
-            X = self._ensure_moments(X, GaussianMoments, ndim=1)
+            X = self._ensure_moments(X, GaussianMoments, ndim=ndim)
         except Moments.NoConverterError:
             pass
 
         try:
             # Try combo Gaussian-Gamma and Wishart
-            X = self._ensure_moments(X, GaussianGammaMoments, ndim=1)
+            X = self._ensure_moments(X, GaussianGammaMoments, ndim=ndim)
         except ValueError:
             # Have to use Gaussian-Wishart and Gamma
-            X = self._ensure_moments(X, GaussianWishartMoments)
-            Lambda = self._ensure_moments(Lambda, GammaMoments)
-            D = X.dims[0][0]
+            X = self._ensure_moments(X, GaussianWishartMoments, ndim=ndim)
+            Lambda = self._ensure_moments(Lambda, GammaMoments, ndim=ndim)
+            shape = X.dims[0]
             if Lambda.dims != ((), ()):
                 raise ValueError(
                     "Mean and precision have inconsistent shapes: {0} and {1}"
@@ -2225,9 +2248,10 @@ class WrapToGaussianWishart(Deterministic):
                 )
             self.wishart = False
         else:
-            Lambda = self._ensure_moments(Lambda, WishartMoments)
-            D = X.dims[0][0]
-            if Lambda.dims != ((D, D), ()):
+            # Gaussian-Gamma and Wishart
+            shape = X.dims[0]
+            Lambda = self._ensure_moments(Lambda, WishartMoments, ndim=ndim)
+            if Lambda.dims != (2 * shape, ()):
                 raise ValueError(
                     "Mean and precision have inconsistent shapes: {0} and {1}"
                     .format(
@@ -2242,7 +2266,6 @@ class WrapToGaussianWishart(Deterministic):
             Lambda._moments,
         )
 
-        shape = (D,)
         self._moments = GaussianWishartMoments(shape)
 
         super().__init__(X, Lambda, dims=self._moments.dims, **kwargs)
