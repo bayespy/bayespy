@@ -283,7 +283,7 @@ def plot_gaussian(X, axis=-1, scale=2, **kwargs):
     axis : int
         The index of the time axis.
     """
-    X = X._ensure_moments(X, GaussianMoments)
+    X = X._ensure_moments(X, GaussianMoments, ndim=0)
     u_X = X.get_moments()
     x = u_X[0]
     xx = misc.get_diag(u_X[1], ndim=len(X.dims[0]))
@@ -312,7 +312,7 @@ def plot(Y, axis=-1, scale=2, center=False, **kwargs):
 
         # Try Gaussian plotting
         try:
-            Y = Y._ensure_moments(Y, GaussianMoments)
+            Y = Y._ensure_moments(Y, GaussianMoments, ndim=0)
         except GaussianMoments.NoConverterError:
             pass
         else:
@@ -603,7 +603,7 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
         fig = plt.gcf()
 
     # Get mean and second moment
-    X = X._ensure_moments(X, GaussianMoments)
+    X = X._ensure_moments(X, GaussianMoments, ndim=0)
     (x, xx) = X.get_moments()
     ndim = len(X.dims[0])
     shape = X.get_shape(0)
