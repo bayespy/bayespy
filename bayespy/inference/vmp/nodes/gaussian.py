@@ -402,7 +402,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         k = np.shape(phi[0])[-1]
         # Moments
         u0 = linalg.chol_solve(L, phi[0])
-        u1 = misc.m_outer(u0, u0) + linalg.chol_inv(L)
+        u1 = linalg.outer(u0, u0) + linalg.chol_inv(L)
         u = [u0, u1]
         # G
         g = (-0.5 * np.einsum('...i,...i', u[0], phi[0])
@@ -444,7 +444,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
            &= - \frac{D}{2} \log(2\pi)
         """
         k = np.shape(x)[-1]
-        u = [x, misc.m_outer(x,x)]
+        u = [x, linalg.outer(x,x)]
         f = -k/2*np.log(2*np.pi)
         return (u, f)
 
@@ -532,7 +532,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         # Denote Lambda = -2*phi[1]
         # Then, Cov = inv(Lambda) = inv(U'*U) = inv(U) * inv(U')
         # Thus, compute mu + U\z
-        z = misc.m_solve_triangular(U, z, trans='N', lower=False)
+        z = linalg.solve_triangular(U, z, trans='N', lower=False)
         return mu + z
             
 
@@ -1280,7 +1280,7 @@ class Gaussian(_GaussianTemplate):
         
     def __str__(self):
         mu = self.u[0]
-        Cov = self.u[1] - misc.m_outer(mu, mu)
+        Cov = self.u[1] - linalg.outer(mu, mu)
         return ("%s ~ Gaussian(mu, Cov)\n"
                 "  mu = \n"
                 "%s\n"
@@ -1516,7 +1516,7 @@ class GaussianARD(_GaussianTemplate):
 
     def __str__(self):
         mu = self.u[0]
-        Cov = self.u[1] - misc.m_outer(mu, mu)
+        Cov = self.u[1] - linalg.outer(mu, mu)
         return ("%s ~ Gaussian(mu, Cov)\n"
                 "  mu = \n"
                 "%s\n"

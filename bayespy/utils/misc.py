@@ -466,67 +466,67 @@ def grid(x1, x2):
     return np.hstack((X1.reshape((-1,1)),X2.reshape((-1,1))))
 
 
-class CholeskyDense():
-    
-    def __init__(self, K):
-        self.U = linalg.cho_factor(K)
-    
-    def solve(self, b):
-        if sparse.issparse(b):
-            b = b.toarray()
-        return linalg.cho_solve(self.U, b)
+# class CholeskyDense():
 
-    def logdet(self):
-        return 2*np.sum(np.log(np.diag(self.U[0])))
+#     def __init__(self, K):
+#         self.U = linalg.cho_factor(K)
 
-    def trace_solve_gradient(self, dK):
-        return np.trace(self.solve(dK))
+#     def solve(self, b):
+#         if sparse.issparse(b):
+#             b = b.toarray()
+#         return linalg.cho_solve(self.U, b)
 
-class CholeskySparse():
-    
-    def __init__(self, K):
-        self.LD = cholmod.cholesky(K)
+#     def logdet(self):
+#         return 2*np.sum(np.log(np.diag(self.U[0])))
 
-    def solve(self, b):
-        if sparse.issparse(b):
-            b = b.toarray()
-        return self.LD.solve_A(b)
+#     def trace_solve_gradient(self, dK):
+#         return np.trace(self.solve(dK))
 
-    def logdet(self):
-        return self.LD.logdet()
-        #np.sum(np.log(LD.D()))
+# class CholeskySparse():
 
-    def trace_solve_gradient(self, dK):
-        # WTF?! numpy.multiply doesn't work for two sparse
-        # matrices.. It returns a result but it is incorrect!
-        
-        # Use the identity trace(K\dK)=sum(inv(K).*dK) by computing
-        # the sparse inverse (lower triangular part)
-        iK = self.LD.spinv(form='lower')
-        return (2*iK.multiply(dK).sum()
-                - iK.diagonal().dot(dK.diagonal()))
-        # Multiply by two because of symmetry (remove diagonal once
-        # because it was taken into account twice)
-        #return np.multiply(self.LD.inv().todense(),dK.todense()).sum()
-        #return self.LD.inv().multiply(dK).sum() # THIS WORKS
-        #return np.multiply(self.LD.inv(),dK).sum() # THIS NOT WORK!! WTF??
-        iK = self.LD.spinv()
-        return iK.multiply(dK).sum()
-        #return (2*iK.multiply(dK).sum()
-        #        - iK.diagonal().dot(dK.diagonal()))
-        #return (2*np.multiply(iK, dK).sum()
-        #        - iK.diagonal().dot(dK.diagonal())) # THIS NOT WORK!!
-        #return np.trace(self.solve(dK))
-    
-    
-def cholesky(K):
-    if isinstance(K, np.ndarray):
-        return CholeskyDense(K)
-    elif sparse.issparse(K):
-        return CholeskySparse(K)
-    else:
-        raise Exception("Unsupported covariance matrix type")
-    
+#     def __init__(self, K):
+#         self.LD = cholmod.cholesky(K)
+
+#     def solve(self, b):
+#         if sparse.issparse(b):
+#             b = b.toarray()
+#         return self.LD.solve_A(b)
+
+#     def logdet(self):
+#         return self.LD.logdet()
+#         #np.sum(np.log(LD.D()))
+
+#     def trace_solve_gradient(self, dK):
+#         # WTF?! numpy.multiply doesn't work for two sparse
+#         # matrices.. It returns a result but it is incorrect!
+
+#         # Use the identity trace(K\dK)=sum(inv(K).*dK) by computing
+#         # the sparse inverse (lower triangular part)
+#         iK = self.LD.spinv(form='lower')
+#         return (2*iK.multiply(dK).sum()
+#                 - iK.diagonal().dot(dK.diagonal()))
+#         # Multiply by two because of symmetry (remove diagonal once
+#         # because it was taken into account twice)
+#         #return np.multiply(self.LD.inv().todense(),dK.todense()).sum()
+#         #return self.LD.inv().multiply(dK).sum() # THIS WORKS
+#         #return np.multiply(self.LD.inv(),dK).sum() # THIS NOT WORK!! WTF??
+#         iK = self.LD.spinv()
+#         return iK.multiply(dK).sum()
+#         #return (2*iK.multiply(dK).sum()
+#         #        - iK.diagonal().dot(dK.diagonal()))
+#         #return (2*np.multiply(iK, dK).sum()
+#         #        - iK.diagonal().dot(dK.diagonal())) # THIS NOT WORK!!
+#         #return np.trace(self.solve(dK))
+
+
+# def cholesky(K):
+#     if isinstance(K, np.ndarray):
+#         return CholeskyDense(K)
+#     elif sparse.issparse(K):
+#         return CholeskySparse(K)
+#     else:
+#         raise Exception("Unsupported covariance matrix type")
+
 # Computes log probability density function of the Gaussian
 # distribution
 def gaussian_logpdf(y_invcov_y,
@@ -826,7 +826,7 @@ def moveaxis(A, axis_from, axis_to):
                          % (axis_from,
                             axis_to,
                             np.shape(A)))
-                            
+
     axes = np.arange(np.ndim(A))
     axes[axis_from:axis_to] += 1
     axes[axis_from:axis_to:-1] -= 1
@@ -912,20 +912,14 @@ def add_axes(X, num=1, axis=0):
     shape = np.shape(X)[:axis] + num*(1,) + np.shape(X)[axis:]
     return np.reshape(X, shape)
 
-    
+
 def add_leading_axes(x, n):
     return add_axes(x, axis=0, num=n)
-    
+
 
 def add_trailing_axes(x, n):
     return add_axes(x, axis=-1, num=n)
 
-
-## def add_axes(x, lead, trail):
-##     shape = (1,)*lead + np.shape(x) + (1,)*trail
-##     return np.reshape(x, shape)
-    
-    
 
 def nested_iterator(max_inds):
     s = [range(i) for i in max_inds]
@@ -952,7 +946,8 @@ def squeeze(X):
     else:
         shape = shape[inds[0]:]
     return np.reshape(X, shape)
-    
+
+
 def squeeze_to_dim(X, dim):
     s = tuple(range(np.ndim(X)-dim))
     return np.squeeze(X, axis=s)
@@ -996,7 +991,7 @@ def sum_to_shape(X, s):
                 raise ValueError("Shape %s can't be summed to shape %s" %
                                  (np.shape(X), s))
     Y = np.sum(Y, axis=axes, keepdims=True)
-    
+
     return Y
 
 def repeat_to_shape(A, s):
@@ -1016,115 +1011,6 @@ def repeat_to_shape(A, s):
                 A = np.repeat(A, s[i], axis=i)
     return A
 
-#def spinv_chol(L):
-    
-
-def chol(C):
-    if sparse.issparse(C):
-        # Sparse Cholesky decomposition (returns a Factor object)
-        return cholmod.cholesky(C)
-    else:
-        # Dense Cholesky decomposition
-        return linalg.cho_factor(C)[0]
-
-def chol_solve(U, b):
-    if isinstance(U, np.ndarray):
-        if sparse.issparse(b):
-            b = b.toarray()
-        return linalg.cho_solve((U, False), b)
-    elif isinstance(U, cholmod.Factor):
-        if sparse.issparse(b):
-            b = b.toarray()
-        return U.solve_A(b)
-    else:
-        raise ValueError("Unknown type of Cholesky factor")
-
-def chol_inv(U):
-    if isinstance(U, np.ndarray):
-        I = np.identity(np.shape(U)[-1])
-        return linalg.cho_solve((U, False), I)
-    elif isinstance(U, cholmod.Factor):
-        raise NotImplementedError
-        ## if sparse.issparse(b):
-        ##     b = b.toarray()
-        ## return U.solve_A(b)
-    else:
-        raise ValueError("Unknown type of Cholesky factor")
-
-def chol_logdet(U):
-    if isinstance(U, np.ndarray):
-        return 2*np.sum(np.log(np.diag(U)))
-    elif isinstance(U, cholmod.Factor):
-        return np.sum(np.log(U.D()))
-    else:
-        raise ValueError("Unknown type of Cholesky factor")
-    
-def logdet_chol(U):
-    if isinstance(U, np.ndarray):
-        return 2*np.sum(np.log(np.diag(U)))
-    elif isinstance(U, cholmod.Factor):
-        return np.sum(np.log(U.D()))
-
-def m_solve_triangular(U, B, **kwargs):
-    # Allocate memory
-    U = np.atleast_2d(U)
-    B = np.atleast_1d(B)
-    sh_u = U.shape[:-2]
-    sh_b = B.shape[:-1]
-    l_u = len(sh_u)
-    l_b = len(sh_b)
-
-    # Check which axis are iterated over with B along with U
-    ind_b = [Ellipsis] * l_b
-    l_min = min(l_u, l_b)
-    jnd_b = tuple(i for i in range(-l_min,0) if sh_b[i]==sh_u[i])
-
-    # Shape of the result (broadcasting rules)
-    sh = broadcasted_shape(sh_u, sh_b)
-    #out = np.zeros(np.shape(B))
-    out = np.zeros(sh + B.shape[-1:])
-    ## if out == None:
-    ##     # Shape of the result (broadcasting rules)
-    ##     sh = broadcasted_shape(sh_u, sh_b)
-    ##     #out = np.zeros(np.shape(B))
-    ##     out = np.zeros(sh + B.shape[-1:])
-    for i in nested_iterator(np.shape(U)[:-2]):
-
-        # The goal is to run triangular solver once for all vectors of
-        # B for which the matrices of U are the same (according to the
-        # broadcasting rules). Thus, we collect all the axes of B for
-        # which U is singleton and form them as a 2-D matrix and then
-        # run the solver once.
-        
-        # Select those axes of B for which U and B are not singleton
-        for j in jnd_b:
-            ind_b[j] = i[j]
-            
-        # Collect all the axes for which U is singleton
-        b = B[tuple(ind_b) + (Ellipsis,)]
-
-        # Reshape it to a 2-D (or 1-D) array
-        orig_shape = b.shape
-        if b.ndim > 1:
-            b = b.reshape((-1, b.shape[-1]))
-
-        # Ellipsis to all preceeding axes and ellipsis for the last
-        # axis:
-        if len(ind_b) < len(sh):
-            ind_out = (Ellipsis,) + tuple(ind_b) + (Ellipsis,)
-        else:
-            ind_out = tuple(ind_b) + (Ellipsis,)
-
-        #print('utils.m_solve_triangular', np.shape(U[i]), np.shape(b))
-        out[ind_out] = linalg.solve_triangular(U[i],
-                                               b.T,
-                                               **kwargs).T.reshape(orig_shape)
-        #out[ind_out] = out[ind_out].T.reshape(orig_shape)
-
-        
-    return out
-
-
 def multidigamma(a, d):
     """
     Returns the derivative of the log of multivariate gamma.
@@ -1134,13 +1020,6 @@ def multidigamma(a, d):
 
 m_digamma = multidigamma
 
-def m_outer(A,B):
-    # Computes outer product over the last axes of A and B. The other
-    # axes are broadcasted. Thus, if A has shape (..., N) and B has
-    # shape (..., M), then the result has shape (..., N, M)
-    A = np.asanyarray(A)
-    B = np.asanyarray(B)
-    return A[...,np.newaxis]*B[...,np.newaxis,:]
 
 def diagonal(A):
     return np.diagonal(A, axis1=-2, axis2=-1)
@@ -1334,144 +1213,8 @@ def block_banded(D, B):
     A[k:,k:] = D[-1]
 
     return A
-    
 
 
-def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
-    """
-    Perform Kalman filtering to obtain filtered mean and covariance.
-    
-    The parameters of the process may vary in time, thus they are
-    given as iterators instead of fixed values.
-
-    Parameters
-    ----------
-    y : (N,D) array
-        "Normalized" noisy observations of the states, that is, the
-        observations multiplied by the precision matrix U (and possibly
-        other transformation matrices).
-    U : (N,D,D) array or N-list of (D,D) arrays
-        Precision matrix (i.e., inverse covariance matrix) of the observation 
-        noise for each time instance.
-    A : (N-1,D,D) array or (N-1)-list of (D,D) arrays
-        Dynamic matrix for each time instance.
-    V : (N-1,D,D) array or (N-1)-list of (D,D) arrays
-        Covariance matrix of the innovation noise for each time instance.
-
-    Returns
-    -------
-    mu : array
-        Filtered mean of the states.
-    Cov : array
-        Filtered covariance of the states.
-
-    See also
-    --------
-    rts_smoother
-    """
-    mu = mu0
-    Cov = Cov0
-
-    # Allocate memory for the results
-    (N,D) = np.shape(y)
-    X = np.empty((N,D))
-    CovX = np.empty((N,D,D))
-    
-    # Update step for t=0
-    M = np.dot(np.dot(Cov, U[0]), Cov) + Cov
-    L = chol(M)
-    mu = np.dot(Cov, chol_solve(L, np.dot(Cov,y[0]) + mu))
-    Cov = np.dot(Cov, chol_solve(L, Cov))
-    X[0,:] = mu
-    CovX[0,:,:] = Cov
-    
-    #for (yn, Un, An, Vn) in zip(y, U, A, V):
-    for n in range(len(y)-1): #(yn, Un, An, Vn) in zip(y, U, A, V):
-        # Prediction step
-        mu = np.dot(A[n], mu)
-        Cov = np.dot(np.dot(A[n], Cov), A[n].T) + V[n]
-        # Update step
-        M = np.dot(np.dot(Cov, U[n+1]), Cov) + Cov
-        L = chol(M)
-        mu = np.dot(Cov, chol_solve(L, np.dot(Cov,y[n+1]) + mu))
-        Cov = np.dot(Cov, chol_solve(L, Cov))
-
-        # Force symmetric covariance (for numeric inaccuracy)
-        Cov = 0.5*Cov + 0.5*Cov.T
-
-        # Store results
-        X[n+1,:] = mu
-        CovX[n+1,:,:] = Cov
-
-    return (X, CovX)
-
-
-def rts_smoother(mu, Cov, A, V, removethis=None):
-    """
-    Perform Rauch-Tung-Striebel smoothing to obtain the posterior.
-
-    The function returns the posterior mean and covariance of each
-    state. The parameters of the process may vary in time, thus they
-    are given as iterators instead of fixed values.
-
-    Parameters
-    ----------
-    mu : (N,D) array
-        Mean of the states from Kalman filter.
-    Cov : (N,D,D) array
-        Covariance of the states from Kalman filter. 
-    A : (N-1,D,D) array or (N-1)-list of (D,D) arrays
-        Dynamic matrix for each time instance.
-    V : (N-1,D,D) array or (N-1)-list of (D,D) arrays
-        Covariance matrix of the innovation noise for each time instance.
-
-    Returns
-    -------
-    mu : array
-        Posterior mean of the states.
-    Cov : array
-        Posterior covariance of the states.
-
-    See also
-    --------
-    kalman_filter
-    """
-
-    N = len(mu)
-    #n = N-1
-
-    # Start from the last time instance and smoothen backwards
-    x = mu[-1,:]
-    Covx = Cov[-1,:,:]
-    
-    for n in reversed(range(N-1)):#(An, Vn) in zip(reversed(A), reversed(V)):
-
-        #n = n - 1
-        #if n <= 0:
-        #    break
-
-        # The predicted value of n
-        x_p = np.dot(A[n], mu[n,:])
-        Cov_p = np.dot(np.dot(A[n], Cov[n,:,:]), A[n].T) + V[n]
-
-        # Temporary variable
-        S = np.linalg.solve(Cov_p, np.dot(A[n], Cov[n,:,:]))
-
-        # Smoothed value of n
-        x = mu[n,:] + np.dot(S.T, x-x_p)
-        Covx = Cov[n,:,:] + np.dot(np.dot(S.T, Covx-Cov_p), S)
-
-        # Force symmetric covariance (for numeric inaccuracy)
-        Covx = 0.5*Covx + 0.5*Covx.T
-
-        # Store results
-        mu[n,:] = x
-        Cov[n,:] = Covx
-
-
-    return (mu, Cov)
-        
-    
 def dist_haversine(c1, c2, radius=6372795):
 
     # Convert coordinates to radians
