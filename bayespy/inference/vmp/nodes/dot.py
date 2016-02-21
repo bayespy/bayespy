@@ -176,17 +176,16 @@ class SumMultiply(Deterministic):
         # Input and output messages are Gaussian unless there is at least one
         # Gaussian-gamma message from the parents
         self.gaussian_gamma = False
-        try:
-            nodes = [
-                self._ensure_moments(
-                    node,
+        for i in range(len(nodes)):
+            try:
+                nodes[i] = self._ensure_moments(
+                    nodes[i],
                     GaussianMoments,
-                    ndim=len(keyset)
+                    ndim=len(keysets[i])
                 )
-                for (node, keyset) in zip(nodes, keysets)
-            ]
-        except GaussianMoments.NoConverterError:
-            self.gaussian_gamma = True
+            except GaussianMoments.NoConverterError:
+                self.gaussian_gamma = True
+        if self.gaussian_gamma:
             nodes = [
                 self._ensure_moments(
                     node,
