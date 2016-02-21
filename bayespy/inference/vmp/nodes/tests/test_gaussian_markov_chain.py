@@ -658,12 +658,7 @@ class TestVaryingGaussianMarkovChain(TestCase):
                             plates=plates_S+(N,))
             v = Gamma(1+np.random.rand(*(plates_v+(1,D))),
                       1+np.random.rand(*(plates_v+(1,D))))
-            X = VaryingGaussianMarkovChain(mu,
-                                            Lambda,
-                                            B,
-                                            S,
-                                            v,
-                name="X")
+            X = VaryingGaussianMarkovChain(mu, Lambda, B, S, v, name="X")
             self.assertEqual(plates_X, X.plates,
                              msg="Incorrect plates deduced")
             pass
@@ -671,8 +666,8 @@ class TestVaryingGaussianMarkovChain(TestCase):
         check(())
         check((2,3),
               plates_mu=(2,3))
-        check((2,3),
-              plates_Lambda=(2,3))
+        check((6,7),
+              plates_Lambda=(6,7))
         check((2,3),
               plates_B=(2,3))
         check((2,3),
