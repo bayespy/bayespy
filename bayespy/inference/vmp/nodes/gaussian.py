@@ -235,9 +235,6 @@ class GaussianWishartMoments(Moments):
         self.ndim = len(shape)
         self.dims = ( shape, (), 2*shape, () )
 
-        if self.ndim != 1:
-            raise NotImplementedError("GaussianWishart for ndim!= not implemented yet")
-
         super().__init__()
 
 
@@ -252,32 +249,33 @@ class GaussianWishartMoments(Moments):
         x = np.asanyarray(x)
         Lambda = np.asanyarray(Lambda)
 
-        u0 = np.einsum('...ik,...k->...i', Lambda, x)
-        u1 = np.einsum('...i,...ij,...j->...', x, Lambda, x)
+        u0 = linalg.mvdot(Lambda, x, ndim=self.ndim)
+        u1 = np.einsum(
+            '...i,...ij,...j->...',
+            misc.flatten_axes(x, self.ndim),
+            misc.flatten_axes(Lambda, self.ndim, self.ndim),
+            misc.flatten_axes(x, self.ndim)
+        )
         u2 = np.copy(Lambda)
-        u3 = linalg.logdet_cov(Lambda)
+        u3 = linalg.logdet_cov(Lambda, ndim=self.ndim)
 
         return [u0, u1, u2, u3]
 
 
-    def compute_dims_from_values(self, x, Lambda):
+    @classmethod
+    def from_values(self, x, Lambda, ndim):
         r"""
         Return the shape of the moments for a fixed value.
         """
-
-        raise DeprecationWarning()
-
-        if np.ndim(x) < 1:
-            raise ValueError("Mean must be a vector")
-        if np.ndim(Lambda) < 2:
-            raise ValueError("Precision must be a matrix")
-
-        D = np.shape(x)[-1]
-        if np.shape(Lambda)[-2:] != (D,D):
-            raise ValueError("Mean vector and precision matrix have "
-                             "inconsistent shapes")
-
-        return ( (D,), (), (D,D), () )
+        if ndim == 0:
+            return cls(())
+        else:
+            if np.ndim(x) < ndim:
+                raise ValueError("Mean must be a vector")
+            shape = np.shape(x)[-ndim:]
+            if np.shape(Lambda)[-2*ndim:] != shape + shape:
+                raise ValueError("Shapes inconsistent")
+            return cls(shape)
 
 
 
@@ -1035,7 +1033,10 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
         u2 = a / b
         u3 = -log_b + special.psi(a)
         u0 = mu * misc.add_trailing_axes(u2, self.ndim)
-        u1 = Cov + linalg.outer(mu, mu) * misc.add_trailing_axes(u2, 2 * self.ndim)
+        u1 = Cov + (
+            linalg.outer(mu, mu, ndim=self.ndim)
+            * misc.add_trailing_axes(u2, 2 * self.ndim)
+        )
         u = [u0, u1, u2, u3]
 
         # Compute g
@@ -2261,6 +2262,8 @@ class WrapToGaussianWishart(Deterministic):
                 )
             self.wishart = True
 
+        self.ndim = len(shape)
+
         self._parent_moments = (
             X._moments,
             Lambda._moments,
@@ -2283,31 +2286,31 @@ class WrapToGaussianWishart(Deterministic):
             logdet_Lambda = u_Lambda[1]
 
             D = np.prod(self.dims[0])
-            
-            u0 = linalg.mvdot(Lambda, alpha_x)
-            u1 = linalg.inner(Lambda, alpha_xx, ndim=2)
-            u2 = Lambda * misc.add_trailing_axes(alpha, 2)
+
+            u0 = linalg.mvdot(Lambda, alpha_x, ndim=self.ndim)
+            u1 = linalg.inner(Lambda, alpha_xx, ndim=2*self.ndim)
+            u2 = Lambda * misc.add_trailing_axes(alpha, 2*self.ndim)
             u3 = logdet_Lambda + D * log_alpha
             u = [u0, u1, u2, u3]
 
             return u
         else:
             raise NotImplementedError()
-    
+
 
     def _compute_message_to_parent(self, index, m_child, u_X_alpha, u_Lambda):
         r"""
         ...
 
         Message from the child is :math:`[m_0, m_1, m_2, m_3]`:
-        
+
         .. math::
 
             \alpha m_0^T \Lambda x + m_1 \alpha x^T \Lambda x
             + \mathrm{tr}(\alpha m_2 \Lambda) + m_3 (\log | \alpha \Lambda |)
 
         In case of Gaussian-gamma and Wishart parents:
-        
+
         Message to the first parent (x, alpha):
 
         .. math::
@@ -2334,9 +2337,9 @@ class WrapToGaussianWishart(Deterministic):
                 # Message to Gaussian-gamma (isotropic)
                 Lambda = u_Lambda[0]
                 D = np.prod(self.dims[0])
-                m0 = linalg.mvdot(Lambda, m_child[0])
-                m1 = Lambda * misc.add_trailing_axes(m_child[1], 2)
-                m2 = linalg.inner(Lambda, m_child[2], ndim=2)
+                m0 = linalg.mvdot(Lambda, m_child[0], ndim=self.ndim)
+                m1 = Lambda * misc.add_trailing_axes(m_child[1], 2*self.ndim)
+                m2 = linalg.inner(Lambda, m_child[2], ndim=2*self.ndim)
                 m3 = D * m_child[3]
                 m = [m0, m1, m2, m3]
                 return m
@@ -2349,10 +2352,10 @@ class WrapToGaussianWishart(Deterministic):
                 alpha_x = u_X_alpha[0]
                 alpha_xx = u_X_alpha[1]
                 alpha = u_X_alpha[2]
-                m0 = (0.5*linalg.outer(alpha_x, m_child[0], ndim=1) +
-                      0.5*linalg.outer(m_child[0], alpha_x, ndim=1) +
-                      alpha_xx * misc.add_trailing_axes(m_child[1], 2) +
-                      misc.add_trailing_axes(alpha, 2) * m_child[2])
+                m0 = (0.5*linalg.outer(alpha_x, m_child[0], ndim=self.ndim) +
+                      0.5*linalg.outer(m_child[0], alpha_x, ndim=self.ndim) +
+                      alpha_xx * misc.add_trailing_axes(m_child[1], 2*self.ndim) +
+                      misc.add_trailing_axes(alpha, 2*self.ndim) * m_child[2])
                 m1 = m_child[3]
                 m = [m0, m1]
                 return m
