@@ -29,6 +29,35 @@ import unittest
 from numpy import testing
 
 
+def flatten_axes(X, *ndims):
+    ndim = sum(ndims)
+    if np.ndim(X) < ndim:
+        raise ValueError("Not enough ndims in the array")
+    if len(ndims) == 0:
+        return X
+    shape = np.shape(X)
+    i = np.ndim(X) - ndim
+    plates = shape[:i]
+    nd_sums = i + np.cumsum((0,) + ndims)
+    sizes = tuple(
+        np.prod(shape[i:j])
+        for (i, j) in zip(nd_sums[:-1], nd_sums[1:])
+    )
+    return np.reshape(X, plates + sizes)
+
+
+def reshape_axes(X, *shapes):
+    ndim = len(shapes)
+    if np.ndim(X) < ndim:
+        raise ValueError("Not enough ndims in the array")
+    i = np.ndim(X) - ndim
+    sizes = tuple(np.prod(sh) for sh in shapes)
+    if np.shape(X)[i:] != sizes:
+        raise ValueError("Shapes inconsistent with sizes")
+    shape = tuple(i for sh in shapes for i in sh)
+    return np.reshape(X, np.shape(X)[:i] + shape)
+
+
 def find_set_index(index, set_lengths):
     """
     Given set sizes and an index, returns the index of the set
