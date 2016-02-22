@@ -301,23 +301,29 @@ class GaussianDistribution(ExponentialFamilyDistribution):
 
     .. math::
 
-       \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D}, 
+       \mathbf{x},\boldsymbol{\mu} \in \mathbb{R}^{D},
        \quad \mathbf{\Lambda} \in \mathbb{R}^{D \times D},
        \quad \mathbf{\Lambda} \text{ symmetric positive definite}
 
     .. math::
 
        \log\mathcal{N}( \mathbf{x} | \boldsymbol{\mu}, \mathbf{\Lambda} )
-       &= 
+       &=
        - \frac{1}{2} \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \mathbf{x}
        + \mathbf{x}^{\mathrm{T}} \mathbf{\Lambda} \boldsymbol{\mu}
        - \frac{1}{2} \boldsymbol{\mu}^{\mathrm{T}} \mathbf{\Lambda}
          \boldsymbol{\mu}
        + \frac{1}{2} \log |\mathbf{\Lambda}|
        - \frac{D}{2} \log (2\pi)
-    """    
+    """
 
-    
+
+    def __init__(self, shape):
+        self.shape = shape
+        self.ndim = len(shape)
+        super().__init__()
+
+
     def compute_message_to_parent(self, parent, index, u, u_mu_Lambda):
         r"""
         Compute the message to a parent node.
@@ -327,7 +333,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
            \boldsymbol{\phi}_{\boldsymbol{\mu}} (\mathbf{x}, \mathbf{\Lambda})
            &=
            \left[ \begin{matrix}
-             \mathbf{\Lambda} \mathbf{x} 
+             \mathbf{\Lambda} \mathbf{x}
              \\
              - \frac{1}{2} \mathbf{\Lambda}
            \end{matrix} \right]
@@ -373,40 +379,42 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         return [Lambda_mu,
                 -0.5 * Lambda]
 
+
     def compute_moments_and_cgf(self, phi, mask=True):
         r"""
         Compute the moments and :math:`g(\phi)`.
 
         .. math::
-        
+
            \overline{\mathbf{u}}  (\boldsymbol{\phi})
            &=
            \left[ \begin{matrix}
              - \frac{1}{2} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
              \\
              \frac{1}{4} \boldsymbol{\phi}^{-1}_2 \boldsymbol{\phi}_1
-             \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
+             \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2
              - \frac{1}{2} \boldsymbol{\phi}^{-1}_2
            \end{matrix} \right]
            \\
            g_{\boldsymbol{\phi}} (\boldsymbol{\phi})
            &=
-           \frac{1}{4} \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2 
+           \frac{1}{4} \boldsymbol{\phi}^{\mathrm{T}}_1 \boldsymbol{\phi}^{-1}_2
            \boldsymbol{\phi}_1
            + \frac{1}{2} \log | -2 \boldsymbol{\phi}_2 |
         """
         # TODO: Compute -2*phi[1] and simplify the formulas
-        L = linalg.chol(-2*phi[1])
+        L = linalg.chol(-2*phi[1], ndim=self.ndim)
         k = np.shape(phi[0])[-1]
         # Moments
-        u0 = linalg.chol_solve(L, phi[0])
-        u1 = linalg.outer(u0, u0) + linalg.chol_inv(L)
+        u0 = linalg.chol_solve(L, phi[0], ndim=self.ndim)
+        u1 = (linalg.outer(u0, u0, ndim=self.ndim)
+              + linalg.chol_inv(L, ndim=self.ndim))
         u = [u0, u1]
         # G
-        g = (-0.5 * np.einsum('...i,...i', u[0], phi[0])
-             + 0.5 * linalg.chol_logdet(L))
-             #+ 0.5 * np.log(2) * self.dims[0][0])
+        g = (-0.5 * linalg.inner(u[0], phi[0], ndim=self.ndim)
+             + 0.5 * linalg.chol_logdet(L, ndim=self.ndim))
         return (u, g)
+
 
     def compute_cgf_from_parents(self, u_mu_Lambda):
         r"""
@@ -423,6 +431,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         logdet_Lambda = u_mu_Lambda[3]
         g = -0.5*mu_Lambda_mu + 0.5*logdet_Lambda
         return g
+
 
     def compute_fixed_moments_and_f(self, x, mask=True):
         r"""
@@ -442,7 +451,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
            &= - \frac{D}{2} \log(2\pi)
         """
         k = np.shape(x)[-1]
-        u = [x, linalg.outer(x,x)]
+        u = [x, linalg.outer(x, x, ndim=self.ndim)]
         f = -k/2*np.log(2*np.pi)
         return (u, f)
 
@@ -450,7 +459,7 @@ class GaussianDistribution(ExponentialFamilyDistribution):
     def compute_gradient(self, g, u, phi):
         r"""
         Compute the standard gradient with respect to the natural parameters.
-        
+
         Gradient of the moments:
 
         .. math::
@@ -496,21 +505,21 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         x = u[0]
         xx = u[1]
         # Some helpful variables
-        x_x = linalg.outer(x, x, ndim=ndim)
+        x_x = linalg.outer(x, x, ndim=self.ndim)
         Cov = xx - x_x
-        cov_g0 = linalg.mvdot(Cov, g[0], ndim=ndim)
-        cov_g0_x = linalg.outer(cov_g0, x, ndim=ndim)
-        g1_x = linalg.mvdot(g[1], x, ndim=ndim)
+        cov_g0 = linalg.mvdot(Cov, g[0], ndim=self.ndim)
+        cov_g0_x = linalg.outer(cov_g0, x, ndim=self.ndim)
+        g1_x = linalg.mvdot(g[1], x, ndim=self.ndim)
         # Compute gradient terms
-        d0 = cov_g0 + 2 * linalg.mvdot(Cov, g1_x, ndim=ndim)
-        d1 = (cov_g0_x + linalg.transpose(cov_g0_x, ndim=ndim)
+        d0 = cov_g0 + 2 * linalg.mvdot(Cov, g1_x, ndim=self.ndim)
+        d1 = (cov_g0_x + linalg.transpose(cov_g0_x, ndim=self.ndim)
               + 2 * linalg.mmdot(xx,
-                                 linalg.mmdot(g[1], xx, ndim=ndim),
-                                 ndim=ndim)
+                                 linalg.mmdot(g[1], xx, ndim=self.ndim),
+                                 ndim=self.ndim)
               - 2 * x_x * misc.add_trailing_axes(linalg.inner(g1_x,
                                                               x,
-                                                              ndim=ndim),
-                                                 2*ndim))
+                                                              ndim=self.ndim),
+                                                 2*self.ndim))
 
         return [d0, d1]
 
@@ -523,16 +532,16 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         # observed/fixed elements!
 
         # Note that phi[1] is -0.5*inv(Cov)
-        U = linalg.chol(-2*phi[1])
-        mu = linalg.chol_solve(U, phi[0])
-        shape = plates + np.shape(mu)[-1:]
+        U = linalg.chol(-2*phi[1], ndim=self.ndim)
+        mu = linalg.chol_solve(U, phi[0], ndim=self.ndim)
+        shape = plates + self.shape
         z = np.random.randn(*shape)
         # Denote Lambda = -2*phi[1]
         # Then, Cov = inv(Lambda) = inv(U'*U) = inv(U) * inv(U')
         # Thus, compute mu + U\z
-        z = linalg.solve_triangular(U, z, trans='N', lower=False)
+        z = linalg.solve_triangular(U, z, trans='N', lower=False, ndim=self.ndim)
         return mu + z
-            
+
 
 class GaussianARDDistribution(ExponentialFamilyDistribution):
     r"""
@@ -1245,8 +1254,6 @@ class Gaussian(_GaussianTemplate):
 
     """
 
-    _distribution = GaussianDistribution()
-
 
     def __init__(self, mu, Lambda, **kwargs):
         r"""
@@ -1256,28 +1263,30 @@ class Gaussian(_GaussianTemplate):
 
 
     @classmethod
-    def _constructor(cls, mu, Lambda, **kwargs):
+    def _constructor(cls, mu, Lambda, ndim=1, **kwargs):
         r"""
         Constructs distribution and moments objects.
         """
 
-        mu_Lambda = WrapToGaussianWishart(mu, Lambda)
+        mu_Lambda = WrapToGaussianWishart(mu, Lambda, ndim=ndim)
 
-        D = mu_Lambda.dims[0][0]
+        shape = mu_Lambda._moments.shape
 
-        moments = GaussianMoments((D,))
+        moments = GaussianMoments(shape)
         parent_moments = (mu_Lambda._moments,)
 
-        if mu_Lambda.dims != ( (D,), (), (D,D), () ):
+        if mu_Lambda.dims != ( shape, (), shape+shape, () ):
             raise Exception("Parents have wrong dimensionality")
+
+        distribution = GaussianDistribution(shape)
 
         parents = [mu_Lambda]
         return (parents,
                 kwargs,
                 moments.dims,
                 cls._total_plates(kwargs.get('plates'),
-                                  cls._distribution.plates_from_parent(0, mu_Lambda.plates)),
-                cls._distribution,
+                                  distribution.plates_from_parent(0, mu_Lambda.plates)),
+                distribution,
                 moments,
                 parent_moments)
 
@@ -1286,10 +1295,11 @@ class Gaussian(_GaussianTemplate):
         u = self._parent_moments[0].compute_fixed_moments(mu, Lambda)
         self._initialize_from_parent_moments(u)
 
-        
+
     def __str__(self):
+        ndim = len(self.dims[0])
         mu = self.u[0]
-        Cov = self.u[1] - linalg.outer(mu, mu)
+        Cov = self.u[1] - linalg.outer(mu, mu, ndim=ndim)
         return ("%s ~ Gaussian(mu, Cov)\n"
                 "  mu = \n"
                 "%s\n"
@@ -1302,6 +1312,9 @@ class Gaussian(_GaussianTemplate):
 
         # TODO/FIXME: Combine and refactor all these rotation transformations
         # into _GaussianTemplate
+
+        if self._moments.ndim != 1:
+            raise NotImplementedError("Not implemented for ndim!=1 yet")
 
         if inv is not None:
             invR = inv
@@ -1354,8 +1367,11 @@ class Gaussian(_GaussianTemplate):
         R1 : ndarray
             A matrix from the left
         R2 : ndarray
-            A matrix from the right        
+            A matrix from the right
         """
+
+        if self._moments.ndim != 1:
+            raise NotImplementedError("Not implemented for ndim!=1 yet")
 
         if Q is not None:
             # Rotate moments using Q
