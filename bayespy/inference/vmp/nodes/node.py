@@ -254,19 +254,21 @@ class Node():
     _id_counter = 0
 
     @ensureparents
-    def __init__(self, *parents, dims=None, plates=None, name="", 
-                 notify_parents=True, plotter=None, plates_multiplier=None):
+    def __init__(self, *parents, dims=None, plates=None, name="",
+                 notify_parents=True, plotter=None, plates_multiplier=None,
+                 allow_dependent_parents=False):
 
         self.parents = parents
         self.dims = dims
         self.name = name
         self._plotter = plotter
 
-        parent_id_list = []
-        for parent in parents:
-            parent_id_list = parent_id_list + list(parent._get_id_list())
-        if len(parent_id_list) != len(set(parent_id_list)):
-            raise ValueError("Parent nodes are not independent")
+        if not allow_dependent_parents:
+            parent_id_list = []
+            for parent in parents:
+                parent_id_list = parent_id_list + list(parent._get_id_list())
+            if len(parent_id_list) != len(set(parent_id_list)):
+                raise ValueError("Parent nodes are not independent")
 
         # Inform parent nodes
         if notify_parents:

@@ -61,13 +61,27 @@ class Concatenate(Deterministic):
         for node in nodes:
             if node.dims != dims:
                 raise ValueError("Parents have different dimensionalities")
-        super().__init__(*nodes, dims=dims, **kwargs)
+
+        super().__init__(
+            *nodes,
+            dims=dims,
+            allow_dependent_parents=True, # because parent plates are kept separate
+            **kwargs
+        )
+
         # Compute start indices for each parent on the concatenated plate axis
         self._indices = np.zeros(len(nodes)+1, dtype=np.int)
         self._indices[1:] = np.cumsum([int(parent.plates[axis])
                                        for parent in self.parents])
         self._lengths = [parent.plates[axis] for parent in self.parents]
         return
+
+
+    def _get_id_list(self):
+        """
+        Parents don't need to be independent for this node so remove duplicates
+        """
+        return list(set(super()._get_id_list()))
 
 
     def _compute_plates_to_parent(self, index, plates):
