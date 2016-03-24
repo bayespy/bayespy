@@ -1709,7 +1709,7 @@ class GaussianGamma(ExponentialFamily):
 
     def translate(self, b, debug=False):
 
-        if self.ndim != 1:
+        if self._moments.ndim != 1:
             raise NotImplementedError("Only ndim=1 supported at the moment")
 
         tau = self.u[2]
@@ -1759,7 +1759,7 @@ class GaussianGamma(ExponentialFamily):
 
     def rotate(self, R, inv=None, logdet=None, debug=False):
 
-        if self.ndim != 1:
+        if self._moments.ndim != 1:
             raise NotImplementedError("Only ndim=1 supported at the moment")
 
         if inv is None:
@@ -1871,7 +1871,7 @@ class GaussianGamma(ExponentialFamily):
         r"""
         Return the mean and variance of the distribution
         """
-        if self.ndim != 1:
+        if self._moments.ndim != 1:
             raise NotImplementedError("Only ndim=1 supported at the moment")
 
         tau = self.u[2]
@@ -2608,12 +2608,15 @@ class ConcatGaussian(Deterministic):
         #
         # ndim = len(shape)
 
+        nodes = [self._ensure_moments(node, GaussianMoments, ndim=1)
+                 for node in nodes]
+
+        D = sum(node.dims[0][0] for node in nodes)
+
         shape = (D,)
 
-        moments = GaussianMoments(shape)
+        self._moments = GaussianMoments(shape)
 
-        nodes = [node._ensure_moments(GaussianMoments, ndim=1)
-                 for node in nodes]
         self._parent_moments = [node._moments for node in nodes]
 
         # Make sure all parents are Gaussian vectors

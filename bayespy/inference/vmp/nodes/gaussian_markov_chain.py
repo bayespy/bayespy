@@ -35,6 +35,12 @@ from .node import Moments, ensureparents
 class GaussianMarkovChainMoments(Moments):
 
 
+    def __init__(self, N, D):
+        self.N = N
+        self.D = D
+        return super().__init__()
+
+
     def compute_fixed_moments(self, x):
         u0 = x
         u1 = x[...,:,np.newaxis] * x[...,np.newaxis,:]
@@ -51,6 +57,7 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
     def __init__(self, N, D):
         self.N = N
         self.D = D
+        self.moments = GaussianMarkovChainMoments(N, D)
         super().__init__()
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
@@ -95,12 +102,12 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
 
         # Compute cumulant-generating function
         g = -0.5 * np.einsum('...ij,...ij', u[0], phi[0]) + 0.5*ldet
-        
+
         return (u, g)
 
     def compute_cgf_from_parents(self, *u_parents):
         raise NotImplementedError()
-        
+
     def compute_fixed_moments_and_f(self, x, mask=True):
         """
         Compute u(x) and f(x) for given x.
@@ -163,9 +170,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
     bayespy.inference.vmp.nodes.wishart.Wishart
 
     """
-
-    _moments = GaussianMarkovChainMoments()
-
 
     def random(self, *phi, plates=None):
         raise NotImplementedError()
@@ -716,7 +720,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
        \prod^{N-1}_{n=1} p(\mathbf{x}_n | \mathbf{x}_{n-1})
 
     where
-    
+
     .. math::
 
        p(\mathbf{x}_0) &= \mathcal{N}(\mathbf{x}_0 | \boldsymbol{\mu}, \mathbf{\Lambda})
@@ -726,19 +730,19 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     Parameters
     ----------
-    
+
     mu : Gaussian-like node or (...,D)-array
         :math:`\boldsymbol{\mu}`, mean of :math:`x_0`, :math:`D`-dimensional
         with plates (...)
-        
+
     Lambda : Wishart-like node or (...,D,D)-array
         :math:`\mathbf{\Lambda}`, precision matrix of :math:`x_0`,
         :math:`D\times D` -dimensional with plates (...)
-        
+
     A : Gaussian-like node or (D,D)-array or (...,1,D,D)-array or (...,N-1,D,D)-array
         :math:`\mathbf{A}`, state dynamics matrix, :math:`D`-dimensional with
         plates (D,) or (...,1,D) or (...,N-1,D)
-        
+
     nu : gamma-like node or (D,)-array or (...,1,D)-array or (...,N-1,D)-array
         :math:`\boldsymbol{\nu}`, diagonal elements of the precision of the
         innovation process, plates (D,) or (...,1,D) or (...,N-1,D)
@@ -749,7 +753,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     See also
     --------
-    
+
     Gaussian, GaussianARD, Wishart, Gamma, SwitchingGaussianMarkovChain,
     VaryingGaussianMarkovChain, CategoricalMarkovChain
     """
@@ -858,6 +862,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
             if inputs.dims != ( (D_inputs,), (D_inputs, D_inputs) ):
                 raise ValueError("Input signals have wrong dimensionality")
 
+        moments = GaussianMarkovChainMoments(M, D)
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
         distribution = GaussianMarkovChainDistribution(M, D)
 
@@ -873,7 +878,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
                                    distribution.plates_from_parent(0, mu_Lambda.plates),
                                    distribution.plates_from_parent(1, A_nu.plates)),
                  distribution,
-                 cls._moments,
+                 moments,
                  _parent_moments)
 
 
@@ -1380,6 +1385,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                              "instances.")
 
         distribution = VaryingGaussianMarkovChainDistribution(M, D)
+        moments = GaussianMarkovChainMoments(M, D)
 
         parents = [mu, Lambda, B, S, v]
 
@@ -1395,7 +1401,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                                   distribution.plates_from_parent(3, S.plates),
                                   distribution.plates_from_parent(4, v.plates)),
                 distribution,
-                cls._moments,
+                moments,
                 parent_moments)
 
 
@@ -1915,6 +1921,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
         distribution = SwitchingGaussianMarkovChainDistribution(M, D, K)
+        moments = GaussianMarkovChainMoments(M, D)
 
         parents = [mu, Lambda, B, Z, v]
 
@@ -1928,7 +1935,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                                   distribution.plates_from_parent(3, Z.plates),
                                   distribution.plates_from_parent(4, v.plates)),
                 distribution,
-                cls._moments,
+                moments,
                 parent_moments)
 
 
@@ -1946,7 +1953,7 @@ class _MarkovChainToGaussian(Deterministic):
         D = X.dims[0][-1]
 
         self._moments = GaussianMoments((D,))
-        self._parent_moments = (GaussianMarkovChainMoments(),)
+        self._parent_moments = (X._moments,)
 
         super().__init__(X, dims=self._moments.dims, **kwargs)
 

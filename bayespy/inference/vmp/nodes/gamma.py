@@ -346,7 +346,7 @@ class _GammaToDiagonalWishart(Deterministic):
                             "order to be used as a diagonal Wishart.")
         D = alpha.plates[-1]
 
-        self._moments = WishartMoments()
+        self._moments = WishartMoments((D,))
         dims = ( (D,D), () )
 
         # Construct the node
