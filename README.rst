@@ -74,12 +74,12 @@ http://opensource.org/licenses/MIT.
      :target: http://bayespy.readthedocs.org/en/develop/
      :align: middle
 
-  =========== =============== ============== =============
-  Branch      Test status     Test coverage  Documentation
-  =========== =============== ============== =============
-  **master**  |travismaster|  |covermaster|  |docsmaster|
-  **develop** |travisdevelop| |coverdevelop| |docsdevelop|
-  =========== =============== ============== =============
+  ==================== =============== ============== =============
+  Branch               Test status     Test coverage  Documentation
+  ==================== =============== ============== =============
+  **master (stable)**  |travismaster|  |covermaster|  |docsmaster|
+  **develop (latest)** |travisdevelop| |coverdevelop| |docsdevelop|
+  ==================== =============== ============== =============
  
 
 Similar projects
