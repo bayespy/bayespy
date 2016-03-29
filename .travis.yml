@@ -57,11 +57,11 @@ script:
   - python -m nose -c setup.cfg
   - cd doc && make doctest
 
-# check coverage
-after_success:
-  - coveralls
-
 # if tests fail, upload images to imgur
 after_failure:
   - wget http://imgur.com/tools/imgurbash.sh
   - for img in result_images/test_plot/*.png; do echo -e "\n$img"; bash imgurbash.sh $img; done
+
+# check coverage
+after_script:
+  - coveralls
