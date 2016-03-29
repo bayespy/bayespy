@@ -111,13 +111,9 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
              \frac{e^{\phi_D}}{\sum_i e^{\phi_i}} \end{bmatrix}
         """
         # Compute the normalized probabilities in a numerically stable way
-        logsum_p = misc.logsumexp(phi[0], axis=-1, keepdims=True)
-        logp = phi[0] - logsum_p
-        p = np.exp(logp)
-        # Because of small numerical inaccuracy, normalize the probabilities
-        # again for more accurate results
+        (p, logsum_p) = misc.normalized_exp(phi[0])
         N = np.expand_dims(self.N, -1)
-        u0 = N * p / np.sum(p, axis=-1, keepdims=True)
+        u0 = N * p
         u = [u0]
         g = -np.squeeze(N * logsum_p, axis=-1)
         return (u, g)
@@ -153,11 +149,12 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
 
-    def random(self, *phi):
+    def random(self, *phi, plates=None):
         r"""
         Draw a random sample from the distribution.
         """
-        raise NotImplementedError()
+        (p, _) = misc.normalized_exp(phi[0])
+        return random.multinomial(self.N, p, size=plates)
 
 
     def compute_gradient(self, g, u, phi):

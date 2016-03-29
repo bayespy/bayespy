@@ -1282,6 +1282,22 @@ def logsumexp(X, axis=None, keepdims=False):
     return np.log(np.sum(np.exp(X), axis=axis, keepdims=keepdims)) + maxX
 
 
+def normalized_exp(phi):
+    """Compute exp(phi) so that exp(phi) sums to one.
+
+    This is useful for computing probabilities from log evidence.
+    """
+    logsum_p = logsumexp(phi, axis=-1, keepdims=True)
+    logp = phi - logsum_p
+    p = np.exp(logp)
+    # Because of small numerical inaccuracy, normalize the probabilities
+    # again for more accurate results
+    return (
+        p / np.sum(p, axis=-1, keepdims=True),
+        logsum_p
+    )
+
+
 def invpsi(x):
     r"""
     Inverse digamma (psi) function.

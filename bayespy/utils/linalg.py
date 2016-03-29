@@ -72,7 +72,6 @@ def chol_solve(U, b, out=None, matrix=False, ndim=1):
             B = misc.flatten_axes(b, ndim)
 
         # Allocate memory
-        #raise Exception("WTF!!!")
         sh_u = U.shape[:-2]
         sh_b = B.shape[:-1]
         l_u = len(sh_u)
