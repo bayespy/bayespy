@@ -53,17 +53,34 @@ http://opensource.org/licenses/MIT.
   .. image:: https://badge.fury.io/py/bayespy.svg
      :target: https://pypi.python.org/pypi/bayespy
 
-* Build status:
-  
-  .. image:: https://travis-ci.org/bayespy/bayespy.png?branch=master
+* Continuous integration:
+
+  .. |travismaster| image:: https://travis-ci.org/bayespy/bayespy.svg?branch=master
      :target: https://travis-ci.org/bayespy/bayespy/
-
-* Unit test coverage:
-
-  .. image:: https://coveralls.io/repos/bayespy/bayespy/badge.png?branch=master
+     :align: middle
+  .. |travisdevelop| image:: https://travis-ci.org/bayespy/bayespy.svg?branch=develop
+     :target: https://travis-ci.org/bayespy/bayespy/
+     :align: middle
+  .. |covermaster| image:: https://coveralls.io/repos/bayespy/bayespy/badge.svg?branch=master
      :target: https://coveralls.io/r/bayespy/bayespy?branch=master
+     :align: middle
+  .. |coverdevelop| image:: https://coveralls.io/repos/bayespy/bayespy/badge.svg?branch=develop
+     :target: https://coveralls.io/r/bayespy/bayespy?branch=develop
+     :align: middle
+  .. |docsmaster| image:: https://img.shields.io/badge/docs-master-blue.svg?style=flat
+     :target: http://bayespy.readthedocs.org/en/master/
+     :align: middle
+  .. |docsdevelop| image:: https://img.shields.io/badge/docs-develop-blue.svg?style=flat
+     :target: http://bayespy.readthedocs.org/en/develop/
+     :align: middle
 
-
+  =========== =============== ============== =============
+  Branch      Test status     Test coverage  Documentation
+  =========== =============== ============== =============
+  **master**  |travismaster|  |covermaster|  |docsmaster|
+  **develop** |travisdevelop| |coverdevelop| |docsdevelop|
+  =========== =============== ============== =============
+ 
 
 Similar projects
 ----------------
