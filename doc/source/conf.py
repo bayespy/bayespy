@@ -36,7 +36,7 @@ if on_rtd:
         @classmethod
         def __getattr__(cls, name):
             return Mock()
-    MOCK_MODULES = ['numpy', 'matplotlib', 'scipy', 'h5py']
+    MOCK_MODULES = ['h5py']
     sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 else:

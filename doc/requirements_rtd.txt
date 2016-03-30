@@ -9,3 +9,4 @@ sphinxcontrib-tikz
 sphinxcontrib-bayesnet
 sphinxcontrib-bibtex
 numpydoc>=0.5
+matplotlib>=1.2.0
