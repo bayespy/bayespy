@@ -30,20 +30,15 @@ if on_rtd:
     # on read the docs, the theme is just called "default"
     html_theme = 'default'
 
-    # Mock modules as per RTF FAQ to avoid hard C dependencies
-    # the below only works for Python3.3+
-    # from unittest.mock import MagicMock
-    # use this for Python<3.3
-    from mock import Mock as MagicMock
-
+    # http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+    from unittest.mock import MagicMock
     class Mock(MagicMock):
         @classmethod
         def __getattr__(cls, name):
             return Mock()
-
-    # include the names of your minimal required packages here
     MOCK_MODULES = ['numpy', 'matplotlib', 'scipy', 'h5py']
     sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
 else:
     html_theme = 'sphinx_rtd_theme'
 
