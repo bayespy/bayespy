@@ -55,7 +55,7 @@ before_script:
 # Run unit tests for the code, docstrings and documentation
 script:
   - python -m nose -c setup.cfg
-  - cd doc && make doctest
+  - cd doc && make doctest && cd ..
 
 # if tests fail, upload images to imgur
 after_failure:
