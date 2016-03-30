@@ -4,4 +4,8 @@
 # You can install install doc dependencies as:
 #   pip install .[doc]
 
-./[doc]
+sphinx>=1.2.3
+sphinxcontrib-tikz
+sphinxcontrib-bayesnet
+sphinxcontrib-bibtex
+numpydoc>=0.5
