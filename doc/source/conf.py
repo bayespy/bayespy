@@ -24,6 +24,29 @@ import setup as setupfile
 
 # -- General configuration -----------------------------------------------------
 
+# Use the 'Read the Docs' theme on home builds:
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+if on_rtd:
+    # on read the docs, the theme is just called "default"
+    html_theme = 'default'
+
+    # Mock modules as per RTF FAQ to avoid hard C dependencies
+    # the below only works for Python3.3+
+    # from unittest.mock import MagicMock
+    # use this for Python<3.3
+    from mock import Mock as MagicMock
+
+    class Mock(MagicMock):
+        @classmethod
+        def __getattr__(cls, name):
+            return Mock()
+
+    # include the names of your minimal required packages here
+    MOCK_MODULES = ['numpy', 'matplotlib', 'scipy', 'h5py']
+    sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+else:
+    html_theme = 'sphinx_rtd_theme'
+
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
 
@@ -130,16 +153,16 @@ tikz_latex_preamble = r"""
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinxdoc'
+#html_theme = 'sphinxdoc'
 #html_theme = 'nature'
 #html_theme = 'default'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    "sidebarwidth": 300
-    }
+# html_theme_options = {
+#     "sidebarwidth": 300
+#     }
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
