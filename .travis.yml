@@ -54,8 +54,8 @@ before_script:
 
 # Run unit tests for the code, docstrings and documentation
 script:
-  - python -m nose -c setup.cfg
-  - cd doc && make doctest && cd ..
+  - travis_wait 30 python -m nose -c setup.cfg
+  - travis_wait 30 (cd doc && make doctest && cd ..)
 
 # if tests fail, upload images to imgur
 after_failure:
