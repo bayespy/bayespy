@@ -60,6 +60,7 @@ if __name__ == "__main__":
                 'sphinxcontrib-bayesnet',
                 'sphinxcontrib-bibtex',
                 'numpydoc>=0.5',
+                'nbsphinx',
             ],
         },
         packages         = find_packages(),
