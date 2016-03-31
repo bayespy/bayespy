@@ -23,6 +23,7 @@ AUTHOR_EMAIL = 'jaakko.luttinen@iki.fi'
 URL          = 'http://bayespy.org'
 LICENSE      = 'MIT'
 VERSION      = __version__
+COPYRIGHT    = '2011-2016, Jaakko Luttinen and contributors'
 
 
 if __name__ == "__main__":

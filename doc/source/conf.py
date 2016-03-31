@@ -19,23 +19,11 @@ import sys, os
 #sys.path.insert(0, os.path.abspath('.'))
 
 # Import some information from the setup.py script.
-sys.path.insert(0, os.path.abspath('../..'))
+root = os.path.join(os.path.dirname(__file__), '..', '..')
+sys.path.insert(0, root)
 import setup as setupfile
 
 # -- General configuration -----------------------------------------------------
-
-# Use some dummy modules on Read the Docs because they are not available
-# (requires some C libraries)
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-if on_rtd:
-    # http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-    from unittest.mock import MagicMock
-    class Mock(MagicMock):
-        @classmethod
-        def __getattr__(cls, name):
-            return Mock()
-    MOCK_MODULES = ['h5py']
-    sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # Use the 'Read the Docs' theme
 html_theme = 'sphinx_rtd_theme'
@@ -46,7 +34,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    'sphinx.ext.autodoc', 
+    'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
@@ -89,7 +77,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = setupfile.NAME
-copyright = u'2011-2015, Jaakko Luttinen, MIT'
+copyright = setupfile.COPYRIGHT
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -316,9 +304,9 @@ texinfo_documents = [
 
 # Bibliographic Dublin Core info.
 epub_title = u'BayesPy'
-epub_author = u'Jaakko Luttinen'
-epub_publisher = u'Jaakko Luttinen'
-epub_copyright = u'2012, Jaakko Luttinen'
+epub_author = setupfile.AUTHOR
+epub_publisher = setupfile.AUTHOR
+epub_copyright = setupfile.COPYRIGHT
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.
