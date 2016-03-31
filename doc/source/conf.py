@@ -33,6 +33,13 @@ import setup as setupfile
 
 # -- General configuration -----------------------------------------------------
 
+# Use some dummy modules on Read the Docs because they are not available
+# (requires some C libraries)
+# http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+from unittest.mock import MagicMock
+MOCK_MODULES = ['h5py']
+sys.modules.update((mod_name, MagicMock()) for mod_name in MOCK_MODULES)
+
 # Use the 'Read the Docs' theme
 html_theme = 'sphinx_rtd_theme'
 
