@@ -60,6 +60,7 @@ extensions = [
     'sphinxcontrib.tikz',
     'sphinxcontrib.bayesnet',
     'sphinxcontrib.bibtex',
+    'nbsphinx',
     ]
 
 # Choose the image processing ‹suite›, either 'Netpbm', 'pdf2svg', 'GhostScript', 'ImageMagick' ('Netpbm' by default):
@@ -115,7 +116,9 @@ release = setupfile.VERSION
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = [
+    '**.ipynb_checkpoints'
+]
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
