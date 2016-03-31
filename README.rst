@@ -25,61 +25,50 @@ BayesPy including the documentation is licensed under the MIT License. See
 LICENSE file for a text of the license or visit
 http://opensource.org/licenses/MIT.
 
-* Documentation:
-    
-    * http://bayespy.org
+.. |chat| image:: https://badges.gitter.im/Join%20Chat.svg
+   :target: https://gitter.im/bayespy/bayespy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
+.. |release| image:: https://badge.fury.io/py/bayespy.svg
+   :target: https://pypi.python.org/pypi/bayespy
 
-    * `PDF file <http://www.bayespy.org/_static/BayesPy.pdf>`_
+============== =============================================
+Latest release |release| 
+Repository     https://github.com/bayespy/bayespy.git
+Bug reports    https://github.com/bayespy/bayespy/issues
+Author         Jaakko Luttinen jaakko.luttinen@iki.fi
+Chat           |chat|
+Mailing list   bayespy@googlegroups.com
+IRC            #bayespy @ `freenode <http://freenode.net/>`_
+============== =============================================
 
-    * RST format in ``doc`` directory
 
-* Repository: https://github.com/bayespy/bayespy.git
+Continuous integration
+++++++++++++++++++++++
 
-* Bug reports: https://github.com/bayespy/bayespy/issues
+.. |travismaster| image:: https://travis-ci.org/bayespy/bayespy.svg?branch=master
+   :target: https://travis-ci.org/bayespy/bayespy/
+   :align: middle
+.. |travisdevelop| image:: https://travis-ci.org/bayespy/bayespy.svg?branch=develop
+   :target: https://travis-ci.org/bayespy/bayespy/
+   :align: middle
+.. |covermaster| image:: https://coveralls.io/repos/bayespy/bayespy/badge.svg?branch=master
+   :target: https://coveralls.io/r/bayespy/bayespy?branch=master
+   :align: middle
+.. |coverdevelop| image:: https://coveralls.io/repos/bayespy/bayespy/badge.svg?branch=develop
+   :target: https://coveralls.io/r/bayespy/bayespy?branch=develop
+   :align: middle
+.. |docsmaster| image:: https://img.shields.io/badge/docs-master-blue.svg?style=flat
+   :target: http://bayespy.readthedocs.org/en/stable/
+   :align: middle
+.. |docsdevelop| image:: https://img.shields.io/badge/docs-develop-blue.svg?style=flat
+   :target: http://bayespy.readthedocs.org/en/latest/
+   :align: middle
 
-* Chat:
-
-  .. image:: https://badges.gitter.im/Join%20Chat.svg
-     :target: https://gitter.im/bayespy/bayespy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
-
-* Mailing list: bayespy@googlegroups.com
-
-* IRC: #bayespy @ `freenode <http://freenode.net/>`_
-
-* Author: Jaakko Luttinen jaakko.luttinen@iki.fi
-
-* Latest release: 
-
-  .. image:: https://badge.fury.io/py/bayespy.svg
-     :target: https://pypi.python.org/pypi/bayespy
-
-* Continuous integration:
-
-  .. |travismaster| image:: https://travis-ci.org/bayespy/bayespy.svg?branch=master
-     :target: https://travis-ci.org/bayespy/bayespy/
-     :align: middle
-  .. |travisdevelop| image:: https://travis-ci.org/bayespy/bayespy.svg?branch=develop
-     :target: https://travis-ci.org/bayespy/bayespy/
-     :align: middle
-  .. |covermaster| image:: https://coveralls.io/repos/bayespy/bayespy/badge.svg?branch=master
-     :target: https://coveralls.io/r/bayespy/bayespy?branch=master
-     :align: middle
-  .. |coverdevelop| image:: https://coveralls.io/repos/bayespy/bayespy/badge.svg?branch=develop
-     :target: https://coveralls.io/r/bayespy/bayespy?branch=develop
-     :align: middle
-  .. |docsmaster| image:: https://img.shields.io/badge/docs-master-blue.svg?style=flat
-     :target: http://bayespy.readthedocs.org/en/stable/
-     :align: middle
-  .. |docsdevelop| image:: https://img.shields.io/badge/docs-develop-blue.svg?style=flat
-     :target: http://bayespy.readthedocs.org/en/latest/
-     :align: middle
-
-  ==================== =============== ============== =============
-  Branch               Test status     Test coverage  Documentation
-  ==================== =============== ============== =============
-  **master (stable)**  |travismaster|  |covermaster|  |docsmaster|
-  **develop (latest)** |travisdevelop| |coverdevelop| |docsdevelop|
-  ==================== =============== ============== =============
+==================== =============== ============== =============
+Branch               Test status     Test coverage  Documentation
+==================== =============== ============== =============
+**master (stable)**  |travismaster|  |covermaster|  |docsmaster|
+**develop (latest)** |travisdevelop| |coverdevelop| |docsdevelop|
+==================== =============== ============== =============
  
 
 Similar projects
