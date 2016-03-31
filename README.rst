@@ -19,7 +19,7 @@ welcome.
 Project information
 -------------------
 
-Copyright (C) 2011-2015 Jaakko Luttinen and other contributors (see below)
+Copyright (C) 2011-2016 Jaakko Luttinen and other contributors (see below)
 
 BayesPy including the documentation is licensed under the MIT License. See
 LICENSE file for a text of the license or visit
