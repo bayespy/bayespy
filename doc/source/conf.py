@@ -71,12 +71,6 @@ numpydoc_show_class_members = False
 # Include TODOs in the documentation?
 todo_include_todos = True
 
-# Add a path to binary files that are necessary for readthedocs.org to
-# build HTML with tikz extension
-if os.environ.get('READTHEDOCS', None) == 'True':
-    os.environ["PATH"] += os.pathsep + os.path.abspath('bin')
-    os.environ["LD_LIBRARY_PATH"] = os.path.abspath('bin')
-
 # Generate autosummary stub pages automatically
 # Or manually: sphinx-autogen -o source/generated source/*.rst
 #autosummary_generate = False
