@@ -24,23 +24,8 @@ import setup as setupfile
 
 # -- General configuration -----------------------------------------------------
 
-# Use the 'Read the Docs' theme on home builds:
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-if on_rtd:
-    # on read the docs, the theme is just called "default"
-    html_theme = 'default'
-
-    # http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-    from unittest.mock import MagicMock
-    class Mock(MagicMock):
-        @classmethod
-        def __getattr__(cls, name):
-            return Mock()
-    MOCK_MODULES = ['h5py']
-    sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
-
-else:
-    html_theme = 'sphinx_rtd_theme'
+# Use the 'Read the Docs' theme
+html_theme = 'sphinx_rtd_theme'
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
