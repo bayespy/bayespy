@@ -55,7 +55,7 @@ if __name__ == "__main__":
         extras_require = {
             'doc': [
                 'sphinx>=1.2.3',
-                'sphinxcontrib-tikz',
+                'sphinxcontrib-tikz>=0.4.2',
                 'sphinxcontrib-bayesnet',
                 'sphinxcontrib-bibtex',
                 'numpydoc>=0.5',
