@@ -57,10 +57,10 @@ Continuous integration
    :target: https://coveralls.io/r/bayespy/bayespy?branch=develop
    :align: middle
 .. |docsmaster| image:: https://img.shields.io/badge/docs-master-blue.svg?style=flat
-   :target: http://bayespy.readthedocs.org/en/stable/
+   :target: http://www.bayespy.org/en/stable/
    :align: middle
 .. |docsdevelop| image:: https://img.shields.io/badge/docs-develop-blue.svg?style=flat
-   :target: http://bayespy.readthedocs.org/en/latest/
+   :target: http://www.bayespy.org/en/latest/
    :align: middle
 
 ==================== =============== ============== =============
