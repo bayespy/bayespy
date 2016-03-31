@@ -35,6 +35,7 @@ Latest release |release|
 Repository     https://github.com/bayespy/bayespy.git
 Bug reports    https://github.com/bayespy/bayespy/issues
 Author         Jaakko Luttinen jaakko.luttinen@iki.fi
+Documentation  http://bayespy.org
 Chat           |chat|
 Mailing list   bayespy@googlegroups.com
 IRC            #bayespy @ `freenode <http://freenode.net/>`_
