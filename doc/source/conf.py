@@ -19,8 +19,16 @@ import sys, os
 #sys.path.insert(0, os.path.abspath('.'))
 
 # Import some information from the setup.py script.
-root = os.path.join(os.path.dirname(__file__), '..', '..')
-sys.path.insert(0, root)
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            os.path.pardir,
+            os.path.pardir
+        )
+    )
+)
 import setup as setupfile
 
 # -- General configuration -----------------------------------------------------
