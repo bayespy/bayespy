@@ -1305,17 +1305,35 @@ def invpsi(x):
     The digamma function is the derivative of the log gamma function.
     This calculates the value Y > 0 for a value X such that digamma(Y) = X.
 
-    See: http://www4.ncsu.edu/~pfackler/
+    For the new version, see Appendix C:
+    http://research.microsoft.com/en-us/um/people/minka/papers/dirichlet/minka-dirichlet.pdf
+
+    For the previous implementation, see:
+    http://www4.ncsu.edu/~pfackler/
+
+    Are there speed/accuracy differences between the methods?
     """
     x = np.asanyarray(x)
-    L = 1.0
-    y = np.exp(x)
-    while (L > 1e-10):
-        y += L*np.sign(x-special.psi(y))
-        L /= 2
-    # Ad hoc by Jaakko
-    y = np.where(x < -100, -1 / x, y)
+
+    y = np.where(
+        x >= -2.22,
+        np.exp(x) + 0.5,
+        -1/(x - special.psi(1))
+    )
+    for i in range(5):
+        y = y - (special.psi(y) - x) / special.polygamma(1, y)
+
     return y
+
+    # # Previous implementation. Is it worse? Is there difference?
+    # L = 1.0
+    # y = np.exp(x)
+    # while (L > 1e-10):
+    #     y += L*np.sign(x-special.psi(y))
+    #     L /= 2
+    # # Ad hoc by Jaakko
+    # y = np.where(x < -100, -1 / x, y)
+    # return y
 
 
 def invgamma(x):
