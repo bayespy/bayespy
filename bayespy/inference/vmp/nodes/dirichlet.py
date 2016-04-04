@@ -10,10 +10,12 @@ Module for the Dirichlet distribution node.
 """
 
 import numpy as np
-import scipy.special as special
+from scipy import special
 
 from bayespy.utils import random
+from bayespy.utils import misc
 
+from .stochastic import Stochastic
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
 from .node import Node, Moments, ensureparents
@@ -106,14 +108,17 @@ class DirichletDistribution(ExponentialFamilyDistribution):
     Class for the VMP formulas of Dirichlet variables.
     """
 
-    
+
     def compute_message_to_parent(self, parent, index, u_self, u_alpha):
         r"""
         Compute the message to a parent node.
         """
-        raise NotImplementedError()
+        logp = u_self[0]
+        m0 = logp
+        m1 = 1
+        return [m0, m1]
 
-    
+
     def compute_phi_from_parents(self, u_alpha, mask=True):
         r"""
         Compute the natural parameter vector given parent moments.
@@ -223,6 +228,68 @@ class DirichletDistribution(ExponentialFamilyDistribution):
         sum_phi = np.sum(phi[0], axis=-1, keepdims=True)
         d0 = g[0] * (special.polygamma(1, phi[0]) - special.polygamma(1, sum_phi))
         return [d0]
+
+
+class DirichletConcentration(Stochastic):
+
+
+    _parent_moments = ()
+
+
+    def __init__(self, D, **kwargs):
+        """
+        Create gamma random variable node
+        """
+        self.D = D
+        self.dims = ( (D,), () )
+        self._moments = DirichletPriorMoments(D)
+        super().__init__(dims=self.dims, initialize=False, **kwargs)
+
+
+    def _update_distribution_and_lowerbound(self, m):
+        r"""
+        Find maximum likelihood estimate for the concentration parameter
+        """
+
+        a = np.ones(self.D)
+        da = np.inf
+        logp = m[0]
+        N = m[1]
+
+        # Compute sufficient statistic
+        mean_logp = logp / N[...,None]
+
+        # It is difficult to estimate values lower than 0.02 because the
+        # Dirichlet distributed probability vector starts to give numerically
+        # zero random samples for lower values.
+        if np.any(np.isinf(mean_logp)):
+            raise ValueError(
+                "Cannot estimate DirichletConcentration because of infs. This "
+                "means that there are numerically zero probabilities in the "
+                "child Dirichlet node."
+            )
+
+        # Fixed-point iteration
+        while np.any(np.abs(da / a) > 1e-5):
+            a_new = misc.invpsi(
+                special.psi(np.sum(a, axis=-1, keepdims=True))
+                + mean_logp
+            )
+            da = a_new - a
+            a = a_new
+
+        self.u = self._moments.compute_fixed_moments(a)
+
+        return
+
+
+    def initialize_from_value(self, x):
+        self.u = self._moments.compute_fixed_moments(x)
+        return
+
+
+    def lower_bound_contribution(self):
+        return 0
 
 
 class Dirichlet(ExponentialFamily):
