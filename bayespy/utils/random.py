@@ -316,6 +316,16 @@ def multinomial(n, p, size=None):
     return x.astype(np.int)
 
 
+def gamma(a, b, size=None):
+    x = np.random.gamma(a, b, size=size)
+    if np.any(x == 0):
+        raise RuntimeError(
+            "Numerically zero samples. Try using a larger shape parameter in "
+            "the gamma distribution."
+        )
+    return x
+
+
 def dirichlet(alpha, size=None):
     r"""
     Draw random samples from the Dirichlet distribution.
@@ -327,7 +337,13 @@ def dirichlet(alpha, size=None):
     else:
         size = size + np.shape(alpha)[-1:]
     p = np.random.gamma(alpha, size=size)
-    p /= np.sum(p, axis=-1, keepdims=True)
+    sump = np.sum(p, axis=-1, keepdims=True)
+    if np.any(sump == 0):
+        raise RuntimeError(
+            "Numerically zero samples. Try using a larger Dirichlet "
+            "concentration parameter value."
+        )
+    p /= sump
     return p
 
 

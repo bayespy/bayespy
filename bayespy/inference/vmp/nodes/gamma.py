@@ -20,6 +20,7 @@ from .constant import Constant
 from .wishart import WishartMoments
 
 from bayespy.utils import misc
+from bayespy.utils import random
 
 
 def diagonal(alpha):
@@ -176,9 +177,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
         r"""
         Draw a random sample from the distribution.
         """
-        return np.random.gamma(phi[1],
-                               -1/phi[0],
-                               size=plates)
+        return random.gamma(phi[1], -1/phi[0], size=plates)
 
     
     def compute_gradient(self, g, u, phi):
