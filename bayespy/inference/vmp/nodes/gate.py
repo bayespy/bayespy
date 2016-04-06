@@ -15,6 +15,7 @@ from bayespy.utils import misc
 from .node import Node, Moments
 from .deterministic import Deterministic
 from .categorical import CategoricalMoments
+from .concatenate import Concatenate
 
 
 class Gate(Deterministic):
@@ -211,3 +212,32 @@ class Gate(Deterministic):
             return tuple(plates)
         else:
             raise ValueError("Invalid parent index")
+
+
+def Where(z, *nodes):
+    """Choose plate elements from nodes based on a categorical variable.
+
+    For instance:
+
+    .. code-block::
+
+       >>> z = [0, 0, 2, 1]
+       >>> x0 = GaussianARD(0, 1)
+       >>> x1 = GaussianARD(10, 1)
+       >>> x2 = GaussianARD(20, 1)
+       >>> x = Where(z, x0, x1, x2)
+       >>> print(x.get_moments()[0])
+       [  0.   0.  20.  10.]
+
+    This is basically just a thin wrapper over applying Gate node over the
+    concatenation of the nodes.
+    """
+    l = z.dims[0][0]
+    if len(nodes) != l:
+        raise ValueError(
+            "Given number of nodes should match the number of categories in "
+            "the categorical variable."
+        )
+    nodes = [node[...,None] for node in nodes]
+    combined = Concatenate(*nodes)
+    return Gate(z, combined)
