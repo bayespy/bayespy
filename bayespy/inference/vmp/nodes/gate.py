@@ -232,13 +232,12 @@ def Choose(z, *nodes):
     This is basically just a thin wrapper over applying Gate node over the
     concatenation of the nodes.
     """
-    z = Deterministic._ensure_moments(z, CategoricalMoments)
-    l = z.dims[0][0]
-    if len(nodes) != l:
-        raise ValueError(
-            "Given number of nodes should match the number of categories in "
-            "the categorical variable."
-        )
+    categories = len(nodes)
+    z = Deterministic._ensure_moments(
+        z,
+        CategoricalMoments,
+        categories=categories
+    )
     nodes = [node[...,None] for node in nodes]
     combined = Concatenate(*nodes)
     return Gate(z, combined)
