@@ -12,6 +12,7 @@ A module for the beta distribution node
 import numpy as np
 import scipy.special as special
 
+from .deterministic import Deterministic
 from .dirichlet import (DirichletMoments,
                         DirichletDistribution,
                         Dirichlet)
@@ -169,6 +170,10 @@ class Beta(Dirichlet):
         )
 
 
+    def complement(self):
+        return Complement(self)
+
+
     def __str__(self):
         """
         Print the distribution using standard parameterization.
@@ -181,3 +186,29 @@ class Beta(Dirichlet):
                 "  b = \n"
                 "%s\n"
                 % (self.name, a, b))
+
+
+class Complement(Deterministic):
+    """
+    Perform 1-p where p is a Beta node.
+    """
+
+
+    _moments = BetaMoments()
+    _parent_moments = (BetaMoments(),)
+
+
+    def __init__(self, p, **kwargs):
+        super().__init__(p, dims=p.dims, **kwargs)
+
+
+    def _compute_message_to_parent(self, index, m, u_p):
+        if index != 0:
+            raise IndexError()
+        m0 = m[0][...,-1::-1]
+        return [m0]
+
+
+    def _compute_moments(self, u_p):
+        u0 = u_p[0][...,-1::-1]
+        return [u0]

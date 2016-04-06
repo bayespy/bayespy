@@ -18,6 +18,7 @@ from .multinomial import Multinomial
 from .poisson import Poisson
 
 from .beta import Beta
+from .beta import Complement
 from .dirichlet import Dirichlet, DirichletConcentration
 
 from .exponential import Exponential
