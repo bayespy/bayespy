@@ -214,7 +214,7 @@ class Gate(Deterministic):
             raise ValueError("Invalid parent index")
 
 
-def Where(z, *nodes):
+def Choose(z, *nodes):
     """Choose plate elements from nodes based on a categorical variable.
 
     For instance:
@@ -225,13 +225,14 @@ def Where(z, *nodes):
        >>> x0 = GaussianARD(0, 1)
        >>> x1 = GaussianARD(10, 1)
        >>> x2 = GaussianARD(20, 1)
-       >>> x = Where(z, x0, x1, x2)
+       >>> x = Choose(z, x0, x1, x2)
        >>> print(x.get_moments()[0])
        [  0.   0.  20.  10.]
 
     This is basically just a thin wrapper over applying Gate node over the
     concatenation of the nodes.
     """
+    z = Deterministic._ensure_moments(z, CategoricalMoments)
     l = z.dims[0][0]
     if len(nodes) != l:
         raise ValueError(
