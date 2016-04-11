@@ -144,6 +144,11 @@ class VB():
         else:
             plot_nodes = [self[x] for x in plot]
 
+        # Make certain that at least one of the nodes in the update list
+        # has been observed
+        if ~np.any([n.observed for n in nodes]):
+            raise Exception("At least one node in the update set must be observed.")
+
         converged = False
 
         for i in range(repeat):
