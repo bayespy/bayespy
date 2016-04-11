@@ -512,7 +512,7 @@ def gaussian_mixture_2d(X, alpha=None, scale=2, fill=False, axes=None, **kwargs)
     return
     
     
-def _hinton(W, error=None, vmax=None, square=True, axes=None):
+def _hinton(W, error=None, vmax=None, square=False, axes=None):
     """
     Draws a Hinton diagram for visualizing a weight matrix. 
 
@@ -538,7 +538,8 @@ def _hinton(W, error=None, vmax=None, square=True, axes=None):
     axes.fill(0.5+np.array([0,width,width,0]),
               0.5+np.array([0,0,height,height]),
               'gray')
-    axes.axis('off')
+    axes.axis('on')
+    axes.axis('image')
     if square:
         axes.axis('equal')
     axes.invert_yaxis()
