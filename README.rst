@@ -123,4 +123,8 @@ The list of contributors:
 
 * Hannu Hartikainen
 
+* Deebul Nair
+
+* Christopher Cramer
+
 Each file or the git log can be used for more detailed information.
