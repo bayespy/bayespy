@@ -538,10 +538,12 @@ def _hinton(W, error=None, vmax=None, square=False, axes=None):
     axes.fill(0.5+np.array([0,width,width,0]),
               0.5+np.array([0,0,height,height]),
               'gray')
-    axes.axis('on')
-    axes.axis('image')
     if square:
-        axes.axis('equal')
+        axes.set_aspect('equal')
+    axes.set_ylim(0.5, height+0.5)
+    axes.set_xlim(0.5, width+0.5)
+    axes.set_xticks([])
+    axes.set_yticks([])
     axes.invert_yaxis()
     for x in range(width):
         for y in range(height):
