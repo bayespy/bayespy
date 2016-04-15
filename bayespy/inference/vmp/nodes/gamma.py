@@ -279,6 +279,8 @@ class GammaShape(Stochastic):
         Create gamma random variable node
         """
         super().__init__(dims=self.dims, initialize=False, **kwargs)
+        self.u = self._moments.compute_fixed_moments(1)
+        return
 
 
     def _update_distribution_and_lowerbound(self, m):

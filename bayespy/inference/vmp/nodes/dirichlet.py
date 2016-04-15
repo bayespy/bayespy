@@ -244,6 +244,8 @@ class DirichletConcentration(Stochastic):
         self.dims = ( (D,), () )
         self._moments = DirichletPriorMoments(D)
         super().__init__(dims=self.dims, initialize=False, **kwargs)
+        self.u = self._moments.compute_fixed_moments(np.ones(D))
+        return
 
 
     def _update_distribution_and_lowerbound(self, m):
