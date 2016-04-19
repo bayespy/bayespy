@@ -11,6 +11,7 @@ Examples
 .. toctree::
    :maxdepth: 1
 
+   multinomial
    regression
    gmm
    bmm
