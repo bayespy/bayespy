@@ -219,13 +219,18 @@ def Choose(z, *nodes):
 
     For instance:
 
-    .. code-block::
+    .. testsetup::
 
+       from bayespy.nodes import *
+
+    .. code-block:: python
+
+       >>> import bayespy as bp
        >>> z = [0, 0, 2, 1]
-       >>> x0 = GaussianARD(0, 1)
-       >>> x1 = GaussianARD(10, 1)
-       >>> x2 = GaussianARD(20, 1)
-       >>> x = Choose(z, x0, x1, x2)
+       >>> x0 = bp.nodes.GaussianARD(0, 1)
+       >>> x1 = bp.nodes.GaussianARD(10, 1)
+       >>> x2 = bp.nodes.GaussianARD(20, 1)
+       >>> x = bp.nodes.Choose(z, x0, x1, x2)
        >>> print(x.get_moments()[0])
        [  0.   0.  20.  10.]
 
