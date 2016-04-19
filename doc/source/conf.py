@@ -13,6 +13,8 @@
 
 import sys, os
 
+ON_RTD = os.environ.get('READTHEDOCS') == 'True'
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -36,9 +38,10 @@ import setup as setupfile
 # Use some dummy modules on Read the Docs because they are not available
 # (requires some C libraries)
 # http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-from unittest.mock import MagicMock
-MOCK_MODULES = ['h5py']
-sys.modules.update((mod_name, MagicMock()) for mod_name in MOCK_MODULES)
+if ON_RTD:
+    from unittest.mock import MagicMock
+    MOCK_MODULES = ['h5py']
+    sys.modules.update((mod_name, MagicMock()) for mod_name in MOCK_MODULES)
 
 # Use the 'Read the Docs' theme
 html_theme = 'sphinx_rtd_theme'
@@ -69,8 +72,7 @@ imgmath_image_format = 'svg'
 # Choose the image processing ‹suite›, either 'Netpbm', 'pdf2svg', 'GhostScript', 'ImageMagick' ('Netpbm' by default):
 # If you want your documentation to be built on http://readthedocs.org, you have to choose GhostScript.
 # All suites produce png images, excepted 'pdf2svg' which produces svg.
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
-if on_rtd:
+if ON_RTD:
     tikz_proc_suite = 'GhostScript'
 else:
     tikz_proc_suite = 'pdf2svg'
