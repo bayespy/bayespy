@@ -1138,7 +1138,33 @@ class RotateGaussianMarkovChain():
 
     def __init__(self, X, *args):
         self.X_node = X
-        self.A_node = X.parents[2]
+
+        # FIXME: Currently, GaussianMarkovChain wraps initial state mean and
+        # precision into one node and dynamics plus innovation noise into
+        # another node. This transformation doesn't yet support GaussianGamma
+        # dynamics, so we'll do some ugly checking here:
+
+        # Dynamics node
+        from bayespy.inference.vmp.nodes.gaussian import (
+            WrapToGaussianGamma,
+            GaussianToGaussianGamma,
+            GaussianMoments,
+        )
+        dynamics_innovation  = X.parents[1]
+        assert(isinstance(dynamics_innovation, WrapToGaussianGamma))
+        dynamics_gaussiangamma = dynamics_innovation.parents[0]
+        assert(isinstance(dynamics_gaussiangamma, GaussianToGaussianGamma))
+        dynamics = dynamics_gaussiangamma.parents[0]
+        print(dynamics.__class__)
+        print(dynamics._moments)
+        assert(isinstance(dynamics._moments, GaussianMoments))
+        self.A_node = dynamics
+
+
+        #initial_mean_precision = X.parents[0]
+        #assert(isinstance(initial_mean_precision, WrapToGaussianWishart))
+
+        #self.A_node = X.parents[2]
 
         if len(args) == 0:
             raise NotImplementedError()
@@ -1146,7 +1172,7 @@ class RotateGaussianMarkovChain():
             self.A_rotator = args[0]
         else:
             raise ValueError("Wrong number of arguments")
-        
+
         self.N = X.dims[0][0]
 
     def nodes(self):
@@ -1161,8 +1187,8 @@ class RotateGaussianMarkovChain():
         self.X_node.rotate(R, inv=inv, logdet=logdet)
 
         from scipy.linalg import block_diag
-        if len(self.X_node.parents) >= 5:
-            input_shape = self.X_node.parents[4].dims[0]
+        if len(self.X_node.parents) >= 3:
+            input_shape = self.X_node.parents[2].dims[0]
             input_len = input_shape[-1]
             I = np.identity(input_len)
         else:
@@ -1229,8 +1255,8 @@ class RotateGaussianMarkovChain():
         XpXp = XnXn[...,:-1,:,:]
 
         # Add input signals
-        if len(self.X_node.parents) >= 5:
-            (U, UU) = self.X_node.parents[4].get_moments()
+        if len(self.X_node.parents) >= 3:
+            (U, UU) = self.X_node.parents[2].get_moments()
             UXn = linalg.outer(U, X[...,1:,:])
             UXp = linalg.outer(U, X[...,:-1,:])
             XpXn = np.concatenate([XpXn, UXn], axis=-2)
@@ -1255,12 +1281,10 @@ class RotateGaussianMarkovChain():
                                   ndim=2)
 
         # Get moments of the fixed parameter nodes
-        mu = self.X_node.parents[0].get_moments()[0]
-        self.Lambda = self.X_node.parents[1].get_moments()[0]
-        self.Lambda_mu_X0 = linalg.outer(np.einsum('...ik,...k->...i',
-                                                   self.Lambda,
-                                                   mu),
-                                         self.X0)
+        Lambda_mu = self.X_node.parents[0].get_moments()[0]
+        self.Lambda = self.X_node.parents[0].get_moments()[2]
+        #self.Lambda = self.X_node.parents[1].get_moments()[0]
+        self.Lambda_mu_X0 = linalg.outer(Lambda_mu, self.X0)
         self.Lambda_mu_X0 = sum_to_plates(self.Lambda_mu_X0,
                                           (),
                                           plates_from=self.X_node.plates,
@@ -1383,8 +1407,8 @@ class RotateGaussianMarkovChain():
 
         # Handle possible input signals
         from scipy.linalg import block_diag
-        if len(self.X_node.parents) >= 5:
-            input_shape = self.X_node.parents[4].dims[0]
+        if len(self.X_node.parents) >= 3:
+            input_shape = self.X_node.parents[2].dims[0]
             input_len = input_shape[-1]
             I = np.identity(input_len)
         else:
@@ -1413,8 +1437,8 @@ class RotateGaussianMarkovChain():
 
         # Handle possible input signals
         from scipy.linalg import block_diag
-        if len(self.X_node.parents) >= 5:
-            input_shape = self.X_node.parents[4].dims[0]
+        if len(self.X_node.parents) >= 3:
+            input_shape = self.X_node.parents[2].dims[0]
             input_len = input_shape[-1]
             I = np.identity(input_len)
         else:
