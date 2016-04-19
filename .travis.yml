@@ -45,8 +45,8 @@ install:
   - conda install -n test-environment --yes h5py
   - source activate test-environment
   - pip install coveralls
-  - pip install "sphinx>=1.2.3" sphinxcontrib-tikz sphinxcontrib-bayesnet sphinxcontrib-bibtex "numpydoc>=0.5"
-  - pip install -e .
+  - pip install -e .[dev,doc]
+
 
 # Select a proper matplotlib backend
 before_script:

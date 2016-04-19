@@ -62,6 +62,10 @@ if __name__ == "__main__":
                 'numpydoc>=0.5',
                 'nbsphinx',
             ],
+            'dev': [
+                'nosetests',
+                'nosebook',
+            ]
         },
         packages         = find_packages(),
         package_data     = {
