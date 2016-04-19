@@ -50,7 +50,7 @@ html_theme = 'sphinx_rtd_theme'
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.mathjax',
+    'sphinx.ext.imgmath',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
     'sphinx.ext.doctest',
@@ -62,6 +62,9 @@ extensions = [
     'sphinxcontrib.bibtex',
     'nbsphinx',
     ]
+
+# Image format for math
+imgmath_image_format = 'svg'
 
 # Choose the image processing ‹suite›, either 'Netpbm', 'pdf2svg', 'GhostScript', 'ImageMagick' ('Netpbm' by default):
 # If you want your documentation to be built on http://readthedocs.org, you have to choose GhostScript.
