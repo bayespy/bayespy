@@ -44,7 +44,7 @@ if __name__ == "__main__":
         return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
     from setuptools import setup, find_packages
-    
+
     # Setup for BayesPy
     setup(
         install_requires = [
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         ],
         extras_require = {
             'doc': [
-                'sphinx>=1.2.3',
+                'sphinx>=1.4.0', # 1.4.0 adds imgmath extension
                 'sphinxcontrib-tikz>=0.4.2',
                 'sphinxcontrib-bayesnet',
                 'sphinxcontrib-bibtex',
@@ -82,7 +82,7 @@ if __name__ == "__main__":
             'graphical models',
             'variational message passing'
         ],
-        classifiers = [ 
+        classifiers = [
             'Programming Language :: Python :: 3 :: Only',
             'Programming Language :: Python :: 3.3',
             'Programming Language :: Python :: 3.4',
