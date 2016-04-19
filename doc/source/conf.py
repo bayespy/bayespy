@@ -77,6 +77,12 @@ if ON_RTD:
 else:
     tikz_proc_suite = 'pdf2svg'
 
+
+if ON_RTD:
+    # For some reason, RTD needs these to be set explicitly although they
+    # should have default values
+    math_number_all = False
+
 numpydoc_show_class_members = False
 
 # Include TODOs in the documentation?
