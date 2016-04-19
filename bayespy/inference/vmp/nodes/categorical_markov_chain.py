@@ -354,7 +354,7 @@ class CategoricalMarkovChainToCategorical(Deterministic):
         K = Z.dims[0][-1]
         dims = ( (K,), )
         self._moments = CategoricalMoments(K)
-        self._parent_moments = (CategoricalMarkovChainMoments(K),)
+        self._parent_moments = (Z._moments,)
         super().__init__(Z, dims=dims, **kwargs)
 
 
