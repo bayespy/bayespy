@@ -69,7 +69,11 @@ imgmath_image_format = 'svg'
 # Choose the image processing ‹suite›, either 'Netpbm', 'pdf2svg', 'GhostScript', 'ImageMagick' ('Netpbm' by default):
 # If you want your documentation to be built on http://readthedocs.org, you have to choose GhostScript.
 # All suites produce png images, excepted 'pdf2svg' which produces svg.
-tikz_proc_suite = 'GhostScript'
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+if on_rtd:
+    tikz_proc_suite = 'GhostScript'
+else:
+    tikz_proc_suite = 'pdf2svg'
 
 numpydoc_show_class_members = False
 
