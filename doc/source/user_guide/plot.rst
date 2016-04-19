@@ -388,8 +388,10 @@ Saving and loading results
 The results of the inference engine can be easily saved and loaded using
 :func:`VB.save` and :func:`VB.load` methods:
 
->>> Q.save(filename='tmp.hdf5')
->>> Q.load(filename='tmp.hdf5')
+>>> import tempfile
+>>> filename = tempfile.mkstemp(suffix='.hdf5')[1]
+>>> Q.save(filename=filename)
+>>> Q.load(filename=filename)
 
 The results are stored in a HDF5 file.  The user may set an autosave file in
 which the results are automatically saved regularly.  Autosave filename can be
