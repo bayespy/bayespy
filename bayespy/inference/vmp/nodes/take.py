@@ -34,7 +34,7 @@ class Take(Deterministic):
     Examples
     --------
 
-    >>> from bayespy.nodes import Gamma
+    >>> from bayespy.nodes import Gamma, Take
     >>> alpha = Gamma([1, 2, 3], [1, 1, 1])
     >>> x = Take(alpha, [1, 1, 2, 2, 1, 0])
     >>> x.get_moments()[0]

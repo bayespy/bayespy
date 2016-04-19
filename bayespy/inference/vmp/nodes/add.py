@@ -21,6 +21,7 @@ class Add(Deterministic):
     Examples
     --------
 
+    >>> import numpy as np
     >>> from bayespy import nodes
     >>> X = nodes.Gaussian(np.zeros(2), np.identity(2), plates=(3,))
     >>> Y = nodes.Gaussian(np.ones(2), np.identity(2))

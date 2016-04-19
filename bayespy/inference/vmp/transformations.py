@@ -1155,16 +1155,8 @@ class RotateGaussianMarkovChain():
         dynamics_gaussiangamma = dynamics_innovation.parents[0]
         assert(isinstance(dynamics_gaussiangamma, GaussianToGaussianGamma))
         dynamics = dynamics_gaussiangamma.parents[0]
-        print(dynamics.__class__)
-        print(dynamics._moments)
         assert(isinstance(dynamics._moments, GaussianMoments))
         self.A_node = dynamics
-
-
-        #initial_mean_precision = X.parents[0]
-        #assert(isinstance(initial_mean_precision, WrapToGaussianWishart))
-
-        #self.A_node = X.parents[2]
 
         if len(args) == 0:
             raise NotImplementedError()

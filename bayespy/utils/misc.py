@@ -115,7 +115,8 @@ def parse_command_line_arguments(mandatory_args, *optional_args_list, argv=None)
     --------
 
     >>> from pprint import pprint as print
-    >>> (args, kwargs) = parse_command_line_arguments(
+    >>> from bayespy.utils import misc
+    >>> (args, kwargs) = misc.parse_command_line_arguments(
     ...     # Mandatory arguments
     ...     [
     ...         ('name',     str,  "Full name"),
@@ -139,7 +140,7 @@ def parse_command_line_arguments(mandatory_args, *optional_args_list, argv=None)
 
     It is possible to have several optional argument sets:
 
-    >>> (args, kw_info, kw_fav) = parse_command_line_arguments(
+    >>> (args, kw_info, kw_fav) = misc.parse_command_line_arguments(
     ...     # Mandatory arguments
     ...     [
     ...         ('name',     str,  "Full name"),

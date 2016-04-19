@@ -401,6 +401,7 @@ class Mixture(ExponentialFamily):
     A simple 2-dimensional Gaussian mixture model with three clusters
     for 100 samples can be constructed, for instance, as:
 
+    >>> import numpy as np
     >>> from bayespy.nodes import (Dirichlet, Categorical, Mixture,
     ...                            Gaussian, Wishart)
     >>> alpha = Dirichlet([1e-3, 1e-3, 1e-3])

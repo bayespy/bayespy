@@ -344,19 +344,20 @@ class CategoricalMarkovChainToCategorical(Deterministic):
     A node for converting categorical MC moments to categorical moments.
     """
 
-    
+
     def __init__(self, Z, **kwargs):
         """
         Create a categorical MC moments to categorical moments conversion node.
         """
         # Convert parent to proper type. Z must be a node.
-        Z = Z._convert(CategoricalMarkovChainMoments)
+        Z = self._ensure_moments(Z, CategoricalMarkovChainMoments)
         K = Z.dims[0][-1]
         dims = ( (K,), )
         self._moments = CategoricalMoments(K)
         self._parent_moments = (CategoricalMarkovChainMoments(K),)
         super().__init__(Z, dims=dims, **kwargs)
-        
+
+
     def _compute_moments(self, u_Z):
         """
         Compute the moments given the moments of the parents.
