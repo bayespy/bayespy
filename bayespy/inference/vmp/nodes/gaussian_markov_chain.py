@@ -53,6 +53,8 @@ class GaussianMarkovChainMoments(Moments):
         if logdet is None:
             logdet = np.linalg.slogdet(R)[1]
 
+        N = np.shape(u[0])[-2]
+
         # Transform moments and g
         u0 = linalg.mvdot(R, u[0])
         u1 = linalg.dot(R, u[1], R.T)
@@ -244,40 +246,6 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
 
     def random(self, *phi, plates=None):
         raise NotImplementedError()
-                                
-    
-    def rotate(self, R, inv=None, logdet=None):
-
-        if inv is not None:
-            invR = inv
-        else:
-            invR = np.linalg.inv(R)
-
-        if logdet is not None:
-            logdetR = logdet
-        else:
-            logdetR = np.linalg.slogdet(R)[1]
-
-        # It would be more efficient and simpler, if you just rotated the
-        # moments and didn't touch phi. However, then you would need to call
-        # update() before lower_bound_contribution. This is more error-safe.
-
-        # Transform parameters
-        self.phi[0] = linalg.mvdot(invR.T, self.phi[0])
-        self.phi[1] = linalg.dot(invR.T, self.phi[1], invR)
-        self.phi[2] = linalg.dot(invR.T, self.phi[2], invR)
-
-        N = self.dims[0][0]
-
-        if False:
-            self._update_moments_and_cgf()
-        else:
-            # Transform moments and g
-            u0 = linalg.mvdot(R, self.u[0])
-            u1 = linalg.dot(R, self.u[1], R.T)
-            u2 = linalg.dot(R, self.u[2], R.T)
-            self.u = [u0, u1, u2]
-            self.g -= N*logdetR
 
 
 def _compute_cgf_for_gaussian_markov_chain(mumu_Lambda, logdet_Lambda,
@@ -473,7 +441,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
 
     def compute_message_to_parent(self, parent, index, u, u_mu_Lambda, u_A_nu, *u_inputs):
-        """
+        r"""
         Compute a message to a parent.
 
         Parameters
@@ -531,39 +499,6 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
             return [m0, m1, m2, m3]
 
-
-                # m1_BB = -0.5 * message_sum_multiply(parent.plates,
-                #                                     (D_inputs, D_inputs),
-                #                                     zz[..., None,    :,    :],
-                #                                     v[ ...,    :, None, None])
-                # Xp_z = Xn[...,:-1,:,None] * z[...,None,:]
-                # m1_AB = -0.5 * message_sum_multiply(parent.plates,
-                #                                     (D, D_inputs),
-                #                                     Xp_z[..., None,    :,    :],
-                #                                     v[   ...,    :, None, None])
-            #m1 = -0.5 * v[...,np.newaxis,np.newaxis] * XnXn[..., :-1, np.newaxis, :, :]
-        # elif index == 3: # v
-        #     ## if len(u_inputs):
-        #     ##     raise NotImplementedError("Message to innovation not yet implemented "
-        #     ##                               "if using input signals")
-        #     XnXn = u[1] # (...,N,D,D)
-        #     XpXn = u[2] # (...,N-1,D,D)
-        #     A = u_A[0][...,:D]     # (..., N-1, D, D)
-        #     AA = u_A[1][...,:D,:D] # (..., N-1, D, D, D)
-        #     m0 = (- 0.5*np.einsum('...ii->...i', XnXn[...,1:,:,:])
-        #           + np.einsum('...ik,...ki->...i', A, XpXn)
-        #           - 0.5*np.einsum('...ikl,...kl->...i', AA, XnXn[...,:-1,:,:]))
-        #     if len(u_inputs):
-        #         Xn = u[0]              # (..., N, D)
-        #         B = u_A[0][...,D:]     # (..., N-1, D, inputs)
-        #         BB = u_A[1][...,D:,D:] # (..., N-1, D, inputs, inputs)
-        #         AB = u_A[1][...,:D,D:] # (..., N-1, D, D, inputs)
-        #         Un = u_inputs[0][0]    # (..., N-1, inputs)
-        #         UnUn = u_inputs[0][1]  # (..., N-1, inputs, inputs)
-        #         BUn = np.einsum('...dk,...k->...d', B, Un)
-        #         m0 = m0 + (- 0.5*np.einsum('...ikl,...kl->...i', BB, UnUn)
-        #                    + BUn * Xn[...,1:,:]
-        #                    - np.einsum('...ijk,...j,...k', AB, Xn[...,:-1,:], Un))
 
         #     m1 = 0.5
         elif index == 2: # input signals
@@ -951,6 +886,25 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
                  distribution,
                  moments,
                  _parent_moments)
+
+
+    def rotate(self, R, inv=None, logdet=None):
+
+        # It would be more efficient and simpler, if you just rotated the
+        # moments and didn't touch phi. However, then you would need to call
+        # update() before lower_bound_contribution. This is more error-safe.
+        (u, phi, dg) = self._distribution.rotate(
+            self.u,
+            self.phi,
+            R,
+            inv=inv,
+            logdet=logdet
+        )
+        self.u = u
+        self.phi = phi
+        self.g = self.g + dg
+
+        return
 
 
 class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
