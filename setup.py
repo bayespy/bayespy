@@ -63,7 +63,7 @@ if __name__ == "__main__":
                 'nbsphinx',
             ],
             'dev': [
-                'nosetests',
+                'nose',
                 'nosebook',
             ]
         },
