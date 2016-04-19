@@ -46,8 +46,23 @@ class GaussianMarkovChainMoments(Moments):
         u1 = x[...,:,np.newaxis] * x[...,np.newaxis,:]
         u2 = x[...,:-1,:,np.newaxis] * x[...,1:,np.newaxis,:]
         return [u0, u1, u2]
-        
-    
+
+
+    def rotate(self, u, R, logdet=None):
+
+        if logdet is None:
+            logdet = np.linalg.slogdet(R)[1]
+
+        # Transform moments and g
+        u0 = linalg.mvdot(R, u[0])
+        u1 = linalg.dot(R, u[1], R.T)
+        u2 = linalg.dot(R, u[2], R.T)
+        u = [u0, u1, u2]
+        dg = -N * logdet
+
+        return (u, dg)
+
+
 class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
     """
     Sub-classes implement distribution specific computations.
@@ -146,6 +161,62 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
         """
         raise NotImplementedError()
 
+
+    def rotate(self, u, phi, R, inv=None, logdet=None):
+
+        (u, dg) = self.moments.rotate(u, R, logdet=logdet)
+
+        # It would be more efficient and simpler, if you just rotated the
+        # moments and didn't touch phi. However, then you would need to call
+        # update() before lower_bound_contribution. This is more error-safe.
+
+        if inv is None:
+            inv = np.linalg.inv(R)
+
+        # Transform parameters
+        phi0 = linalg.mvdot(inv.T, phi[0])
+        phi1 = linalg.dot(inv.T, phi[1], inv)
+        phi2 = linalg.dot(inv.T, phi[2], inv)
+        phi = [phi0, phi1, phi2]
+
+        return (u, phi, dg)
+
+
+    def compute_rotation_bound(self, u, u_mu_Lambda, u_A_V, R, inv=None, logdet=None):
+
+        (Lambda_mu, Lambda_mumu, Lambda, logdetLambda) = u_mu_Lambda
+        (V_A, V_AA, V, logdetV) = u_A_V
+
+        V = misc.make_diag(V, ndim=1)
+
+        R_XnXn = linalg.dot(R, self.XnXn)
+        R_XpXp = linalg.dot(R, self.XpXp)
+        R_X0X0 = linalg.dot(R, self.X0X0)
+
+        tracedot(dot(Lambda, R_X0X0), R.T)
+        tracedot(dot(V, R_XnXn), R.T)
+        tracedot(dot(V_AA, R_XpXp), R.T)
+        tracedot(dot(V_A, R_XpXn), R.T)
+        (N - 1) * logdetV
+        2 * N * logdetR
+
+        logp = random.gaussian_logpdf(
+            Lambda_R_X0X0_R + V_R_XnXn_R,
+            V_A_R_XpXn_R,
+            V_AA_R_XpXp_R,
+            (N - 1) * logdetV + 2 * N * logdetR
+        )
+
+        logH = random.gaussian_entropy(
+            -2 * M * logdetR,
+            0
+        )
+
+        dlogp
+
+        dlogH
+
+        return (L, dL)
 
 
 class _TemplateGaussianMarkovChain(ExponentialFamily):
