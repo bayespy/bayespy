@@ -3,6 +3,10 @@ language: python
 # use the faster container-based architecture
 sudo: false
 
+addons:
+  apt_packages:
+    - pandoc
+
 # versions to test
 # list of packages in miniconda:
 # http://repo.continuum.io/pkgs/free/linux-64/index.html
