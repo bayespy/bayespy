@@ -251,6 +251,7 @@ latex_elements = {
 \usepackage{tikz}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{svg}
 \usetikzlibrary{shapes}
 \usetikzlibrary{fit}
 \usetikzlibrary{chains}
