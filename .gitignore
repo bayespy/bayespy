@@ -19,6 +19,7 @@ doc/source/generated
 doc/source/*/generated
 doc/source/examples/*_files/*
 doc/source/*/*_files/*
+doc/_build
 ENV
 *.hdf5
 .env*
