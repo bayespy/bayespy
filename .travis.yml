@@ -56,6 +56,7 @@ install:
   - source activate test-environment
   - pip install coveralls
   - pip install -e .[dev,doc]
+  - pip freeze
 
 
 # Select a proper matplotlib backend
