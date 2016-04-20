@@ -32,6 +32,12 @@ matrix:
         - NUMPYVERSION=
         - SCIPYVERSION=
         - MATPLOTLIBVERSION=
+    - python: 3.5
+      env:
+        - PYTHONVERSION==3.5
+        - NUMPYVERSION=
+        - SCIPYVERSION=
+        - MATPLOTLIBVERSION=
 
 # install Miniconda; use it to install dependencies
 install:
