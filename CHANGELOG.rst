@@ -1,12 +1,14 @@
 Dev
 +++
 
-* Implement Take, MultiMixture, ConcatGaussian, GaussianWishart and
-  GaussianGamma nodes
+* Implement Take, MultiMixture, ConcatGaussian, GaussianWishart, GaussianGamma,
+  Choose and Concentration nodes
 
 * Support GaussianWishart and GaussianGamma in GaussianMarkovChain
 
 * Simplify GaussianARD mean parent handling
+
+* Support 1-p operation (complement) for beta variables
 
 * Support ndim in many linalg functions and Gaussian-related nodes
 
@@ -16,11 +18,17 @@ Dev
 
 * Fix Dirichlet node parent validation
 
+* Fix VB iteration when no data given
+
+* Fix axis label support in Hinton plots
+
 * Add conjugate gradient support for Multinomial and Mixture
 
 * Support monitoring of only some nodes when learning
 
 * Add diag() method to Gamma node
+
+* Add some examples as Jupyter notebooks
 
 * Fix recursive node deletion
 
