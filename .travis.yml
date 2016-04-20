@@ -66,7 +66,7 @@ before_script:
 script:
   - travis_wait 30 python -m nose -c setup.cfg
   - cd doc
-  - travis_wait 30 make doctest
+  - travis_wait 50 make doctest
   - cd ..
 
 # if tests fail, upload images to imgur
