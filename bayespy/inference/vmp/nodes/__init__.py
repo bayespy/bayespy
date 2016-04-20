@@ -19,7 +19,9 @@ from .poisson import Poisson
 
 from .beta import Beta
 from .beta import Complement
-from .dirichlet import Dirichlet, DirichletConcentration
+from .dirichlet import Dirichlet, Concentration
+DirichletConcentration = Concentration
+BetaConcentration = lambda **kwargs: Concentration(2, **kwargs)
 
 from .exponential import Exponential
 

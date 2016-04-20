@@ -21,7 +21,7 @@ from .constant import Constant
 from .node import Node, Moments, ensureparents
 
 
-class DirichletPriorMoments(Moments):
+class ConcentrationMoments(Moments):
     """
     Class for the moments of Dirichlet conjugate-prior variables.
     """
@@ -230,7 +230,7 @@ class DirichletDistribution(ExponentialFamilyDistribution):
         return [d0]
 
 
-class DirichletConcentration(Stochastic):
+class Concentration(Stochastic):
 
 
     _parent_moments = ()
@@ -242,7 +242,7 @@ class DirichletConcentration(Stochastic):
         """
         self.D = D
         self.dims = ( (D,), () )
-        self._moments = DirichletPriorMoments(D)
+        self._moments = ConcentrationMoments(D)
         super().__init__(dims=self.dims, initialize=False, **kwargs)
         self.u = self._moments.compute_fixed_moments(np.ones(D))
         return
@@ -334,7 +334,7 @@ class Dirichlet(ExponentialFamily):
         Constructs distribution and moments objects.
         """
         # Number of categories
-        alpha = cls._ensure_moments(alpha, DirichletPriorMoments)
+        alpha = cls._ensure_moments(alpha, ConcentrationMoments)
         parent_moments = (alpha._moments,)
 
         parents = [alpha]
