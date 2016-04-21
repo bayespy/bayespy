@@ -14,6 +14,7 @@ from scipy import special
 
 from bayespy.utils import random
 from bayespy.utils import misc
+from bayespy.utils import linalg
 
 from .stochastic import Stochastic
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
@@ -236,15 +237,47 @@ class Concentration(Stochastic):
     _parent_moments = ()
 
 
-    def __init__(self, D, **kwargs):
+    def __init__(self, D, regularization=True, **kwargs):
         """
-        Create gamma random variable node
+        ML estimation node for concentration parameters.
+
+        Parameters
+        ----------
+
+        D : int
+            Number of categories
+
+        regularization : 2-tuple of arrays (optional)
+            "Prior" log-probability and "prior" sample number
         """
         self.D = D
         self.dims = ( (D,), () )
         self._moments = ConcentrationMoments(D)
         super().__init__(dims=self.dims, initialize=False, **kwargs)
         self.u = self._moments.compute_fixed_moments(np.ones(D))
+        if regularization is None or regularization is False:
+            regularization = [0, 0]
+        elif regularization is True:
+            # Decent default regularization?
+            regularization = [np.log(1/D), 1]
+        self.regularization = regularization
+        return
+
+
+    @property
+    def regularization(self):
+        return self.__regularization
+
+
+    @regularization.setter
+    def regularization(self, regularization):
+        if len(regularization) != 2:
+            raise ValueError("Regularization must 2-tuple")
+        if not misc.is_shape_subset(np.shape(regularization[0], self.get_shape(0))):
+            raise ValueError("Wrong shape")
+        if not misc.is_shape_subset(np.shape(regularization[1], self.get_shape(1))):
+            raise ValueError("Wrong shape")
+        self.__regularization = regularization
         return
 
 
@@ -255,8 +288,8 @@ class Concentration(Stochastic):
 
         a = np.ones(self.D)
         da = np.inf
-        logp = m[0]
-        N = m[1]
+        logp = m[0] + self.regularization[0]
+        N = m[1] + self.regularization[1]
 
         # Compute sufficient statistic
         mean_logp = logp / N[...,None]
@@ -291,7 +324,10 @@ class Concentration(Stochastic):
 
 
     def lower_bound_contribution(self):
-        return 0
+        return (
+            linalg.inner(self.u[0], self.regularization[0], ndim=1)
+            + self.u[1] * self.regularization[1]
+        )
 
 
 class Dirichlet(ExponentialFamily):
