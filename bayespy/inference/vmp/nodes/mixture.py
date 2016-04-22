@@ -214,6 +214,10 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             # Shape(p)      = [Nn,..,N0,1,..,1,K]
             p = misc.moveaxis(p, -(self.ndims[ind]+1), -1)
 
+            # Handle zero probability cases. This avoids nans when p=0 and
+            # phi=inf.
+            phi[ind] = np.where(p != 0, phi[ind], 0)
+
             # Now the shapes broadcast perfectly and we can sum
             # p*phi over the last axis:
             # Shape(result) = [Nn,..,N0,Dd,..,D0]
