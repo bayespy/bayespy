@@ -342,7 +342,7 @@ class TestMixture(TestCase):
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             [1, 9])
-        
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             warnings.simplefilter("ignore", UserWarning)
@@ -350,10 +350,8 @@ class TestMixture(TestCase):
             p1 = [1.0, 0.0]
             X = Mixture(0, Multinomial, 10, [p0, p1])
             u = X._message_to_child()
-            self.assertAllClose(u[0],
-                                np.nan*np.ones(2))
+            self.assertAllClose(u[0], [1, 9])
 
-        
         pass
 
 
