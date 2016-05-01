@@ -14,6 +14,8 @@ from .expfamily import ExponentialFamily
 from .expfamily import ExponentialFamilyDistribution
 from .expfamily import useconstructor
 from .constant import Constant
+from .deterministic import Deterministic
+from .gamma import GammaMoments
 
 from .node import Moments, Node
 
@@ -283,6 +285,10 @@ class Wishart(ExponentialFamily):
                 parent_moments)
 
 
+    def scale(self, scalar, **kwargs):
+        return _ScaledWishart(self, scalar, **kwargs)
+
+
     def __str__(self):
         n = 2*self.phi[1]
         A = 0.5 * self.u[0] / self.phi[1][...,np.newaxis,np.newaxis]
@@ -293,3 +299,57 @@ class Wishart(ExponentialFamily):
                 "%s\n"
                 % (self.name, n, A))
 
+
+class _ScaledWishart(Deterministic):
+
+
+    def __init__(self, Lambda, alpha, ndim=None, **kwargs):
+
+        if ndim is None:
+            try:
+                ndim = Lambda._moments.ndim
+            except AttributeError:
+                raise ValueError("Give explicit ndim argument. (ndim=1 for normal matrix)")
+
+        Lambda = self._ensure_moments(Lambda, WishartMoments, ndim=ndim)
+        alpha = self._ensure_moments(alpha, GammaMoments)
+
+        dims = Lambda.dims
+
+        self._moments = Lambda._moments
+        self._parent_moments = (Lambda._moments, alpha._moments)
+
+        return super().__init__(Lambda, alpha, dims=dims, **kwargs)
+
+
+    def _compute_moments(self, u_Lambda, u_alpha):
+
+        Lambda = u_Lambda[0]
+        logdet_Lambda = u_Lambda[1]
+
+        alpha = misc.add_trailing_axes(u_alpha[0], 2*self._moments.ndim)
+        logalpha = u_alpha[1]
+
+        u0 = Lambda * alpha
+        u1 = logdet_Lambda + np.prod(self._moments.shape) * logalpha
+
+        return [u0, u1]
+
+
+    def _compute_message_to_parent(self, index, m, u_Lambda, u_alpha):
+
+        if index == 0:
+            alpha = misc.add_trailing_axes(u_alpha[0], 2*self._moments.ndim)
+            logalpha = u_alpha[1]
+            m0 = m[0] * alpha
+            m1 = m[1]
+            return [m0, m1]
+
+        if index == 1:
+            Lambda = u_Lambda[0]
+            logdet_Lambda = u_Lambda[1]
+            m0 = linalg.inner(m[0], Lambda, ndim=2*self._moments.ndim)
+            m1 = m[1] * np.prod(self._moments.shape)
+            return [m0, m1]
+
+        raise IndexError()

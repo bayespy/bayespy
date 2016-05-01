@@ -17,7 +17,6 @@ from .deterministic import Deterministic
 from .stochastic import Stochastic
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
-from .wishart import WishartMoments
 
 from bayespy.utils import misc
 from bayespy.utils import random
@@ -347,6 +346,8 @@ class _GammaToDiagonalWishart(Deterministic):
                             "order to be used as a diagonal Wishart.")
         D = alpha.plates[-1]
 
+        # FIXME: Put import here to avoid circular dependency import
+        from .wishart import WishartMoments
         self._moments = WishartMoments((D,))
         dims = ( (D,D), () )
 
