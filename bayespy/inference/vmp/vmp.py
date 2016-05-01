@@ -452,49 +452,11 @@ class VB():
         if collapsed is None:
             collapsed = []
 
-        t = time.clock()
-
-        # Current parameters
+        scale = 1.0
         p = self.get_parameters(*nodes)
+        dd_prev = 0
 
-        # Get gradients
-        if riemannian and method == 'gradient':
-            rg = self.get_gradients(*nodes, euclidian=False)
-            g1 = rg
-            g2 = rg
-        else:
-            (rg, g) = self.get_gradients(*nodes, euclidian=True)
-            if riemannian:
-                g1 = g
-                g2 = rg
-            else:
-                g1 = g
-                g2 = g
-
-        if method == 'gradient':
-            pass
-        elif method == 'fletcher-reeves':
-            dd_prev = self.dot(g1, g2)
-        else:
-            raise Exception("Unknown optimization method: %s" % (method))
-
-        # Take a gradient ascending step
-        p_new = self.add(p, g2)
-        self.set_parameters(p_new, *nodes)
-        p = p_new
-
-        # Update collapsed variables
-        for node in collapsed:
-            self[node].update()
-
-        L = self.compute_lowerbound()
-
-        s = g2
-        cputime = time.clock() - t
-
-        self._end_iteration_step('OPT', cputime, tol=tol, verbose=verbose)
-
-        for i in range(maxiter-1):
+        for i in range(maxiter):
 
             t = time.clock()
 
@@ -530,7 +492,6 @@ class VB():
                 s = g2
 
             success = False
-            scale = 1.0
             while not success:
 
                 p_new = self.add(p, s, scale=scale)
@@ -548,14 +509,28 @@ class VB():
 
                 # Update collapsed variables
                 collapsed_params = self.get_parameters(*collapsed)
-                for node in collapsed:
-                    self[node].update()
+                try:
+                    for node in collapsed:
+                        self[node].update()
+                except:
+                    self.set_parameters(collapsed_params, *collapsed)
+                    if verbose:
+                        self.print("Collapsed node update node failed, reset CG")
+                    if s is g2:
+                        scale = scale / 2
+                    dd_prev = 0
+                    s = g2
+                    continue
 
                 L = self.compute_lowerbound()
 
-                if np.isnan(L) or (
-                        L < self.L[self.iter-1] and
-                        not np.allclose(L, self.L[self.iter-1], rtol=1e-8)):
+                bound_decreased = (
+                    self.iter > 0 and
+                    L < self.L[self.iter-1] and
+                    not np.allclose(L, self.L[self.iter-1], rtol=1e-8)
+                )
+
+                if np.isnan(L) or bound_decreased:
 
                     # Restore the state of the collapsed nodes to what it was
                     # before updating them
@@ -571,20 +546,32 @@ class VB():
                                 )
                             )
                     else:
-                        if verbose:
-                            self.print(
-                                "CG decreased lower bound from {0} to {1}, using gradient and resetting CG"
-                                .format(
-                                    self.L[self.iter-1],
-                                    L,
+                        if scale < 2 ** (-10):
+                            if verbose:
+                                self.print(
+                                    "CG decreased lower bound from {0} to {1}, reset CG."
+                                    .format(
+                                        self.L[self.iter-1],
+                                        L,
+                                    )
                                 )
-                            )
-                    dd_prev = 0
-                    s = g2
+                            dd_prev = 0
+                            s = g2
+                        else:
+                            scale = scale / 2
+                            if verbose:
+                                self.print(
+                                    "CG decreased lower bound from {0} to {1}, halfing step length"
+                                    .format(
+                                        self.L[self.iter-1],
+                                        L,
+                                    )
+                                )
                     continue
 
                 success = True
 
+            scale = scale * np.sqrt(2)
             p = p_new
 
             cputime = time.clock() - t

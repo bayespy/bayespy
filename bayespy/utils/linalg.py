@@ -194,7 +194,9 @@ def logdet_cov(C, ndim=1):
     return chol_logdet(chol(C, ndim=ndim), ndim=ndim)
 
 
-def solve_triangular(U, B, **kwargs):
+def solve_triangular(U, B, ndim=1, **kwargs):
+    if ndim != 1:
+        raise NotImplementedError("Not yet implemented for ndim!=1")
     # Allocate memory
     U = np.atleast_2d(U)
     B = np.atleast_1d(B)

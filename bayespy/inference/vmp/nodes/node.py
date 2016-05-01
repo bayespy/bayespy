@@ -555,14 +555,14 @@ class Node():
                            self.name))
         return u
                 
-    def _message_to_parent(self, index):
+    def _message_to_parent(self, index, u_parent=None):
 
         # Compute the message, check plates, apply mask and sum over some plates
         if index >= len(self.parents):
             raise ValueError("Parent index larger than the number of parents")
 
         # Compute the message and mask
-        (m, mask) = self._get_message_and_mask_to_parent(index)
+        (m, mask) = self._get_message_and_mask_to_parent(index, u_parent=u_parent)
         mask = misc.squeeze(mask)
 
         # Plates in the mask
@@ -579,6 +579,8 @@ class Node():
 
         # Check if m is a logpdf function (for black-box variational inference)
         if callable(m):
+            return m
+
             def m_function(*args):
                 lpdf = m(*args)
                 # Log pdf only contains plate axes!
@@ -640,20 +642,36 @@ class Node():
 
         return m
 
-    def _message_from_children(self):
+    def _message_from_children(self, u_self=None):
         msg = [np.zeros(shape) for shape in self.dims]
         #msg = [np.array(0.0) for i in range(len(self.dims))]
+        isfunction = None
         for (child,index) in self.children:
-            m = child._message_to_parent(index)
-            for i in range(len(self.dims)):
-                if m[i] is not None:
-                    # Check broadcasting shapes
-                    sh = misc.broadcasted_shape(self.get_shape(i), np.shape(m[i]))
-                    try:
-                        # Try exploiting broadcasting rules
-                        msg[i] += m[i]
-                    except ValueError:
-                        msg[i] = msg[i] + m[i]
+            m = child._message_to_parent(index, u_parent=u_self)
+            if callable(m):
+                if isfunction is False:
+                    raise NotImplementedError()
+                elif isfunction is None:
+                    msg = m
+                else:
+                    def join(m1, m2):
+                        return (m1[0] + m2[0], m1[1] + m2[1])
+                    msg = lambda x: join(m(x), msg(x))
+                    isfunction = True
+            else:
+                if isfunction is True:
+                    raise NotImplementedError()
+                else:
+                    isfunction = False
+                    for i in range(len(self.dims)):
+                        if m[i] is not None:
+                            # Check broadcasting shapes
+                            sh = misc.broadcasted_shape(self.get_shape(i), np.shape(m[i]))
+                            try:
+                                # Try exploiting broadcasting rules
+                                msg[i] += m[i]
+                            except ValueError:
+                                msg[i] = msg[i] + m[i]
 
         return msg
 
