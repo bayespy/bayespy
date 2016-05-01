@@ -152,7 +152,7 @@ class TestNode(misc.TestCase):
             def __init__(self, *args, **kwargs):
                 self._parent_moments = len(args)*(Moments(),)
                 super().__init__(*args, **kwargs)
-            def _get_message_and_mask_to_parent(self, index):
+            def _get_message_and_mask_to_parent(self, index, u_parent=None):
                 return ([msg], mask)
             def _get_id_list(self):
                 return []
@@ -804,7 +804,7 @@ class TestSlice(misc.TestCase):
                 super().__init__(X, **kwargs)
                 self.m = m
                 self.mask2 = mask
-            def _message_to_parent(self, index):
+            def _message_to_parent(self, index, u_parent=None):
                 return self.m
             def _mask_to_parent(self, index):
                 return self.mask2

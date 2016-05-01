@@ -330,7 +330,7 @@ class SumMultiply(Deterministic):
         return u
         
 
-    def _message_to_parent(self, index):
+    def _message_to_parent(self, index, u_parent=None):
         """
         Compute the message and mask to a parent node.
         """
