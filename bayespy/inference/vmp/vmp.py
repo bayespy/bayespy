@@ -146,7 +146,9 @@ class VB():
 
         # Make certain that at least one of the nodes in the model has been
         # observed
-        if all(~np.any(n.observed) for n in self.model):
+        if (not self.ignore_bound_checks
+            and all(~np.any(n.observed) for n in self.model)):
+
             raise Exception("At least one node in the model must be observed.")
 
         converged = False
