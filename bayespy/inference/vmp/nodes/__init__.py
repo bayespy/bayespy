@@ -52,3 +52,5 @@ from .gaussian import ConcatGaussian
 from .logpdf import LogPDF
 
 from .constant import Constant
+from .ml import MaximumLikelihood
+from .ml import Function

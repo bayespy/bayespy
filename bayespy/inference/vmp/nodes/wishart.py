@@ -50,15 +50,36 @@ class WishartMoments(Moments):
         return
 
 
-    def compute_fixed_moments(self, Lambda):
+    def compute_fixed_moments(self, Lambda, gradient=None):
         """ Compute moments for fixed x. """
-        ldet = linalg.chol_logdet(
-            linalg.chol(Lambda, ndim=self.ndim),
-            ndim=self.ndim
-        )
+        L = linalg.chol(Lambda, ndim=self.ndim)
+        ldet = linalg.chol_logdet(L, ndim=self.ndim)
         u = [Lambda,
              ldet]
-        return u
+
+        if gradient is None:
+            return u
+
+        du0 = gradient[0]
+        du1 = (
+            misc.add_trailing_axes(gradient[1], 2*self.ndim)
+            * linalg.chol_inv(L, ndim=self.ndim)
+        )
+
+        du = du0 + du1
+
+        return (u, du)
+
+
+    def plates_from_shape(self, shape):
+        if self.ndim == 0:
+            return shape
+        else:
+            return shape[:-2*self.ndim]
+
+
+    def shape_from_plates(self, plates):
+        return plates + self.shape + self.shape
 
 
     def get_instance_conversion_kwargs(self):

@@ -24,7 +24,7 @@ class NodeConverter(Deterministic):
     def _compute_message_to_parent(self, index, m_child, u_node):
         if index != 0:
             raise IndexError()
-        return self.moments_converter.compute_message_to_parent(m_child)
+        return self.moments_converter.compute_message_to_parent(m_child, u_node)
 
 
     def _compute_weights_to_parent(self, index, weights):

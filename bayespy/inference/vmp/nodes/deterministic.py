@@ -69,9 +69,14 @@ class Deterministic(Node):
         mask = self._compute_weights_to_parent(index, self.mask) != 0
         return (m, mask)
 
-    def _get_message_and_mask_to_parent(self, index):
+    def _get_message_and_mask_to_parent(self, index, u_parent=None):
         u_parents = self._message_from_parents(exclude=index)
-        m_children = self._message_from_children()
+        u_parents[index] = u_parent
+        if u_parent is not None:
+            u_self = self._compute_moments(*u_parents)
+        else:
+            u_self = None
+        m_children = self._message_from_children(u_self=u_self)
         return self._compute_message_and_mask_to_parent(index,
                                                         m_children,
                                                         *u_parents)

@@ -115,7 +115,7 @@ class GaussianToGaussian():
         return [u0, u1]
 
 
-    def compute_message_to_parent(self, m):
+    def compute_message_to_parent(self, m, u_parent):
         # Handle broadcasting in m_child
         m0 = m[0] * np.ones(self.shape_from)
         m1 = (

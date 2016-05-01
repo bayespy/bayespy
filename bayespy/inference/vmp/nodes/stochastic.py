@@ -157,8 +157,9 @@ class Stochastic(Node):
         # node but instead create a copy of the list. 
         return [ui for ui in self.u]
 
-    def _get_message_and_mask_to_parent(self, index):
+    def _get_message_and_mask_to_parent(self, index, u_parent=None):
         u_parents = self._message_from_parents(exclude=index)
+        u_parents[index] = u_parent
         m = self._distribution.compute_message_to_parent(self.parents[index], 
                                                          index, 
                                                          self.u, 
