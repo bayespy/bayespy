@@ -56,7 +56,10 @@ class VB():
                  autosave_filename=None,
                  autosave_iterations=0,
                  use_logging=False,
+                 user_data=None,
                  callback=None):
+
+        self.user_data = user_data
 
         for (ind, node) in enumerate(nodes):
             if not isinstance(node, Node):
@@ -279,9 +282,29 @@ class VB():
             boundgroup = h5f.create_group('boundterms')
             for node in nodes:
                 misc.write_to_hdf5(boundgroup, self.l[node], node.name)
+            # Write user data
+            if self.user_data is not None:
+                user_data_group = h5f.create_group('user_data')
+                for (key, value) in self.user_data.items():
+                    user_data_group[key] = value
         finally:
             # Close file
             h5f.close()
+
+
+    @staticmethod
+    def load_user_data(filename):
+        f = h5py.File(filename, 'r')
+        try:
+            group = f['user_data']
+            for (key, value) in group.items():
+                user_data['key'] = value[...]
+        except:
+            raise
+        finally:
+            f.close()
+        return
+
 
     def load(self, *nodes, filename=None, nodes_only=False):
 
