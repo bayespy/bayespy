@@ -635,7 +635,7 @@ class Node():
                 mask_i = misc.add_trailing_axes(mask, ndim)
                 # Apply mask and sum plate axes as necessary (and apply plate
                 # multiplier)
-                m[i] = r * misc.sum_multiply_to_plates(m[i], mask_i,
+                m[i] = r * misc.sum_multiply_to_plates(np.where(mask_i, m[i], 0),
                                                        to_plates=to_shape,
                                                        from_plates=from_shape,
                                                        ndim=0)
