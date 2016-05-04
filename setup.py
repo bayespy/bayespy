@@ -45,7 +45,10 @@ if __name__ == "__main__":
         'matplotlib>=1.2.0',
     ]
     ON_RTD = os.environ.get('READTHEDOCS') == 'True'
-    if not ON_RTD:
+    if ON_RTD:
+        # Workaround for https://github.com/rtfd/readthedocs.org/issues/2149
+        install_requires = install_requires + ['sphinx>=1.4.0']
+    else:
         install_requires = install_requires + ['h5py']
 
     # Utility function to read the README file.
