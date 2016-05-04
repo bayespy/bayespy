@@ -75,7 +75,13 @@ Other stochastic nodes:
 
    Mixture
 
+Point-estimation nodes:
 
+.. autosummary::
+
+   MaximumLikelihood
+   Concentration
+   GammaShape
 
 Deterministic nodes
 ===================
@@ -88,6 +94,9 @@ Deterministic nodes
    Add
    Gate
    Take
+   Function
+   ConcatGaussian
+   Choose
 """
 
 # Currently, model construction and the inference network are not separated so
