@@ -21,7 +21,7 @@ class WarnAsError(Plugin):
         super().options(parser, env)
         parser.add_option("--warn-as-error", action="store_true",
                           default=False,
-                          dest="enabled",
+                          dest="warnaserror",
                           help="Treat warnings that occur WITHIN tests as errors.")
 
 
@@ -30,7 +30,7 @@ class WarnAsError(Plugin):
         Configure plugin.
         """
         super().configure(options, conf)
-        if options.enabled:
+        if options.warnaserror:
             self.enabled = True
 
 
@@ -38,7 +38,10 @@ class WarnAsError(Plugin):
         """
         Treat warnings as errors.
         """
-        return WarnAsErrorTestRunner(runner)
+        if self.enabled:
+            return WarnAsErrorTestRunner(runner)
+        else:
+            return runner
 
 
 class WarnAsErrorTestRunner(object):

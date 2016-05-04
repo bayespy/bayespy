@@ -102,7 +102,7 @@ class ExponentialFamily(Stochastic):
 
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
-       _compute_mask_to_parent(index, mask)
+       _compute_weights_to_parent(index, weights)
        _compute_plates_to_parent(self, index, plates)
        _compute_plates_from_parent(self, index, plates)
     
@@ -349,7 +349,8 @@ class ExponentialFamily(Stochastic):
                                                             mask=update_mask)
         # ... and store them
         self._set_moments_and_cgf(u, g, mask=update_mask)
-            
+
+
     def observe(self, x, *args, mask=True):
         """
         Fix moments, compute f and propagate mask.
@@ -359,21 +360,22 @@ class ExponentialFamily(Stochastic):
         (u, f) = self._distribution.compute_fixed_moments_and_f(x, *args,
                                                                 mask=mask)
 
-        # Check the dimensionality of the observations
-        for (i,v) in enumerate(u):
-            # This is what the dimensionality "should" be
-            s = self.plates + self.dims[i]
-            t = np.shape(v)
-            if s != t:
-                msg = "Dimensionality of the observations incorrect."
-                msg += "\nShape of input: " + str(t)
-                msg += "\nExpected shape: " + str(s)
-                msg += "\nCheck plates."
-                raise Exception(msg)
+        # # Check the dimensionality of the observations
+        # self._check_shape()
+        # for (i,v) in enumerate(u):
+        #     # This is what the dimensionality "should" be
+        #     s = self.plates + self.dims[i]
+        #     t = np.shape(v)
+        #     if s != t:
+        #         msg = "Dimensionality of the observations incorrect."
+        #         msg += "\nShape of input: " + str(t)
+        #         msg += "\nExpected shape: " + str(s)
+        #         msg += "\nCheck plates."
+        #         raise Exception(msg)
 
-        # Set the moments
-        self._set_moments(u, mask=mask)
-        
+        # Set the moments. Shape checking is done there.
+        self._set_moments(u, mask=mask, broadcast=False)
+
         self.f = np.where(mask, f, self.f)
 
         # Observed nodes should not be ignored
@@ -436,8 +438,11 @@ class ExponentialFamily(Stochastic):
             # Compute the term
             phi_q = np.where(latent_mask_i, phi_q, 0)
             # Apply annealing
+            phi_diff = phi_p - T * phi_q
+            # Handle 0 * -inf
+            phi_diff = np.where(u_q != 0, phi_diff, 0)
             # TODO/FIXME: Use einsum here?
-            Z = np.sum((phi_p-T*phi_q) * u_q, axis=axis_sum)
+            Z = np.sum(phi_diff * u_q, axis=axis_sum)
 
             L = L + Z
 

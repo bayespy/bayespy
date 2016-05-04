@@ -18,7 +18,10 @@ from bayespy.nodes import (GaussianARD,
                            Mixture,
                            Categorical,
                            Bernoulli,
-                           Multinomial)
+                           Multinomial,
+                           Beta,
+                           Gate,
+                           Dirichlet)
 
 from bayespy.utils import random
 from bayespy.utils import linalg
@@ -207,6 +210,72 @@ class TestMixture(TestCase):
         X = Mixture(Z, Categorical, [[0.2,0.8], [0.1,0.9], [0.3,0.7]])
         m = Z._message_from_children()
 
+        #
+        # Test nested mixtures
+        #
+        t1 = [1, 1, 0, 3, 3]
+        t2 = [2]
+        p = Dirichlet([1, 1], plates=(4, 3))
+        X = Mixture(t1, Mixture, t2, Categorical, p)
+        X.observe([1, 1, 0, 0, 0])
+        p.update()
+        self.assertAllClose(
+            p.phi[0],
+            [
+                [[1, 1], [1, 1], [2, 1]],
+                [[1, 1], [1, 1], [1, 3]],
+                [[1, 1], [1, 1], [1, 1]],
+                [[1, 1], [1, 1], [3, 1]],
+            ]
+        )
+
+        # Test sample plates in nested mixtures
+        t1 = Categorical([0.3, 0.7], plates=(5,))
+        t2 = [[1], [1], [0], [3], [3]]
+        t3 = 2
+        p = Dirichlet([1, 1], plates=(2, 4, 3))
+        X = Mixture(t1, Mixture, t2, Mixture, t3, Categorical, p)
+        X.observe([1, 1, 0, 0, 0])
+        p.update()
+        self.assertAllClose(
+            p.phi[0],
+            [
+                [
+                    [[1, 1], [1, 1], [1.3, 1]],
+                    [[1, 1], [1, 1], [1, 1.6]],
+                    [[1, 1], [1, 1], [1, 1]],
+                    [[1, 1], [1, 1], [1.6, 1]],
+                ],
+                [
+                    [[1, 1], [1, 1], [1.7, 1]],
+                    [[1, 1], [1, 1], [1, 2.4]],
+                    [[1, 1], [1, 1], [1, 1]],
+                    [[1, 1], [1, 1], [2.4, 1]],
+                ]
+            ]
+        )
+
+        # Check that Gate and nested Mixture are equal
+        t1 = Categorical([0.3, 0.7], plates=(5,))
+        t2 = Categorical([0.1, 0.3, 0.6], plates=(5, 1))
+        p = Dirichlet([1, 2, 3, 4], plates=(2, 3))
+        X = Mixture(t1, Mixture, t2, Categorical, p)
+        X.observe([3, 3, 1, 2, 2])
+        t1_msg = t1._message_from_children()
+        t2_msg = t2._message_from_children()
+        p_msg = p._message_from_children()
+        t1 = Categorical([0.3, 0.7], plates=(5,))
+        t2 = Categorical([0.1, 0.3, 0.6], plates=(5, 1))
+        p = Dirichlet([1, 2, 3, 4], plates=(2, 3))
+        X = Categorical(Gate(t1, Gate(t2, p)))
+        X.observe([3, 3, 1, 2, 2])
+        t1_msg2 = t1._message_from_children()
+        t2_msg2 = t2._message_from_children()
+        p_msg2 = p._message_from_children()
+        self.assertAllClose(t1_msg[0], t1_msg2[0])
+        self.assertAllClose(t2_msg[0], t2_msg2[0])
+        self.assertAllClose(p_msg[0], p_msg2[0])
+
         pass
 
 
@@ -220,7 +289,7 @@ class TestMixture(TestCase):
         Z = Categorical([0.3, 0.5, 0.2])
         X = Mixture(Z, Categorical, [[0.2,0.8], [0.1,0.9], [0.3,0.7]])
         X.lower_bound_contribution()
-        
+
         pass
 
     def test_mask_to_parent(self):
@@ -230,25 +299,25 @@ class TestMixture(TestCase):
 
         K = 3
         Z = Categorical(np.ones(K)/K,
-                        plates=(4,5))
+                        plates=(4,5,1))
         Mu = GaussianARD(0, 1,
                          shape=(2,),
                          plates=(4,K,5))
         Alpha = Gamma(1, 1,
                       plates=(4,K,5,2))
-        X = Mixture(Z, GaussianARD, Mu, Alpha, cluster_plate=-2)
-        Y = GaussianARD(X, 1)
+        X = Mixture(Z, GaussianARD, Mu, Alpha, cluster_plate=-3)
+        Y = GaussianARD(X, 1, ndim=1)
         mask = np.reshape((np.mod(np.arange(4*5), 2) == 0),
                           (4,5))
-        Y.observe(np.ones((4,5,2)), 
+        Y.observe(np.ones((4,5,2)),
                   mask=mask)
         self.assertArrayEqual(Z.mask,
-                              mask)
+                              mask[:,:,None])
         self.assertArrayEqual(Mu.mask,
                               mask[:,None,:])
         self.assertArrayEqual(Alpha.mask,
                               mask[:,None,:,None])
-                         
+
         pass
 
 
@@ -273,7 +342,7 @@ class TestMixture(TestCase):
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             [1, 9])
-        
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             warnings.simplefilter("ignore", UserWarning)
@@ -281,10 +350,8 @@ class TestMixture(TestCase):
             p1 = [1.0, 0.0]
             X = Mixture(0, Multinomial, 10, [p0, p1])
             u = X._message_to_child()
-            self.assertAllClose(u[0],
-                                np.nan*np.ones(2))
+            self.assertAllClose(u[0], [1, 9])
 
-        
         pass
 
 

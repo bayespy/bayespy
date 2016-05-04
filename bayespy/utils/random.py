@@ -287,6 +287,45 @@ def categorical(p, size=None):
     return z.astype(np.int)
 
 
+def multinomial(n, p, size=None):
+
+    plates_n = np.shape(n)
+    plates_p = np.shape(p)[:-1]
+    k = np.shape(p)[-1]
+
+    if size is None:
+        size = misc.broadcasted_shape(plates_n, plates_p)
+
+    if not misc.is_shape_subset(plates_n, size):
+        raise ValueError("Shape of n does not broadcast to the given size")
+
+    if not misc.is_shape_subset(plates_p, size):
+        raise ValueError("Shape of p does not broadcast to the given size")
+
+    # This isn't a very efficient implementation. One could use NumPy's
+    # multinomial once for all those plates for which n and p is the same.
+
+    n = np.broadcast_to(n, size)
+    p = np.broadcast_to(p, size + (k,))
+
+    x = np.empty(size + (k,))
+
+    for i in misc.nested_iterator(size):
+        x[i] = np.random.multinomial(n[i], p[i])
+
+    return x.astype(np.int)
+
+
+def gamma(a, b, size=None):
+    x = np.random.gamma(a, b, size=size)
+    if np.any(x == 0):
+        raise RuntimeError(
+            "Numerically zero samples. Try using a larger shape parameter in "
+            "the gamma distribution."
+        )
+    return x
+
+
 def dirichlet(alpha, size=None):
     r"""
     Draw random samples from the Dirichlet distribution.
@@ -298,7 +337,13 @@ def dirichlet(alpha, size=None):
     else:
         size = size + np.shape(alpha)[-1:]
     p = np.random.gamma(alpha, size=size)
-    p /= np.sum(p, axis=-1, keepdims=True)
+    sump = np.sum(p, axis=-1, keepdims=True)
+    if np.any(sump == 0):
+        raise RuntimeError(
+            "Numerically zero samples. Try using a larger Dirichlet "
+            "concentration parameter value."
+        )
+    p /= sump
     return p
 
 

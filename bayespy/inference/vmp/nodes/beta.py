@@ -12,6 +12,7 @@ A module for the beta distribution node
 import numpy as np
 import scipy.special as special
 
+from .deterministic import Deterministic
 from .dirichlet import (DirichletMoments,
                         DirichletDistribution,
                         Dirichlet)
@@ -25,19 +26,25 @@ class BetaMoments(DirichletMoments):
     """
 
 
+    def __init__(self):
+        super().__init__(2)
+
+
     def compute_fixed_moments(self, p):
         """
         Compute the moments for a fixed value
         """
         p = np.asanyarray(p)[...,None] * [1,-1] + [0,1]
+        self.dims = ( (2,), )
         return super().compute_fixed_moments(p)
 
-    
-    def compute_dims_from_values(self, p):
+
+    @classmethod
+    def from_values(cls, p):
         """
         Return the shape of the moments for a fixed value.
         """
-        return ( (2,), )
+        return cls()
 
 
 class BetaDistribution(DirichletDistribution):
@@ -141,20 +148,32 @@ class Beta(Dirichlet):
 
 
     @classmethod
-    @ensureparents
     def _constructor(cls, alpha, **kwargs):
         """
         Constructs distribution and moments objects.
         """
 
-        D = alpha.dims[0][0]
-        if D != 2:
+        retval = super()._constructor(alpha, **kwargs)
+
+        if retval[2] != cls._moments.dims:
             raise ValueError("Parent has wrong dimensionality. Must be a "
                              "two-dimensional vector.")
 
-        return super()._constructor(alpha, **kwargs)
+        return (
+            retval[0],
+            retval[1],
+            retval[2],
+            retval[3],
+            cls._distribution,
+            cls._moments,
+            retval[6]
+        )
 
-    
+
+    def complement(self):
+        return Complement(self)
+
+
     def __str__(self):
         """
         Print the distribution using standard parameterization.
@@ -167,3 +186,29 @@ class Beta(Dirichlet):
                 "  b = \n"
                 "%s\n"
                 % (self.name, a, b))
+
+
+class Complement(Deterministic):
+    """
+    Perform 1-p where p is a Beta node.
+    """
+
+
+    _moments = BetaMoments()
+    _parent_moments = (BetaMoments(),)
+
+
+    def __init__(self, p, **kwargs):
+        super().__init__(p, dims=p.dims, **kwargs)
+
+
+    def _compute_message_to_parent(self, index, m, u_p):
+        if index != 0:
+            raise IndexError()
+        m0 = m[0][...,-1::-1]
+        return [m0]
+
+
+    def _compute_moments(self, u_p):
+        u0 = u_p[0][...,-1::-1]
+        return [u0]

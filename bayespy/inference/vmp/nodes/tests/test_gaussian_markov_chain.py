@@ -13,16 +13,152 @@ import numpy as np
 
 from ..gaussian_markov_chain import GaussianMarkovChain
 from ..gaussian_markov_chain import VaryingGaussianMarkovChain
-from ..gaussian import Gaussian
+from ..gaussian import Gaussian, GaussianMoments
 from ..gaussian import GaussianARD
-from ..wishart import Wishart
-from ..gamma import Gamma
+from ..wishart import Wishart, WishartMoments
+from ..gamma import Gamma, GammaMoments
 
 from bayespy.utils import random
 from bayespy.utils import linalg
 from bayespy.utils import misc
 
 from bayespy.utils.misc import TestCase
+
+
+def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
+    """
+    Perform Kalman filtering to obtain filtered mean and covariance.
+
+    The parameters of the process may vary in time, thus they are
+    given as iterators instead of fixed values.
+
+    Parameters
+    ----------
+    y : (N,D) array
+        "Normalized" noisy observations of the states, that is, the
+        observations multiplied by the precision matrix U (and possibly
+        other transformation matrices).
+    U : (N,D,D) array or N-list of (D,D) arrays
+        Precision matrix (i.e., inverse covariance matrix) of the observation 
+        noise for each time instance.
+    A : (N-1,D,D) array or (N-1)-list of (D,D) arrays
+        Dynamic matrix for each time instance.
+    V : (N-1,D,D) array or (N-1)-list of (D,D) arrays
+        Covariance matrix of the innovation noise for each time instance.
+
+    Returns
+    -------
+    mu : array
+        Filtered mean of the states.
+    Cov : array
+        Filtered covariance of the states.
+
+    See also
+    --------
+    rts_smoother
+    """
+    mu = mu0
+    Cov = Cov0
+
+    # Allocate memory for the results
+    (N,D) = np.shape(y)
+    X = np.empty((N,D))
+    CovX = np.empty((N,D,D))
+
+    # Update step for t=0
+    M = np.dot(np.dot(Cov, U[0]), Cov) + Cov
+    L = linalg.chol(M)
+    mu = np.dot(Cov, linalg.chol_solve(L, np.dot(Cov,y[0]) + mu))
+    Cov = np.dot(Cov, linalg.chol_solve(L, Cov))
+    X[0,:] = mu
+    CovX[0,:,:] = Cov
+
+    #for (yn, Un, An, Vn) in zip(y, U, A, V):
+    for n in range(len(y)-1): #(yn, Un, An, Vn) in zip(y, U, A, V):
+        # Prediction step
+        mu = np.dot(A[n], mu)
+        Cov = np.dot(np.dot(A[n], Cov), A[n].T) + V[n]
+        # Update step
+        M = np.dot(np.dot(Cov, U[n+1]), Cov) + Cov
+        L = linalg.chol(M)
+        mu = np.dot(Cov, linalg.chol_solve(L, np.dot(Cov,y[n+1]) + mu))
+        Cov = np.dot(Cov, linalg.chol_solve(L, Cov))
+
+        # Force symmetric covariance (for numeric inaccuracy)
+        Cov = 0.5*Cov + 0.5*Cov.T
+
+        # Store results
+        X[n+1,:] = mu
+        CovX[n+1,:,:] = Cov
+
+    return (X, CovX)
+
+
+def rts_smoother(mu, Cov, A, V, removethis=None):
+    """
+    Perform Rauch-Tung-Striebel smoothing to obtain the posterior.
+
+    The function returns the posterior mean and covariance of each
+    state. The parameters of the process may vary in time, thus they
+    are given as iterators instead of fixed values.
+
+    Parameters
+    ----------
+    mu : (N,D) array
+        Mean of the states from Kalman filter.
+    Cov : (N,D,D) array
+        Covariance of the states from Kalman filter. 
+    A : (N-1,D,D) array or (N-1)-list of (D,D) arrays
+        Dynamic matrix for each time instance.
+    V : (N-1,D,D) array or (N-1)-list of (D,D) arrays
+        Covariance matrix of the innovation noise for each time instance.
+
+    Returns
+    -------
+    mu : array
+        Posterior mean of the states.
+    Cov : array
+        Posterior covariance of the states.
+
+    See also
+    --------
+    kalman_filter
+    """
+
+    N = len(mu)
+    #n = N-1
+
+    # Start from the last time instance and smoothen backwards
+    x = mu[-1,:]
+    Covx = Cov[-1,:,:]
+
+    for n in reversed(range(N-1)):#(An, Vn) in zip(reversed(A), reversed(V)):
+
+        #n = n - 1
+        #if n <= 0:
+        #    break
+
+        # The predicted value of n
+        x_p = np.dot(A[n], mu[n,:])
+        Cov_p = np.dot(np.dot(A[n], Cov[n,:,:]), A[n].T) + V[n]
+
+        # Temporary variable
+        S = np.linalg.solve(Cov_p, np.dot(A[n], Cov[n,:,:]))
+
+        # Smoothed value of n
+        x = mu[n,:] + np.dot(S.T, x-x_p)
+        Covx = Cov[n,:,:] + np.dot(np.dot(S.T, Covx-Cov_p), S)
+
+        # Force symmetric covariance (for numeric inaccuracy)
+        Covx = 0.5*Covx + 0.5*Covx.T
+
+        # Store results
+        mu[n,:] = x
+        Cov[n,:] = Covx
+
+
+    return (mu, Cov)
+
 
 class TestGaussianMarkovChain(TestCase):
 
@@ -162,12 +298,12 @@ class TestGaussianMarkovChain(TestCase):
                                     plates=plates,
                                     n=N)
             (u0, u1, u2) = X._message_to_child()
-            (mu, mumu) = X.parents[0].get_moments()
-            (Lambda, _) = X.parents[1].get_moments()
-            (a, aa) = X.parents[2].get_moments()
+            (mu, mumu) = Gaussian._ensure_moments(mu, GaussianMoments, ndim=1).get_moments()
+            (Lambda, _) = Wishart._ensure_moments(Lambda, WishartMoments, ndim=1).get_moments()
+            (a, aa) = Gaussian._ensure_moments(A, GaussianMoments, ndim=1).get_moments()
             a = a * np.ones((N-1,D,D))     # explicit broadcasting for simplicity
             aa = aa * np.ones((N-1,D,D,D)) # explicit broadcasting for simplicity
-            (v, _) = X.parents[3].get_moments()
+            (v, _) = Gamma._ensure_moments(V, GammaMoments).get_moments()
             v = v * np.ones((N-1,D))
             plates_C = X.plates
             plates_mu = X.plates
@@ -480,8 +616,8 @@ class TestGaussianMarkovChain(TestCase):
         V = N*(V,)
         UY = Y
         U = N*(C,)
-        (Xh, CovXh) = misc.kalman_filter(UY, U, A, V, np.zeros(D), np.identity(D))
-        (Xh, CovXh) = misc.rts_smoother(Xh, CovXh, A, V)
+        (Xh, CovXh) = kalman_filter(UY, U, A, V, np.zeros(D), np.identity(D))
+        (Xh, CovXh) = rts_smoother(Xh, CovXh, A, V)
 
         #
         # Check results
@@ -522,12 +658,7 @@ class TestVaryingGaussianMarkovChain(TestCase):
                             plates=plates_S+(N,))
             v = Gamma(1+np.random.rand(*(plates_v+(1,D))),
                       1+np.random.rand(*(plates_v+(1,D))))
-            X = VaryingGaussianMarkovChain(mu,
-                                            Lambda,
-                                            B,
-                                            S,
-                                            v,
-                name="X")
+            X = VaryingGaussianMarkovChain(mu, Lambda, B, S, v, name="X")
             self.assertEqual(plates_X, X.plates,
                              msg="Incorrect plates deduced")
             pass
@@ -535,8 +666,8 @@ class TestVaryingGaussianMarkovChain(TestCase):
         check(())
         check((2,3),
               plates_mu=(2,3))
-        check((2,3),
-              plates_Lambda=(2,3))
+        check((6,7),
+              plates_Lambda=(6,7))
         check((2,3),
               plates_B=(2,3))
         check((2,3),

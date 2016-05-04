@@ -23,6 +23,7 @@ AUTHOR_EMAIL = 'jaakko.luttinen@iki.fi'
 URL          = 'http://bayespy.org'
 LICENSE      = 'MIT'
 VERSION      = __version__
+COPYRIGHT    = '2011-2016, Jaakko Luttinen and contributors'
 
 
 if __name__ == "__main__":
@@ -35,6 +36,23 @@ if __name__ == "__main__":
         raise RuntimeError("BayesPy requires Python 3. You are running Python "
                            "{0}.".format(python_version))
 
+    # This is annoying: Because readthedocs.org doesn't support depending on
+    # h5py, we need to remove that dependency if we are on the readthedocs
+    # servers..
+    ON_RTD = os.environ.get('READTHEDOCS') == 'True'
+    if ON_RTD:
+        # Workaround for https://github.com/rtfd/readthedocs.org/issues/2149
+        install_requires = [
+            'sphinx>=1.4.0'
+        ]
+    else:
+        install_requires = [
+            'numpy>=1.8.0', # 1.8 implements broadcasting in numpy.linalg
+            'scipy>=0.13.0', # <0.13 have a bug in special.multigammaln
+            'matplotlib>=1.2.0',
+            'h5py',
+        ]
+
     # Utility function to read the README file.
     # Used for the long_description.  It's nice, because now 1) we have a top level
     # README file and 2) it's easier to type in the README file than to put a raw
@@ -43,23 +61,23 @@ if __name__ == "__main__":
         return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
     from setuptools import setup, find_packages
-    
+
     # Setup for BayesPy
     setup(
-        install_requires = [
-            'numpy>=1.8.0', # 1.8 implements broadcasting in numpy.linalg
-            'scipy>=0.13.0', # <0.13 have a bug in special.multigammaln
-            'matplotlib>=1.2.0',
-            'h5py'
-        ],
+        install_requires = install_requires,
         extras_require = {
             'doc': [
-                'sphinx>=1.2.3',
-                'sphinxcontrib-tikz',
+                'sphinx>=1.4.0', # 1.4.0 adds imgmath extension
+                'sphinxcontrib-tikz>=0.4.2',
                 'sphinxcontrib-bayesnet',
                 'sphinxcontrib-bibtex',
                 'numpydoc>=0.5',
+                'nbsphinx',
             ],
+            'dev': [
+                'nose',
+                'nosebook',
+            ]
         },
         packages         = find_packages(),
         package_data     = {
@@ -80,7 +98,7 @@ if __name__ == "__main__":
             'graphical models',
             'variational message passing'
         ],
-        classifiers = [ 
+        classifiers = [
             'Programming Language :: Python :: 3 :: Only',
             'Programming Language :: Python :: 3.3',
             'Programming Language :: Python :: 3.4',

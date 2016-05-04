@@ -6,6 +6,7 @@
 
 
 import numpy as np
+from bayespy.utils import misc
 
 from .node import Node, Moments
 
@@ -24,15 +25,17 @@ class Constant(Node):
         # Compute moments
         self.u = self._moments.compute_fixed_moments(x)
         # Dimensions of the moments
-        dims = self._moments.compute_dims_from_values(x)
+        dims = self._moments.dims
         # Resolve plates
         D = len(dims[0])
         if D > 0:
             plates = np.shape(self.u[0])[:-D]
         else:
             plates = np.shape(self.u[0])
+        kwargs.setdefault('plates', plates)
+        self._parent_moments = ()
         # Parent constructor
-        super().__init__(dims=dims, plates=plates, **kwargs)
+        super().__init__(dims=dims, **kwargs)
 
 
     def _get_id_list(self):
@@ -53,18 +56,24 @@ class Constant(Node):
         """
         return []
 
-    
+
     def get_moments(self):
         return self.u
 
 
     def set_value(self, x):
         x = np.asanyarray(x)
-        shapes = [np.shape(ui) for ui in self.u]
+        #shapes = [np.shape(ui) for ui in self.u]
         self.u = self._moments.compute_fixed_moments(x)
-        for (i, shape) in enumerate(shapes):
-            if np.shape(self.u[i]) != shape:
-                raise ValueError("Incorrect shape for the array")
+        for (i, dimsi) in enumerate(self.dims):
+            correct_shape = tuple(self.plates) + tuple(dimsi)
+            given_shape = np.shape(self.u[i])
+            if not misc.is_shape_subset(given_shape, correct_shape):
+                raise ValueError(
+                    "Incorrect shape {0} for the array, expected {1}"
+                    .format(given_shape, correct_shape)
+                )
+        return
 
 
     def lower_bound_contribution(self, gradient=False, **kwargs):

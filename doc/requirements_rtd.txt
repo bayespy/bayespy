@@ -1,0 +1,18 @@
+# This file should be used from the bayespy root folder as:
+#   pip install -r doc/requirements.txt
+# This is just a compatibility file for Read the Docs service.
+# You can install install doc dependencies as:
+#   pip install .[doc]
+
+setuptools>=21.0.0
+pip>=8.1.1
+.[doc]
+# pip>=8.1.1
+# sphinx>=1.4.0
+# sphinxcontrib-tikz>=0.4.2
+# sphinxcontrib-bayesnet
+# sphinxcontrib-bibtex
+# numpydoc>=0.5
+# matplotlib>=1.2.0
+# nbsphinx
+# ipykernel

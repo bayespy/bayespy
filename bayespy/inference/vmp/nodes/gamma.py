@@ -12,15 +12,14 @@ Module for the gamma distribution node.
 import numpy as np
 import scipy.special as special
 
-from .node import Node
+from .node import Node, Moments, ensureparents
 from .deterministic import Deterministic
 from .stochastic import Stochastic
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
-from .node import Moments
-from .wishart import WishartMoments
 
 from bayespy.utils import misc
+from bayespy.utils import random
 
 
 def diagonal(alpha):
@@ -35,30 +34,39 @@ class GammaPriorMoments(Moments):
     """
     Class for the moments of the shape parameter in gamma distributions.
     """
-    
-    
+
+
+    dims = ( (), () )
+
+
     def compute_fixed_moments(self, a):
         """
         Compute the moments for a fixed value
         """
+        a = np.asanyarray(a)
+        if np.any(a <= 0):
+            raise ValueError("Shape parameter must be positive")
         u0 = a
         u1 = special.gammaln(a)
         return [u0, u1]
-    
 
-    def compute_dims_from_values(self, a):
+
+    @classmethod
+    def from_values(cls, a):
         """
         Return the shape of the moments for a fixed value.
         """
-        return ( (), () )
-    
+        return cls()
+
 
 class GammaMoments(Moments):
     """
     Class for the moments of gamma variables.
     """
-    
-    
+
+    dims = ( (), () )
+
+
     def compute_fixed_moments(self, x):
         """
         Compute the moments for a fixed value
@@ -70,12 +78,13 @@ class GammaMoments(Moments):
         return [u0, u1]
 
 
-    def compute_dims_from_values(self, x):
+    @classmethod
+    def from_values(cls, x):
         """
         Return the shape of the moments for a fixed value.
         """
-        return ( (), () )
-    
+        return cls()
+
 
 class GammaDistribution(ExponentialFamilyDistribution):
     """
@@ -149,11 +158,12 @@ class GammaDistribution(ExponentialFamilyDistribution):
         g = a * log_b - gammaln_a
         return g
 
-            
+
     def compute_fixed_moments_and_f(self, x, mask=True):
         r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
+        x = np.asanyarray(x)
         if np.any(x < 0):
             raise ValueError("Values must be positive")
         logx = np.log(x)
@@ -166,9 +176,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
         r"""
         Draw a random sample from the distribution.
         """
-        return np.random.gamma(phi[1],
-                               -1/phi[0],
-                               size=plates)
+        return random.gamma(phi[1], -1/phi[0], size=plates)
 
     
     def compute_gradient(self, g, u, phi):
@@ -251,6 +259,10 @@ class Gamma(ExponentialFamily):
                                        name=self.name + " as Wishart")
 
 
+    def diag(self):
+        return self.as_diagonal_wishart()
+
+
 class GammaShape(Stochastic):
     """
     ML point estimator for the shape parameter of the gamma distribution
@@ -266,6 +278,8 @@ class GammaShape(Stochastic):
         Create gamma random variable node
         """
         super().__init__(dims=self.dims, initialize=False, **kwargs)
+        self.u = self._moments.compute_fixed_moments(1)
+        return
 
 
     def _update_distribution_and_lowerbound(self, m):
@@ -316,32 +330,33 @@ class _GammaToDiagonalWishart(Deterministic):
     The last plate is used as the diagonal dimension.
     """
 
-    _moments = WishartMoments()
+
     _parent_moments = [GammaMoments()]
-    
-    
+
+
+    @ensureparents
     def __init__(self, alpha, **kwargs):
 
         # Check for constant
         if misc.is_numeric(alpha):
             alpha = Constant(Gamma)(alpha)
 
-        # Remove the last plate...
-        #plates = alpha.plates[:-1]
-        # ... and use it as the dimensionality of the Wishart
-        # distribution
         if len(alpha.plates) == 0:
             raise Exception("Gamma variable needs to have plates in "
                             "order to be used as a diagonal Wishart.")
         D = alpha.plates[-1]
+
+        # FIXME: Put import here to avoid circular dependency import
+        from .wishart import WishartMoments
+        self._moments = WishartMoments((D,))
         dims = ( (D,D), () )
 
         # Construct the node
         super().__init__(alpha,
-        #plates=plates,
-                         dims=dims,
+                         dims=self._moments.dims,
                          **kwargs)
-        
+
+
     def _plates_to_parent(self, index):
         D = self.dims[0][0]
         return self.plates + (D,)
@@ -350,8 +365,8 @@ class _GammaToDiagonalWishart(Deterministic):
         return self.parents[index].plates[:-1]
 
     @staticmethod
-    def _compute_mask_to_parent(index, mask):
-        return mask[..., np.newaxis]
+    def _compute_weights_to_parent(index, weights):
+        return weights[..., np.newaxis]
 
     def get_moments(self):
         u = self.parents[0].get_moments()
@@ -368,24 +383,3 @@ class _GammaToDiagonalWishart(Deterministic):
         m1 = np.reshape(m_children[1], np.shape(m_children[1]) + (1,))
 
         return [m0, m1]
-        
-
-    ## def _compute_message_and_mask_to_parent(self, index, m_children, *u_parents):
-        
-    ##     m = self._message_from_children()
-    ##     #(m, mask) = self.message_from_children()
-
-    ##     # Take the diagonal
-    ##     m[0] = np.einsum('...ii->...i', m[0])
-    ##     # TODO/FIXME: I think m[1] is wrong..
-    ##     m[1] = np.reshape(m[1], np.shape(m[1]) + (1,))
-    ##     # m[1] is ok
-
-    ##     mask = self._compute_mask_to_parent(index, self.mask)
-    ##     #mask = mask[...,np.newaxis]
-
-    ##     return (m, mask)
-    ##     #return m
-        
-
-

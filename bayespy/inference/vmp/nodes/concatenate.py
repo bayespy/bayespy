@@ -39,13 +39,21 @@ class Concatenate(Deterministic):
                 pass
             else:
                 break
+        if parent_moments is None:
+            raise ValueError("Couldn't determine parent moments")
         # All parents must have same moments
         self._parent_moments = (parent_moments,) * len(nodes)
         self._moments = parent_moments
         # Convert nodes
         try:
-            nodes = [self._ensure_moments(node, self._parent_moments[0])
-                     for node in nodes]
+            nodes = [
+                self._ensure_moments(
+                    node,
+                    parent_moments.__class__,
+                    **parent_moments.get_instance_conversion_kwargs()
+                )
+                for node in nodes
+            ]
         except Moments.NoConverterError:
             raise ValueError("Parents have different moments")
         # Dimensionality of the node
@@ -53,13 +61,27 @@ class Concatenate(Deterministic):
         for node in nodes:
             if node.dims != dims:
                 raise ValueError("Parents have different dimensionalities")
-        super().__init__(*nodes, dims=dims, **kwargs)
+
+        super().__init__(
+            *nodes,
+            dims=dims,
+            allow_dependent_parents=True, # because parent plates are kept separate
+            **kwargs
+        )
+
         # Compute start indices for each parent on the concatenated plate axis
         self._indices = np.zeros(len(nodes)+1, dtype=np.int)
         self._indices[1:] = np.cumsum([int(parent.plates[axis])
                                        for parent in self.parents])
         self._lengths = [parent.plates[axis] for parent in self.parents]
         return
+
+
+    def _get_id_list(self):
+        """
+        Parents don't need to be independent for this node so remove duplicates
+        """
+        return list(set(super()._get_id_list()))
 
 
     def _compute_plates_to_parent(self, index, plates):
@@ -85,14 +107,14 @@ class Concatenate(Deterministic):
         return ()
 
 
-    def _compute_mask_to_parent(self, index, mask):
+    def _compute_weights_to_parent(self, index, weights):
         axis = self._axis
         indices = self._indices[index:(index+1)]
-        if np.ndim(mask) >= abs(axis) and np.shape(mask)[axis] > 1:
+        if np.ndim(weights) >= abs(axis) and np.shape(weights)[axis] > 1:
             # Take the middle one of the returned three arrays
-            return np.split(mask, indices, axis=axis)[1]
+            return np.split(weights, indices, axis=axis)[1]
         else:
-            return mask
+            return weights
 
 
     def _compute_message_to_parent(self, index, m, *u_parents):

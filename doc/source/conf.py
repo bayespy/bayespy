@@ -13,16 +13,38 @@
 
 import sys, os
 
+ON_RTD = os.environ.get('READTHEDOCS') == 'True'
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
 # Import some information from the setup.py script.
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            os.path.pardir,
+            os.path.pardir
+        )
+    )
+)
 import setup as setupfile
 
 # -- General configuration -----------------------------------------------------
+
+# Use some dummy modules on Read the Docs because they are not available
+# (requires some C libraries)
+# http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+if ON_RTD:
+    from unittest.mock import MagicMock
+    MOCK_MODULES = ['h5py']
+    sys.modules.update((mod_name, MagicMock()) for mod_name in MOCK_MODULES)
+
+# Use the 'Read the Docs' theme
+html_theme = 'sphinx_rtd_theme'
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
@@ -30,8 +52,8 @@ import setup as setupfile
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    'sphinx.ext.autodoc', 
-    'sphinx.ext.mathjax',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.imgmath',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
     'sphinx.ext.doctest',
@@ -41,19 +63,30 @@ extensions = [
     'sphinxcontrib.tikz',
     'sphinxcontrib.bayesnet',
     'sphinxcontrib.bibtex',
+    'nbsphinx',
     ]
 
+# Image format for math
+imgmath_image_format = 'svg'
+
+# Choose the image processing ‹suite›, either 'Netpbm', 'pdf2svg', 'GhostScript', 'ImageMagick' ('Netpbm' by default):
+# If you want your documentation to be built on http://readthedocs.org, you have to choose GhostScript.
+# All suites produce png images, excepted 'pdf2svg' which produces svg.
+if ON_RTD:
+    tikz_proc_suite = 'GhostScript'
+else:
+    tikz_proc_suite = 'pdf2svg'
+
+
+if ON_RTD:
+    # For some reason, RTD needs these to be set explicitly although they
+    # should have default values
+    math_number_all = False
 
 numpydoc_show_class_members = False
 
 # Include TODOs in the documentation?
 todo_include_todos = True
-
-# Add a path to binary files that are necessary for readthedocs.org to
-# build HTML with tikz extension
-if os.environ.get('READTHEDOCS', None) == 'True':
-    os.environ["PATH"] += os.pathsep + os.path.abspath('bin')
-    os.environ["LD_LIBRARY_PATH"] = os.path.abspath('bin')
 
 # Generate autosummary stub pages automatically
 # Or manually: sphinx-autogen -o source/generated source/*.rst
@@ -75,7 +108,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = setupfile.NAME
-copyright = u'2011-2015, Jaakko Luttinen, MIT'
+copyright = setupfile.COPYRIGHT
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -98,7 +131,9 @@ release = setupfile.VERSION
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = [
+    '**.ipynb_checkpoints'
+]
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -124,22 +159,22 @@ pygments_style = 'sphinx'
 # -- Options for HTML output ---------------------------------------------------
 
 # Sphinx-TikZ extension
-tikz_latex_preamble = """
+tikz_latex_preamble = r"""
 \usepackage{amsmath}
 """
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinxdoc'
+#html_theme = 'sphinxdoc'
 #html_theme = 'nature'
 #html_theme = 'default'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    "sidebarwidth": 300
-    }
+# html_theme_options = {
+#     "sidebarwidth": 300
+#     }
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -224,6 +259,7 @@ latex_elements = {
 \usepackage{tikz}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{svg}
 \usetikzlibrary{shapes}
 \usetikzlibrary{fit}
 \usetikzlibrary{chains}
@@ -302,9 +338,9 @@ texinfo_documents = [
 
 # Bibliographic Dublin Core info.
 epub_title = u'BayesPy'
-epub_author = u'Jaakko Luttinen'
-epub_publisher = u'Jaakko Luttinen'
-epub_copyright = u'2012, Jaakko Luttinen'
+epub_author = setupfile.AUTHOR
+epub_publisher = setupfile.AUTHOR
+epub_copyright = setupfile.COPYRIGHT
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

@@ -63,7 +63,6 @@ parameters. Note that we have given quite uninformative priors for the
 variables :math:`\mu` and :math:`\tau`\ . This simple model can also be
 shown as a directed factor graph:
 
-                
 .. bayesnet:: Directed factor graph of the example model.
 
    \node[obs]                                  (y)     {$y_n$} ;

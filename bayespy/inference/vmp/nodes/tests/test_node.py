@@ -152,7 +152,7 @@ class TestNode(misc.TestCase):
             def __init__(self, *args, **kwargs):
                 self._parent_moments = len(args)*(Moments(),)
                 super().__init__(*args, **kwargs)
-            def _get_message_and_mask_to_parent(self, index):
+            def _get_message_and_mask_to_parent(self, index, u_parent=None):
                 return ([msg], mask)
             def _get_id_list(self):
                 return []
@@ -411,15 +411,38 @@ class TestNode(misc.TestCase):
                                                   ndim=1),
                             [1*4*5, 2*4*5, 3*4*5])
 
+        # Bugfix: Check that plate keys are mapped correctly
+        self.assertAllClose(
+            Node._compute_message(
+                [[1], [2], [3]],
+                plates_from=(3,2),
+                plates_to=(1,2),
+                ndim=0
+            ),
+            [[6]]
+        )
+
+        # Bugfix: Check plate key mapping when plates_to is shorter than shape
+        # of the array
+        self.assertAllClose(
+            Node._compute_message(
+                [[1, 2, 3], [4, 5, 6]],
+                plates_from=(2,3),
+                plates_to=(3,),
+                ndim=0
+            ),
+            [5, 7, 9]
+        )
+
         # Complex example
         x1 = np.random.randn(5,4,1,2,1)
         x2 = np.random.randn(    1,2,1)
         x3 = np.random.randn(5,1,1,1,1)
         self.assertAllClose(Node._compute_message(x1, x2, x3,
                                                   plates_from=(6,5,4,3),
-                                                  plates_to=(5,1,3),
+                                                  plates_to=(5,1,1),
                                                   ndim=2),
-                            6*np.sum(x1*x2*x3, axis=(-4,), keepdims=True))
+                            3*6*np.sum(x1*x2*x3, axis=(-4,-3), keepdims=True))
 
         pass
 
@@ -433,14 +456,22 @@ class TestSlice(misc.TestCase):
 
         class MyNode(Node):
             _moments = Moments()
+            _parent_moments = ()
             def _get_id_list(self):
                 return []
 
         # Integer index
         X = MyNode(plates=(3,4), dims=((),))
+        Y = X[2]
+        self.assertEqual(Y.plates, (4,))
+        X = MyNode(plates=(3,4), dims=((),))
+        Y = X[(2,)]
+        self.assertEqual(Y.plates, (4,))
+
+        X = MyNode(plates=(3,4), dims=((),))
         Y = X[2,-4]
         self.assertEqual(Y.plates, ())
-        
+
         X = MyNode(plates=(3,4,5), dims=((),))
         Y = X[2,1]
         self.assertEqual(Y.plates, (5,))
@@ -762,6 +793,7 @@ class TestSlice(misc.TestCase):
 
         class ParentNode(Node):
             _moments = Moments()
+            _parent_moments = ()
             def _get_id_list(self):
                 return []
             
@@ -772,7 +804,7 @@ class TestSlice(misc.TestCase):
                 super().__init__(X, **kwargs)
                 self.m = m
                 self.mask2 = mask
-            def _message_to_parent(self, index):
+            def _message_to_parent(self, index, u_parent=None):
                 return self.m
             def _mask_to_parent(self, index):
                 return self.mask2

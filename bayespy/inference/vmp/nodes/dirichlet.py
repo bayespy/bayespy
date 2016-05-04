@@ -10,21 +10,30 @@ Module for the Dirichlet distribution node.
 """
 
 import numpy as np
-import scipy.special as special
+from scipy import special
 
 from bayespy.utils import random
+from bayespy.utils import misc
+from bayespy.utils import linalg
 
+from .stochastic import Stochastic
 from .expfamily import ExponentialFamily, ExponentialFamilyDistribution
 from .constant import Constant
 from .node import Node, Moments, ensureparents
 
 
-class DirichletPriorMoments(Moments):
+class ConcentrationMoments(Moments):
     """
     Class for the moments of Dirichlet conjugate-prior variables.
     """
 
-    
+
+    def __init__(self, categories):
+        self.categories = categories
+        self.dims = ( (categories,), () )
+        return
+
+
     def compute_fixed_moments(self, alpha):
         """
         Compute the moments for a fixed value
@@ -35,29 +44,35 @@ class DirichletPriorMoments(Moments):
             raise ValueError("The prior sample sizes must be a vector")
         if np.any(alpha < 0):
             raise ValueError("The prior sample sizes must be non-negative")
-        
+
         gammaln_sum = special.gammaln(np.sum(alpha, axis=-1))
         sum_gammaln = np.sum(special.gammaln(alpha), axis=-1)
         z = gammaln_sum - sum_gammaln
         return [alpha, z]
 
-    
-    def compute_dims_from_values(self, alpha):
+
+    @classmethod
+    def from_values(cls, alpha):
         """
         Return the shape of the moments for a fixed value.
         """
         if np.ndim(alpha) < 1:
             raise ValueError("The array must be at least 1-dimensional array.")
-        d = np.shape(alpha)[-1]
-        return [(d,), ()]
+        categories = np.shape(alpha)[-1]
+        return cls(categories)
 
-    
+
 class DirichletMoments(Moments):
     """
     Class for the moments of Dirichlet variables.
     """
 
-    
+
+    def __init__(self, categories):
+        self.categories = categories
+        self.dims = ( (categories,), )
+
+
     def compute_fixed_moments(self, p):
         """
         Compute the moments for a fixed value
@@ -77,15 +92,16 @@ class DirichletMoments(Moments):
         u = [logp]
         return u
 
-    
-    def compute_dims_from_values(self, x):
+
+    @classmethod
+    def from_values(cls, x):
         """
         Return the shape of the moments for a fixed value.
         """
         if np.ndim(x) < 1:
             raise ValueError("Probabilities must be given as a vector")
-        D = np.shape(x)[-1]
-        return ( (D,), )
+        categories = np.shape(x)[-1]
+        return cls(categories)
 
 
 class DirichletDistribution(ExponentialFamilyDistribution):
@@ -93,14 +109,17 @@ class DirichletDistribution(ExponentialFamilyDistribution):
     Class for the VMP formulas of Dirichlet variables.
     """
 
-    
+
     def compute_message_to_parent(self, parent, index, u_self, u_alpha):
         r"""
         Compute the message to a parent node.
         """
-        raise NotImplementedError()
+        logp = u_self[0]
+        m0 = logp
+        m1 = 1
+        return [m0, m1]
 
-    
+
     def compute_phi_from_parents(self, u_alpha, mask=True):
         r"""
         Compute the natural parameter vector given parent moments.
@@ -124,6 +143,10 @@ class DirichletDistribution(ExponentialFamilyDistribution):
            &=
            TODO
         """
+
+        if np.any(np.asanyarray(phi) <= 0):
+            raise ValueError("Natural parameters should be positive")
+
         sum_gammaln = np.sum(special.gammaln(phi[0]), axis=-1)
         gammaln_sum = special.gammaln(np.sum(phi[0], axis=-1))
         psi_sum = special.psi(np.sum(phi[0], axis=-1, keepdims=True))
@@ -208,6 +231,105 @@ class DirichletDistribution(ExponentialFamilyDistribution):
         return [d0]
 
 
+class Concentration(Stochastic):
+
+
+    _parent_moments = ()
+
+
+    def __init__(self, D, regularization=True, **kwargs):
+        """
+        ML estimation node for concentration parameters.
+
+        Parameters
+        ----------
+
+        D : int
+            Number of categories
+
+        regularization : 2-tuple of arrays (optional)
+            "Prior" log-probability and "prior" sample number
+        """
+        self.D = D
+        self.dims = ( (D,), () )
+        self._moments = ConcentrationMoments(D)
+        super().__init__(dims=self.dims, initialize=False, **kwargs)
+        self.u = self._moments.compute_fixed_moments(np.ones(D))
+        if regularization is None or regularization is False:
+            regularization = [0, 0]
+        elif regularization is True:
+            # Decent default regularization?
+            regularization = [np.log(1/D), 1]
+        self.regularization = regularization
+        return
+
+
+    @property
+    def regularization(self):
+        return self.__regularization
+
+
+    @regularization.setter
+    def regularization(self, regularization):
+        if len(regularization) != 2:
+            raise ValueError("Regularization must 2-tuple")
+        if not misc.is_shape_subset(np.shape(regularization[0], self.get_shape(0))):
+            raise ValueError("Wrong shape")
+        if not misc.is_shape_subset(np.shape(regularization[1], self.get_shape(1))):
+            raise ValueError("Wrong shape")
+        self.__regularization = regularization
+        return
+
+
+    def _update_distribution_and_lowerbound(self, m):
+        r"""
+        Find maximum likelihood estimate for the concentration parameter
+        """
+
+        a = np.ones(self.D)
+        da = np.inf
+        logp = m[0] + self.regularization[0]
+        N = m[1] + self.regularization[1]
+
+        # Compute sufficient statistic
+        mean_logp = logp / N[...,None]
+
+        # It is difficult to estimate values lower than 0.02 because the
+        # Dirichlet distributed probability vector starts to give numerically
+        # zero random samples for lower values.
+        if np.any(np.isinf(mean_logp)):
+            raise ValueError(
+                "Cannot estimate DirichletConcentration because of infs. This "
+                "means that there are numerically zero probabilities in the "
+                "child Dirichlet node."
+            )
+
+        # Fixed-point iteration
+        while np.any(np.abs(da / a) > 1e-5):
+            a_new = misc.invpsi(
+                special.psi(np.sum(a, axis=-1, keepdims=True))
+                + mean_logp
+            )
+            da = a_new - a
+            a = a_new
+
+        self.u = self._moments.compute_fixed_moments(a)
+
+        return
+
+
+    def initialize_from_value(self, x):
+        self.u = self._moments.compute_fixed_moments(x)
+        return
+
+
+    def lower_bound_contribution(self):
+        return (
+            linalg.inner(self.u[0], self.regularization[0], ndim=1)
+            + self.u[1] * self.regularization[1]
+        )
+
+
 class Dirichlet(ExponentialFamily):
     r"""
     Node for Dirichlet random variables.
@@ -228,42 +350,45 @@ class Dirichlet(ExponentialFamily):
 
     Parameters
     ----------
-    
+
     alpha : (...,K)-shaped array
-    
+
         Prior counts :math:`\alpha_k`
 
     See also
     --------
-    
+
     Beta, Categorical, Multinomial, CategoricalMarkovChain
     """
 
-    _moments = DirichletMoments()
-    _parent_moments = (DirichletPriorMoments(),)
     _distribution = DirichletDistribution()
-    
+
 
     @classmethod
-    @ensureparents
     def _constructor(cls, alpha, **kwargs):
         """
         Constructs distribution and moments objects.
         """
         # Number of categories
-        D = alpha.dims[0][0]
+        alpha = cls._ensure_moments(alpha, ConcentrationMoments)
+        parent_moments = (alpha._moments,)
 
         parents = [alpha]
-        
-        return ( parents,
-                 kwargs,
-                 ( (D,), ),
-                 cls._total_plates(kwargs.get('plates'), alpha.plates),
-                 cls._distribution, 
-                 cls._moments, 
-                 cls._parent_moments)
 
-                 
+        categories = alpha.dims[0][0]
+        moments = DirichletMoments(categories)
+
+        return (
+            parents,
+            kwargs,
+            moments.dims,
+            cls._total_plates(kwargs.get('plates'), alpha.plates),
+            cls._distribution,
+            moments,
+            parent_moments
+        )
+
+
     def __str__(self):
         """
         Show distribution as a string

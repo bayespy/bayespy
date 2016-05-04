@@ -56,7 +56,10 @@ class VB():
                  autosave_filename=None,
                  autosave_iterations=0,
                  use_logging=False,
+                 user_data=None,
                  callback=None):
+
+        self.user_data = user_data
 
         for (ind, node) in enumerate(nodes):
             if not isinstance(node, Node):
@@ -137,6 +140,19 @@ class VB():
         # By default, update all nodes
         if len(nodes) == 0:
             nodes = self.model
+        if plot is True:
+            plot_nodes = self.model
+        elif plot is False:
+            plot_nodes = []
+        else:
+            plot_nodes = [self[x] for x in plot]
+
+        # Make certain that at least one of the nodes in the model has been
+        # observed
+        if (not self.ignore_bound_checks
+            and all(~np.any(n.observed) for n in self.model)):
+
+            raise Exception("At least one node in the model must be observed.")
 
         converged = False
 
@@ -149,7 +165,7 @@ class VB():
                 X = self[node]
                 if hasattr(X, 'update') and callable(X.update):
                     X.update()
-                if plot:
+                if X in plot_nodes:
                     self.plot(X)
 
             cputime = time.clock() - t
@@ -266,9 +282,29 @@ class VB():
             boundgroup = h5f.create_group('boundterms')
             for node in nodes:
                 misc.write_to_hdf5(boundgroup, self.l[node], node.name)
+            # Write user data
+            if self.user_data is not None:
+                user_data_group = h5f.create_group('user_data')
+                for (key, value) in self.user_data.items():
+                    user_data_group[key] = value
         finally:
             # Close file
             h5f.close()
+
+
+    @staticmethod
+    def load_user_data(filename):
+        f = h5py.File(filename, 'r')
+        try:
+            group = f['user_data']
+            for (key, value) in group.items():
+                user_data['key'] = value[...]
+        except:
+            raise
+        finally:
+            f.close()
+        return
+
 
     def load(self, *nodes, filename=None, nodes_only=False):
 
@@ -441,63 +477,27 @@ class VB():
         if collapsed is None:
             collapsed = []
 
-        t = time.clock()
-
-        # Current parameters
+        scale = 1.0
         p = self.get_parameters(*nodes)
-        
-        # Get gradients
-        if riemannian and method == 'gradient':
-            rg = self.get_gradients(*nodes, euclidian=False)
-        else:
-            (rg, g) = self.get_gradients(*nodes, euclidian=True)
+        dd_prev = 0
 
-        if riemannian:
-            g1 = g
-            g2 = rg
-        else:
-            g1 = g
-            g2 = g
-
-        if method == 'gradient':
-            pass
-        elif method == 'fletcher-reeves':
-            dd_prev = self.dot(g1, g2)
-        else:
-            raise Exception("Unknown optimization method: %s" % (method))
-
-        # Take a gradient ascending step
-        p_new = self.add(p, g2)
-        self.set_parameters(p_new, *nodes)
-        p = p_new
-
-        # Update collapsed variables
-        for node in collapsed:
-            self[node].update()
-
-        L = self.compute_lowerbound()
-
-        s = g2
-        cputime = time.clock() - t
-        
-        self._end_iteration_step('OPT', cputime, tol=tol)
-
-        for i in range(maxiter-1):
+        for i in range(maxiter):
 
             t = time.clock()
 
             # Get gradients
             if riemannian and method == 'gradient':
                 rg = self.get_gradients(*nodes, euclidian=False)
-            else:
-                (rg, g) = self.get_gradients(*nodes, euclidian=True)
-
-            if riemannian:
-                g1 = g
+                g1 = rg
                 g2 = rg
             else:
-                g1 = g
-                g2 = g
+                (rg, g) = self.get_gradients(*nodes, euclidian=True)
+                if riemannian:
+                    g1 = g
+                    g2 = rg
+                else:
+                    g1 = g
+                    g2 = g
 
             if method == 'gradient':
                 b = 0
@@ -519,32 +519,88 @@ class VB():
             success = False
             while not success:
 
-                p_new = self.add(p, s)
+                p_new = self.add(p, s, scale=scale)
 
                 try:
                     self.set_parameters(p_new, *nodes)
                 except:
-                    self.print("CG update was unsuccessful, using gradient and resetting CG")
+                    if verbose:
+                        self.print("CG update was unsuccessful, using gradient and resetting CG")
+                    if s is g2:
+                        scale = scale / 2
+                    dd_prev = 0
                     s = g2
                     continue
 
                 # Update collapsed variables
-                for node in collapsed:
-                    self[node].update()
+                collapsed_params = self.get_parameters(*collapsed)
+                try:
+                    for node in collapsed:
+                        self[node].update()
+                except:
+                    self.set_parameters(collapsed_params, *collapsed)
+                    if verbose:
+                        self.print("Collapsed node update node failed, reset CG")
+                    if s is g2:
+                        scale = scale / 2
+                    dd_prev = 0
+                    s = g2
+                    continue
 
                 L = self.compute_lowerbound()
 
-                if L < self.L[self.iter-1] and not np.allclose(L, self.L[self.iter-1], rtol=1e-8):
-                    self.print("CG decreased lower bound to %e, using gradient and resetting CG" % L)
-                    s = g2
+                bound_decreased = (
+                    self.iter > 0 and
+                    L < self.L[self.iter-1] and
+                    not np.allclose(L, self.L[self.iter-1], rtol=1e-8)
+                )
+
+                if np.isnan(L) or bound_decreased:
+
+                    # Restore the state of the collapsed nodes to what it was
+                    # before updating them
+                    self.set_parameters(collapsed_params, *collapsed)
+                    if s is g2:
+                        scale = scale / 2
+                        if verbose:
+                            self.print(
+                                "Gradient ascent decreased lower bound from {0} to {1}, halfing step length"
+                                .format(
+                                    self.L[self.iter-1],
+                                    L,
+                                )
+                            )
+                    else:
+                        if scale < 2 ** (-10):
+                            if verbose:
+                                self.print(
+                                    "CG decreased lower bound from {0} to {1}, reset CG."
+                                    .format(
+                                        self.L[self.iter-1],
+                                        L,
+                                    )
+                                )
+                            dd_prev = 0
+                            s = g2
+                        else:
+                            scale = scale / 2
+                            if verbose:
+                                self.print(
+                                    "CG decreased lower bound from {0} to {1}, halfing step length"
+                                    .format(
+                                        self.L[self.iter-1],
+                                        L,
+                                    )
+                                )
                     continue
 
                 success = True
 
+            scale = scale * np.sqrt(2)
             p = p_new
-            
+
             cputime = time.clock() - t
-            if self._end_iteration_step('OPT', cputime, tol=tol):
+            if self._end_iteration_step('OPT', cputime, tol=tol, verbose=verbose):
                 break
 
 

@@ -7,6 +7,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import functools
 
 from bayespy.utils import misc
 
@@ -46,6 +47,7 @@ def message_sum_multiply(plates_parent, dims_parent, *arrays):
     m = misc.squeeze_to_dim(m, len(shape_parent))
     return m
 
+
 class Moments():
     """
     Base class for defining the expectation of the sufficient statistics.
@@ -76,12 +78,35 @@ class Moments():
         pass
 
 
+    def get_instance_converter(self, **kwargs):
+        """Default converter within a moments class is an identity.
+
+        Override this method when moment class instances are not identical if
+        they have different attributes.
+
+        """
+        if len(kwargs) > 0:
+            raise NotImplementedError(
+                "get_instance_converter not implemented for class {0}"
+                .format(self.__class__.__name__)
+            )
+        return None
+
+
+    def get_instance_conversion_kwargs(self):
+        """
+        Override this method when moment class instances are not identical if
+        they have different attributes.
+        """
+        return {}
+
+
     @classmethod
     def add_converter(cls, moments_to, converter):
         cls._converters = cls._converters.copy()
         cls._converters[moments_to] = converter
         return
-    
+
 
     def get_converter(self, moments_to):
         """
@@ -153,7 +178,7 @@ class Moments():
         raise self.NoConverterError("No conversion defined from %s to %s"
                                     % (self.__class__.__name__,
                                        moments_to.__name__))
-    
+
 
     def compute_fixed_moments(self, x):
         # This method can't be static because the computation of the moments may
@@ -161,27 +186,41 @@ class Moments():
         raise NotImplementedError("compute_fixed_moments not implemented for "
                                   "%s" 
                                   % (self.__class__.__name__))
-    
-    def compute_dims_from_values(self, x):
-        # This method can't be static because the computation of the moments may
-        # depend on, for instance, ndim in Gaussian arrays.
-        raise NotImplementedError("compute_dims_from_values not implemented "
+
+
+    @classmethod
+    def from_values(cls, x):
+        raise NotImplementedError("from_values not implemented "
                                   "for %s"
-                                  % (self.__class__.__name__))
+                                  % (cls.__name__))
 
 def ensureparents(func):
-    def new_func(self, *parents, **kwargs):
+    @functools.wraps(func)
+    def wrapper(self, *parents, **kwargs):
         # Convert parents to proper nodes
-        parents = list(parents)
-        for (ind, parent) in enumerate(parents):
-            parents[ind] = self._ensure_moments(parent, 
-                                                self._parent_moments[ind])
+        if self._parent_moments is None:
+            raise ValueError(
+                "Parent moments must be defined for {0}"
+                .format(self.__class__.__name__)
+            )
+        parents = [
+            Node._ensure_moments(
+                parent,
+                moments.__class__,
+                **moments.get_instance_conversion_kwargs()
+            )
+            for (parent, moments) in zip(parents, self._parent_moments)
+        ]
+        # parents = list(parents)
+        # for (ind, parent) in enumerate(parents):
+        #     parents[ind] = self._ensure_moments(parent, 
+        #                                         self._parent_moments[ind])
         # Run the function
         return func(self, *parents, **kwargs)
-    
-    return new_func
 
-    
+    return wrapper
+
+
 class Node():
     """
     Base class for all nodes.
@@ -201,7 +240,7 @@ class Node():
 
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
-       _compute_mask_to_parent(index, mask)
+       _compute_weights_to_parent(index, weights)
        _plates_to_parent(self, index)
        _plates_from_parent(self, index)
     """
@@ -215,19 +254,21 @@ class Node():
     _id_counter = 0
 
     @ensureparents
-    def __init__(self, *parents, dims=None, plates=None, name="", 
-                 notify_parents=True, plotter=None, plates_multiplier=None):
+    def __init__(self, *parents, dims=None, plates=None, name="",
+                 notify_parents=True, plotter=None, plates_multiplier=None,
+                 allow_dependent_parents=False):
 
         self.parents = parents
         self.dims = dims
         self.name = name
         self._plotter = plotter
 
-        parent_id_list = []
-        for parent in parents:
-            parent_id_list = parent_id_list + list(parent._get_id_list())
-        if len(parent_id_list) != len(set(parent_id_list)):
-            raise ValueError("Parent nodes are not independent")
+        if not allow_dependent_parents:
+            parent_id_list = []
+            for parent in parents:
+                parent_id_list = parent_id_list + list(parent._get_id_list())
+            if len(parent_id_list) != len(set(parent_id_list)):
+                raise ValueError("Parent nodes are not independent")
 
         # Inform parent nodes
         if notify_parents:
@@ -288,7 +329,11 @@ class Node():
             try:
                 return misc.broadcasted_shape(*parent_plates)
             except ValueError:
-                raise ValueError("The plates of the parents do not broadcast.")
+                raise ValueError(
+                    "The plates of the parents do not broadcast: {0}".format(
+                        parent_plates
+                    )
+                )
         else:
             # Check that the parent_plates are a subset of plates.
             for (ind, p) in enumerate(parent_plates):
@@ -299,18 +344,25 @@ class Node():
                                      % (p,
                                         plates))
             return plates
-        
+
 
     @staticmethod
-    def _ensure_moments(node, moments):
-
-        if isinstance(node, Node):
-            # Convert to correct type
-            return node._convert(moments.__class__)
-
-        # Convert to constant node
-        from .constant import Constant
-        return Constant(moments, node)
+    def _ensure_moments(node, moments_class, **kwargs):
+        try:
+            converter = node._moments.get_converter(moments_class)
+        except AttributeError:
+            from .constant import Constant
+            return Constant(
+                moments_class.from_values(node, **kwargs),
+                node
+            )
+        else:
+            node = converter(node)
+            converter = node._moments.get_instance_converter(**kwargs)
+            if converter is not None:
+                from .converters import NodeConverter
+                return NodeConverter(converter, node)
+            return node
 
 
     def _compute_plates_to_parent(self, index, plates):
@@ -323,6 +375,10 @@ class Node():
         return plates
 
 
+    def _compute_plates_multiplier_from_parent(self, index, plates_multiplier):
+        return self._compute_plates_from_parent(index, plates_multiplier)
+
+
     def _plates_to_parent(self, index):
         return self._compute_plates_to_parent(index, self.plates)
 
@@ -333,8 +389,10 @@ class Node():
 
 
     def _plates_multiplier_from_parent(self, index):
-        return self._compute_plates_from_parent(index,
-                                                self.parents[index].plates_multiplier)
+        return self._compute_plates_multiplier_from_parent(
+            index,
+            self.parents[index].plates_multiplier
+        )
 
 
     @property
@@ -404,24 +462,20 @@ class Node():
         for parent in self.parents:
             parent._update_mask()
 
-    ## @staticmethod
-    ## def _compute_mask_to_parent(index, mask):
-    ##     # Sub-classes may want to overwrite this if they do something to plates.
-    ##     return mask
 
-    # TODO: Rename to _compute_message_mask_to_parent(index, mask)
-    def _compute_mask_to_parent(self, index, mask):
-        """
-        Compute the mask used for messages sent to parent[index].
+    def _compute_weights_to_parent(self, index, weights):
+        """Compute the mask used for messages sent to parent[index].
 
         The mask tells which plates in the messages are active. This method is
         used for obtaining the mask which is used to set plates in the messages
         to parent to zero.
-        
+
         Sub-classes may want to overwrite this method if they do something to
-        plates so that the mask is somehow altered. 
+        plates so that the mask is somehow altered.
+
         """
-        return mask
+        return weights
+
 
     def _mask_to_parent(self, index):
         """
@@ -432,7 +486,7 @@ class Node():
         can't be used for masking messages, because some plates have been summed
         already. This method is used for propagating the mask to parents.
         """
-        mask = self._compute_mask_to_parent(index, self.mask)
+        mask = self._compute_weights_to_parent(index, self.mask) != 0
 
         # Check the shape of the mask
         plates_to_parent = self._plates_to_parent(index)
@@ -443,7 +497,7 @@ class Node():
                              "the node with respect to the parent %s. It could "
                              "be that this node (%s) is manipulating plates "
                              "but has not overwritten the method "
-                             "_compute_mask_to_parent."
+                             "_compute_weights_to_parent."
                              % (self.name,
                                 index,
                                 self.parents[index].name,
@@ -458,12 +512,11 @@ class Node():
         mask = np.any(mask, axis=s, keepdims=True)
         mask = misc.squeeze_to_dim(mask, len(parent_plates))
         return mask
-    #return self._compute_mask_to_parent(index, self.get_mask())
 
     def _message_to_child(self):
 
         u = self.get_moments()
-        
+
         # Debug: Check that the message has appropriate shape
         for (ui, dim) in zip(u, self.dims):
             ndim = len(dim)
@@ -502,14 +555,14 @@ class Node():
                            self.name))
         return u
                 
-    def _message_to_parent(self, index):
+    def _message_to_parent(self, index, u_parent=None):
 
         # Compute the message, check plates, apply mask and sum over some plates
         if index >= len(self.parents):
             raise ValueError("Parent index larger than the number of parents")
 
         # Compute the message and mask
-        (m, mask) = self._get_message_and_mask_to_parent(index)
+        (m, mask) = self._get_message_and_mask_to_parent(index, u_parent=u_parent)
         mask = misc.squeeze(mask)
 
         # Plates in the mask
@@ -526,6 +579,8 @@ class Node():
 
         # Check if m is a logpdf function (for black-box variational inference)
         if callable(m):
+            return m
+
             def m_function(*args):
                 lpdf = m(*args)
                 # Log pdf only contains plate axes!
@@ -580,27 +635,43 @@ class Node():
                 mask_i = misc.add_trailing_axes(mask, ndim)
                 # Apply mask and sum plate axes as necessary (and apply plate
                 # multiplier)
-                m[i] = r * misc.sum_multiply_to_plates(m[i], mask_i,
+                m[i] = r * misc.sum_multiply_to_plates(np.where(mask_i, m[i], 0),
                                                        to_plates=to_shape,
                                                        from_plates=from_shape,
                                                        ndim=0)
 
         return m
 
-    def _message_from_children(self):
+    def _message_from_children(self, u_self=None):
         msg = [np.zeros(shape) for shape in self.dims]
         #msg = [np.array(0.0) for i in range(len(self.dims))]
+        isfunction = None
         for (child,index) in self.children:
-            m = child._message_to_parent(index)
-            for i in range(len(self.dims)):
-                if m[i] is not None:
-                    # Check broadcasting shapes
-                    sh = misc.broadcasted_shape(self.get_shape(i), np.shape(m[i]))
-                    try:
-                        # Try exploiting broadcasting rules
-                        msg[i] += m[i]
-                    except ValueError:
-                        msg[i] = msg[i] + m[i]
+            m = child._message_to_parent(index, u_parent=u_self)
+            if callable(m):
+                if isfunction is False:
+                    raise NotImplementedError()
+                elif isfunction is None:
+                    msg = m
+                else:
+                    def join(m1, m2):
+                        return (m1[0] + m2[0], m1[1] + m2[1])
+                    msg = lambda x: join(m(x), msg(x))
+                    isfunction = True
+            else:
+                if isfunction is True:
+                    raise NotImplementedError()
+                else:
+                    isfunction = False
+                    for i in range(len(self.dims)):
+                        if m[i] is not None:
+                            # Check broadcasting shapes
+                            sh = misc.broadcasted_shape(self.get_shape(i), np.shape(m[i]))
+                            try:
+                                # Try exploiting broadcasting rules
+                                msg[i] += m[i]
+                            except ValueError:
+                                msg[i] = msg[i] + m[i]
 
         return msg
 
@@ -617,10 +688,10 @@ class Node():
         """
         Delete this node and the children
         """
-        for child in self.children:
-            child.delete()
         for (ind, parent) in enumerate(self.parents):
             parent._remove_child(self, ind)
+        for (child, _) in self.children:
+            child.delete()
 
     @staticmethod
     def broadcasting_multiplier(plates, *args):
@@ -706,12 +777,6 @@ class Node():
         else:
             raise Exception("No plotter defined, can not plot")
 
-    def _convert(self, moments_class):
-        converter = self._moments.get_converter(moments_class)
-        return converter(self)
-    ## def convert(self, node_class):
-    ##     return self._convert(node_class._moments_class)
-
 
     @staticmethod
     def _compute_message(*arrays, plates_from=(), plates_to=(), ndim=0):
@@ -745,13 +810,13 @@ class Node():
 
         # For simplicity, make the arrays equal ndim
         arrays = misc.make_equal_ndim(*arrays)
-        
+
         # Keys for the input plates: (N-1, N-2, ..., 0)
         nplates = len(arrays_plates)
-        in_plate_keys = list(range(nplates))
+        in_plate_keys = list(range(nplates-1, -1, -1))
 
         # Keys for the output plates
-        out_plate_keys = [key 
+        out_plate_keys = [key
                           for key in in_plate_keys
                           if key < len(plates_to) and plates_to[-key-1] != 1]
 
@@ -773,10 +838,10 @@ class Node():
         else:
             plates_result = [min(plates_to[ind], arrays_plates[ind])
                              for ind in range(-nplates_result, 0)]
+
         y = np.reshape(y, plates_result + list(dims))
 
         return y
-    
 
 
 from .deterministic import Deterministic
@@ -807,11 +872,11 @@ class Slice(Deterministic):
     http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#basic-slicing
     """
 
-    _parent_moments = (Moments(),)
-    
+
     def __init__(self, X, slices, **kwargs):
 
         self._moments = X._moments
+        self._parent_moments = (X._moments,)
 
         # Force a list
         if not isinstance(slices, tuple):
@@ -828,7 +893,7 @@ class Slice(Deterministic):
         ellipsis_index = None
         for (k, s) in enumerate(slices):
 
-            if isinstance(s, int) or isinstance(s, slice):
+            if misc.is_scalar_integer(s) or isinstance(s, slice):
                 num_axis += 1
 
             elif s is None:
@@ -846,7 +911,7 @@ class Slice(Deterministic):
                     slices[k] = slice(None)
                     
             else:
-                raise TypeError("Invalid argument type.")
+                raise TypeError("Invalid argument type: {0}".format(s.__class__))
 
         if num_axis > len(X.plates):
             raise IndexError("Too many indices")
@@ -877,7 +942,7 @@ class Slice(Deterministic):
         
         for (k, s) in enumerate(slices):
 
-            if isinstance(s, int):
+            if misc.is_scalar_integer(s):
                 # Index is an integer, e.g., [3]
                 
                 if s < 0:
@@ -931,9 +996,11 @@ class Slice(Deterministic):
                 plates = plates[:k] + [1] + plates[k:]
                 k += 1
                 
-            elif isinstance(s, int):
+            elif misc.is_scalar_integer(s):
                 # Integer, e.g., [3]
                 del plates[k]
+            else:
+                raise RuntimeError("BUG: Unknown index type. Should capture earlier.")
 
         return tuple(plates)
 
@@ -958,7 +1025,7 @@ class Slice(Deterministic):
 
         for s in reversed(slices):
 
-            if isinstance(s, int):
+            if misc.is_scalar_integer(s):
                 # Case: integer
                 parent_slices = (s,) + parent_slices
                 msg_plates = (plates[j],) + msg_plates
@@ -968,7 +1035,7 @@ class Slice(Deterministic):
                 if -i <= len(m_plates):
                     child_slices = (0,) + child_slices
                 i -= 1
-            else:
+            elif isinstance(s, slice):
                 # Case: slice
                 if -i <= len(m_plates):
                     child_slices = (slice(None),) + child_slices
@@ -984,6 +1051,8 @@ class Slice(Deterministic):
                     msg_plates = (plates[j],) + msg_plates
                 j -= 1
                 i -= 1
+            else:
+                raise RuntimeError("BUG: Unknown index type. Should capture earlier.")
 
         # Set the elements of the message
         m_parent = np.zeros(msg_plates + dims)
@@ -998,21 +1067,22 @@ class Slice(Deterministic):
 
         return m_parent
 
-    
-    def _compute_mask_to_parent(self, index, mask):
+
+    def _compute_weights_to_parent(self, index, weights):
         """
         Compute the mask to the parent node.
         """
         if index != 0:
             raise ValueError("Invalid index")
         parent = self.parents[0]
-        
+
         return self.__reverse_indexing(self.slices,
-                                       self.mask, 
-                                       parent.plates, 
+                                       weights,
+                                       parent.plates,
                                        ())
 
-    def _compute_message_and_mask_to_parent(self, index, m, u):
+
+    def _compute_message_to_parent(self, index, m, u):
         """
         Compute the message to a parent node.
         """
@@ -1028,10 +1098,7 @@ class Slice(Deterministic):
                                        dims)
                for (m_child, dims) in zip(m, parent.dims)]
 
-        # Apply reverse indexing for the mask
-        mask = self._compute_mask_to_parent(0, self.mask)
-
-        return (msg, mask)
+        return msg
 
     def _compute_moments(self, u):
         """
@@ -1131,28 +1198,23 @@ def AddPlateAxis(to_plate):
             plates.insert(len(plates)-to_plate+1, 1)
             return tuple(plates)
 
-        def _compute_mask_to_parent(self, index, mask):
+
+        def _compute_weights_to_parent(self, index, weights):
             # Remove the added mask plate
-            if abs(to_plate) <= np.ndim(mask):
-                sh_mask = list(np.shape(mask))
-                sh_mask.pop(to_plate)
-                mask = np.reshape(mask, sh_mask)
-            return mask
+            if abs(to_plate) <= np.ndim(weights):
+                sh_weighs = list(np.shape(weights))
+                sh_weights.pop(to_plate)
+                weights = np.reshape(weights, sh_weights)
+            return weights
 
 
-        def _compute_message_and_mask_to_parent(self, index, m, *u_parents):
+        def _compute_message_to_parent(self, index, m, *u_parents):
             """
             Compute the message to a parent node.
             """
 
-            # Get the message from children
-            #(m, mask) = self.message_from_children()
-
             # Remove the added message plate
             for i in range(len(m)):
-                # Make sure the message has all the axes
-                #diff = len(self.plates) + len(self.dims[i]) - np.ndim(m[i])
-                #m[i] = misc.add_leading_axes(m[i], diff)
                 # Remove the axis
                 if np.ndim(m[i]) >= abs(to_plate) + len(self.dims[i]):
                     axis = to_plate - len(self.dims[i])
@@ -1160,9 +1222,7 @@ def AddPlateAxis(to_plate):
                     sh_m.pop(axis)
                     m[i] = np.reshape(m[i], sh_m)
 
-            mask = self._compute_mask_to_parent(index, self.mask)
-
-            return (m, mask)
+            return m
 
         def _compute_moments(self, u):
             """

@@ -29,11 +29,14 @@ class CategoricalMarkovChainMoments(Moments):
     """
 
 
-    def __init__(self, categories):
+    def __init__(self, categories, length):
         """
         Create moments object for categorical Markov chain variables.
         """
-        self.D = categories
+        self.categories = categories
+        self.length = length
+        self.dims = ( (categories,), (length-1, categories, categories) )
+        return
 
 
     def compute_fixed_moments(self, x):
@@ -44,12 +47,13 @@ class CategoricalMarkovChainMoments(Moments):
                                   "%s" 
                                   % (self.__class__.__name__))
 
-    
-    def compute_dims_from_values(self, x):
+
+    @classmethod
+    def from_values(cls, x, categories):
         """
         Return the shape of the moments for a fixed value.
         """
-        raise NotImplementedError("compute_dims_from_values not implemented "
+        raise NotImplementedError("from_values not implemented "
                                   "for %s"
                                   % (self.__class__.__name__))
 
@@ -81,16 +85,16 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         else:
             raise ValueError("Parent index out of bounds")
 
-    def compute_mask_to_parent(self, index, mask):
+    def compute_weights_to_parent(self, index, weights):
         """
         Maps the mask to the plates of a parent.
         """
         if index == 0:
-            return mask
+            return weights
         elif index == 1:
             # Add plate axis for the time axis and row axis of the transition
             # matrix
-            return np.asanyarray(mask)[...,None,None]
+            return np.asanyarray(weights)[...,None,None]
         else:
             raise ValueError("Parent index out of bounds")
 
@@ -263,10 +267,6 @@ class CategoricalMarkovChain(ExponentialFamily):
     SwitchingGaussianMarkovChain
     """
 
-    
-    _parent_moments = (DirichletMoments(),
-                       DirichletMoments())
-
 
     def __init__(self, pi, A, states=None, **kwargs):
         """
@@ -276,20 +276,25 @@ class CategoricalMarkovChain(ExponentialFamily):
 
 
     @classmethod
-    @ensureparents
     def _constructor(cls, p0, P, states=None, **kwargs):
         """
         Constructs distribution and moments objects.
 
         This method is called if useconstructor decorator is used for __init__.
-        
+
         Becase the distribution and moments object depend on the number of
         categories, that is, they depend on the parent node, this method can be
         used to construct those objects.
         """
 
+        p0 = cls._ensure_moments(p0, DirichletMoments)
+        P = cls._ensure_moments(P, DirichletMoments)
+
         # Number of categories
         D = p0.dims[0][0]
+
+        parent_moments = (p0._moments, P._moments)
+
         # Number of states
         if len(P.plates) < 2:
             if states is None:
@@ -321,38 +326,38 @@ class CategoricalMarkovChain(ExponentialFamily):
 
         parents = [p0, P]
         distribution = CategoricalMarkovChainDistribution(D, N)
-        moments = CategoricalMarkovChainMoments(D)
-        parent_moments = cls._parent_moments
+        moments = CategoricalMarkovChainMoments(D, N)
 
         return (parents,
                 kwargs,
-                dims, 
+                moments.dims,
                 cls._total_plates(kwargs.get('plates'),
                                   distribution.plates_from_parent(0, p0.plates),
                                   distribution.plates_from_parent(1, P.plates)),
-                distribution, 
-                moments, 
+                distribution,
+                moments,
                 parent_moments)
 
-        
+
 class CategoricalMarkovChainToCategorical(Deterministic):
     """
     A node for converting categorical MC moments to categorical moments.
     """
 
-    
+
     def __init__(self, Z, **kwargs):
         """
         Create a categorical MC moments to categorical moments conversion node.
         """
         # Convert parent to proper type. Z must be a node.
-        Z = Z._convert(CategoricalMarkovChainMoments)
+        Z = self._ensure_moments(Z, CategoricalMarkovChainMoments)
         K = Z.dims[0][-1]
         dims = ( (K,), )
         self._moments = CategoricalMoments(K)
-        self._parent_moments = (CategoricalMarkovChainMoments(K),)
+        self._parent_moments = (Z._moments,)
         super().__init__(Z, dims=dims, **kwargs)
-        
+
+
     def _compute_moments(self, u_Z):
         """
         Compute the moments given the moments of the parents.
@@ -382,18 +387,20 @@ class CategoricalMarkovChainToCategorical(Deterministic):
         m0 = m[0][...,0,:]
         m1 = m[0][...,1:,None,:]
         return [m0, m1]
-    
-    def _compute_mask_to_parent(self, index, mask):
+
+
+    def _compute_weights_to_parent(self, index, weights):
         """
         Compute the mask used for messages sent to a parent.
         """
         if index == 0:
             # "Sum" over the last axis
             # TODO/FIXME: Check this. BUG I THINK.
-            return np.any(mask, axis=-1)
+            return np.sum(weights, axis=-1)
         else:
             raise ValueError("Parent index out of bounds")
-    
+
+
     def _plates_to_parent(self, index):
         if index == 0:
             return self.plates[:-1]

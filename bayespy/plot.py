@@ -57,6 +57,7 @@ import scipy
 from scipy import special
 import matplotlib.pyplot as plt
 from matplotlib import animation
+from matplotlib import colors
 #from matplotlib.pyplot import *
 
 from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
@@ -266,7 +267,7 @@ def plot_bernoulli(X, axis=-1, scale=2, **kwargs):
     """
     Plot Bernoulli node as a 1-D function
     """
-    X = X._convert(BernoulliMoments)
+    X = X._ensure_moments(X, BernoulliMoments)
     u_X = X.get_moments()
     z = u_X[0]
     return _timeseries_mean_and_error(z, None, axis=axis, **kwargs)
@@ -283,7 +284,7 @@ def plot_gaussian(X, axis=-1, scale=2, **kwargs):
     axis : int
         The index of the time axis.
     """
-    X = X._convert(GaussianMoments)
+    X = X._ensure_moments(X, GaussianMoments, ndim=0)
     u_X = X.get_moments()
     x = u_X[0]
     xx = misc.get_diag(u_X[1], ndim=len(X.dims[0]))
@@ -304,7 +305,7 @@ def plot(Y, axis=-1, scale=2, center=False, **kwargs):
 
         # Try Bernoulli plotting
         try:
-            Y = Y._convert(BernoulliMoments)
+            Y = Y._ensure_moments(Y, BernoulliMoments)
         except BernoulliMoments.NoConverterError:
             pass
         else:
@@ -312,7 +313,7 @@ def plot(Y, axis=-1, scale=2, center=False, **kwargs):
 
         # Try Gaussian plotting
         try:
-            Y = Y._convert(GaussianMoments)
+            Y = Y._ensure_moments(Y, GaussianMoments, ndim=0)
         except GaussianMoments.NoConverterError:
             pass
         else:
@@ -454,7 +455,7 @@ def gaussian_mixture_2d(X, alpha=None, scale=2, fill=False, axes=None, **kwargs)
     if axes is None:
         axes = plt.gca()
 
-    mu_Lambda = X.parents[1]._convert(GaussianWishartMoments)
+    mu_Lambda = X._ensure_moments(X.parents[1], GaussianWishartMoments)
 
     (mu, _, Lambda, _) = mu_Lambda.get_moments()
     mu = np.linalg.solve(Lambda, mu)
@@ -512,7 +513,7 @@ def gaussian_mixture_2d(X, alpha=None, scale=2, fill=False, axes=None, **kwargs)
     return
     
     
-def _hinton(W, error=None, vmax=None, square=True, axes=None):
+def _hinton(W, error=None, vmax=None, square=False, axes=None):
     """
     Draws a Hinton diagram for visualizing a weight matrix. 
 
@@ -538,9 +539,12 @@ def _hinton(W, error=None, vmax=None, square=True, axes=None):
     axes.fill(0.5+np.array([0,width,width,0]),
               0.5+np.array([0,0,height,height]),
               'gray')
-    axes.axis('off')
     if square:
-        axes.axis('equal')
+        axes.set_aspect('equal')
+    axes.set_ylim(0.5, height+0.5)
+    axes.set_xlim(0.5, width+0.5)
+    axes.set_xticks([])
+    axes.set_yticks([])
     axes.invert_yaxis()
     for x in range(width):
         for y in range(height):
@@ -603,7 +607,7 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
         fig = plt.gcf()
 
     # Get mean and second moment
-    X = X._convert(GaussianMoments)
+    X = X._ensure_moments(X, GaussianMoments, ndim=0)
     (x, xx) = X.get_moments()
     ndim = len(X.dims[0])
     shape = X.get_shape(0)
@@ -759,7 +763,7 @@ def timeseries_categorical_mc(Z, fig=None):
         fig = plt.gcf()
 
     # Make sure that the node is categorical
-    Z = Z._convert(CategoricalMoments)
+    Z = Z._ensure_moments(Z, CategoricalMoments, categories=None)
 
     # Get expectations (and broadcast explicitly)
     z = Z._message_to_child()[0] * np.ones(Z.get_shape(0))
@@ -784,7 +788,7 @@ def gamma_hinton(alpha, square=True, **kwargs):
     """
 
     # Make sure that the node is beta
-    alpha = alpha._convert(GammaMoments)
+    alpha = alpha._ensure_moments(alpha, GammaMoments)
 
     # Compute exp( <log p> )
     x = alpha.get_moments()[0]
@@ -802,7 +806,7 @@ def beta_hinton(P, square=True):
     """
 
     # Make sure that the node is beta
-    P = P._convert(BetaMoments)
+    P = P._ensure_moments(P, BetaMoments)
 
     # Compute exp( <log p> )
     p = np.exp(P._message_to_child()[0][...,0])
@@ -820,7 +824,7 @@ def dirichlet_hinton(P, square=True):
     """
 
     # Make sure that the node is beta
-    P = P._convert(DirichletMoments)
+    P = P._ensure_moments(P, DirichletMoments)
 
     # Compute exp( <log p> )
     p = np.exp(P._message_to_child()[0])
@@ -838,7 +842,7 @@ def bernoulli_hinton(Z, square=True):
     """
 
     # Make sure that the node is Bernoulli
-    Z = Z._convert(BernoulliMoments)
+    Z = Z._ensure_moments(Z, BernoulliMoments)
 
     # Get <Z>
     z = Z._message_to_child()[0]
@@ -856,7 +860,7 @@ def categorical_hinton(Z, square=True):
     """
 
     # Make sure that the node is Bernoulli
-    Z = Z._convert(CategoricalMoments)
+    Z = Z._ensure_moments(Z, CategoricalMoments, categories=None)
 
     # Get <Z>
     z = Z._message_to_child()[0]
@@ -883,45 +887,45 @@ def hinton(X, **kwargs):
 
     """
 
-    if hasattr(X, "_convert"):
+    if hasattr(X, "_ensure_moments"):
 
         try:
-            X = X._convert(GaussianMoments)
+            X = X._ensure_moments(X, GaussianMoments, ndim=0)
         except Moments.NoConverterError:
             pass
         else:
             return gaussian_hinton(X, **kwargs)
 
         try:
-            X = X._convert(GammaMoments)
+            X = X._ensure_moments(X, GammaMoments)
         except Moments.NoConverterError:
             pass
         else:
             return gamma_hinton(X, **kwargs)
 
         try:
-            X = X._convert(BetaMoments)
+            X = X._ensure_moments(X, BetaMoments)
         except Moments.NoConverterError:
             pass
         else:
             return beta_hinton(X, **kwargs)
 
         try:
-            X = X._convert(DirichletMoments)
+            X = X._ensure_moments(X, DirichletMoments)
         except Moments.NoConverterError:
             pass
         else:
             return dirichlet_hinton(X, **kwargs)
 
         try:
-            X = X._convert(BernoulliMoments)
+            X = X._ensure_moments(X, BernoulliMoments)
         except Moments.NoConverterError:
             pass
         else:
             return bernoulli_hinton(X, **kwargs)
 
         try:
-            X = X._convert(CategoricalMoments)
+            X = X._ensure_moments(X, CategoricalMoments, categories=None)
         except Moments.NoConverterError:
             pass
         else:
@@ -1236,7 +1240,7 @@ def contourplot(x1, x2, y, colorbar=False, filled=True, axes=None):
         
 
 def errorplot(y=None, error=None, x=None, lower=None, upper=None,
-              color=(0,0,0,1), fillcolor=(0,0,0,0.4), axes=None, **kwargs):
+              color=(0,0,0,1), fillcolor=None, axes=None, **kwargs):
 
     if axes is None:
         axes = plt.gca()
@@ -1261,6 +1265,9 @@ def errorplot(y=None, error=None, x=None, lower=None, upper=None,
     if (lower is not None) and (upper is not None):
         l = y - lower
         u = y + upper
+        if fillcolor is None:
+            color = colors.ColorConverter().to_rgba(color)
+            fillcolor = tuple(color[:3]) + (0.2 * color[3],)
         axes.fill_between(x,
                           l,
                           u,

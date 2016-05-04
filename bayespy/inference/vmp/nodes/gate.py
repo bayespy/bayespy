@@ -15,6 +15,7 @@ from bayespy.utils import misc
 from .node import Node, Moments
 from .deterministic import Deterministic
 from .categorical import CategoricalMoments
+from .concatenate import Concatenate
 
 
 class Gate(Deterministic):
@@ -53,7 +54,11 @@ class Gate(Deterministic):
         self.gated_plate = gated_plate
 
         if moments is not None:
-            X = self._ensure_moments(X, moments)
+            X = self._ensure_moments(
+                X,
+                moments.__class__,
+                **moments.get_instance_conversion_kwargs()
+            )
 
         if not isinstance(X, Node):
             raise ValueError("X must be a node or moments should be provided")
@@ -66,10 +71,9 @@ class Gate(Deterministic):
                              "gated")
         K = X.plates[gated_plate]
 
-        self._parent_moments = [CategoricalMoments(K),
-                                X_moments]
+        Z = self._ensure_moments(Z, CategoricalMoments, categories=K)
 
-        Z = self._ensure_moments(Z, self._parent_moments[0])
+        self._parent_moments = (Z._moments, X_moments)
 
         if Z.dims != ( (K,), ):
             raise ValueError("Inconsistent number of clusters")
@@ -161,17 +165,17 @@ class Gate(Deterministic):
             raise ValueError("Invalid parent index")
 
 
-    def _compute_mask_to_parent(self, index, mask):
+    def _compute_weights_to_parent(self, index, weights):
         """
         """
         if index == 0:
-            return mask
+            return weights
         elif index == 1:
             if self.gated_plate >= 0:
                 raise ValueError("Gated plate axis must be negative")
-            if np.ndim(mask) >= abs(self.gated_plate):
-                mask = np.expand_dims(mask, axis=self.gated_plate)
-            return mask
+            if np.ndim(weights) >= abs(self.gated_plate):
+                mask = np.expand_dims(weights, axis=self.gated_plate)
+            return weights
         else:
             raise ValueError("Invalid parent index")
 
@@ -208,3 +212,37 @@ class Gate(Deterministic):
             return tuple(plates)
         else:
             raise ValueError("Invalid parent index")
+
+
+def Choose(z, *nodes):
+    """Choose plate elements from nodes based on a categorical variable.
+
+    For instance:
+
+    .. testsetup::
+
+       from bayespy.nodes import *
+
+    .. code-block:: python
+
+       >>> import bayespy as bp
+       >>> z = [0, 0, 2, 1]
+       >>> x0 = bp.nodes.GaussianARD(0, 1)
+       >>> x1 = bp.nodes.GaussianARD(10, 1)
+       >>> x2 = bp.nodes.GaussianARD(20, 1)
+       >>> x = bp.nodes.Choose(z, x0, x1, x2)
+       >>> print(x.get_moments()[0])
+       [  0.   0.  20.  10.]
+
+    This is basically just a thin wrapper over applying Gate node over the
+    concatenation of the nodes.
+    """
+    categories = len(nodes)
+    z = Deterministic._ensure_moments(
+        z,
+        CategoricalMoments,
+        categories=categories
+    )
+    nodes = [node[...,None] for node in nodes]
+    combined = Concatenate(*nodes)
+    return Gate(z, combined)

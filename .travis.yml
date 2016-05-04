@@ -3,6 +3,10 @@ language: python
 # use the faster container-based architecture
 sudo: false
 
+addons:
+  apt_packages:
+    - pandoc
+
 # versions to test
 # list of packages in miniconda:
 # http://repo.continuum.io/pkgs/free/linux-64/index.html
@@ -28,10 +32,16 @@ matrix:
         - NUMPYVERSION=
         - SCIPYVERSION=
         - MATPLOTLIBVERSION=
+    - python: 3.5
+      env:
+        - PYTHONVERSION==3.5
+        - NUMPYVERSION=
+        - SCIPYVERSION=
+        - MATPLOTLIBVERSION=
 
 # install Miniconda; use it to install dependencies
 install:
-  - wget http://repo.continuum.io/miniconda/Miniconda3-3.8.3-Linux-x86_64.sh -O miniconda.sh
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $(pwd)/miniconda
   - export PATH="$(pwd)/miniconda/bin:$PATH"
   - hash -r
@@ -45,8 +55,9 @@ install:
   - conda install -n test-environment --yes h5py
   - source activate test-environment
   - pip install coveralls
-  - pip install "sphinx>=1.2.3" sphinxcontrib-tikz sphinxcontrib-bayesnet sphinxcontrib-bibtex "numpydoc>=0.5"
-  - pip install -e .
+  - pip install -e .[dev,doc]
+  - pip freeze
+
 
 # Select a proper matplotlib backend
 before_script:
@@ -54,14 +65,24 @@ before_script:
 
 # Run unit tests for the code, docstrings and documentation
 script:
-  - python -m nose -c nose.cfg
-  - cd doc && make doctest
-
-# check coverage
-after_success:
-  - coveralls
+  - travis_wait 30 python -m nose -c setup.cfg
+  - cd doc
+  - travis_wait 50 make doctest
+  - cd ..
 
 # if tests fail, upload images to imgur
 after_failure:
   - wget http://imgur.com/tools/imgurbash.sh
   - for img in result_images/test_plot/*.png; do echo -e "\n$img"; bash imgurbash.sh $img; done
+
+# check coverage
+after_script:
+  - coveralls
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/d33dd85624e42382050a
+    on_success: change  # options: [always|never|change] default: always
+    on_failure: always  # options: [always|never|change] default: always
+    on_start: never     # options: [always|never|change] default: always

@@ -68,7 +68,7 @@ class LogPDF(ExponentialFamily):
                       else x
                       for j in range(len(self.parents))]
             return self._logpdf(self.random(), *inputs)
-        mask = self._distribution.compute_mask_to_parent(index, self.mask)
+        mask = self._distribution.compute_weights_to_parent(index, self.mask) != 0
         return (logpdf_sampler, mask)
 
 

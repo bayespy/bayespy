@@ -27,37 +27,51 @@ import scipy.sparse as sparse
 
 from . import misc
 
-def chol(C):
+
+def chol(C, ndim=1):
     if sparse.issparse(C):
+        if ndim != 1:
+            raise NotImplementedError()
         # Sparse Cholesky decomposition (returns a Factor object)
         return cholmod.cholesky(C)
     else:
         # Computes Cholesky decomposition for a collection of matrices.
-        # The last two axes of C are considered as the matrix.
-        C = np.atleast_2d(C)
+        # The last 2*ndim axes of C are considered as the matrix.
+        if ndim == 0:
+            return np.sqrt(C)
+        shape_original = np.shape(C)[-ndim:]
+        C = misc.flatten_axes(C, ndim, ndim)
+        if np.shape(C)[-1] != np.shape(C)[-2]:
+            raise ValueError("Not square matrix w.r.t. ndim sense")
         U = np.empty(np.shape(C))
         for i in misc.nested_iterator(np.shape(U)[:-2]):
             try:
                 U[i] = linalg.cho_factor(C[i])[0]
             except np.linalg.linalg.LinAlgError:
                 raise Exception("Matrix not positive definite")
-        return U
+        return misc.reshape_axes(U, shape_original, shape_original)
 
-def chol_solve(U, b, out=None, matrix=False):
+
+def chol_solve(U, b, out=None, matrix=False, ndim=1):
     if isinstance(U, np.ndarray):
         if sparse.issparse(b):
             b = b.toarray()
 
+        if ndim == 0:
+            return (b / U) / U
+
+        shape = np.shape(U)[-ndim:]
+        U = misc.flatten_axes(U, ndim, ndim)
+
         if matrix:
-            if np.ndim(b) < 2:
-                raise ValueError("b is not a matrix")
-            b = np.swapaxes(b, -1, -2)
+            shape_b = np.shape(b)[-ndim:]
+            B = misc.flatten_axes(b, ndim, ndim)
+            B = transpose(b, ndim=1)
             U = U[...,None,:,:]
-            
-            
+        else:
+            B = misc.flatten_axes(b, ndim)
+
         # Allocate memory
-        U = np.atleast_2d(U)
-        B = np.atleast_1d(b)
         sh_u = U.shape[:-2]
         sh_b = B.shape[:-1]
         l_u = len(sh_u)
@@ -73,6 +87,7 @@ def chol_solve(U, b, out=None, matrix=False):
             sh = misc.broadcasted_shape(sh_u, sh_b)
             #out = np.zeros(np.shape(B))
             out = np.zeros(sh + B.shape[-1:])
+
         for i in misc.nested_iterator(np.shape(U)[:-2]):
 
             # The goal is to run Cholesky solver once for all vectors of B
@@ -103,13 +118,17 @@ def chol_solve(U, b, out=None, matrix=False):
             out[ind_out] = linalg.cho_solve((U[i], False),
                                             b.T).T.reshape(orig_shape)
 
-
         if matrix:
-            out = np.swapaxes(out, -1, -2)
-            
+            out = transpose(out, ndim=1)
+            out = misc.reshape_axes(out, shape, shape_b)
+        else:
+            out = misc.reshape_axes(out, shape)
+
         return out
 
     elif isinstance(U, cholmod.Factor):
+        if ndim != 1:
+            raise NotImplementedError()
         if matrix:
             raise NotImplementedError()
         if sparse.issparse(b):
@@ -118,49 +137,66 @@ def chol_solve(U, b, out=None, matrix=False):
     else:
         raise ValueError("Unknown type of Cholesky factor")
 
-def chol_inv(U):
+
+def chol_inv(U, ndim=1):
     if isinstance(U, np.ndarray):
+        if ndim == 0:
+            return (1 / U) / U
+        shape = np.shape(U)[-ndim:]
+        U = misc.flatten_axes(U, ndim, ndim)
         # Allocate memory
         V = np.tile(np.identity(np.shape(U)[-1]), np.shape(U)[:-2]+(1,1))
         for i in misc.nested_iterator(np.shape(U)[:-2]):
-            V[i] = linalg.cho_solve((U[i], False),
-                                    V[i],
-                                    overwrite_b=True) # This would need Fortran order
-
+            V[i] = linalg.cho_solve(
+                (U[i], False),
+                V[i],
+                overwrite_b=True # This would need Fortran order
+            )
+        V = misc.reshape_axes(V, shape, shape)
         return V
+
     elif isinstance(U, cholmod.Factor):
         raise NotImplementedError
-        ## if sparse.issparse(b):
-        ##     b = b.toarray()
-        ## return U.solve_A(b)
+        if ndim != 1:
+            raise NotImplementedError()
     else:
         raise ValueError("Unknown type of Cholesky factor")
 
-def chol_logdet(U):
+def chol_logdet(U, ndim=1):
     if isinstance(U, np.ndarray):
+        if ndim == 0:
+            return 2 * np.log(U)
+        U = misc.flatten_axes(U, ndim, ndim)
         return 2*np.sum(np.log(np.einsum('...ii->...i',U)), axis=-1)
     elif isinstance(U, cholmod.Factor):
+        if ndim != 1:
+            raise NotImplementedError()
         return np.sum(np.log(U.D()))
     else:
         raise ValueError("Unknown type of Cholesky factor")
-    
+
 def logdet_chol(U):
     if isinstance(U, np.ndarray):
         # Computes Cholesky decomposition for a collection of matrices.
         return 2*np.sum(np.log(np.einsum('...ii->...i', U)), axis=(-1,))
     elif isinstance(U, cholmod.Factor):
         return np.sum(np.log(U.D()))
-    
+
+
 def logdet_tri(R):
     """
     Logarithm of the absolute value of the determinant of a triangular matrix.
     """
     return np.sum(np.log(np.abs(np.einsum('...ii->...i', R))))
-    
-def logdet_cov(C):
-    return logdet_chol(chol(C))
 
-def solve_triangular(U, B, **kwargs):
+
+def logdet_cov(C, ndim=1):
+    return chol_logdet(chol(C, ndim=ndim), ndim=ndim)
+
+
+def solve_triangular(U, B, ndim=1, **kwargs):
+    if ndim != 1:
+        raise NotImplementedError("Not yet implemented for ndim!=1")
     # Allocate memory
     U = np.atleast_2d(U)
     B = np.atleast_1d(B)

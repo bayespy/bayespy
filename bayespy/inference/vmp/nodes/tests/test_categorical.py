@@ -20,6 +20,7 @@ from bayespy.nodes import (Categorical,
                            Gamma)
 
 from bayespy.utils import random
+from bayespy.utils import misc
 
 from bayespy.utils.misc import TestCase
 
@@ -220,5 +221,29 @@ class TestCategorical(TestCase):
             self.assertAllClose(u[0],
                                 [[0, 1, 0],
                                  [0, 0, 1]])
-        
+
+        pass
+
+
+    def test_gradient(self):
+        """
+        Check the Euclidean gradient of the categorical node
+        """
+
+        Z = Categorical([[0.3, 0.5, 0.2], [0.1, 0.6, 0.3]])
+        Y = Mixture(Z, Gamma, [2, 3, 4], [5, 6, 7])
+        Y.observe([4.2, 0.2])
+        def f(x):
+            Z.set_parameters([np.reshape(x, Z.get_shape(0))])
+            return Z.lower_bound_contribution() + Y.lower_bound_contribution()
+        def df(x):
+            Z.set_parameters([np.reshape(x, Z.get_shape(0))])
+            g = Z.get_riemannian_gradient()
+            return Z.get_gradient(g)[0]
+        x0 = np.ravel(np.log([[2, 3, 7], [0.1, 3, 1]]))
+        self.assertAllClose(
+            misc.gradient(f, x0),
+            np.ravel(df(x0))
+        )
+
         pass

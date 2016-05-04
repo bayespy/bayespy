@@ -29,6 +29,35 @@ import unittest
 from numpy import testing
 
 
+def flatten_axes(X, *ndims):
+    ndim = sum(ndims)
+    if np.ndim(X) < ndim:
+        raise ValueError("Not enough ndims in the array")
+    if len(ndims) == 0:
+        return X
+    shape = np.shape(X)
+    i = np.ndim(X) - ndim
+    plates = shape[:i]
+    nd_sums = i + np.cumsum((0,) + ndims)
+    sizes = tuple(
+        np.prod(shape[i:j])
+        for (i, j) in zip(nd_sums[:-1], nd_sums[1:])
+    )
+    return np.reshape(X, plates + sizes)
+
+
+def reshape_axes(X, *shapes):
+    ndim = len(shapes)
+    if np.ndim(X) < ndim:
+        raise ValueError("Not enough ndims in the array")
+    i = np.ndim(X) - ndim
+    sizes = tuple(np.prod(sh) for sh in shapes)
+    if np.shape(X)[i:] != sizes:
+        raise ValueError("Shapes inconsistent with sizes")
+    shape = tuple(i for sh in shapes for i in sh)
+    return np.reshape(X, np.shape(X)[:i] + shape)
+
+
 def find_set_index(index, set_lengths):
     """
     Given set sizes and an index, returns the index of the set
@@ -86,7 +115,8 @@ def parse_command_line_arguments(mandatory_args, *optional_args_list, argv=None)
     --------
 
     >>> from pprint import pprint as print
-    >>> (args, kwargs) = parse_command_line_arguments(
+    >>> from bayespy.utils import misc
+    >>> (args, kwargs) = misc.parse_command_line_arguments(
     ...     # Mandatory arguments
     ...     [
     ...         ('name',     str,  "Full name"),
@@ -110,7 +140,7 @@ def parse_command_line_arguments(mandatory_args, *optional_args_list, argv=None)
 
     It is possible to have several optional argument sets:
 
-    >>> (args, kw_info, kw_fav) = parse_command_line_arguments(
+    >>> (args, kw_info, kw_fav) = misc.parse_command_line_arguments(
     ...     # Mandatory arguments
     ...     [
     ...         ('name',     str,  "Full name"),
@@ -361,73 +391,172 @@ def array_to_scalar(x):
 
 #def diag(x):
 
+
+def put(x, indices, y, axis=-1, ufunc=np.add):
+    """A kind of inverse mapping of `np.take`
+
+    In a simple, the operation can be thought as:
+
+    .. code-block:: python
+
+       x[indices] += y
+
+    with the exception that all entries of `y` are used instead of just the
+    first occurence corresponding to a particular element. That is, the results
+    are accumulated, and the accumulation function can be changed by providing
+    `ufunc`. For instance, `np.multiply` corresponds to:
+
+    .. code-block:: python
+
+       x[indices] *= y
+
+    Whereas `np.take` picks indices along an axis and returns the resulting
+    array, `put` similarly picks indices along an axis but accumulates the
+    given values to those entries.
+
+    Example
+    -------
+
+    .. code-block:: python
+
+       >>> x = np.zeros(3)
+       >>> put(x, [2, 2, 0, 2, 2], 1)
+       array([ 1.,  0.,  4.])
+
+    `y` must broadcast to the shape of `np.take(x, indices)`:
+
+    .. code-block:: python
+
+       >>> x = np.zeros((3,4))
+       >>> put(x, [[2, 2, 0, 2, 2], [1, 2, 1, 2, 1]], np.ones((2,1,4)), axis=0)
+       array([[ 1.,  1.,  1.,  1.],
+              [ 3.,  3.,  3.,  3.],
+              [ 6.,  6.,  6.,  6.]])
+
+    """
+    #x = np.copy(x)
+    ndim = np.ndim(x)
+    if not isinstance(axis, int):
+        raise ValueError("Axis must be an integer")
+
+    # Make axis index positive: [0, ..., ndim-1]
+    if axis < 0:
+        axis = axis + ndim
+    if axis < 0 or axis >= ndim:
+        raise ValueError("Axis out of bounds")
+
+    indices = axis*(slice(None),) + (indices,) + (ndim-axis-1)*(slice(None),)
+    #y = add_trailing_axes(y, ndim-axis-1)
+    ufunc.at(x, indices, y)
+    return x
+
+
+def put_simple(y, indices, axis=-1, length=None):
+    """An inverse operation of `np.take` with accumulation and broadcasting.
+
+    Compared to `put`, the difference is that the result array is initialized
+    with an array of zeros whose shape is determined automatically and `np.add`
+    is used as the accumulator.
+
+    """
+
+    if length is None:
+        # Try to determine the original length of the axis by finding the
+        # largest index. It is more robust to give the length explicitly.
+        indices = np.copy(indices)
+        indices[indices<0] = np.abs(indices[indices<0]) - 1
+        length = np.amax(indices) + 1
+
+    if not isinstance(axis, int):
+        raise ValueError("Axis must be an integer")
+
+    # Make axis index negative: [-ndim, ..., -1]
+    if axis >= 0:
+        raise ValueError("Axis index must be negative")
+
+    y = atleast_nd(y, abs(axis)-1)
+    shape_y = np.shape(y)
+    end_before = axis - np.ndim(indices) + 1
+    start_after = axis + 1
+    if end_before == 0:
+        shape_x = shape_y + (length,)
+    elif start_after == 0:
+        shape_x = shape_y[:end_before] + (length,)
+    else:
+        shape_x = shape_y[:end_before] + (length,) + shape_y[start_after:]
+
+    x = np.zeros(shape_x)
+
+    return put(x, indices, y, axis=axis)
+
+
 def grid(x1, x2):
     """ Returns meshgrid as a (M*N,2)-shape array. """
     (X1, X2) = np.meshgrid(x1, x2)
     return np.hstack((X1.reshape((-1,1)),X2.reshape((-1,1))))
 
 
-class CholeskyDense():
-    
-    def __init__(self, K):
-        self.U = linalg.cho_factor(K)
-    
-    def solve(self, b):
-        if sparse.issparse(b):
-            b = b.toarray()
-        return linalg.cho_solve(self.U, b)
+# class CholeskyDense():
 
-    def logdet(self):
-        return 2*np.sum(np.log(np.diag(self.U[0])))
+#     def __init__(self, K):
+#         self.U = linalg.cho_factor(K)
 
-    def trace_solve_gradient(self, dK):
-        return np.trace(self.solve(dK))
+#     def solve(self, b):
+#         if sparse.issparse(b):
+#             b = b.toarray()
+#         return linalg.cho_solve(self.U, b)
 
-class CholeskySparse():
-    
-    def __init__(self, K):
-        self.LD = cholmod.cholesky(K)
+#     def logdet(self):
+#         return 2*np.sum(np.log(np.diag(self.U[0])))
 
-    def solve(self, b):
-        if sparse.issparse(b):
-            b = b.toarray()
-        return self.LD.solve_A(b)
+#     def trace_solve_gradient(self, dK):
+#         return np.trace(self.solve(dK))
 
-    def logdet(self):
-        return self.LD.logdet()
-        #np.sum(np.log(LD.D()))
+# class CholeskySparse():
 
-    def trace_solve_gradient(self, dK):
-        # WTF?! numpy.multiply doesn't work for two sparse
-        # matrices.. It returns a result but it is incorrect!
-        
-        # Use the identity trace(K\dK)=sum(inv(K).*dK) by computing
-        # the sparse inverse (lower triangular part)
-        iK = self.LD.spinv(form='lower')
-        return (2*iK.multiply(dK).sum()
-                - iK.diagonal().dot(dK.diagonal()))
-        # Multiply by two because of symmetry (remove diagonal once
-        # because it was taken into account twice)
-        #return np.multiply(self.LD.inv().todense(),dK.todense()).sum()
-        #return self.LD.inv().multiply(dK).sum() # THIS WORKS
-        #return np.multiply(self.LD.inv(),dK).sum() # THIS NOT WORK!! WTF??
-        iK = self.LD.spinv()
-        return iK.multiply(dK).sum()
-        #return (2*iK.multiply(dK).sum()
-        #        - iK.diagonal().dot(dK.diagonal()))
-        #return (2*np.multiply(iK, dK).sum()
-        #        - iK.diagonal().dot(dK.diagonal())) # THIS NOT WORK!!
-        #return np.trace(self.solve(dK))
-    
-    
-def cholesky(K):
-    if isinstance(K, np.ndarray):
-        return CholeskyDense(K)
-    elif sparse.issparse(K):
-        return CholeskySparse(K)
-    else:
-        raise Exception("Unsupported covariance matrix type")
-    
+#     def __init__(self, K):
+#         self.LD = cholmod.cholesky(K)
+
+#     def solve(self, b):
+#         if sparse.issparse(b):
+#             b = b.toarray()
+#         return self.LD.solve_A(b)
+
+#     def logdet(self):
+#         return self.LD.logdet()
+#         #np.sum(np.log(LD.D()))
+
+#     def trace_solve_gradient(self, dK):
+#         # WTF?! numpy.multiply doesn't work for two sparse
+#         # matrices.. It returns a result but it is incorrect!
+
+#         # Use the identity trace(K\dK)=sum(inv(K).*dK) by computing
+#         # the sparse inverse (lower triangular part)
+#         iK = self.LD.spinv(form='lower')
+#         return (2*iK.multiply(dK).sum()
+#                 - iK.diagonal().dot(dK.diagonal()))
+#         # Multiply by two because of symmetry (remove diagonal once
+#         # because it was taken into account twice)
+#         #return np.multiply(self.LD.inv().todense(),dK.todense()).sum()
+#         #return self.LD.inv().multiply(dK).sum() # THIS WORKS
+#         #return np.multiply(self.LD.inv(),dK).sum() # THIS NOT WORK!! WTF??
+#         iK = self.LD.spinv()
+#         return iK.multiply(dK).sum()
+#         #return (2*iK.multiply(dK).sum()
+#         #        - iK.diagonal().dot(dK.diagonal()))
+#         #return (2*np.multiply(iK, dK).sum()
+#         #        - iK.diagonal().dot(dK.diagonal())) # THIS NOT WORK!!
+#         #return np.trace(self.solve(dK))
+
+
+# def cholesky(K):
+#     if isinstance(K, np.ndarray):
+#         return CholeskyDense(K)
+#     elif sparse.issparse(K):
+#         return CholeskySparse(K)
+#     else:
+#         raise Exception("Unsupported covariance matrix type")
+
 # Computes log probability density function of the Gaussian
 # distribution
 def gaussian_logpdf(y_invcov_y,
@@ -465,6 +594,11 @@ def is_numeric(a):
     return (np.isscalar(a) or
             isinstance(a, list) or
             isinstance(a, np.ndarray))
+
+def is_scalar_integer(x):
+    t = np.asanyarray(x).dtype.type
+    return np.ndim(x) == 0 and issubclass(t, np.integer)
+
 
 def isinteger(x):
     t = np.asanyarray(x).dtype.type
@@ -722,7 +856,7 @@ def moveaxis(A, axis_from, axis_to):
                          % (axis_from,
                             axis_to,
                             np.shape(A)))
-                            
+
     axes = np.arange(np.ndim(A))
     axes[axis_from:axis_to] += 1
     axes[axis_from:axis_to:-1] -= 1
@@ -808,20 +942,14 @@ def add_axes(X, num=1, axis=0):
     shape = np.shape(X)[:axis] + num*(1,) + np.shape(X)[axis:]
     return np.reshape(X, shape)
 
-    
+
 def add_leading_axes(x, n):
     return add_axes(x, axis=0, num=n)
-    
+
 
 def add_trailing_axes(x, n):
     return add_axes(x, axis=-1, num=n)
 
-
-## def add_axes(x, lead, trail):
-##     shape = (1,)*lead + np.shape(x) + (1,)*trail
-##     return np.reshape(x, shape)
-    
-    
 
 def nested_iterator(max_inds):
     s = [range(i) for i in max_inds]
@@ -848,7 +976,8 @@ def squeeze(X):
     else:
         shape = shape[inds[0]:]
     return np.reshape(X, shape)
-    
+
+
 def squeeze_to_dim(X, dim):
     s = tuple(range(np.ndim(X)-dim))
     return np.squeeze(X, axis=s)
@@ -892,7 +1021,7 @@ def sum_to_shape(X, s):
                 raise ValueError("Shape %s can't be summed to shape %s" %
                                  (np.shape(X), s))
     Y = np.sum(Y, axis=axes, keepdims=True)
-    
+
     return Y
 
 def repeat_to_shape(A, s):
@@ -912,115 +1041,6 @@ def repeat_to_shape(A, s):
                 A = np.repeat(A, s[i], axis=i)
     return A
 
-#def spinv_chol(L):
-    
-
-def chol(C):
-    if sparse.issparse(C):
-        # Sparse Cholesky decomposition (returns a Factor object)
-        return cholmod.cholesky(C)
-    else:
-        # Dense Cholesky decomposition
-        return linalg.cho_factor(C)[0]
-
-def chol_solve(U, b):
-    if isinstance(U, np.ndarray):
-        if sparse.issparse(b):
-            b = b.toarray()
-        return linalg.cho_solve((U, False), b)
-    elif isinstance(U, cholmod.Factor):
-        if sparse.issparse(b):
-            b = b.toarray()
-        return U.solve_A(b)
-    else:
-        raise ValueError("Unknown type of Cholesky factor")
-
-def chol_inv(U):
-    if isinstance(U, np.ndarray):
-        I = np.identity(np.shape(U)[-1])
-        return linalg.cho_solve((U, False), I)
-    elif isinstance(U, cholmod.Factor):
-        raise NotImplementedError
-        ## if sparse.issparse(b):
-        ##     b = b.toarray()
-        ## return U.solve_A(b)
-    else:
-        raise ValueError("Unknown type of Cholesky factor")
-
-def chol_logdet(U):
-    if isinstance(U, np.ndarray):
-        return 2*np.sum(np.log(np.diag(U)))
-    elif isinstance(U, cholmod.Factor):
-        return np.sum(np.log(U.D()))
-    else:
-        raise ValueError("Unknown type of Cholesky factor")
-    
-def logdet_chol(U):
-    if isinstance(U, np.ndarray):
-        return 2*np.sum(np.log(np.diag(U)))
-    elif isinstance(U, cholmod.Factor):
-        return np.sum(np.log(U.D()))
-
-def m_solve_triangular(U, B, **kwargs):
-    # Allocate memory
-    U = np.atleast_2d(U)
-    B = np.atleast_1d(B)
-    sh_u = U.shape[:-2]
-    sh_b = B.shape[:-1]
-    l_u = len(sh_u)
-    l_b = len(sh_b)
-
-    # Check which axis are iterated over with B along with U
-    ind_b = [Ellipsis] * l_b
-    l_min = min(l_u, l_b)
-    jnd_b = tuple(i for i in range(-l_min,0) if sh_b[i]==sh_u[i])
-
-    # Shape of the result (broadcasting rules)
-    sh = broadcasted_shape(sh_u, sh_b)
-    #out = np.zeros(np.shape(B))
-    out = np.zeros(sh + B.shape[-1:])
-    ## if out == None:
-    ##     # Shape of the result (broadcasting rules)
-    ##     sh = broadcasted_shape(sh_u, sh_b)
-    ##     #out = np.zeros(np.shape(B))
-    ##     out = np.zeros(sh + B.shape[-1:])
-    for i in nested_iterator(np.shape(U)[:-2]):
-
-        # The goal is to run triangular solver once for all vectors of
-        # B for which the matrices of U are the same (according to the
-        # broadcasting rules). Thus, we collect all the axes of B for
-        # which U is singleton and form them as a 2-D matrix and then
-        # run the solver once.
-        
-        # Select those axes of B for which U and B are not singleton
-        for j in jnd_b:
-            ind_b[j] = i[j]
-            
-        # Collect all the axes for which U is singleton
-        b = B[tuple(ind_b) + (Ellipsis,)]
-
-        # Reshape it to a 2-D (or 1-D) array
-        orig_shape = b.shape
-        if b.ndim > 1:
-            b = b.reshape((-1, b.shape[-1]))
-
-        # Ellipsis to all preceeding axes and ellipsis for the last
-        # axis:
-        if len(ind_b) < len(sh):
-            ind_out = (Ellipsis,) + tuple(ind_b) + (Ellipsis,)
-        else:
-            ind_out = tuple(ind_b) + (Ellipsis,)
-
-        #print('utils.m_solve_triangular', np.shape(U[i]), np.shape(b))
-        out[ind_out] = linalg.solve_triangular(U[i],
-                                               b.T,
-                                               **kwargs).T.reshape(orig_shape)
-        #out[ind_out] = out[ind_out].T.reshape(orig_shape)
-
-        
-    return out
-
-
 def multidigamma(a, d):
     """
     Returns the derivative of the log of multivariate gamma.
@@ -1030,28 +1050,75 @@ def multidigamma(a, d):
 
 m_digamma = multidigamma
 
-def m_outer(A,B):
-    # Computes outer product over the last axes of A and B. The other
-    # axes are broadcasted. Thus, if A has shape (..., N) and B has
-    # shape (..., M), then the result has shape (..., N, M)
-    A = np.asanyarray(A)
-    B = np.asanyarray(B)
-    return A[...,np.newaxis]*B[...,np.newaxis,:]
 
 def diagonal(A):
     return np.diagonal(A, axis1=-2, axis2=-1)
 
-def get_diag(X, ndim=1):
+
+def make_diag(X, ndim=1, ndim_from=0):
+    """
+    Create a diagonal array given the diagonal elements.
+
+    The diagonal array can be multi-dimensional. By default, the last axis is
+    transformed to two axes (diagonal matrix) but this can be changed using ndim
+    keyword. For instance, an array with shape (K,L,M,N) can be transformed to a
+    set of diagonal 4-D tensors with shape (K,L,M,N,M,N) by giving ndim=2. If
+    ndim=3, the result has shape (K,L,M,N,L,M,N), and so on.
+
+    Diagonality means that for the resulting array Y holds:
+    Y[...,i_1,i_2,..,i_ndim,j_1,j_2,..,j_ndim] is zero if i_n!=j_n for any n.
+    """
+    if ndim < 0:
+        raise ValueError("Parameter ndim must be non-negative integer")
+
+    if ndim_from < 0:
+        raise ValueError("Parameter ndim_to must be non-negative integer")
+
+    if ndim_from > ndim:
+        raise ValueError("Parameter ndim_to must not be greater than ndim")
+
+    if ndim == 0:
+        return X
+
+    if np.ndim(X) < 2 * ndim_from:
+        raise ValueError("The array does not have enough axes")
+
+    if ndim_from > 0:
+        if np.shape(X)[-ndim_from:] != np.shape(X)[-2*ndim_from:-ndim_from]:
+            raise ValueError("The array X is not square")
+
+    if ndim == ndim_from:
+        return X
+
+    X = atleast_nd(X, ndim+ndim_from)
+
+    if ndim > 0:
+        if ndim_from > 0:
+            I = identity(*(np.shape(X)[-(ndim_from+ndim):-ndim_from]))
+        else:
+            I = identity(*(np.shape(X)[-ndim:]))
+        X = add_axes(X, axis=np.ndim(X)-ndim_from, num=ndim-ndim_from)
+        X = I * X
+    return X
+
+
+def get_diag(X, ndim=1, ndim_to=0):
     """
     Get the diagonal of an array.
 
     If ndim>1, take the diagonal of the last 2*ndim axes.
     """
-    if ndim == 0:
-        return X
-
     if ndim < 0:
         raise ValueError("Parameter ndim must be non-negative integer")
+
+    if ndim_to < 0:
+        raise ValueError("Parameter ndim_to must be non-negative integer")
+
+    if ndim_to > ndim:
+        raise ValueError("Parameter ndim_to must not be greater than ndim")
+
+    if ndim == 0:
+        return X
 
     if np.ndim(X) < 2*ndim:
         raise ValueError("The array does not have enough axes")
@@ -1059,10 +1126,27 @@ def get_diag(X, ndim=1):
     if np.shape(X)[-ndim:] != np.shape(X)[-2*ndim:-ndim]:
         raise ValueError("The array X is not square")
 
-    axes_out = tuple(range(np.ndim(X)-ndim, 0, -1))
-    axes_dim = tuple(range(ndim, 0, -1))
-    return np.einsum(X, axes_out+axes_dim, axes_out)
-    
+    if ndim == ndim_to:
+        return X
+
+    n_plate_axes = np.ndim(X) - 2 * ndim
+    n_diag_axes = ndim - ndim_to
+
+    axes = tuple(range(0, np.ndim(X) - ndim + ndim_to))
+
+    lengths = [0, n_plate_axes, n_diag_axes, ndim_to, ndim_to]
+    cutpoints = list(np.cumsum(lengths))
+
+    axes_plates = axes[cutpoints[0]:cutpoints[1]]
+    axes_diag= axes[cutpoints[1]:cutpoints[2]]
+    axes_dims1 = axes[cutpoints[2]:cutpoints[3]]
+    axes_dims2 = axes[cutpoints[3]:cutpoints[4]]
+
+    axes_input = axes_plates + axes_diag + axes_dims1 + axes_diag + axes_dims2
+    axes_output = axes_plates + axes_diag + axes_dims1 + axes_dims2
+
+    return np.einsum(X, axes_input, axes_output)
+
 
 def diag(X, ndim=1):
     """
@@ -1159,144 +1243,8 @@ def block_banded(D, B):
     A[k:,k:] = D[-1]
 
     return A
-    
 
 
-def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
-    """
-    Perform Kalman filtering to obtain filtered mean and covariance.
-    
-    The parameters of the process may vary in time, thus they are
-    given as iterators instead of fixed values.
-
-    Parameters
-    ----------
-    y : (N,D) array
-        "Normalized" noisy observations of the states, that is, the
-        observations multiplied by the precision matrix U (and possibly
-        other transformation matrices).
-    U : (N,D,D) array or N-list of (D,D) arrays
-        Precision matrix (i.e., inverse covariance matrix) of the observation 
-        noise for each time instance.
-    A : (N-1,D,D) array or (N-1)-list of (D,D) arrays
-        Dynamic matrix for each time instance.
-    V : (N-1,D,D) array or (N-1)-list of (D,D) arrays
-        Covariance matrix of the innovation noise for each time instance.
-
-    Returns
-    -------
-    mu : array
-        Filtered mean of the states.
-    Cov : array
-        Filtered covariance of the states.
-
-    See also
-    --------
-    rts_smoother
-    """
-    mu = mu0
-    Cov = Cov0
-
-    # Allocate memory for the results
-    (N,D) = np.shape(y)
-    X = np.empty((N,D))
-    CovX = np.empty((N,D,D))
-    
-    # Update step for t=0
-    M = np.dot(np.dot(Cov, U[0]), Cov) + Cov
-    L = chol(M)
-    mu = np.dot(Cov, chol_solve(L, np.dot(Cov,y[0]) + mu))
-    Cov = np.dot(Cov, chol_solve(L, Cov))
-    X[0,:] = mu
-    CovX[0,:,:] = Cov
-    
-    #for (yn, Un, An, Vn) in zip(y, U, A, V):
-    for n in range(len(y)-1): #(yn, Un, An, Vn) in zip(y, U, A, V):
-        # Prediction step
-        mu = np.dot(A[n], mu)
-        Cov = np.dot(np.dot(A[n], Cov), A[n].T) + V[n]
-        # Update step
-        M = np.dot(np.dot(Cov, U[n+1]), Cov) + Cov
-        L = chol(M)
-        mu = np.dot(Cov, chol_solve(L, np.dot(Cov,y[n+1]) + mu))
-        Cov = np.dot(Cov, chol_solve(L, Cov))
-
-        # Force symmetric covariance (for numeric inaccuracy)
-        Cov = 0.5*Cov + 0.5*Cov.T
-
-        # Store results
-        X[n+1,:] = mu
-        CovX[n+1,:,:] = Cov
-
-    return (X, CovX)
-
-
-def rts_smoother(mu, Cov, A, V, removethis=None):
-    """
-    Perform Rauch-Tung-Striebel smoothing to obtain the posterior.
-
-    The function returns the posterior mean and covariance of each
-    state. The parameters of the process may vary in time, thus they
-    are given as iterators instead of fixed values.
-
-    Parameters
-    ----------
-    mu : (N,D) array
-        Mean of the states from Kalman filter.
-    Cov : (N,D,D) array
-        Covariance of the states from Kalman filter. 
-    A : (N-1,D,D) array or (N-1)-list of (D,D) arrays
-        Dynamic matrix for each time instance.
-    V : (N-1,D,D) array or (N-1)-list of (D,D) arrays
-        Covariance matrix of the innovation noise for each time instance.
-
-    Returns
-    -------
-    mu : array
-        Posterior mean of the states.
-    Cov : array
-        Posterior covariance of the states.
-
-    See also
-    --------
-    kalman_filter
-    """
-
-    N = len(mu)
-    #n = N-1
-
-    # Start from the last time instance and smoothen backwards
-    x = mu[-1,:]
-    Covx = Cov[-1,:,:]
-    
-    for n in reversed(range(N-1)):#(An, Vn) in zip(reversed(A), reversed(V)):
-
-        #n = n - 1
-        #if n <= 0:
-        #    break
-
-        # The predicted value of n
-        x_p = np.dot(A[n], mu[n,:])
-        Cov_p = np.dot(np.dot(A[n], Cov[n,:,:]), A[n].T) + V[n]
-
-        # Temporary variable
-        S = np.linalg.solve(Cov_p, np.dot(A[n], Cov[n,:,:]))
-
-        # Smoothed value of n
-        x = mu[n,:] + np.dot(S.T, x-x_p)
-        Covx = Cov[n,:,:] + np.dot(np.dot(S.T, Covx-Cov_p), S)
-
-        # Force symmetric covariance (for numeric inaccuracy)
-        Covx = 0.5*Covx + 0.5*Covx.T
-
-        # Store results
-        mu[n,:] = x
-        Cov[n,:] = Covx
-
-
-    return (mu, Cov)
-        
-    
 def dist_haversine(c1, c2, radius=6372795):
 
     # Convert coordinates to radians
@@ -1335,6 +1283,22 @@ def logsumexp(X, axis=None, keepdims=False):
     return np.log(np.sum(np.exp(X), axis=axis, keepdims=keepdims)) + maxX
 
 
+def normalized_exp(phi):
+    """Compute exp(phi) so that exp(phi) sums to one.
+
+    This is useful for computing probabilities from log evidence.
+    """
+    logsum_p = logsumexp(phi, axis=-1, keepdims=True)
+    logp = phi - logsum_p
+    p = np.exp(logp)
+    # Because of small numerical inaccuracy, normalize the probabilities
+    # again for more accurate results
+    return (
+        p / np.sum(p, axis=-1, keepdims=True),
+        logsum_p
+    )
+
+
 def invpsi(x):
     r"""
     Inverse digamma (psi) function.
@@ -1342,16 +1306,35 @@ def invpsi(x):
     The digamma function is the derivative of the log gamma function.
     This calculates the value Y > 0 for a value X such that digamma(Y) = X.
 
-    See: http://www4.ncsu.edu/~pfackler/
+    For the new version, see Appendix C:
+    http://research.microsoft.com/en-us/um/people/minka/papers/dirichlet/minka-dirichlet.pdf
+
+    For the previous implementation, see:
+    http://www4.ncsu.edu/~pfackler/
+
+    Are there speed/accuracy differences between the methods?
     """
-    L = 1.0
-    y = np.exp(x)
-    while (L > 1e-10):
-        y += L*np.sign(x-special.psi(y))
-        L /= 2
-    # Ad hoc by Jaakko
-    y[x<-10] = -1/x[x<-10]
+    x = np.asanyarray(x)
+
+    y = np.where(
+        x >= -2.22,
+        np.exp(x) + 0.5,
+        -1/(x - special.psi(1))
+    )
+    for i in range(5):
+        y = y - (special.psi(y) - x) / special.polygamma(1, y)
+
     return y
+
+    # # Previous implementation. Is it worse? Is there difference?
+    # L = 1.0
+    # y = np.exp(x)
+    # while (L > 1e-10):
+    #     y += L*np.sign(x-special.psi(y))
+    #     L /= 2
+    # # Ad hoc by Jaakko
+    # y = np.where(x < -100, -1 / x, y)
+    # return y
 
 
 def invgamma(x):
@@ -1382,3 +1365,92 @@ def mean(X, axis=None, keepdims=False):
     m = (np.sum(X, axis=axis, keepdims=keepdims) / 
          np.sum(~nans, axis=axis, keepdims=keepdims))
     return m
+
+
+def gradient(f, x, epsilon=1e-6):
+    return optimize.approx_fprime(x, f, epsilon)
+
+
+def broadcast(*arrays, ignore_axis=None):
+    """
+    Explicitly broadcast arrays to same shapes.
+
+    It is possible ignore some axes so that the arrays are not broadcasted
+    along those axes.
+    """
+
+    shapes = [np.shape(array) for array in arrays]
+
+    if ignore_axis is None:
+        full_shape = broadcasted_shape(*shapes)
+
+    else:
+        try:
+            ignore_axis = tuple(ignore_axis)
+        except TypeError:
+            ignore_axis = (ignore_axis,)
+
+        if len(ignore_axis) != len(set(ignore_axis)):
+            raise ValueError("Indices must be unique")
+
+        if any(i >= 0 for i in ignore_axis):
+            raise ValueError("Indices must be negative")
+
+        # Put lengths of ignored axes to 1
+        cut_shapes = [
+            tuple(
+                1
+                if i in ignore_axis else
+                shape[i]
+                for i in range(-len(shape), 0)
+            )
+            for shape in shapes
+        ]
+
+        full_shape = broadcasted_shape(*cut_shapes)
+
+    return [np.ones(full_shape) * array for array in arrays]
+
+
+def block_diag(*arrays):
+    """
+    Form a block diagonal array from the given arrays.
+
+    Compared to SciPy's block_diag, this utilizes broadcasting and accepts more
+    than dimensions in the input arrays.
+
+    """
+
+    arrays = broadcast(*arrays, ignore_axis=(-1, -2))
+
+    plates = np.shape(arrays[0])[:-2]
+
+    M = sum(np.shape(array)[-2] for array in arrays)
+    N = sum(np.shape(array)[-1] for array in arrays)
+
+    Y = np.zeros(plates + (M, N))
+
+    i_start = 0
+    j_start = 0
+    for array in arrays:
+        i_end = i_start + np.shape(array)[-2]
+        j_end = j_start + np.shape(array)[-1]
+        Y[...,i_start:i_end,j_start:j_end] = array
+        i_start = i_end
+        j_start = j_end
+
+    return Y
+
+
+def concatenate(*arrays, axis=-1):
+    """
+    Concatenate arrays along a given axis.
+
+    Compared to NumPy's concatenate, this utilizes broadcasting.
+    """
+
+    # numpy.concatenate doesn't do broadcasting, so we need to do it explicitly
+    return np.concatenate(
+        broadcast(*arrays, ignore_axis=axis),
+        axis=axis
+    )

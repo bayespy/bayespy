@@ -23,13 +23,12 @@ class Deterministic(Node):
     2. One of the following options:
        a) Simple methods:
           _compute_message_to_parent(self, index, m, *u)
-          not? _compute_mask_to_parent(self, index, mask)
        b) More control with:
           _compute_message_and_mask_to_parent(self, index, m, *u)
 
     Sub-classes may need to re-implement:
     1. If they manipulate plates:
-       _compute_mask_to_parent(index, mask)
+       _compute_weights_to_parent(index, mask)
        _compute_plates_to_parent(self, index, plates)
        _compute_plates_from_parent(self, index, plates)
     
@@ -67,12 +66,17 @@ class Deterministic(Node):
     def _compute_message_and_mask_to_parent(self, index, m_children, *u_parents):
         # The following methods should be implemented by sub-classes.
         m = self._compute_message_to_parent(index, m_children, *u_parents)
-        mask = self._compute_mask_to_parent(index, self.mask)
+        mask = self._compute_weights_to_parent(index, self.mask) != 0
         return (m, mask)
 
-    def _get_message_and_mask_to_parent(self, index):
+    def _get_message_and_mask_to_parent(self, index, u_parent=None):
         u_parents = self._message_from_parents(exclude=index)
-        m_children = self._message_from_children()
+        u_parents[index] = u_parent
+        if u_parent is not None:
+            u_self = self._compute_moments(*u_parents)
+        else:
+            u_self = None
+        m_children = self._message_from_children(u_self=u_self)
         return self._compute_message_and_mask_to_parent(index,
                                                         m_children,
                                                         *u_parents)
@@ -186,17 +190,20 @@ def tile(X, tiles):
         def _compute_plates_from_parent(self, index, plates):
             return tuple(misc.multiply_shapes(plates, tiles))
 
-        def _compute_mask_to_parent(self, index, mask):
+
+        def _compute_weights_to_parent(self, index, weights):
             # Idea: Reshape the message array such that every other axis
             # will be summed and every other kept.
 
             # Make plates equal length
             plates = self._plates_to_parent(index)
-            shape_m = np.shape(mask)
-            (plates, tiles_m, shape_m) = misc.make_equal_length(plates, 
-                                                                tiles,
-                                                                shape_m)
-            
+            shape_m = np.shape(weights)
+            (plates, tiles_m, shape_m) = misc.make_equal_length(
+                plates,
+                tiles,
+                shape_m
+            )
+
             # Handle broadcasting rules for axes that have unit length in
             # the message (although the plate may be non-unit length). Also,
             # compute the corresponding broadcasting_multiplier.
@@ -206,24 +213,24 @@ def tile(X, tiles):
                 if shape_m[j] == 1:
                     plates[j] = 1
                     tiles_m[j] = 1
-                    
+
             # Combine the tuples by picking every other from tiles_ind and
             # every other from shape
             shape = functools.reduce(lambda x,y: x+y,
                                      zip(tiles_m, plates))
             # ..and reshape the array, that is, every other axis corresponds
             # to tiles and every other to plates/dimensions in parents
-            mask = np.reshape(mask, shape)
+            weights = np.reshape(weights, shape)
 
             # Sum over every other axis
             axes = tuple(range(0,len(shape),2))
-            mask = np.any(mask, axis=axes)
+            weights = np.sum(weights, axis=axes)
 
             # Remove extra leading axes
             ndim_parent = len(self.parents[index].plates)
-            mask = misc.squeeze_to_dim(mask, ndim_parent)
+            weights = misc.squeeze_to_dim(weights, ndim_parent)
 
-            return mask
+            return weights
 
 
         def _compute_message_to_parent(self, index, m, u_X):

@@ -36,8 +36,7 @@ for Gaussian nodes):
 .. autosummary::
    :toctree: generated/
 
-   GaussianGammaISO
-   GaussianGammaARD
+   GaussianGamma
    GaussianWishart
 
 Nodes for discrete count variables:
@@ -76,7 +75,13 @@ Other stochastic nodes:
 
    Mixture
 
+Point-estimation nodes:
 
+.. autosummary::
+
+   MaximumLikelihood
+   Concentration
+   GammaShape
 
 Deterministic nodes
 ===================
@@ -86,7 +91,12 @@ Deterministic nodes
 
    Dot
    SumMultiply
+   Add
    Gate
+   Take
+   Function
+   ConcatGaussian
+   Choose
 """
 
 # Currently, model construction and the inference network are not separated so

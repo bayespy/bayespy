@@ -67,7 +67,7 @@ class DeltaToAny(Deterministic):
             raise ValueError("Invalid parent index")
 
 
-    def _compute_mask_to_parent(self, index, mask):
+    def _compute_weights_to_parent(self, index, weights):
         r"""
         """
         raise NotImplementedError()

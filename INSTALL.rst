@@ -48,7 +48,7 @@ instead:
 
 .. code-block:: console
 
-    pip install https://github.com/bayespy/bayespy/archive/master.zip
+    pip install git+https://github.com/bayespy/bayespy.git@develop
 
 For developers
 ++++++++++++++

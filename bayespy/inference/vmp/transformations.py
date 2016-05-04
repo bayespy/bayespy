@@ -1122,8 +1122,14 @@ class RotateGaussianMarkovChain():
 
     TODO: Allow constant A or not rotating A.
 
+    .. math::
+
+       R x_n = R A R^{-1} R x_{n-1} + R B u_{n-1} + noise
+       \\\
+       R x_n = R [A, B] [R^{-1}, 0; 0, I] [R, 0; 0, I] [x_{n-1}; u_{n-1}]
+
     :math:`A` may vary in time.
-    
+
     Shape of A: (N,D,D)
     Shape of AA: (N,D,D,D)
 
@@ -1132,7 +1138,25 @@ class RotateGaussianMarkovChain():
 
     def __init__(self, X, *args):
         self.X_node = X
-        self.A_node = X.parents[2]
+
+        # FIXME: Currently, GaussianMarkovChain wraps initial state mean and
+        # precision into one node and dynamics plus innovation noise into
+        # another node. This transformation doesn't yet support GaussianGamma
+        # dynamics, so we'll do some ugly checking here:
+
+        # Dynamics node
+        from bayespy.inference.vmp.nodes.gaussian import (
+            WrapToGaussianGamma,
+            GaussianToGaussianGamma,
+            GaussianMoments,
+        )
+        dynamics_innovation  = X.parents[1]
+        assert(isinstance(dynamics_innovation, WrapToGaussianGamma))
+        dynamics_gaussiangamma = dynamics_innovation.parents[0]
+        assert(isinstance(dynamics_gaussiangamma, GaussianToGaussianGamma))
+        dynamics = dynamics_gaussiangamma.parents[0]
+        assert(isinstance(dynamics._moments, GaussianMoments))
+        self.A_node = dynamics
 
         if len(args) == 0:
             raise NotImplementedError()
@@ -1140,7 +1164,7 @@ class RotateGaussianMarkovChain():
             self.A_rotator = args[0]
         else:
             raise ValueError("Wrong number of arguments")
-        
+
         self.N = X.dims[0][0]
 
     def nodes(self):
@@ -1151,17 +1175,22 @@ class RotateGaussianMarkovChain():
             inv = np.linalg.inv(R)
         if logdet is None:
             logdet = np.linalg.slogdet(R)[1]
-            
+
         self.X_node.rotate(R, inv=inv, logdet=logdet)
-        self.A_rotator.rotate(inv.T, inv=R.T, logdet=-logdet, Q=R)
+
+        from scipy.linalg import block_diag
+        if len(self.X_node.parents) >= 3:
+            input_shape = self.X_node.parents[2].dims[0]
+            input_len = input_shape[-1]
+            I = np.identity(input_len)
+        else:
+            I = np.identity(0)
+        self.A_rotator.rotate(block_diag(inv.T, I), inv=block_diag(R.T, I), logdet=-logdet, Q=R)
+
 
     def _computations_for_A_and_X(self, XpXn, XpXp):
         # Get moments of the state dynamics matrix
         (A, AA) = self.A_node.get_moments()
-        # Ignore axes that correspond to input signals
-        D = np.shape(A)[-2]
-        A = A[...,:D]
-        AA = AA[...,:D,:D]
         # Make sure time axis is in the arrays
         A = misc.atleast_nd(A, 3)
         AA = misc.atleast_nd(AA, 4)
@@ -1203,24 +1232,38 @@ class RotateGaussianMarkovChain():
                                   (),
                                   ndim=1,
                                   plates_from=self.X_node.plates)
-        
+
         return (A_XpXn, A_XpXp_A, CovA_XpXp)
 
     def setup(self):
         """
         This method should be called just before optimization.
         """
-        
+
         # Get moments of X
         (X, XnXn, XpXn) = self.X_node.get_moments()
 
         # TODO/FIXME: Sum to plates of A/CovA
         XpXp = XnXn[...,:-1,:,:]
 
+        # Add input signals
+        if len(self.X_node.parents) >= 3:
+            (U, UU) = self.X_node.parents[2].get_moments()
+            UXn = linalg.outer(U, X[...,1:,:])
+            UXp = linalg.outer(U, X[...,:-1,:])
+            XpXn = np.concatenate([XpXn, UXn], axis=-2)
+            XpXp = np.concatenate(
+                [
+                    np.concatenate([XpXp, linalg.transpose(UXp)], axis=-1),
+                    np.concatenate([UXp, UU], axis=-1)
+                ],
+                axis=-2
+            )
+
         #
         # Expectations with respect to X
         #
-        
+
         self.X0 = X[...,0,:]
         self.X0X0 = XnXn[...,0,:,:]
         #self.XnXn = np.sum(XnXn[...,1:,:,:], axis=-3)
@@ -1230,12 +1273,10 @@ class RotateGaussianMarkovChain():
                                   ndim=2)
 
         # Get moments of the fixed parameter nodes
-        mu = self.X_node.parents[0].get_moments()[0]
-        self.Lambda = self.X_node.parents[1].get_moments()[0]
-        self.Lambda_mu_X0 = linalg.outer(np.einsum('...ik,...k->...i',
-                                                   self.Lambda,
-                                                   mu),
-                                         self.X0)
+        Lambda_mu = self.X_node.parents[0].get_moments()[0]
+        self.Lambda = self.X_node.parents[0].get_moments()[2]
+        #self.Lambda = self.X_node.parents[1].get_moments()[0]
+        self.Lambda_mu_X0 = linalg.outer(Lambda_mu, self.X0)
         self.Lambda_mu_X0 = sum_to_plates(self.Lambda_mu_X0,
                                           (),
                                           plates_from=self.X_node.plates,
@@ -1245,11 +1286,10 @@ class RotateGaussianMarkovChain():
         # Prepare the rotation for A
         #
 
-        (self.A_XpXn, 
-         self.A_XpXp_A, 
+        (self.A_XpXn,
+         self.A_XpXp_A,
          self.CovA_XpXp) = self._computations_for_A_and_X(XpXn, XpXp)
 
-        
         self.A_rotator.setup(plate_axis=-1)
 
         # Innovation noise is assumed to be I
@@ -1356,10 +1396,22 @@ class RotateGaussianMarkovChain():
                                                    gradient=True)
         
         # Compute cost and gradient from A
-        (bound_A, dR_bound_A, dQ_bound_A) = self.A_rotator.bound(inv.T, 
-                                                                 inv=R.T,
+
+        # Handle possible input signals
+        from scipy.linalg import block_diag
+        if len(self.X_node.parents) >= 3:
+            input_shape = self.X_node.parents[2].dims[0]
+            input_len = input_shape[-1]
+            I = np.identity(input_len)
+        else:
+            I = np.identity(0)
+        (bound_A, dR_bound_A, dQ_bound_A) = self.A_rotator.bound(block_diag(inv.T, I),
+                                                                 inv=block_diag(R.T, I),
                                                                  logdet=-logdet,
                                                                  Q=R)
+        # Ignore input signals gradients
+        D = self.X_node.dims[0][-1]
+        dR_bound_A = dR_bound_A[...,:D,:D]
         dR_bound_A = -dot(inv.T, dR_bound_A.T, inv.T)
 
         # Compute the bound
@@ -1374,12 +1426,20 @@ class RotateGaussianMarkovChain():
             inv = np.linalg.inv(R)
         if logdet is None:
             logdet = np.linalg.slogdet(R)[1]
-            
-        terms_A = self.A_rotator.get_bound_terms(inv.T, 
-                                                 inv=R.T,
+
+        # Handle possible input signals
+        from scipy.linalg import block_diag
+        if len(self.X_node.parents) >= 3:
+            input_shape = self.X_node.parents[2].dims[0]
+            input_len = input_shape[-1]
+            I = np.identity(input_len)
+        else:
+            I = np.identity(0)
+        terms_A = self.A_rotator.get_bound_terms(block_diag(inv.T, I),
+                                                 inv=block_diag(R.T, I),
                                                  logdet=-logdet,
                                                  Q=R)
-        
+
         terms_X = self._compute_bound(R,
                                       logdet=logdet,
                                       inv=inv,
@@ -1575,7 +1635,7 @@ class RotateSwitchingMarkovChain(RotateGaussianMarkovChain):
 class RotateMultiple():
     r"""
     Identical parameter expansion for several nodes simultaneously
-    
+
     Performs the same rotation for multiple nodes and combines the cost
     effect.
     """
@@ -1584,9 +1644,10 @@ class RotateMultiple():
         self.rotators = rotators
 
     def nodes(self):
-        return [node
-                for node in rotator.nodes()
-                for rotator in self.rotators]
+        nodes = []
+        for rotator in self.rotators:
+            nodes += rotator.nodes()
+        return nodes
 
     def rotate(self, R, inv=None, logdet=None):
         for rotator in self.rotators:
@@ -1595,11 +1656,11 @@ class RotateMultiple():
     def setup(self):
         for rotator in self.rotators:
             rotator.setup()
-    
+
     def bound(self, R, logdet=None, inv=None):
         bound = 0
         dbound = 0
-        
+
         for rotator in self.rotators:
             (b, db) = rotator.bound(R, logdet=logdet, inv=inv)
             bound = bound + b
@@ -1607,7 +1668,8 @@ class RotateMultiple():
 
         return (bound, dbound)
 
-    def get_bound_terms(self, R, logdet=None, inv=None):
-        return {node: terms 
-                for (node, terms) in rotator.items()
-                for rotator in self.rotators}
+    def get_bound_terms(self, *args, **kwargs):
+        d = dict()
+        for rotator in self.rotators:
+            d.update(rotator.get_bound_terms(*args, **kwargs))
+        return d
