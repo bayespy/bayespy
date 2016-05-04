@@ -57,6 +57,7 @@ import scipy
 from scipy import special
 import matplotlib.pyplot as plt
 from matplotlib import animation
+from matplotlib import colors
 #from matplotlib.pyplot import *
 
 from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
@@ -1239,7 +1240,7 @@ def contourplot(x1, x2, y, colorbar=False, filled=True, axes=None):
         
 
 def errorplot(y=None, error=None, x=None, lower=None, upper=None,
-              color=(0,0,0,1), fillcolor=(0,0,0,0.4), axes=None, **kwargs):
+              color=(0,0,0,1), fillcolor=None, axes=None, **kwargs):
 
     if axes is None:
         axes = plt.gca()
@@ -1264,6 +1265,9 @@ def errorplot(y=None, error=None, x=None, lower=None, upper=None,
     if (lower is not None) and (upper is not None):
         l = y - lower
         u = y + upper
+        if fillcolor is None:
+            color = colors.ColorConverter().to_rgba(color)
+            fillcolor = tuple(color[:3]) + (0.2 * color[3],)
         axes.fill_between(x,
                           l,
                           u,
