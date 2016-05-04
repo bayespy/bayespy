@@ -1,26 +1,34 @@
 Dev
 +++
 
-* Implement Take, MultiMixture, ConcatGaussian, GaussianWishart, GaussianGamma,
-  Choose and Concentration nodes
+Added
+.....
+
+* Implement the following new nodes:
+
+  - Take
+  - MultiMixture
+  - ConcatGaussian
+  - GaussianWishart
+  - GaussianGamma
+  - Choose
+  - Concentration
+  - MaximumLikelihood
+  - Function
+
+* Add preliminary support for maximum likelihood estimation (implemented only
+  for Wishart moments now)
+
+* Support multiplying Wishart variable by a gamma variable (scale method in
+  Wishart class)
 
 * Support GaussianWishart and GaussianGamma in GaussianMarkovChain
 
-* Simplify GaussianARD mean parent handling
-
 * Support 1-p operation (complement) for beta variables
-
-* Support ndim in many linalg functions and Gaussian-related nodes
 
 * Implement random sampling for Multinomial node
 
-* Fix an axis mapping bug in Mixture (#39)
-
-* Fix Dirichlet node parent validation
-
-* Fix VB iteration when no data given
-
-* Fix axis label support in Hinton plots
+* Support ndim in many linalg functions and Gaussian-related nodes
 
 * Add conjugate gradient support for Multinomial and Mixture
 
@@ -30,11 +38,27 @@ Dev
 
 * Add some examples as Jupyter notebooks
 
-* Fix recursive node deletion
+Changed
+.......
+
+* Simplify GaussianARD mean parent handling
 
 * Move documentation to Read the Docs
 
-* Lots of other minor bug fixes, enhancements and refactorizations
+Fixed
+.....
+
+* Fix an axis mapping bug in Mixture (#39)
+
+* Fix NaN issue in Mixture with deterministic mappings (#66)
+
+* Fix Dirichlet node parent validation
+
+* Fix VB iteration when no data given (#67)
+
+* Fix axis label support in Hinton plots (#64)
+
+* Fix recursive node deletion
 
 Version 0.4.1 (2015-11-02)
 ++++++++++++++++++++++++++
