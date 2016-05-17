@@ -1,3 +1,14 @@
+Version 0.5.1 (2016-05-17)
+++++++++++++++++++++++++++
+
+Fixed
+.....
+
+* Accept lists as number of multinomial trials
+
+* Fix typo in handling concentration regularization shape
+
+
 Version 0.5.0 (2016-05-04)
 ++++++++++++++++++++++++++
 
