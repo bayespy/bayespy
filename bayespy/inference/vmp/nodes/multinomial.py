@@ -71,6 +71,7 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
 
         `trials` is the total number of trials.
         """
+        trials = np.asanyarray(trials)
         if not misc.isinteger(trials):
             raise ValueError("Number of trials must be integer")
         if np.any(trials < 0):

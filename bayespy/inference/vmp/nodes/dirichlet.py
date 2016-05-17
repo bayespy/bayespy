@@ -273,9 +273,9 @@ class Concentration(Stochastic):
     def regularization(self, regularization):
         if len(regularization) != 2:
             raise ValueError("Regularization must 2-tuple")
-        if not misc.is_shape_subset(np.shape(regularization[0], self.get_shape(0))):
+        if not misc.is_shape_subset(np.shape(regularization[0]), self.get_shape(0)):
             raise ValueError("Wrong shape")
-        if not misc.is_shape_subset(np.shape(regularization[1], self.get_shape(1))):
+        if not misc.is_shape_subset(np.shape(regularization[1]), self.get_shape(1)):
             raise ValueError("Wrong shape")
         self.__regularization = regularization
         return
