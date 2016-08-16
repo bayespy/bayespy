@@ -176,13 +176,15 @@ class GaussianGammaMoments(Moments):
         super().__init__()
 
 
-    def compute_fixed_moments(self, x, alpha):
+    def compute_fixed_moments(self, x_alpha):
         r"""
         Compute the moments for a fixed value
 
         `x` is a mean vector.
         `alpha` is a precision scale
         """
+
+        (x, alpha) = x_alpha
 
         x = np.asanyarray(x)
         alpha = np.asanyarray(alpha)
@@ -1525,7 +1527,7 @@ class GaussianARD(_GaussianTemplate):
         mu = mu * np.ones(np.shape(alpha))
         alpha = alpha * np.ones(np.shape(mu))
         # Compute parent moments
-        u = self._parent_moments[0].compute_fixed_moments(mu, alpha)
+        u = self._parent_moments[0].compute_fixed_moments([mu, alpha])
         # Initialize distribution
         self._initialize_from_parent_moments(u)
 
