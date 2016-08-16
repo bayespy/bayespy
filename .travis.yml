@@ -14,7 +14,7 @@ matrix:
   include:
     - python: 3.3
       env:
-        - PYTHONVERSION==3.3.0
+        - PYTHONVERSION==3.3
         - NUMPYVERSION==1.8.0
         - SCIPYVERSION==0.13.0
         - MATPLOTLIBVERSION==1.3.0  # matplotlib 1.2.0 fails unit tests
