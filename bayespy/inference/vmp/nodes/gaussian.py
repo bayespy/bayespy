@@ -901,8 +901,9 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
     """
 
 
-    def __init__(self, ndim):
-        self.ndim = ndim
+    def __init__(self, shape):
+        self.shape = shape
+        self.ndim = len(shape)
         super().__init__()
 
 
@@ -1677,7 +1678,7 @@ class GaussianGamma(ExponentialFamily):
 
         shape = mu_Lambda.dims[0]
 
-        distribution = GaussianGammaDistribution(ndim)
+        distribution = GaussianGammaDistribution(shape)
 
         moments = GaussianGammaMoments(shape)
         parent_moments = (
@@ -2040,14 +2041,15 @@ class GaussianWishart(ExponentialFamily):
         `V` is the scale matrix
         """
 
+        # Convert parent nodes
+        mu_alpha = WrapToGaussianGamma(mu, alpha, ndim=1)
+        D = mu_alpha.dims[0][0]
+        shape = mu_alpha._moments.shape
+
         moments = GaussianWishartMoments(shape)
 
-        # Convert parent nodes
-        mu_alpha = WrapToGaussianGamma(mu, alpha)
-        D = mu_alpha.dims[0][0]
-
-        n = cls._ensure_moments(n, WishartPriorMoments)
-        V = cls._ensure_moments(V, WishartMoments)
+        n = cls._ensure_moments(n, WishartPriorMoments, d=D)
+        V = cls._ensure_moments(V, WishartMoments, ndim=1)
 
         parent_moments = (
             mu_alpha._moments,
