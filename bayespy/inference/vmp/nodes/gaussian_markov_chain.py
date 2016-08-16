@@ -629,8 +629,8 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             )
             # Sum over time axis
             if np.ndim(g_inputs) == 0 or np.shape(g_inputs)[-1] == 1:
-                g_inputs *= self.N
-            else:
+                g_inputs *= self.N - 1
+            if np.ndim(g_inputs) > 0:
                 g_inputs = np.sum(g_inputs, axis=-1)
             g = g + g_inputs
 
