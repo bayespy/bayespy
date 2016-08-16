@@ -1088,11 +1088,24 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
 
-    def random(self, *params, plates=None):
+    def random(self, *phi, plates=None):
         r"""
         Draw a random sample from the distribution.
         """
-        raise NotImplementedError()
+        # TODO/FIXME: This is incorrect, I think. Gamma distribution parameters
+        # aren't directly those, because phi has some parts from the Gaussian
+        # distribution.
+        alpha = GammaDistribution().random(
+            phi[2],
+            phi[3],
+            plates=plates
+        )
+        mu = GaussianDistribution(self.shape).random(
+            misc.add_trailing_axes(alpha, self.ndim) * phi[0],
+            misc.add_trailing_axes(alpha, 2*self.ndim) * phi[1],
+            plates=plates
+        )
+        return (mu, alpha)
 
 
 class GaussianWishartDistribution(ExponentialFamilyDistribution):
