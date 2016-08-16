@@ -1,3 +1,22 @@
+Version DEV
++++++++++++
+
+Added
+-----
+
+* Add a node method to obtain the VB lower bound terms that contain the node
+
+Fixed
+-----
+
+* Handle empty CLI argument lists in CLI argument parsing
+
+* Fix handling of the two variables (Gaussian and Gamma) in GaussianGamma
+  methods
+
+* Fix minor bugs, including CGF in GaussianMarkovChain with inputs
+
+
 Version 0.5.1 (2016-05-17)
 ++++++++++++++++++++++++++
 
