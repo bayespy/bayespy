@@ -122,6 +122,14 @@ class Stochastic(Node):
             self.initialize_from_prior()
 
 
+    def get_pdf_nodes(self):
+        return (self,) + super().get_pdf_nodes()
+
+
+    def _get_pdf_nodes_conditioned_on_parents(self):
+        return (self,)
+
+
     def _get_id_list(self):
         """
         Returns the stochastic ID list.
