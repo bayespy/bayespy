@@ -1228,7 +1228,7 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
         raise NotImplementedError()
         return (u, f)
 
-    
+
     def random(self, *params, plates=None):
         r"""
         Draw a random sample from the distribution.
@@ -2336,7 +2336,7 @@ class WrapToGaussianWishart(Deterministic):
         try:
             # Try combo Gaussian-Gamma and Wishart
             X = self._ensure_moments(X, GaussianGammaMoments, ndim=ndim)
-        except ValueError:
+        except Moments.NoConverterError:
             # Have to use Gaussian-Wishart and Gamma
             X = self._ensure_moments(X, GaussianWishartMoments, ndim=ndim)
             Lambda = self._ensure_moments(Lambda, GammaMoments, ndim=ndim)
