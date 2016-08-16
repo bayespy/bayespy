@@ -177,7 +177,7 @@ def parse_command_line_arguments(mandatory_args, *optional_args_list, argv=None)
     # Sizes of each optional argument list
     optional_args_lengths = [len(opt_args) for opt_args in optional_args_list]
 
-    all_args = mandatory_args + functools.reduce(operator.add, optional_args_list)
+    all_args = mandatory_args + functools.reduce(operator.add, optional_args_list, [])
 
     # Create a list of arg names for the getopt parser
     arg_list = []
