@@ -10,3 +10,5 @@ recursive-include doc/source *.rst
 recursive-include doc/source *.py
 include doc/Makefile
 #include doc/make.bat
+include versioneer.py
+include bayespy/_version.py
