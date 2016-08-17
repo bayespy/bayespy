@@ -61,8 +61,8 @@ install:
 
 # Select a proper matplotlib backend
 before_script:
-  - echo "backend : Agg" > matplotlibrc
-  - echo "backend : Agg" > doc/matplotlibrc
+  - "echo backend : Agg > matplotlibrc"
+  - "echo backend : Agg > doc/matplotlibrc"
 
 # Run unit tests for the code, docstrings and documentation
 script:
