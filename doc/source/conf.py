@@ -12,11 +12,8 @@
 # serve to show the default.
 
 import sys, os
-import bayespy._meta as meta
 
 ON_RTD = os.environ.get('READTHEDOCS') == 'True'
-
-# -- General configuration -----------------------------------------------------
 
 # Use some dummy modules on Read the Docs because they are not available
 # (requires some C libraries)
@@ -25,6 +22,10 @@ if ON_RTD:
     from unittest.mock import MagicMock
     MOCK_MODULES = ['h5py']
     sys.modules.update((mod_name, MagicMock()) for mod_name in MOCK_MODULES)
+
+# -- General configuration -----------------------------------------------------
+
+import bayespy._meta as meta
 
 # Use the 'Read the Docs' theme
 html_theme = 'sphinx_rtd_theme'
