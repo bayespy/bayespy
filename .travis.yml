@@ -55,6 +55,7 @@ install:
   - conda install -n test-environment --yes h5py
   - source activate test-environment
   - pip install coveralls
+  - pip install ipython
   - pip install -e .[dev,doc]
   - pip freeze
 
