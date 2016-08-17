@@ -302,6 +302,18 @@ class Node():
         self.plates_multiplier = plates_multiplier
 
 
+    def get_pdf_nodes(self):
+        return tuple(
+            node
+            for (child, _) in self.children
+            for node in child._get_pdf_nodes_conditioned_on_parents()
+        )
+
+
+    def _get_pdf_nodes_conditioned_on_parents(self):
+        return self.get_pdf_nodes()
+
+
     def _get_id_list(self):
         """
         Returns the stochastic ID list.

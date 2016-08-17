@@ -335,7 +335,7 @@ Now the iteration converges to the relative tolerance :math:`10^{-6}` much
 faster:
 
 >>> Q.update(repeat=1000, tol=1e-6)
-Iteration 1: loglike=-9.363500e+02 (... seconds)
+Iteration 1: loglike=-9.363...e+02 (... seconds)
 ...
 Iteration 18: loglike=-1.221354e+02 (... seconds)
 Converged at iteration 18.

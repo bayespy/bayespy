@@ -24,6 +24,7 @@ from .expfamily import (ExponentialFamily,
 from .wishart import (WishartMoments,
                       WishartPriorMoments)
 from .gamma import (GammaMoments,
+                    GammaDistribution,
                     GammaPriorMoments)
 from .deterministic import Deterministic
 
@@ -176,13 +177,15 @@ class GaussianGammaMoments(Moments):
         super().__init__()
 
 
-    def compute_fixed_moments(self, x, alpha):
+    def compute_fixed_moments(self, x_alpha):
         r"""
         Compute the moments for a fixed value
 
         `x` is a mean vector.
         `alpha` is a precision scale
         """
+
+        (x, alpha) = x_alpha
 
         x = np.asanyarray(x)
         alpha = np.asanyarray(alpha)
@@ -899,8 +902,9 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
     """
 
 
-    def __init__(self, ndim):
-        self.ndim = ndim
+    def __init__(self, shape):
+        self.shape = shape
+        self.ndim = len(shape)
         super().__init__()
 
 
@@ -1084,11 +1088,24 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
 
-    def random(self, *params, plates=None):
+    def random(self, *phi, plates=None):
         r"""
         Draw a random sample from the distribution.
         """
-        raise NotImplementedError()
+        # TODO/FIXME: This is incorrect, I think. Gamma distribution parameters
+        # aren't directly those, because phi has some parts from the Gaussian
+        # distribution.
+        alpha = GammaDistribution().random(
+            phi[2],
+            phi[3],
+            plates=plates
+        )
+        mu = GaussianDistribution(self.shape).random(
+            misc.add_trailing_axes(alpha, self.ndim) * phi[0],
+            misc.add_trailing_axes(alpha, 2*self.ndim) * phi[1],
+            plates=plates
+        )
+        return (mu, alpha)
 
 
 class GaussianWishartDistribution(ExponentialFamilyDistribution):
@@ -1096,14 +1113,82 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
     Class for the VMP formulas of Gaussian-Wishart variables.
 
     Currently, supports only vector variables.
+
+    .. math::
+
+       \log p(\mathbf{x}, \mathbf{\Lambda} | \boldsymbol{\mu},
+       \alpha, n, \mathbf{V})
+       =&
+       - \frac{1}{2} \alpha \mathbf{x}^T \mathbf{\Lambda} \mathbf{x}
+       + \frac{1}{2} \alpha \mathbf{x}^T \mathbf{\Lambda} \boldsymbol{\mu}
+       + \frac{1}{2} \alpha \boldsymbol{\mu}^T \mathbf{\Lambda} \mathbf{x}
+       - \frac{1}{2} \alpha \boldsymbol{\mu}^T \mathbf{\Lambda} \boldsymbol{\mu}
+       + \frac{1}{2} \log|\mathbf{\Lambda}|
+       + \frac{D}{2} \log\alpha
+       - \frac{D}{2} \log(2\pi)
+       \\ &
+       - \frac{1}{2} \mathrm{tr}(\mathbf{V}\mathbf{\Lambda})
+       + \frac{n-d-1}{2} \log|\mathbf{\Lambda}|
+       - \frac{nd}{2}\log 2
+       - \frac{n}{2} \log|\mathbf{V}|
+       - \log\Gamma_d(\frac{n}{2})
+
+    Posterior approximation:
+
+    .. math::
+
+       \log q(\mathbf{x}, \mathbf{\Lambda})
+       =&
+       \mathbf{x}^T \mathbf{\Lambda} \boldsymbol{\phi}_1
+       + \phi_2 \mathbf{x}^T \mathbf{\Lambda} \mathbf{x}
+       + \mathrm{tr}(\mathbf{\Lambda} \mathbf{\Phi}_3)
+       + \phi_4 \log|\mathbf{\Lambda}|
+       + g(\boldsymbol{\phi}_1, \phi_2, \mathbf{\Phi}_3, \phi_4)
+       + f(\mathbf{x}, \mathbf{\Lambda})
+
     """
 
 
-    def compute_message_to_parent(self, parent, index, u, u_mu_alpha, u_V, u_n):
+    def compute_message_to_parent(self, parent, index, u, u_mu_alpha, u_n, u_V):
         r"""
         Compute the message to a parent node.
+
+        For parent :math:`q(\boldsymbol{\mu}, \alpha)`:
+
+        .. math::
+
+           \alpha \boldsymbol{\mu}^T \mathbf{m}_1
+           \Rightarrow &
+           \mathbf{m}_1 = \langle \mathbf{\Lambda x} \rangle
+           \\
+           \alpha \boldsymbol{\mu}^T \mathbf{M}_2 \boldsymbol{\mu}
+           \Rightarrow &
+           \mathbf{M}_2 = - \frac{1}{2} \langle \mathbf{\Lambda} \rangle
+           \\
+           \alpha m_3
+           \Rightarrow &
+           m_3 = - \frac{1}{2} \langle \mathbf{x}^T \mathbf{\Lambda} \mathbf{x} \rangle
+           \\
+           m_4 \log \alpha
+           \Rightarrow &
+           m_4 = \frac{d}{2}
+
+        For parent :math:`q(\mathbf{V})`:
+
+        .. math::
+
+           \mathbf{M}_1 &= \frac{\partial \langle \log p \rangle}{\partial
+           \langle \mathbf{V} \rangle} = -\frac{1}{2} \langle \mathbf{\Lambda} \rangle
+           \\
+           \mathbf{M}_2 &= \frac{\partial \langle \log p \rangle}{\partial \langle \log|\mathbf{V}| \rangle}
+           = ...
+
         """
         if index == 0:
+            m0
+            m1
+            m2
+            m3
             raise NotImplementedError()
         elif index == 1:
             raise NotImplementedError()
@@ -1113,29 +1198,42 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
             raise ValueError("Index out of bounds")
 
 
-    def compute_phi_from_parents(self, u_mu_alpha, u_V, u_n, mask=True):
+    def compute_phi_from_parents(self, u_mu_alpha, u_n, u_V, mask=True):
         r"""
         Compute the natural parameter vector given parent moments.
         """
-        raise NotImplementedError()
+        alpha_mu = u_mu_alpha[0]
+        alpha_mumu = u_mu_alpha[1]
+        alpha = u_mu_alpha[2]
+        V = u_V[0]
+        n = u_n[0]
+
+        phi0 = alpha_mu
+        phi1 = -0.5 * alpha
+        phi2 = -0.5 * (V + alpha_mumu)
+        phi3 = 0.5 * n
+        return [phi0, phi1, phi2, phi3]
 
 
     def compute_moments_and_cgf(self, phi, mask=True):
         r"""
         Compute the moments and :math:`g(\phi)`.
         """
+        # TODO/FIXME: This isn't probably correct. Phi[2:] has terms that are
+        # related to the Gaussian also, not only Wishart.
+        u_Lambda = WishartDistribution((D,)).compute_moments_and_cgf(phi[2:])
         raise NotImplementedError()
         return (u, g)
 
-    
-    def compute_cgf_from_parents(self, u_mu_alpha, u_V, u_n):
+
+    def compute_cgf_from_parents(self, u_mu_alpha, u_n, u_V):
         r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         raise NotImplementedError()
         return g
 
-    
+
     def compute_fixed_moments_and_f(self, x, Lambda, mask=True):
         r"""
         Compute the moments and :math:`f(x)` for a fixed value.
@@ -1143,7 +1241,7 @@ class GaussianWishartDistribution(ExponentialFamilyDistribution):
         raise NotImplementedError()
         return (u, f)
 
-    
+
     def random(self, *params, plates=None):
         r"""
         Draw a random sample from the distribution.
@@ -1525,7 +1623,7 @@ class GaussianARD(_GaussianTemplate):
         mu = mu * np.ones(np.shape(alpha))
         alpha = alpha * np.ones(np.shape(mu))
         # Compute parent moments
-        u = self._parent_moments[0].compute_fixed_moments(mu, alpha)
+        u = self._parent_moments[0].compute_fixed_moments([mu, alpha])
         # Initialize distribution
         self._initialize_from_parent_moments(u)
 
@@ -1675,7 +1773,7 @@ class GaussianGamma(ExponentialFamily):
 
         shape = mu_Lambda.dims[0]
 
-        distribution = GaussianGammaDistribution(ndim)
+        distribution = GaussianGammaDistribution(shape)
 
         moments = GaussianGammaMoments(shape)
         parent_moments = (
@@ -2038,14 +2136,15 @@ class GaussianWishart(ExponentialFamily):
         `V` is the scale matrix
         """
 
+        # Convert parent nodes
+        mu_alpha = WrapToGaussianGamma(mu, alpha, ndim=1)
+        D = mu_alpha.dims[0][0]
+        shape = mu_alpha._moments.shape
+
         moments = GaussianWishartMoments(shape)
 
-        # Convert parent nodes
-        mu_alpha = WrapToGaussianGamma(mu, alpha)
-        D = mu_alpha.dims[0][0]
-
-        n = cls._ensure_moments(n, WishartPriorMoments)
-        V = cls._ensure_moments(V, WishartMoments)
+        n = cls._ensure_moments(n, WishartPriorMoments, d=D)
+        V = cls._ensure_moments(V, WishartMoments, ndim=1)
 
         parent_moments = (
             mu_alpha._moments,
@@ -2250,7 +2349,7 @@ class WrapToGaussianWishart(Deterministic):
         try:
             # Try combo Gaussian-Gamma and Wishart
             X = self._ensure_moments(X, GaussianGammaMoments, ndim=ndim)
-        except ValueError:
+        except Moments.NoConverterError:
             # Have to use Gaussian-Wishart and Gamma
             X = self._ensure_moments(X, GaussianWishartMoments, ndim=ndim)
             Lambda = self._ensure_moments(Lambda, GammaMoments, ndim=ndim)

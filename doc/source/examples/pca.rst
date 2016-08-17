@@ -112,10 +112,10 @@ For more information about the rotation parameter expansion, see
 inference until convergence:
 
 >>> Q.update(repeat=1000)
-Iteration 1: loglike=-2.339710e+03 (... seconds)
+Iteration 1: loglike=-2.33...e+03 (... seconds)
 ...
-Iteration 22: loglike=6.500...e+02 (... seconds)
-Converged at iteration 2...
+Iteration ...: loglike=6.500...e+02 (... seconds)
+Converged at iteration ...
 
 
 
