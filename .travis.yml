@@ -70,6 +70,10 @@ script:
   - travis_wait 50 make doctest
   - cd ..
 
+# Run doctests only for recent enough NumPy.
+# - python -c "import sys; import numpy; from distutils.version import StrictVersion; sys.exit(StrictVersion(numpy.__version__) < StrictVersion('1.11'))"
+# - if [ $? -eq 0]; then travis_wait 50 make doctest; fi
+
 # if tests fail, upload images to imgur
 after_failure:
   - wget http://imgur.com/tools/imgurbash.sh

@@ -259,7 +259,7 @@ Set the parameter expansion to be applied after each iteration:
 Now, run iterations until convergence:
 
 >>> Q.update(repeat=1000)
-Iteration 11: loglike=-1.010806e+04 (... seconds)
+Iteration 11: loglike=-1.010...e+04 (... seconds)
 ...
 Iteration 58: loglike=-8.906...e+03 (... seconds)
 Converged at iteration ...
