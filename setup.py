@@ -7,16 +7,22 @@
 ################################################################################
 
 
+import os
 import versioneer
+
+
+meta = {}
+base_dir = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(base_dir, 'bayespy', '_meta.py')) as fp:
+    exec(fp.read(), meta)
 
 NAME         = 'bayespy'
 DESCRIPTION  = 'Variational Bayesian inference tools for Python'
-AUTHOR       = 'Jaakko Luttinen'
-AUTHOR_EMAIL = 'jaakko.luttinen@iki.fi'
+AUTHOR       = meta['__author__']
+AUTHOR_EMAIL = meta['__contact__']
 URL          = 'http://bayespy.org'
-LICENSE      = 'MIT'
 VERSION      = versioneer.get_version()
-COPYRIGHT    = '2011-2016, Jaakko Luttinen and contributors'
+COPYRIGHT    = meta['__copyright__']
 
 
 if __name__ == "__main__":
@@ -81,7 +87,6 @@ if __name__ == "__main__":
         author           = AUTHOR,
         author_email     = AUTHOR_EMAIL,
         description      = DESCRIPTION,
-        license          = LICENSE,
         url              = URL,
         long_description = read('README.rst'),
         cmdclass         = versioneer.get_cmdclass(),
@@ -100,7 +105,7 @@ if __name__ == "__main__":
             'Environment :: Console',
             'Intended Audience :: Developers',
             'Intended Audience :: Science/Research',
-            'License :: OSI Approved :: MIT License',
+            'License :: OSI Approved :: {0}'.format(meta['__license__']),
             'Operating System :: OS Independent',
             'Topic :: Scientific/Engineering',
             'Topic :: Scientific/Engineering :: Information Analysis'
