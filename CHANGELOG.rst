@@ -1,3 +1,14 @@
+Version 0.5.3 (2016-08-17)
+++++++++++++++++++++++++++
+
+Fixed
+-----
+
+* Fix package metadata handling
+
+* Fix Travis test errors
+
+
 Version 0.5.2 (2016-08-17)
 ++++++++++++++++++++++++++
 

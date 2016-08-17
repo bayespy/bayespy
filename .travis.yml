@@ -55,13 +55,15 @@ install:
   - conda install -n test-environment --yes h5py
   - source activate test-environment
   - pip install coveralls
+  - pip install ipython
   - pip install -e .[dev,doc]
   - pip freeze
 
 
 # Select a proper matplotlib backend
 before_script:
-  - "echo backend : Agg > matplotlibrc"
+  - mkdir -p ~/.config/matplotlib
+  - "echo backend : Agg > ~/.config/matplotlib/matplotlibrc"
 
 # Run unit tests for the code, docstrings and documentation
 script:
