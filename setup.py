@@ -7,14 +7,7 @@
 ################################################################################
 
 
-# Read version number __version__ from the file
-# See: https://packaging.python.org/en/latest/single_source_version/#single-sourcing-the-version
-import os
-version = {}
-base_dir = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(base_dir, 'bayespy', 'version.py')) as fp:
-    exec(fp.read(), version)
-__version__ = version['__version__']
+import versioneer
 
 NAME         = 'bayespy'
 DESCRIPTION  = 'Variational Bayesian inference tools for Python'
@@ -22,7 +15,7 @@ AUTHOR       = 'Jaakko Luttinen'
 AUTHOR_EMAIL = 'jaakko.luttinen@iki.fi'
 URL          = 'http://bayespy.org'
 LICENSE      = 'MIT'
-VERSION      = __version__
+VERSION      = versioneer.get_version()
 COPYRIGHT    = '2011-2016, Jaakko Luttinen and contributors'
 
 
@@ -91,6 +84,7 @@ if __name__ == "__main__":
         license          = LICENSE,
         url              = URL,
         long_description = read('README.rst'),
+        cmdclass         = versioneer.get_cmdclass(),
         keywords         = [
             'variational Bayes',
             'probabilistic programming',
