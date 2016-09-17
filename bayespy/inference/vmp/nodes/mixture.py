@@ -14,6 +14,8 @@ import numpy as np
 
 from bayespy.utils import misc
 
+from .node import Node
+
 from .expfamily import ExponentialFamily, \
                        ExponentialFamilyDistribution, \
                        useconstructor
@@ -143,6 +145,9 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             )
 
             # Weigh the elements in the message array
+            #
+            # TODO/FIXME: This may result in huge intermediate arrays. Need to
+            # use einsum!
             m = [mi * misc.add_trailing_axes(p, ndim)
                  #for (mi, ndim) in zip(m, self.ndims)]
                  for (mi, ndim) in zip(m, self.ndims_parents[index_for_parent])]
@@ -541,7 +546,8 @@ def MultiMixture(thetas, *mixture_args, **kwargs):
     The mixings are assumed to be separate, that is, inner mixings don't affect
     the parameters of outer mixings.
     """
-    thetas = list(thetas)
+    thetas = [theta if isinstance(theta, Node) else np.asanyarray(theta)
+              for theta in thetas]
     N = len(thetas)
     # Add trailing plate axes to thetas because you assume that each
     # mixed axis is separate from the others.
