@@ -480,6 +480,9 @@ def block_banded_solve(A, B, y):
     # TODO: This whole algorithm could be implemented as in-place operation.
     # Might be a nice feature (optional?)
 
+    # TODO/FIXME: chol_solve has quite a high overhead because it uses shape
+    # manipulations. Use some more raw method instead.
+
     x[...,0,:] = y[...,0,:]
     V[...,0,:,:] = chol(A[...,0,:,:])
     ldet = chol_logdet(V[...,0,:,:])
