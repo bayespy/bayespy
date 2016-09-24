@@ -574,85 +574,108 @@ class Node():
             raise ValueError("Parent index larger than the number of parents")
 
         # Compute the message and mask
-        (m, mask) = self._get_message_and_mask_to_parent(index, u_parent=u_parent)
-        mask = misc.squeeze(mask)
+        m = self._get_message_to_parent(index, u_parent=u_parent)
+        # (m, mask) = self._get_message_and_mask_to_parent(index, u_parent=u_parent)
+        # mask = misc.squeeze(mask)
 
-        # Plates in the mask
-        plates_mask = np.shape(mask)
-
-        # The parent we're sending the message to
         parent = self.parents[index]
-
-        # Plates with respect to the parent
-        plates_self = self._plates_to_parent(index)
 
         # Plate multiplier of the parent
         multiplier_parent = self._plates_multiplier_from_parent(index)
 
-        # Check if m is a logpdf function (for black-box variational inference)
-        if callable(m):
-            return m
+        try:
+            r = self.broadcasting_multiplier(
+                self.plates_multiplier,
+                multiplier_parent
+            )
+        except:
+            raise ValueError("The plate multipliers are incompatible. "
+                                "This node (%s) has %s and parent[%d] "
+                                "(%s) has %s"
+                                % (self.name,
+                                self.plates_multiplier,
+                                index,
+                                parent.name,
+                                multiplier_parent))
 
-            def m_function(*args):
-                lpdf = m(*args)
-                # Log pdf only contains plate axes!
-                plates_m = np.shape(lpdf)
-                r = (self.broadcasting_multiplier(plates_self,
-                                                  plates_m,
-                                                  plates_mask,
-                                                  parent.plates) *
-                     self.broadcasting_multiplier(self.plates_multiplier,
-                                                  multiplier_parent))
-                axes_msg = misc.axes_to_collapse(plates_m, parent.plates)
-                m[i] = misc.sum_multiply(mask_i, m[i], r,
-                                         axis=axes_msg,
-                                         keepdims=True)
+        return [r * mi for mi in m]
 
-                # Remove leading singular plates if the parent does not have
-                # those plate axes.
-                m[i] = misc.squeeze_to_dim(m[i], len(shape_parent))
+        # # # Plates in the mask
+        # # plates_mask = np.shape(mask)
 
-            return m_function
-            raise NotImplementedError()
+        # # The parent we're sending the message to
+        # parent = self.parents[index]
 
-        # Compact the message to a proper shape
-        for i in range(len(m)):
+        # # Plates with respect to the parent
+        # plates_self = self._plates_to_parent(index)
 
-            # Empty messages are given as None. We can ignore those.
-            if m[i] is not None:
+        # # Plate multiplier of the parent
+        # multiplier_parent = self._plates_multiplier_from_parent(index)
 
-                try:
-                    r = self.broadcasting_multiplier(self.plates_multiplier,
-                                                     multiplier_parent)
-                except:
-                    raise ValueError("The plate multipliers are incompatible. "
-                                     "This node (%s) has %s and parent[%d] "
-                                     "(%s) has %s"
-                                     % (self.name,
-                                        self.plates_multiplier,
-                                        index,
-                                        parent.name,
-                                        multiplier_parent))
+        # # Check if m is a logpdf function (for black-box variational inference)
+        # if callable(m):
+        #     return m
 
-                ndim = len(parent.dims[i])
-                # Source and target shapes
-                if ndim > 0:
-                    dims = misc.broadcasted_shape(np.shape(m[i])[-ndim:],
-                                                  parent.dims[i])
-                    from_shape = plates_self + dims
-                else:
-                    from_shape = plates_self
-                to_shape = parent.get_shape(i)
-                # Add variable axes to the mask
-                mask_i = misc.add_trailing_axes(mask, ndim)
-                # Apply mask and sum plate axes as necessary (and apply plate
-                # multiplier)
-                m[i] = r * misc.sum_multiply_to_plates(np.where(mask_i, m[i], 0),
-                                                       to_plates=to_shape,
-                                                       from_plates=from_shape,
-                                                       ndim=0)
+        #     def m_function(*args):
+        #         lpdf = m(*args)
+        #         # Log pdf only contains plate axes!
+        #         plates_m = np.shape(lpdf)
+        #         r = (self.broadcasting_multiplier(plates_self,
+        #                                           plates_m,
+        #                                           plates_mask,
+        #                                           parent.plates) *
+        #              self.broadcasting_multiplier(self.plates_multiplier,
+        #                                           multiplier_parent))
+        #         axes_msg = misc.axes_to_collapse(plates_m, parent.plates)
+        #         m[i] = misc.sum_multiply(mask_i, m[i], r,
+        #                                  axis=axes_msg,
+        #                                  keepdims=True)
 
-        return m
+        #         # Remove leading singular plates if the parent does not have
+        #         # those plate axes.
+        #         m[i] = misc.squeeze_to_dim(m[i], len(shape_parent))
+
+        #     return m_function
+        #     raise NotImplementedError()
+
+        # # Compact the message to a proper shape
+        # for i in range(len(m)):
+
+        #     # Empty messages are given as None. We can ignore those.
+        #     if m[i] is not None:
+
+        #         try:
+        #             r = self.broadcasting_multiplier(self.plates_multiplier,
+        #                                              multiplier_parent)
+        #         except:
+        #             raise ValueError("The plate multipliers are incompatible. "
+        #                              "This node (%s) has %s and parent[%d] "
+        #                              "(%s) has %s"
+        #                              % (self.name,
+        #                                 self.plates_multiplier,
+        #                                 index,
+        #                                 parent.name,
+        #                                 multiplier_parent))
+
+        #         ndim = len(parent.dims[i])
+        #         # Source and target shapes
+        #         if ndim > 0:
+        #             dims = misc.broadcasted_shape(np.shape(m[i])[-ndim:],
+        #                                           parent.dims[i])
+        #             from_shape = plates_self + dims
+        #         else:
+        #             from_shape = plates_self
+        #         to_shape = parent.get_shape(i)
+        #         # Add variable axes to the mask
+        #         mask_i = misc.add_trailing_axes(mask, ndim)
+        #         # Apply mask and sum plate axes as necessary (and apply plate
+        #         # multiplier)
+        #         m[i] = r * misc.sum_multiply_to_plates(np.where(mask_i, m[i], 0),
+        #                                                to_plates=to_shape,
+        #                                                from_plates=from_shape,
+        #                                                ndim=0)
+
+        # return m
 
     def _message_from_children(self, u_self=None):
         msg = [np.zeros(shape) for shape in self.dims]

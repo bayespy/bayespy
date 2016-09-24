@@ -80,12 +80,31 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         super().__init__()
 
 
-    def compute_message_to_parent(self, parent, index, u, u_p):
+    # def compute_message_to_parent(self, parent, index, u, u_p):
+    #     """
+    #     Compute the message to a parent node.
+    #     """
+    #     if index == 0:
+    #         return [ u[0].copy() ]
+    #     else:
+    #         raise ValueError("Index out of bounds")
+
+
+    def compute_gradient_to_parent(self, index, mask, from_plates, to_plates,
+                                   u, u_p):
         """
         Compute the message to a parent node.
         """
         if index == 0:
-            return [ u[0].copy() ]
+            return [
+                misc.sum_multiply_to_plates(
+                    u[0].copy(),
+                    mask[...,None],
+                    from_plates=from_plates,
+                    to_plates=to_plates,
+                    ndim=1
+                )
+            ]
         else:
             raise ValueError("Index out of bounds")
 

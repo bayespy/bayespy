@@ -110,14 +110,39 @@ class DirichletDistribution(ExponentialFamilyDistribution):
     """
 
 
-    def compute_message_to_parent(self, parent, index, u_self, u_alpha):
+    # def compute_message_to_parent(self, parent, index, u_self, u_alpha):
+    #     r"""
+    #     Compute the message to a parent node.
+    #     """
+    #     logp = u_self[0]
+    #     m0 = logp
+    #     m1 = 1
+    #     return [m0, m1]
+
+
+    def compute_gradient_to_parent(self, index, mask, from_plates, to_plates, u_self, u_alpha):
         r"""
         Compute the message to a parent node.
         """
         logp = u_self[0]
         m0 = logp
         m1 = 1
-        return [m0, m1]
+        return [
+            misc.sum_multiply_to_plates(
+                m0,
+                mask,
+                from_plates=from_plates,
+                to_plates=to_plates,
+                ndim=1
+            ),
+            misc.sum_multiply_to_plates(
+                m1,
+                mask,
+                from_plates=from_plates,
+                to_plates=to_plates,
+                ndim=0
+            )
+        ]
 
 
     def compute_phi_from_parents(self, u_alpha, mask=True):

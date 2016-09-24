@@ -165,15 +165,24 @@ class Stochastic(Node):
         # node but instead create a copy of the list. 
         return [ui for ui in self.u]
 
-    def _get_message_and_mask_to_parent(self, index, u_parent=None):
+    def _get_message_to_parent(self, index, u_parent=None):
         u_parents = self._message_from_parents(exclude=index)
         u_parents[index] = u_parent
-        m = self._distribution.compute_message_to_parent(self.parents[index], 
-                                                         index, 
-                                                         self.u, 
-                                                         *u_parents)
-        mask = self._distribution.compute_weights_to_parent(index, self.mask) != 0
-        return (m, mask)
+        #mask = self._distribution.compute_weights_to_parent(index, self.mask) != 0
+        return self._distribution.compute_gradient_to_parent(
+            index,
+            self.mask,
+            self.plates,
+            #self._plates_to_parent(index),
+            self.parents[index].plates,
+            self.u,
+            *u_parents
+        )
+        # m = self._distribution.compute_message_to_parent(self.parents[index],
+        #                                                  index,
+        #                                                  self.u,
+        #                                                  *u_parents)
+        # return (m, mask)
 
     def _set_mask(self, mask):
         self.mask = np.logical_or(mask, self.observed)

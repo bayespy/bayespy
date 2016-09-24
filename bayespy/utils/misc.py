@@ -842,6 +842,19 @@ def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
                             sumaxis=True,
                             keepdims=keepdims)
 
+
+def insert(l, index, value):
+    l = list(l).copy()
+    if index < 0:
+        index = (len(l) + 1) + index
+        if index < 0:
+            # Cut negative values to zero so that non-integers remain
+            # non-integers
+            index = index + abs(round(index))
+    l.insert(index, value)
+    return l
+
+
 def moveaxis(A, axis_from, axis_to):
     """
     Move the axis `axis_from` to position `axis_to`. 

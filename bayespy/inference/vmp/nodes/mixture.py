@@ -41,7 +41,8 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         self.K = n_clusters
 
 
-    def compute_message_to_parent(self, parent, index, u, *u_parents):
+    def compute_gradient_to_parent(self, index, mask, from_plates, to_plates,
+                                   u, *u_parents):
         """
         Compute the message to a parent node.
         """
@@ -100,15 +101,25 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             # Hmm.. I think the message passing method will do
             # that automatically
 
-            m = [L]
+            return [
+                misc.sum_multiply_to_plates(
+                    mask[...,None],
+                    L,
+                    to_plates=to_plates,
+                    from_plates=from_plates,
+                    ndim=1
+                )
+            ]
+
+            #m = [L]
 
             return m
 
         elif index >= 1:
 
-            # Parent index for the distribution used for the
-            # mixture.
-            index_for_parent = index - 1
+            # # Parent index for the distribution used for the
+            # # mixture.
+            # index_for_parent = index - 1
 
             # Reshape u:
             # Shape(u)      = [Nn,..1,..,N0,Dd,..,D0]
@@ -120,39 +131,64 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                     raise ValueError("Cluster plate axis must be negative")
                 u_self.append(np.expand_dims(u[ind], axis=cluster_axis))
 
+            # mask shape:   (plates)
+            # Z shape:      (plates, cluster_dim)
+            # parent shape: (plates, cluster_plate, dims)
+            # E.g.,
+            # mask: (1000, 2000)
+            # Z:    (1000,    1, 3000)
+            # par:  (   1, 2000, 3000, 4000)
+            # Thus:
+            # sum-multiply Z and parent, then apply mask?
+            # sum(mask * sum_cluster(p * pdf(u_self, u_parents))
+            #mask * p
+
             # Message from the mixed distribution
-            m = self.distribution.compute_message_to_parent(parent,
-                                                            index_for_parent,
-                                                            u_self,
-                                                            *(u_parents[1:]))
-
-            # Note: The cluster assignment probabilities can be considered as
-            # weights to plate elements. These weights need to mapped properly
-            # via the plate mapping of self.distribution. Otherwise, nested
-            # mixtures won't work, or possibly not any distribution that does
-            # something to the plates. Thus, use compute_weights_to_parent to
-            # compute the transformations to the weight array properly.
-            #
-            # See issue #39 for more details.
-
-            # Compute weights (i.e., cluster assignment probabilities) and map
-            # the plates properly.
-            p = misc.atleast_nd(u_parents[0][0], abs(self.cluster_plate))
-            p = misc.moveaxis(p, -1, self.cluster_plate)
-            p = self.distribution.compute_weights_to_parent(
-                index_for_parent,
-                p,
+            p = u_parents[0][0]
+            return self.distribution.compute_gradient_to_parent(
+                index - 1,
+                misc.moveaxis(mask[...,None] * p, -1, self.cluster_plate),
+                misc.insert(from_plates, self.cluster_plate, self.K),
+                to_plates,
+                u_self,
+                *u_parents[1:]
             )
+            # # m = self.distribution.compute_message_to_parent(parent,
+            # #                                                 index_for_parent,
+            # #                                                 u_self,
+            # #                                                 *(u_parents[1:]))
 
-            # Weigh the elements in the message array
-            #
-            # TODO/FIXME: This may result in huge intermediate arrays. Need to
-            # use einsum!
-            m = [mi * misc.add_trailing_axes(p, ndim)
-                 #for (mi, ndim) in zip(m, self.ndims)]
-                 for (mi, ndim) in zip(m, self.ndims_parents[index_for_parent])]
+            # # Note: The cluster assignment probabilities can be considered as
+            # # weights to plate elements. These weights need to mapped properly
+            # # via the plate mapping of self.distribution. Otherwise, nested
+            # # mixtures won't work, or possibly not any distribution that does
+            # # something to the plates. Thus, use compute_weights_to_parent to
+            # # compute the transformations to the weight array properly.
+            # #
+            # # See issue #39 for more details.
 
-            return m
+            # # Compute weights (i.e., cluster assignment probabilities) and map
+            # # the plates properly.
+            # p = misc.atleast_nd(u_parents[0][0], abs(self.cluster_plate))
+            # p = misc.moveaxis(p, -1, self.cluster_plate)
+            # p = self.distribution.compute_weights_to_parent(
+            #     index_for_parent,
+            #     p,
+            # )
+
+            # # Weigh the elements in the message array
+            # #
+            # # TODO/FIXME: This may result in huge intermediate arrays. Need to
+            # # use einsum!
+            # m = [
+            #     misc.sum_multiply_to_plates(
+            #     )
+            #     for (mi, ndim) in zip(m, self.ndims_parents[index_for_parent])
+            # ]
+            # m = [mi * misc.add_trailing_axes(p, ndim)
+            #      for (mi, ndim) in zip(m, self.ndims_parents[index_for_parent])]
+
+            # return m
 
 
     def compute_weights_to_parent(self, index, weights):
@@ -221,7 +257,9 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             # Handle zero probability cases. This avoids nans when p=0 and
             # phi=inf.
-            phi[ind] = np.where(p != 0, phi[ind], 0)
+            def clip_to_finite(x):
+                return np.clip(x, np.nan_to_num(-np.inf), np.nan_to_num(np.inf))
+            phi[ind] = clip_to_finite(phi[ind]) #np.where(p != 0, phi[ind], 0)
 
             # Now the shapes broadcast perfectly and we can sum
             # p*phi over the last axis:
