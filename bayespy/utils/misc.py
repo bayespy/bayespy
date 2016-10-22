@@ -600,8 +600,51 @@ def is_scalar_integer(x):
     return np.ndim(x) == 0 and issubclass(t, np.integer)
 
 
+def is_sparse(x):
+    return sparse.issparse(x)
+
+
+def change_sparse_data(x, y):
+    z = x.copy()
+    z.data = y
+    return z
+
+
+def asarray(x):
+    """ NumPy `asanyarray` function with sparse matrix support """
+    return (
+        x if is_sparse(x) else
+        np.asanyarray(x)
+    )
+
+
+def any(x):
+    """ NumPy `any` function with sparse matrix support """
+    return (
+        np.any(x.data) if is_sparse(x) else
+        np.any(x)
+    )
+
+
+def gammaln_add1(x):
+    """ Compute gammaln(x+1) with sparse matrix support """
+    z = (
+        x.data if is_sparse(x) else
+        x
+    )
+    y = special.gammaln(z + 1)
+    return (
+        change_sparse_data(x, y) if is_sparse(x) else
+        y
+    )
+
+
 def isinteger(x):
-    t = np.asanyarray(x).dtype.type
+    try:
+        # Not using asanyarray keeps sparse matrix support
+        t = x.dtype.type
+    except AttributeError:
+        t = np.asanyarray(x).dtype.type
     return ( issubclass(t, np.integer) or issubclass(t, np.bool_) )
 
 
@@ -749,7 +792,34 @@ def sum_multiply_to_plates(*arrays, to_plates=(), from_plates=None, ndim=0):
     return r * y
 
 
+def _sum_sparse(x, axis, keepdims):
+    y = np.asarray(np.sum(x, axis=axis))
+    return (
+        y if keepdims else
+        np.squeeze(y, axis=axis)
+    )
+
+
+def sum(x, axis=None, keepdims=False):
+    return (
+        _sum_sparse(x, axis, keepdims) if is_sparse(x) else
+        np.sum(x, axis=axis, keepdims=keepdims)
+    )
+
+
 def sum_multiply(*args, axis=None, sumaxis=True, keepdims=False):
+
+    args_sparse = [is_sparse(x) for x in args]
+
+    if any(args_sparse):
+        i = args_sparse.index(True)
+        xs = list(args)
+        y = xs.pop(i)
+        for xj in xs:
+            y = y.multiply(xj)
+        if not sumaxis:
+            raise NotImplementedError()
+        return _sum_sparse(y, axis=axis, keepdims=keepdims)
 
     # Computes sum(arg[0]*arg[1]*arg[2]*..., axis=axes_to_sum) without
     # explicitly computing the intermediate product
