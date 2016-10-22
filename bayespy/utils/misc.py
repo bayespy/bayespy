@@ -9,6 +9,7 @@
 General numerical functions and methods.
 
 """
+from scipy.optimize import approx_fprime
 import functools
 import itertools
 import operator
@@ -340,6 +341,94 @@ class TestCase(unittest.TestCase):
     def assertMessageToChild(self, X, u):
         self.assertMessage(X._message_to_child(), u)
         pass
+
+
+    def _get_pack_functions(self, plates, dims):
+
+        inds = np.concatenate(
+            [
+                [0],
+                np.cumsum(
+                    [
+                        np.prod(dimi) * np.prod(plates)
+                        for dimi in dims
+                    ]
+                )
+            ]
+        ).astype(np.int)
+
+        def pack(x):
+            return [
+                np.reshape(x[start:end], plates + dimi)
+                for (start, end, dimi) in zip(inds[:-1], inds[1:], dims)
+            ]
+
+        def unpack(u):
+            return np.concatenate(
+                [
+                    np.broadcast_to(ui, plates + dimi).ravel()
+                    for (ui, dimi) in zip(u, dims)
+                ]
+            )
+
+        return (pack, unpack)
+
+
+    def assert_message_to_parent(self, child, parent, postprocess=lambda u: u,
+                                 eps=1e-6, rtol=1e-4, atol=0):
+
+        (pack, unpack) = self._get_pack_functions(parent.plates, parent.dims)
+
+        def cost(x):
+            parent.u = pack(x)
+            return child.lower_bound_contribution()
+
+        d = unpack(postprocess(parent._message_from_children()))
+
+        d_num = unpack(postprocess(pack(approx_fprime(
+            unpack(parent.u),
+            cost,
+            eps
+        ))))
+
+        # for (i, j) in zip(postprocess(pack(d)), postprocess(pack(d_num))):
+        #     print(i)
+        #     print(j)
+
+        self.assertAllClose(d, d_num, rtol=rtol, atol=atol)
+
+
+    def assert_moments(self, node, postprocess=lambda u: u, eps=1e-6,
+                       rtol=1e-4, atol=0):
+
+        (u, g) = node._distribution.compute_moments_and_cgf(node.phi)
+
+        (pack, unpack) = self._get_pack_functions(node.plates, node.dims)
+
+        def cost(x):
+            (_, g) = node._distribution.compute_moments_and_cgf(pack(x))
+            return -np.sum(g)
+
+        u_num = approx_fprime(
+            unpack(node.phi),
+            cost,
+            eps
+        )
+
+        # for (i, j) in zip(postprocess(u), postprocess(pack(u_num))):
+        #     print(i)
+        #     print(j)
+
+        self.assertAllClose(
+            unpack(postprocess(u)),
+            unpack(postprocess(pack(u_num))),
+            rtol=rtol,
+            atol=atol
+        )
+
+        pass
+
+
 
 def symm(X):
     """

@@ -502,7 +502,27 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
         #     m1 = 0.5
         elif index == 2: # input signals
-            raise NotImplementedError()
+
+            # (..., N-1, D)
+            Xn = u[0][...,1:,:]
+            # (..., N-1, D)
+            Xp = u[0][...,:-1,:]
+            # (..., N-1, D, K)
+            B = u_A_nu[0][...,D:]
+            # (..., N-1, D, D, K)
+            AB = u_A_nu[1][...,:D,D:]
+            # (..., N-1, D, K, K)
+            BB = u_A_nu[1][...,D:,D:]
+
+            # (..., N-1, K)
+            m0 = (
+                np.einsum('...dk,...d->...k', B, Xn) -
+                np.einsum('...dk,...d->...k', np.sum(AB, axis=-3), Xp)
+            )
+            # (..., N-1, K, K)
+            m1 = -0.5 * np.sum(BB, axis=-3)
+
+            return [m0, m1]
 
         raise IndexError("Parent index out of bounds")
 
