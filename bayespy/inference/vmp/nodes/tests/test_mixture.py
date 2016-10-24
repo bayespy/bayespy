@@ -12,6 +12,7 @@ Unit tests for mixture module.
 import warnings
 
 import numpy as np
+from scipy import sparse
 
 from bayespy.nodes import (GaussianARD,
                            Gamma,
@@ -25,6 +26,7 @@ from bayespy.nodes import (GaussianARD,
 
 from bayespy.utils import random
 from bayespy.utils import linalg
+from bayespy.utils import misc
 
 from bayespy.utils.misc import TestCase
 
@@ -369,3 +371,29 @@ class TestMixture(TestCase):
 
         pass
 
+
+    def test_sparse_support(self):
+
+        D = 7
+        N = 10
+        K = 3
+
+        Z = Categorical(np.ones((N,K))/K, plates=(N,))
+        p = Dirichlet(np.ones((K,D)), plates=(K,))
+        Y = Mixture(Z, Multinomial, 5, p)
+
+        y = sparse.coo_matrix(
+            Multinomial(
+                5,
+                Dirichlet(1e-2*np.ones(D), plates=(N,)).random()
+            )
+            .random()
+        )#.toarray()
+        Y.observe(y)
+
+        #assert(misc.is_sparse(Y.get_moments()[0]))
+
+        self.assert_message_to_parent(Y, Z)
+        self.assert_message_to_parent(Y, p)
+
+        pass

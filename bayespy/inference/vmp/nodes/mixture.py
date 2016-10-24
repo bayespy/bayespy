@@ -49,53 +49,84 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
         if index == 0:
 
+            N = len(from_plates)
+
             # Shape(phi)    = [Nn,..,K,..,N0,Dd,..,D0]
             # Shape(L)      = [Nn,..,K,..,N0]
             # Shape(u)      = [Nn,..,N0,Dd,..,D0]
             # Shape(result) = [Nn,..,N0,K]
 
-            # Compute g:
-            # Shape(g)      = [Nn,..,K,..,N0]
-            g = self.distribution.compute_cgf_from_parents(*(u_parents[1:]))
+            # Compute and reshape g:
+            # Shape(g)      = [K,Nn,..,N0]
+            g = misc.moveaxis(
+                misc.atleast_nd(
+                    self.distribution.compute_cgf_from_parents(
+                        *u_parents[1:]
+                    ),
+                    N + 1
+                ),
+                self.cluster_plate,
+                0
+            )
             # Reshape(g):
-            # Shape(g)      = [Nn,..,N0,K]
-            if np.ndim(g) < abs(self.cluster_plate):
-                # Not enough axes, just add the cluster plate axis
-                g = np.expand_dims(g, -1)
-            else:
-                # Move the cluster plate axis
-                g = misc.moveaxis(g, self.cluster_plate, -1)
+            # Shape(g)      = [K,Nn,..,N0]
+            # if np.ndim(g) < abs(self.cluster_plate):
+            #     # Not enough axes, just add the cluster plate axis
+            #     g = np.expand_dims(g, -1)
+            # else:
+            #     # Move the cluster plate axis
+            #     g = misc.moveaxis(g, self.cluster_plate, -1)
 
-            # Compute phi:
-            # Shape(phi)    = [Nn,..,K,..,N0,Dd,..,D0]
-            phi = self.distribution.compute_phi_from_parents(*(u_parents[1:]))
-            # Move phi axis:
-            # Shape(phi)    = [Nn,..,N0,K,Dd,..,D0]
-            for ind in range(len(phi)):
-                if self.cluster_plate < 0:
-                    axis_from = self.cluster_plate-self.ndims[ind]
-                else:
-                    raise RuntimeError("Cluster plate axis must be negative")
-                axis_to = -1-self.ndims[ind]
-                if np.ndim(phi[ind]) >= abs(axis_from):
-                    # Cluster plate axis exists, move it to the correct position
-                    phi[ind] = misc.moveaxis(phi[ind], axis_from, axis_to)
-                else:
-                    # No cluster plate axis, just add a new axis to the correct
-                    # position, if phi has something on that axis
-                    if np.ndim(phi[ind]) >= abs(axis_to):
-                        phi[ind] = np.expand_dims(phi[ind], axis=axis_to)
+            # Compute and reshape phi:
+            # Shape(phi)    = [K,Nn,..,N0,Dd,..,D0]
+            phi = [
+                misc.moveaxis(
+                    misc.atleast_nd(phi_i, N + 1 + ndim_i),
+                    self.cluster_plate - ndim_i,
+                    0
+                )
+                for (phi_i, ndim_i) in zip(
+                        self.distribution.compute_phi_from_parents(
+                            *u_parents[1:]
+                        ),
+                        self.ndims
+                )
+            ]
+
+            # # Move phi axis:
+            # # Shape(phi)    = [Nn,..,N0,K,Dd,..,D0]
+            # for ind in range(len(phi)):
+            #     if self.cluster_plate < 0:
+            #         axis_from = self.cluster_plate-self.ndims[ind]
+            #     else:
+            #         raise RuntimeError("Cluster plate axis must be negative")
+            #     axis_to = -1-self.ndims[ind]
+            #     if np.ndim(phi[ind]) >= abs(axis_from):
+            #         # Cluster plate axis exists, move it to the correct position
+            #         phi[ind] = misc.moveaxis(phi[ind], axis_from, axis_to)
+            #     else:
+            #         # No cluster plate axis, just add a new axis to the correct
+            #         # position, if phi has something on that axis
+            #         if np.ndim(phi[ind]) >= abs(axis_to):
+            #             phi[ind] = np.expand_dims(phi[ind], axis=axis_to)
 
             # Reshape u:
             # Shape(u)      = [Nn,..,N0,1,Dd,..,D0]
-            u_self = list()
-            for ind in range(len(u)):
-                u_self.append(np.expand_dims(u[ind],
-                                             axis=(-1-self.ndims[ind])))
+            # u_self = list()
+            # for ind in range(len(u)):
+            #     u_self.append(np.expand_dims(u[ind],
+            #                                  axis=(-1-self.ndims[ind])))
+            #
+            # EDIT:
+            # Do not reshape u so sparse u can be supported
+            # Shape(u)      = [Nn,..,N0,Dd,..,D0]
+            # u_self = u
 
             # Compute logpdf:
-            # Shape(L)      = [Nn,..,N0,K]
-            L = self.distribution.compute_logpdf(u_self, phi, g, 0, self.ndims)
+            # Shape(L)      = [K,Nn,..,N0]
+            L = self.distribution.compute_logpdf(u, phi, g, 0, self.ndims)
+            ## Shape(L)      = [Nn,..,N0,K]
+            #L = self.distribution.compute_logpdf(u_self, phi, g, 0, self.ndims)
 
             # Sum over other than the cluster dimensions? No!
             # Hmm.. I think the message passing method will do
@@ -104,16 +135,12 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             return [
                 misc.sum_multiply_to_plates(
                     mask[...,None],
-                    L,
+                    misc.moveaxis(L, 0, -1),
                     to_plates=to_plates,
                     from_plates=from_plates,
                     ndim=1
                 )
             ]
-
-            #m = [L]
-
-            return m
 
         elif index >= 1:
 

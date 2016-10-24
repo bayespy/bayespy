@@ -705,7 +705,7 @@ class Node():
                             try:
                                 # Try exploiting broadcasting rules
                                 msg[i] += m[i]
-                            except ValueError:
+                            except (ValueError, TypeError):
                                 msg[i] = msg[i] + m[i]
 
         return msg

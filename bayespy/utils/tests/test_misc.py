@@ -14,6 +14,7 @@ import unittest
 import warnings
 
 import numpy as np
+from scipy import sparse
 from scipy.special import psi
 
 from numpy import testing
@@ -156,188 +157,331 @@ class TestMultiplyShapes(unittest.TestCase):
 
 class TestSumMultiply(unittest.TestCase):
 
-    def check_sum_multiply(self, *shapes, **kwargs):
+    def check_sum_multiply(self, mapping, true_shape, xs, **kwargs):
 
-        # The set of arrays
-        x = list()
-        for (ind, shape) in enumerate(shapes):
-            x += [np.random.randn(*shape)]
+        # # The set of arrays
+        # x = list()
+        # for (ind, shape) in enumerate(shapes):
+        #     x += [np.random.randn(*shape)]
 
         # Result from the function
-        yh = misc.sum_multiply(*x,
-                               **kwargs)
+        yh = misc.sum_multiply(*xs, **kwargs)
 
-        axis = kwargs.get('axis', None)
-        sumaxis = kwargs.get('sumaxis', True)
-        keepdims = kwargs.get('keepdims', False)
-        
-        # Compute the product
-        y = 1
-        for xi in x:
-            y = y * xi
-
-        # Compute the sum
-        if sumaxis:
-            y = np.sum(y, axis=axis, keepdims=keepdims)
-        else:
-            axes = np.arange(np.ndim(y))
-            # TODO/FIXME: np.delete has a bug that it doesn't accept negative
-            # indices. Thus, transform negative axes to positive axes.
-            if len(axis) > 0:
-                axis = [i if i >= 0 
-                        else i+np.ndim(y) 
-                        for i in axis]
-            elif axis < 0:
-                axis += np.ndim(y)
-                
-            axes = np.delete(axes, axis)
-            axes = tuple(axes)
-            if len(axes) > 0:
-                y = np.sum(y, axis=axes, keepdims=keepdims)
+        # True result
+        xs_dense = [
+            x.toarray() if misc.is_sparse(x) else x
+            for x in xs
+        ]
+        y = np.reshape(np.einsum(mapping, *xs_dense), true_shape)
 
         # Check the result
-        testing.assert_allclose(yh, y,
-                                err_msg="Incorrect value.")
-        
+        testing.assert_allclose(yh, y, err_msg="Incorrect value.")
+
 
     def test_sum_multiply(self):
         """
         Test misc.sum_multiply.
         """
         # Check empty list returns error
-        self.assertRaises(ValueError, 
-                          self.check_sum_multiply)
+        self.assertRaises(
+            ValueError,
+            misc.sum_multiply,
+        )
         # Check scalars
-        self.check_sum_multiply(())
-        self.check_sum_multiply((), (), ())
-        
+        self.check_sum_multiply(
+            '',
+            (),
+            [
+                np.random.randn()
+            ]
+        )
+        self.check_sum_multiply(
+            ',,',
+            (),
+            [
+                np.random.randn(),
+                np.random.randn(),
+                np.random.randn()
+            ]
+        )
+
         # Check doing no summation
-        self.check_sum_multiply((3,), 
-                                axis=())
-        self.check_sum_multiply((3,1,5), 
-                                (  4,1),
-                                (    5,),
-                                (      ),
-                                axis=(), 
-                                keepdims=True)
+        self.check_sum_multiply(
+            'i->i',
+            (3,),
+            [
+                np.random.randn(3,)
+            ],
+            axis=()
+        )
+        self.check_sum_multiply(
+            'ijk,jk,k,->ijk',
+            (3,4,5),
+            [
+                np.random.randn(3,1,5),
+                np.random.randn(  4,1),
+                np.random.randn(    5,),
+                np.random.randn(      ),
+            ],
+            axis=(),
+            keepdims=True
+        )
         # Check AXES_TO_SUM
-        self.check_sum_multiply((3,1), 
-                                (1,4),
-                                (3,4),
-                                axis=(1,))
-        self.check_sum_multiply((3,1),
-                                (1,4),
-                                (3,4),
-                                axis=(-2,))
-        self.check_sum_multiply((3,1), 
-                                (1,4),
-                                (3,4),
-                                axis=(1,-2))
+        self.check_sum_multiply(
+            'ij,ij,ij->i',
+            (3,),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            axis=(1,)
+        )
+        self.check_sum_multiply(
+            'ij,ij,ij->j',
+            (4,),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            axis=(-2,)
+        )
+        self.check_sum_multiply(
+            'ij,ij,ij->',
+            (),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            axis=(1,-2)
+        )
         # Check AXES_TO_SUM and KEEPDIMS
-        self.check_sum_multiply((3,1), 
-                                (1,4),
-                                (3,4),
-                                axis=(1,),
-                                keepdims=True)
-        self.check_sum_multiply((3,1),
-                                (1,4),
-                                (3,4),
-                                axis=(-2,),
-                                keepdims=True)
-        self.check_sum_multiply((3,1), 
-                                (1,4),
-                                (3,4),
-                                axis=(1,-2,),
-                                keepdims=True)
-        self.check_sum_multiply((3,1,5,6), 
-                                (  4,1,6),
-                                (  4,1,1),
-                                (       ),
-                                axis=(1,-2),
-                                keepdims=True)
+        self.check_sum_multiply(
+            'ij,ij,ij->i',
+            (3,1),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            axis=(1,),
+            keepdims=True
+        )
+        self.check_sum_multiply(
+            'ij,ij,ij->j',
+            (1,4),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            axis=(-2,),
+            keepdims=True
+        )
+        self.check_sum_multiply(
+            'ij,ij,ij->',
+            (1,1),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            axis=(1,-2,),
+            keepdims=True
+        )
+        self.check_sum_multiply(
+            'ijkl,jkl,jkl,->il',
+            (3,1,1,6),
+            [
+                np.random.randn(3,1,5,6),
+                np.random.randn(  4,1,6),
+                np.random.randn(  4,1,1),
+                np.random.randn(       ),
+            ],
+            axis=(1,-2),
+            keepdims=True
+        )
         # Check AXES_TO_KEEP
-        self.check_sum_multiply((3,1), 
-                                (1,4),
-                                (3,4),
-                                sumaxis=False,
-                                axis=(1,))
-        self.check_sum_multiply((3,1),
-                                (1,4),
-                                (3,4),
-                                sumaxis=False,
-                                axis=(-2,))
-        self.check_sum_multiply((3,1), 
-                                (1,4),
-                                (3,4),
-                                sumaxis=False,
-                                axis=(1,-2))
+        self.check_sum_multiply(
+            'ij,ij,ij->j',
+            (4,),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            sumaxis=False,
+            axis=(1,)
+        )
+        self.check_sum_multiply(
+            'ij,ij,ij->i',
+            (3,),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            sumaxis=False,
+            axis=(-2,)
+        )
+        self.check_sum_multiply(
+            'ij,ij,ij->ij',
+            (3,4),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            sumaxis=False,
+            axis=(1,-2)
+        )
         # Check AXES_TO_KEEP and KEEPDIMS
-        self.check_sum_multiply((3,1), 
-                                (1,4),
-                                (3,4),
-                                sumaxis=False,
-                                axis=(1,),
-                                keepdims=True)
-        self.check_sum_multiply((3,1),
-                                (1,4),
-                                (3,4),
-                                sumaxis=False,
-                                axis=(-2,),
-                                keepdims=True)
-        self.check_sum_multiply((3,1), 
-                                (1,4),
-                                (3,4),
-                                sumaxis=False,
-                                axis=(1,-2,),
-                                keepdims=True)
-        self.check_sum_multiply((3,1,5,6), 
-                                (  4,1,6),
-                                (  4,1,1),
-                                (       ),
-                                sumaxis=False,
-                                axis=(1,-2,),
-                                keepdims=True)
+        self.check_sum_multiply(
+            'ij,ij,ij->j',
+            (1,4),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            sumaxis=False,
+            axis=(1,),
+            keepdims=True
+        )
+        self.check_sum_multiply(
+            'ij,ij,ij->i',
+            (3,1),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            sumaxis=False,
+            axis=(-2,),
+            keepdims=True
+        )
+        self.check_sum_multiply(
+            'ij,ij,ij->ij',
+            (3,4),
+            [
+                np.random.randn(3,1),
+                np.random.randn(1,4),
+                np.random.randn(3,4),
+            ],
+            sumaxis=False,
+            axis=(1,-2,),
+            keepdims=True
+        )
+        self.check_sum_multiply(
+            'ijkl,jkl,jkl,->jk',
+            (1,4,5,1),
+            [
+                np.random.randn(3,1,5,6),
+                np.random.randn(  4,1,6),
+                np.random.randn(  4,1,1),
+                np.random.randn(       ),
+            ],
+            sumaxis=False,
+            axis=(1,-2,),
+            keepdims=True
+        )
+
+        #
+        # Check sparse support
+        #
+
+        # Sum first axis
+        self.check_sum_multiply(
+            'ij,ij->j',
+            (4,),
+            [
+                sparse.rand(3, 4, density=1.0),
+                np.random.randn(3, 4),
+            ],
+            axis=(0,),
+        )
+        # Sum last axis
+        self.check_sum_multiply(
+            'ij,ij->i',
+            (3,),
+            [
+                sparse.rand(3, 4, density=1.0),
+                np.random.randn(3, 4),
+            ],
+            axis=(1,),
+        )
+        # Sum both axes
+        # Sum no axes
+        # Second argument sparse
+        # Both arrays sparse
+        # Dense array more than 2 dim
+        self.check_sum_multiply(
+            'jk,ijk->j',
+            (3,),
+            [
+                sparse.rand(3, 4, density=1.0),
+                np.random.randn(2, 3, 4),
+            ],
+            axis=(0,2),
+        )
+
         # Check errors
         # Inconsistent shapes
-        self.assertRaises(ValueError, 
-                          self.check_sum_multiply,
-                          (3,4),
-                          (3,5))
+        self.assertRaises(
+            ValueError,
+            misc.sum_multiply,
+            np.random.randn(3,4),
+            np.random.randn(3,5)
+        )
         # Axis index out of bounds
-        self.assertRaises(ValueError, 
-                          self.check_sum_multiply,
-                          (3,4),
-                          (3,4),
-                          axis=(-3,))
-        self.assertRaises(ValueError, 
-                          self.check_sum_multiply,
-                          (3,4),
-                          (3,4),
-                          axis=(2,))
-        self.assertRaises(ValueError, 
-                          self.check_sum_multiply,
-                          (3,4),
-                          (3,4),
-                          sumaxis=False,
-                          axis=(-3,))
-        self.assertRaises(ValueError, 
-                          self.check_sum_multiply,
-                          (3,4),
-                          (3,4),
-                          sumaxis=False,
-                          axis=(2,))
+        self.assertRaises(
+            ValueError,
+            misc.sum_multiply,
+            np.random.randn(3,4),
+            np.random.randn(3,4),
+            axis=(-3,)
+        )
+        self.assertRaises(
+            ValueError,
+            misc.sum_multiply,
+            np.random.randn(3,4),
+            np.random.randn(3,4),
+            axis=(2,)
+        )
+        self.assertRaises(
+            ValueError,
+            misc.sum_multiply,
+            np.random.randn(3,4),
+            np.random.randn(3,4),
+            sumaxis=False,
+            axis=(-3,)
+        )
+        self.assertRaises(
+            ValueError,
+            misc.sum_multiply,
+            np.random.randn(3,4),
+            np.random.randn(3,4),
+            sumaxis=False,
+            axis=(2,)
+        )
         # Same axis several times
-        self.assertRaises(ValueError, 
-                          self.check_sum_multiply,
-                          (3,4),
-                          (3,4),
-                          axis=(1,-1))
-        self.assertRaises(ValueError, 
-                          self.check_sum_multiply,
-                          (3,4),
-                          (3,4),
-                          sumaxis=False,
-                          axis=(1,-1))
+        self.assertRaises(
+            ValueError,
+            misc.sum_multiply,
+            np.random.randn(3,4),
+            np.random.randn(3,4),
+            axis=(1,-1)
+        )
+        self.assertRaises(
+            ValueError,
+            misc.sum_multiply,
+            np.random.randn(3,4),
+            np.random.randn(3,4),
+            sumaxis=False,
+            axis=(1,-1)
+        )
 
 class TestLogSumExp(misc.TestCase):
 
@@ -432,6 +576,185 @@ class TestMean(misc.TestCase):
                                        keepdims=True),
                             [[2.5]])
         
+        pass
+
+
+class TestSum(misc.TestCase):
+
+
+    def test_sparse_sum(self):
+
+        x = np.random.randn(3, 4)
+        y = sparse.coo_matrix(x)
+        self.assertAllClose(
+            misc.sum(x),
+            misc.sum(y)
+        )
+        self.assertAllClose(
+            misc.sum(x, keepdims=True),
+            misc.sum(y, keepdims=True)
+        )
+        self.assertAllClose(
+            misc.sum(x, keepdims=False),
+            misc.sum(y, keepdims=False)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=None),
+            misc.sum(y, axis=None)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=None, keepdims=True),
+            misc.sum(y, axis=None, keepdims=True)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=None, keepdims=False),
+            misc.sum(y, axis=None, keepdims=False)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=0),
+            misc.sum(y, axis=0)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=0, keepdims=True),
+            misc.sum(y, axis=0, keepdims=True)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=0, keepdims=False),
+            misc.sum(y, axis=0, keepdims=False)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=1),
+            misc.sum(y, axis=1)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=1, keepdims=True),
+            misc.sum(y, axis=1, keepdims=True)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=1, keepdims=False),
+            misc.sum(y, axis=1, keepdims=False)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=-1),
+            misc.sum(y, axis=-1)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=-1, keepdims=True),
+            misc.sum(y, axis=-1, keepdims=True)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=-1, keepdims=False),
+            misc.sum(y, axis=-1, keepdims=False)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=-2),
+            misc.sum(y, axis=-2)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=-2, keepdims=True),
+            misc.sum(y, axis=-2, keepdims=True)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=-2, keepdims=False),
+            misc.sum(y, axis=-2, keepdims=False)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=(1,)),
+            misc.sum(y, axis=(1,))
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=(1,), keepdims=True),
+            misc.sum(y, axis=(1,), keepdims=True)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=(1,), keepdims=False),
+            misc.sum(y, axis=(1,), keepdims=False)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=(0,1)),
+            misc.sum(y, axis=(0,1))
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=(0,1), keepdims=True),
+            misc.sum(y, axis=(0,1), keepdims=True)
+        )
+        self.assertAllClose(
+            misc.sum(x, axis=(0,1), keepdims=False),
+            misc.sum(y, axis=(0,1), keepdims=False)
+        )
+
+        #
+        # Non-integer
+        #
+        # self.assertRaises(
+        #     ValueError,
+        #     misc.sum,
+        #     x,
+        #     axis=1.3
+        # )
+        self.assertRaises(
+            ValueError,
+            misc.sum,
+            y,
+            axis=1.3
+        )
+
+        #
+        # Out of bounds
+        #
+        self.assertRaises(
+            ValueError,
+            misc.sum,
+            x,
+            axis=2
+        )
+        self.assertRaises(
+            ValueError,
+            misc.sum,
+            y,
+            axis=2
+        )
+        self.assertRaises(
+            ValueError,
+            misc.sum,
+            x,
+            axis=-3
+        )
+        self.assertRaises(
+            ValueError,
+            misc.sum,
+            y,
+            axis=-3
+        )
+        self.assertRaises(
+            ValueError,
+            misc.sum,
+            x,
+            axis=(1, -3)
+        )
+        self.assertRaises(
+            ValueError,
+            misc.sum,
+            y,
+            axis=(1, -3)
+        )
+
+        #
+        # Duplicate
+        #
+        self.assertRaises(
+            ValueError,
+            misc.sum,
+            x,
+            axis=(2, -1)
+        )
+        self.assertRaises(
+            ValueError,
+            misc.sum,
+            y,
+            axis=(2, -1)
+        )
+
         pass
 
 

@@ -441,9 +441,12 @@ class ExponentialFamily(Stochastic):
             # Apply annealing
             phi_diff = phi_p - T * phi_q
             # Handle 0 * -inf
-            phi_diff = np.where(u_q != 0, phi_diff, 0)
-            # TODO/FIXME: Use einsum here?
-            Z = np.sum(phi_diff * u_q, axis=axis_sum)
+            if not misc.is_sparse(u_q):
+                phi_diff = np.where(u_q != 0, phi_diff, 0)
+
+            Z = misc.sum_multiply(u_q, phi_diff, axis=axis_sum)
+            # # TODO/FIXME: Use einsum here?
+            # Z = np.sum(phi_diff * u_q, axis=axis_sum)
 
             L = L + Z
 

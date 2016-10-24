@@ -227,27 +227,33 @@ class Stochastic(Node):
         # Store the computed moments u but do not change moments for
         # observations, i.e., utilize the mask.
         for ind in range(len(u)):
-            # Add axes to the mask for the variable dimensions (mask
-            # contains only axes for the plates).
-            u_mask = misc.add_trailing_axes(mask, self.ndims[ind])
 
-            # Enlarge self.u[ind] as necessary so that it can store the
-            # broadcasted result.
-            sh = misc.broadcasted_shape_from_arrays(self.u[ind], u[ind], u_mask)
-            self.u[ind] = misc.repeat_to_shape(self.u[ind], sh)
+            if np.all(mask):
+                self.u[ind] = u[ind]
+            else:
 
-            # TODO/FIXME/BUG: The mask of observations is not used, observations
-            # may be overwritten!!! ???
-            
-            # Hah, this function is used to set the observations! The caller
-            # should be careful what mask he uses! If you want to set only
-            # latent variables, then use such a mask.
-            
-            # Use mask to update only unobserved plates and keep the
-            # observed as before
-            np.copyto(self.u[ind],
-                      u[ind],
-                      where=u_mask)
+                # Add axes to the mask for the variable dimensions (mask
+                # contains only axes for the plates).
+                u_mask = misc.add_trailing_axes(mask, self.ndims[ind])
+
+                # Enlarge self.u[ind] as necessary so that it can store the
+                # broadcasted result.
+                sh = misc.broadcasted_shape_from_arrays(self.u[ind], u[ind], u_mask)
+                self.u[ind] = misc.repeat_to_shape(self.u[ind], sh)
+
+                # TODO/FIXME/BUG: The mask of observations is not used, observations
+                # may be overwritten!!! ???
+
+                # Hah, this function is used to set the observations! The caller
+                # should be careful what mask he uses! If you want to set only
+                # latent variables, then use such a mask.
+
+                # Use mask to update only unobserved plates and keep the
+                # observed as before
+                np.copyto(self.u[ind],
+                        u[ind],
+                        where=u_mask)
+
 
             # Make sure u has the correct number of dimensions:
             shape = self.get_shape(ind)

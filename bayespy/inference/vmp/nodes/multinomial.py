@@ -151,11 +151,14 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         Compute the moments and :math:`f(x)` for a fixed value.
         """
 
+        # NOTE: In order to support sparse data, we must use some thin wrappers
+        # over some of the NumPy functions
+
         # Check that counts are valid
-        x = np.asanyarray(x)
+        x = misc.asarray(x)
         if not misc.isinteger(x):
             raise ValueError("Counts must be integers")
-        if np.any(x < 0):
+        if misc.any(x < 0):
             raise ValueError("Counts must be non-negative")
         if np.any(np.sum(x, axis=-1) != self.N):
             raise ValueError("Counts must sum to the number of trials")
@@ -164,7 +167,7 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         u0 = x.copy()
         u = [u0]
 
-        f = special.gammaln(self.N+1) - np.sum(special.gammaln(x+1), axis=-1)
+        f = special.gammaln(self.N+1) - misc.sum(misc.gammaln_add1(x), axis=-1)
 
         return (u, f)
 

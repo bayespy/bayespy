@@ -11,12 +11,13 @@ Unit tests for `multinomial` module.
 
 import numpy as np
 import scipy
+from scipy import sparse
 
 from bayespy.nodes import (Multinomial,
                            Dirichlet,
                            Mixture)
 
-from bayespy.utils import random
+from bayespy.utils import random, misc
 
 from bayespy.utils.misc import TestCase
 
@@ -183,6 +184,30 @@ class TestMultinomial(TestCase):
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             10*np.array(p2))
+
+        pass
+
+
+    def test_sparse_support(self):
+
+        D = 100
+        N = 50
+
+        p = Dirichlet(np.ones(D))
+        Y = Multinomial(5, p, plates=(N,))
+
+        y = sparse.coo_matrix(
+            Multinomial(
+                5,
+                Dirichlet(1e-2*np.ones(D), plates=(N,)).random()
+            )
+            .random()
+        )
+        Y.observe(y)
+
+        assert(misc.is_sparse(Y.get_moments()[0]))
+
+        self.assert_message_to_parent(Y, p)
 
         pass
 
