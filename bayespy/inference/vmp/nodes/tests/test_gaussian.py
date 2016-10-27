@@ -1104,6 +1104,7 @@ class TestGaussianGamma(TestCase):
                 u[3]
             ],
             rtol=1e-5,
+            atol=1e-8,
             eps=1e-8
         )
 
