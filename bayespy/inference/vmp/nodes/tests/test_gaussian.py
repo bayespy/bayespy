@@ -669,7 +669,23 @@ class TestGaussianARD(TestCase):
                             0.5 * np.ones(2))
         
         pass
-        
+
+
+    def test_message_to_parents(self):
+        """ Check gradient passed to inputs parent node """
+        D = 3
+
+        X = Gaussian(np.random.randn(D), random.covariance(D))
+        a = Gamma(np.random.rand(D), np.random.rand(D))
+
+        Y = GaussianARD(X, a)
+        Y.observe(np.random.randn(D))
+
+        self.assert_message_to_parent(Y, X)
+        self.assert_message_to_parent(Y, a)
+
+        pass
+
 
     def test_lowerbound(self):
         """
@@ -1057,6 +1073,73 @@ class TestGaussianGamma(TestCase):
         """
 
         pass
+
+
+    def test_messages(self):
+
+        D = 2
+        M = 3
+
+        mu = Gaussian(np.random.randn(M, D), random.covariance(D), plates=(M,))
+        Lambda = Wishart(D + np.random.rand(M), random.covariance(D), plates=(M,))
+        alpha = np.random.rand(M)
+        beta = Gamma(np.random.rand(M), np.random.rand(M), plates=(M,))
+
+        X = GaussianGamma(
+            mu,
+            Lambda,
+            alpha,
+            beta,
+            ndim=1
+        )
+
+        np.random.seed(42)
+
+        self.assert_moments(
+            X,
+            postprocess=lambda u: [
+                u[0],
+                u[1] + linalg.transpose(u[1], ndim=1),
+                u[2],
+                u[3]
+            ],
+            rtol=1e-5,
+            atol=1e-8,
+            eps=1e-8
+        )
+
+        self.assert_message_to_parent(X, mu)
+        self.assert_message_to_parent(X, Lambda)
+        self.assert_message_to_parent(X, beta)
+
+        pass
+
+
+class TestGaussian(TestCase):
+
+
+    def test_message_to_parents(self):
+        """ Check gradient passed to inputs parent node """
+        D = 3
+
+        X = Gaussian(np.random.randn(D), random.covariance(D))
+        V = Wishart(D + np.random.rand(), random.covariance(D))
+
+        Y = Gaussian(X, V)
+
+        self.assert_moments(
+            Y,
+            lambda u: [u[0], u[1] + u[1].T]
+        )
+
+        Y.observe(np.random.randn(D))
+
+        self.assert_message_to_parent(Y, X)
+        #self.assert_message_to_parent(Y, V)
+
+
+        pass
+
 
 
 class TestGaussianGradient(TestCase):

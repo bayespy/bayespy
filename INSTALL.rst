@@ -92,7 +92,7 @@ Installing requirements
 
 BayesPy requires Python 3.3 (or later) and the following packages:
 
-* NumPy (>=1.8.0), 
+* NumPy (>=1.10.0), 
 * SciPy (>=0.13.0) 
 * matplotlib (>=1.2)
 * h5py
@@ -125,7 +125,7 @@ dependencies:
      .. code-block:: console
 
         pip install "distribute>=0.6.28"
-        pip install "numpy>=1.8.0" "scipy>=0.13.0" "matplotlib>=1.2" h5py
+        pip install "numpy>=1.10.0" "scipy>=0.13.0" "matplotlib>=1.2" h5py
 
      This also makes sure you have recent enough version of Distribute (required
      by Matplotlib).  However, this installation method may require that the

@@ -15,6 +15,7 @@ from ..gaussian_markov_chain import GaussianMarkovChain
 from ..gaussian_markov_chain import VaryingGaussianMarkovChain
 from ..gaussian import Gaussian, GaussianMoments
 from ..gaussian import GaussianARD
+from ..gaussian import GaussianGamma
 from ..wishart import Wishart, WishartMoments
 from ..gamma import Gamma, GammaMoments
 
@@ -195,6 +196,137 @@ class TestGaussianMarkovChain(TestCase):
 
     def test_message_to_v(self):
         pass
+
+
+    def test_message_to_parents(self):
+        """ Check gradient passed to inputs parent node """
+        N = 3
+        D = 2
+
+        Mu = Gaussian(np.random.randn(D), random.covariance(D))
+        Lambda = Wishart(D, random.covariance(D))
+        A = Gaussian(np.random.randn(D,D), random.covariance(D))
+        V = Gamma(D, np.random.rand(D))
+
+        X = GaussianMarkovChain(Mu, Lambda, A, V, n=N+1)
+        Y = Gaussian(X, random.covariance(D))
+
+        self.assert_moments(
+            X,
+            postprocess=lambda u: [
+                u[0],
+                u[1] + linalg.transpose(u[1], ndim=1),
+                u[2]
+            ]
+        )
+
+        Y.observe(np.random.randn(N+1, D))
+
+        #self.assert_message_to_parent(X, Mu)
+        #self.assert_message_to_parent(X, Lambda)
+        self.assert_message_to_parent(X, A)
+        #self.assert_message_to_parent(X, V)
+        #self.assert_message_to_parent(X, U)
+
+        pass
+
+
+    def test_message_to_parents_with_inputs(self):
+        """ Check gradient passed to inputs parent node """
+
+        def check(Mu, Lambda, A, V, U):
+
+            X = GaussianMarkovChain(Mu, Lambda, A, V, inputs=U)
+            Y = Gaussian(X, random.covariance(D))
+
+            # Check moments
+            self.assert_moments(
+                X,
+                postprocess=lambda u: [
+                    u[0],
+                    u[1] + linalg.transpose(u[1], ndim=1),
+                    u[2]
+                ]
+            )
+
+            Y.observe(np.random.randn(N+1, D))
+
+            # Check gradient messages to parents
+            self.assert_message_to_parent(X, Mu)
+            self.assert_message_to_parent(
+                X,
+                Lambda,
+                postprocess=lambda phi: [
+                    phi[0] + linalg.transpose(phi[0], ndim=1),
+                    phi[1]
+                ]
+            )
+            self.assert_message_to_parent(
+                X,
+                A,
+                postprocess=lambda phi: [
+                    phi[0],
+                    phi[1] + linalg.transpose(phi[1], ndim=1),
+                ]
+            )
+            self.assert_message_to_parent(X, V)
+            self.assert_message_to_parent(X, U)
+
+        N = 4
+        D = 2
+        K = 3
+
+        check(
+            Gaussian(
+                np.random.randn(D),
+                random.covariance(D)
+            ),
+            Wishart(
+                D,
+                random.covariance(D)
+            ),
+            Gaussian(
+                np.random.randn(D,D+K),
+                random.covariance(D+K)
+            ),
+            Gamma(
+                D,
+                np.random.rand(D)
+            ),
+            Gaussian(
+                np.random.randn(N,K),
+                random.covariance(K)
+            )
+        )
+
+        check(
+            Gaussian(
+                np.random.randn(D),
+                random.covariance(D)
+            ),
+            Wishart(
+                D,
+                random.covariance(D)
+            ),
+            GaussianGamma(
+                np.random.randn(D,D+K),
+                random.covariance(D+K),
+                D,
+                np.random.rand(D),
+                ndim=1
+            ),
+            Gamma(
+                D,
+                np.random.rand(D)
+            ),
+            Gaussian(
+                np.random.randn(N,K),
+                random.covariance(K)
+            )
+        )
+
+        pass
+
 
     def test_message_to_child(self):
         """
