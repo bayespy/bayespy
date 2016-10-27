@@ -1077,8 +1077,8 @@ class TestGaussianGamma(TestCase):
 
     def test_messages(self):
 
-        D = 3
-        M = 4
+        D = 2
+        M = 3
 
         mu = Gaussian(np.random.randn(M, D), random.covariance(D), plates=(M,))
         Lambda = Wishart(D + np.random.rand(M), random.covariance(D), plates=(M,))
@@ -1102,7 +1102,9 @@ class TestGaussianGamma(TestCase):
                 u[1] + linalg.transpose(u[1], ndim=1),
                 u[2],
                 u[3]
-            ]
+            ],
+            rtol=1e-5,
+            eps=1e-8
         )
 
         self.assert_message_to_parent(X, mu)

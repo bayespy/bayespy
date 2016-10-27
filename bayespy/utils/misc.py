@@ -409,22 +409,21 @@ class TestCase(unittest.TestCase):
             (_, g) = node._distribution.compute_moments_and_cgf(pack(x))
             return -np.sum(g)
 
-        u_num = approx_fprime(
-            unpack(node.phi),
-            cost,
-            eps
+        u_num = pack(
+            approx_fprime(
+                unpack(node.phi),
+                cost,
+                eps
+            )
         )
 
-        # for (i, j) in zip(postprocess(u), postprocess(pack(u_num))):
-        #     print(i)
-        #     print(j)
+        assert len(u_num) == len(u)
 
-        self.assertAllClose(
-            unpack(postprocess(u)),
-            unpack(postprocess(pack(u_num))),
-            rtol=rtol,
-            atol=atol
-        )
+        up = postprocess(u)
+        up_num = postprocess(u_num)
+
+        for i in range(len(up)):
+            self.assertAllClose(up[i], up_num[i], rtol=rtol, atol=atol)
 
         pass
 
