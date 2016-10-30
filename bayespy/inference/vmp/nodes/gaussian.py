@@ -1102,7 +1102,7 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
             phi[3],
             plates=plates
         )
-        mu = GaussianDistribution(self.shape).random(
+        mu = GaussianARDDistribution(self.shape).random(
             misc.add_trailing_axes(alpha, self.ndim) * phi[0],
             misc.add_trailing_axes(alpha, 2*self.ndim) * phi[1],
             plates=plates
