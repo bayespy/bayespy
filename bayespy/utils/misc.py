@@ -837,6 +837,10 @@ def sum_multiply_to_plates(*arrays, to_plates=(), from_plates=None, ndim=0):
     return r * y
 
 
+def multiply(*arrays):
+    return functools.reduce(np.multiply, arrays, 1)
+
+
 def sum_multiply(*args, axis=None, sumaxis=True, keepdims=False):
 
     # Computes sum(arg[0]*arg[1]*arg[2]*..., axis=axes_to_sum) without

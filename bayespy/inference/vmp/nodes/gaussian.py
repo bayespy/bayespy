@@ -2228,6 +2228,10 @@ class GaussianToGaussianGamma(Deterministic):
             raise ValueError("Invalid parent index")
 
 
+    def _compute_function(self, x):
+        return (x, 1)
+
+
 GaussianMoments.add_converter(GaussianGammaMoments,
                               GaussianToGaussianGamma)
 
