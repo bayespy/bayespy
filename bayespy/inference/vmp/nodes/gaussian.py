@@ -201,10 +201,11 @@ class GaussianGammaMoments(Moments):
 
 
     @classmethod
-    def from_values(cls, x, alpha, ndim):
+    def from_values(cls, x_alpha, ndim):
         r"""
         Return the shape of the moments for a fixed value.
         """
+        (x, alpha) = x_alpha
         if ndim == 0:
             shape = ( (), (), (), () )
         else:
@@ -1070,10 +1071,11 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
         return g
 
 
-    def compute_fixed_moments_and_f(self, x, alpha, mask=True):
+    def compute_fixed_moments_and_f(self, x_alpha, mask=True):
         r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
+        (x, alpha) = x_alpha
         logalpha = np.log(alpha)
         u0 = x * misc.add_trailing_axes(alpha, self.ndim)
         u1 = linalg.outer(x, x, ndim=self.ndim) * misc.add_trailing_axes(alpha, self.ndim)
