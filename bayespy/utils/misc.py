@@ -675,7 +675,7 @@ def zipper_merge(*lists):
     This is known as alternating merge or zipper merge.
     """
     
-    return list(sum(zip(*lists), ()))
+    return list(builtins.sum(zip(*lists), ()))
 
 def remove_whitespace(s):
     return ''.join(s.split())
@@ -880,14 +880,11 @@ def sum_multiply_to_plates(*arrays, to_plates=(), from_plates=None, ndim=0):
     return r * y
 
 
-def explicit_axis(axis, ndim):
+def validate_axes(axis, ndim):
     try:
         x = tuple(axis)
     except TypeError:
-        x = (
-            tuple(range(ndim)) if axis is None else
-            (axis,)
-        )
+        x = (axis,)
 
     y = tuple(i if i >= 0 else i + ndim for i in x)
 
@@ -904,11 +901,11 @@ def explicit_axis(axis, ndim):
     if builtins.any((i < 0) or (i >= ndim) for i in y):
         raise ValueError("'axis' entry is out of bounds")
 
-    return y
+    return sorted(y)
 
 
 def _sum_sparse(x, axis, keepdims):
-    ax = explicit_axis(axis, ndim=2)
+    ax = validate_axes(axis, ndim=2)
     y = np.atleast_2d(
         np.asarray(
             np.sum(x)             if len(ax) == 2 else
@@ -916,10 +913,6 @@ def _sum_sparse(x, axis, keepdims):
             x.toarray()
         )
     )
-    print("DEBUG IN MISC SUM SPARSE")
-    print(y)
-    print(ax)
-    print(keepdims)
     return (
         y if keepdims else
         np.squeeze(y, axis=ax)
@@ -933,195 +926,294 @@ def sum(x, axis=None, keepdims=False):
     )
 
 
+def pop(xs, i):
+    ys = list(xs)
+    x = ys.pop(i)
+    return (x, xs.__class__(ys))
+
+
+def _sparse_sum_multiply(xs, axis, keepdims, sumaxis):
+
+    # TODO/FIXME: Sparse matrix support and compatibility with NumPy arrays and
+    # functions is extremely bad. Thus, this function only implements some
+    # specific cases but no general recipe.
+
+    # Broadcasted limensionality of the inputs
+    max_dim = builtins.max(np.ndim(x) for x in xs)
+
+    # Validate axes and standardize the format to a tuple of unique sorted
+    # indices in {0,...,max_dim-1}.
+    valid_axes = validate_axes(
+        (
+            list(range(max_dim)) if axis is None else
+            axis
+        ),
+        max_dim
+    )
+    # Convert axes to negative indices and to contain the axes that are
+    # summed over
+    axes_to_sum = [
+        a - max_dim
+        for a in range(max_dim)
+        if sumaxis == (a in valid_axes)
+    ]
+
+    are_sparse = [is_sparse(x) for x in xs]
+    i = are_sparse.index(True)
+    (x, x_others) = pop(xs, i)
+    if len(x_others) != 1:
+        raise NotImplementedError()
+    y = x_others[0]
+
+    def not_implemented(msg=""):
+        raise NotImplementedError(msg)
+
+    return (
+        #
+        # Sum multiply for shapes (M,N) and (M,N) over any axes
+        #
+        # No broadcasting, see:
+        # https://github.com/scipy/scipy/issues/5056#issuecomment-257148393
+        #
+        sum(x.multiply(y), axis=axes_to_sum, keepdims=keepdims)
+        if (
+                y.shape == x.shape
+        ) else
+        #
+        # Sum multiply for shapes (M,N) and (K,1,N) over N
+        #
+        (
+            lambda z: (
+                add_singleton_axes(z, [-1]) if keepdims else
+                z
+            )
+        )
+        (
+            np.asarray(x.dot(np.squeeze(y, axis=1).T)).T
+        )
+        if (
+                y.ndim == 3 and
+                y.shape[-2] == 1 and
+                tuple(axes_to_sum) == (-1,) and
+                y.shape[-1] == x.shape[-1]
+        ) else
+        not_implemented("Requested sparse matrix sum-multiply not implemented")
+    )
+
+    # def case_2d(x, y, axes_to_sum, keepdims):
+    #     # TODO/FIXME: This method doesn't work properly because SciPy sparse
+    #     # element-wise multiplication converts incorrectly to dense matrix if
+    #     # any broadcasting occurs. See:
+    #     # https://github.com/scipy/scipy/issues/5056#issuecomment-257148393
+    #     return _sum_sparse(
+    #         x.multiply(y),
+    #         axis=axes_to_sum,
+    #         keepdims=keepdims
+    #     )
+
+    # def case_dense(x, y, axes_to_sum, keepdims):
+    #     if y.ndim != 3:
+    #         raise NotImplementedError()
+
+    #     if axes_to_sum != (
+
+    #     (
+    #     (K_y, M_y, N_y) = y.shape
+
+    # function = (
+    #     case_2d if max_dim == 2 else
+    #     None
+    # )
+
+    # if max_dim == 2:
+    #     return _sum_sparse(
+    #         x_sparse.multiply(x_other),
+    #         axis=axes_to_sum,
+    #         keepdims=keepdims
+    #     )
+    # else:
+
+    #     # Different axes:
+    #     #
+    #     # In sparse   In dense   To sum
+    #     #      1          1         1   -> sum after
+    #     #      1          0         1   -> sum after/before?
+    #     #      0          1         1   -> sum before
+    #     #      0          0         1   -> ignore
+    #     #      1          1         0   -> multiply
+    #     #      1          0         0   -> multiply
+    #     #      0          1         0   -> multiply
+    #     #      0          0         0   -> ignore
+    #     # This branch can only reach if x_other is dense because sparse
+    #     # matrices have ndim==2.
+
+    #     # Sum axes that should be summed over in the end and are not in the
+    #     # sparse matrix.
+    #     x_dense = np.sum(
+    #         x_other,
+    #         axis=[
+    #             a
+    #             for a in axes_to_sum
+    #             if ((a < -2) or (np.shape(x_sparse)[a]) == 1)
+    #         ],
+    #         keepdims=True
+    #     )
+
+    #     # Handle simple aligned matrices case with element-wise multiply
+    #     if np.prod(np.shape(x_dense)[:-2]) == 1:
+    #         return _sum_sparse(
+    #             x_sparse.multiply(squeeze_to_dim(x_other, 2)),
+    #             axis=axes_to_sum,
+    #         )
+
+    #     # Supporting sum&multiply operation for sparse-dense pair is not in
+    #     # general possible with the builtin operations. One example: dense
+    #     # has shape (3,4,5) and sparse has shape (4,5). Now, computing
+    #     # dense*sparse would require converting sparse to dense. Or 
+
+    #     # If dense is as large or larger than the sparse, just transform
+    #     # the sparse to dense and compute with dense operations, because
+    #     # such a case cannot be supported easily with builtin sparse
+    #     # operations.
+    #     if is_shape_subset(np.shape(x_sparse), np.shape(x_dense)[-2:]):
+    #         return sum_multiply(
+    #             x_sparse.toarray(),
+    #             x_dense,
+    #             axis=axis,
+    #             keepdims=keepdims
+    #         )
+
+    #     # Sparse (3,1), dense (10,1,4)
+    #     # Reshape the dense matrix to (M3, M2, M1)
+    #     x_dense_matrix = np.reshape(x_dense, (-1,) + np.shape(x_dense)[-2:])
+
+    #     # Let sparse shape be (N2, N1)
+
+    #     # After the dense summation, there can be no summable axes that
+    #     # exist in dense but are singleton or non-existent in sparse.
+    #     #
+    #     # Cases matched in order:
+    #     #
+    #     # We already know that we are not summing over D
+    #     #
+    #     # - sparse (.,.), dense (  .,.), axis=.  => use sparse multiply and sum
+    #     #
+    #     # - sparse (.,.), dense (.,M,N), axis=.  => use dense function
+    #     #
+    #     # Now we know that in dense M==1 and/or N==1
+    #     #
+    #     # - sparse (.,.), dense (.,.,.), axis=() => use dense multiply
+    #     #
+    #     # Now we know that we are summing over M and/or N
+    #     #
+    #     # - sparse (.,.), dense (.,1,1), axis=(M,N)  => sum whole sparse
+    #     #
+    #     # - sparse (.,.), dense (.,1,1), axis=. => ????
+    #     #
+    #     # - sparse (.,.), dense (.,.,.), axis=(M,N) => ????
+    #     #
+    #     # - sparse (.,N), dense (.,1,N), axis=(N) => sparse dot
+    #     #
+    #     # - sparse (M,.), dense (.,M,1), axis=(M) => sparse dot
+    #     #
+    #     # - sparse (1,N), dense (.,M,1), axis=(N)
+    #     #
+    #     # - sparse (M,N), dense (.,1,1), axis=(M)
+
+    #     # - sparse (M,1), dense (.,1,N), axis=()
+
+    #     # - sparse (1,N), dense (D,M,1), axis=
+    #     # - sparse (.,.), dense (D,1,.), axis=
+    #     # sparse (M,1), dense (D,1,N), axis=()
+
+    #     # - sparse (.,.), dense (.,1,.), axis=(.)
+    #     # - sparse (.,.), dense (.,.,1), axis=(.)
+
+    #     # (keep dense only, keep both, sum both, keep sparse, sum sparse)
+
+
+    # #ndim = max(np.ndim(y), np.ndim(x))
+    # #x = sum_to_shape(x, np.shape(x)[-2:])
+    # # for xj in xs:
+    # #     print("DEBUG IN MISC")
+    # #     print(xj)
+    # #     y = y.multiply(xj)
+    # return ( #atleast_nd(
+    #     _sum_sparse(
+    #         y.multiply(sum_to_shape(x, np.shape(x)[-2:])),
+    #         axis=axis,
+    #         keepdims=keepdims
+    #     )
+    #     #,
+    #     #ndim
+    # )
+
+
+def _dense_sum_multiply(xs, axis, keepdims, sumaxis):
+    # Computes sum(arg[0]*arg[1]*arg[2]*..., axis=axes_to_sum) without
+    # explicitly computing the intermediate product
+
+    # Broadcasted limensionality of the inputs
+    max_dim = max(np.ndim(x) for x in xs)
+
+    # Validate axes and standardize the format to a tuple of unique sorted
+    # indices in {0,...,max_dim-1}.
+    valid_axes = validate_axes(
+        (
+            list(range(max_dim)) if axis is None else
+            axis
+        ),
+        max_dim
+    )
+
+    output_axes = (
+        valid_axes if not sumaxis else
+        tuple(a for a in range(max_dim) if a not in valid_axes)
+    )
+
+    # Form a list of pairs: the array in the product and its axes
+    input_pairs = zipper_merge(
+        xs,
+        [tuple(range(max_dim - np.ndim(x), max_dim)) for x in xs]
+    )
+    pairs = input_pairs + [output_axes]
+
+    # Compute the sum-product
+    y = np.einsum(*pairs)
+
+    # Restore summed axes as singleton axes if keepdims is True
+    return (
+        y if not keepdims else
+        add_singleton_axes(y, [i for i in range(max_dim) if i not in output_axes])
+    )
+
+
+def add_singleton_axes(x, axes):
+    """ Add singleton axes to the given positions """
+    return functools.reduce(
+        np.expand_dims,
+        validate_axes(
+            axes if axes is not None else (),
+            np.ndim(x) + len(axes)
+        ),
+        x
+    )
+
+
 def sum_multiply(*args, axis=None, sumaxis=True, keepdims=False):
 
     if len(args) == 0:
         raise ValueError("You must give at least one input array")
 
-    # Dimensionality of the result
-    max_dim = max(np.ndim(arg) for arg in args)
+    use_sparse = builtins.any(is_sparse(x) for x in args)
 
-    # Validate axes and standardize the format to a tuple of unique sorted
-    # indices in {0,...,max_dim-1}.
-    valid_axis = sorted(
-        explicit_axis(
-            (
-                list(range(max_dim)) if axis is None and sumaxis else
-                axis
-            ),
-            max_dim
-        )
-    )
-    args_sparse = [is_sparse(x) for x in args]
-
-    if any(args_sparse):
-        if len(args) != 2:
-            raise NotImplementedError()
-        if keepdims:
-            raise NotImplementedError()
-        # Convert axes to negative indices and to contain the axes that are
-        # summed over
-        sum_axes = [
-            a - max_dim
-            for a in range(max_dim)
-            if sumaxis == (a in valid_axis)
-        ]
-        i = args_sparse.index(True)
-        xs = list(args)
-        x_sparse = xs.pop(i)
-        x_other = xs[0]
-
-        if max_dim == 2:
-            return _sum_sparse(
-                x_sparse.multiply(x_other),
-                axis=sum_axes,
-                keepdims=keepdims
-            )
-        else:
-            # This branch can only reach if x_other is dense because sparse
-            # matrices have ndim==2.
-
-            # Sum axes that should be summed over in the end and are not in the
-            # sparse matrix.
-            x_dense = np.sum(
-                x_other,
-                axis=[
-                    a
-                    for a in sum_axes
-                    if (
-                            (a in sum_axes) and
-                            ((-a > 2) or (np.shape(x_sparse)[a]) == 1)
-                    )
-                ],
-                keepdims=True
-            )
-
-            # Handle simple aligned matrices case with element-wise multiply
-            if np.prod(np.shape(x_dense)[:-2]) == 1:
-                return _sum_sparse(
-                    x_sparse.multiply(squeeze_to_dim(x_other, 2)),
-                    axis=sum_axes,
-                )
-
-            # Supporting sum&multiply operation for sparse-dense pair is not in
-            # general possible with the builtin operations. One example: dense
-            # has shape (3,4,5) and sparse has shape (4,5). Now, computing
-            # dense*sparse would require converting sparse to dense. Or 
-
-            # If dense is as large or larger than the sparse, just transform
-            # the sparse to dense and compute with dense operations, because
-            # such a case cannot be supported easily with builtin sparse
-            # operations.
-            if is_shape_subset(np.shape(x_sparse), np.shape(x_dense)[-2:]):
-                return sum_multiply(
-                    x_sparse.toarray(),
-                    x_dense,
-                    axis=axis,
-                    keepdims=keepdims
-                )
-
-            # Sparse (3,1), dense (10,1,4)
-            # Reshape the dense matrix to (M3, M2, M1)
-            x_dense_matrix = np.reshape(x_dense, (-1,) + np.shape(x_dense)[-2:])
-
-            # Let sparse shape be (N2, N1)
-
-            # After the dense summation, there can be no summable axes that
-            # exist in dense but are singleton or non-existent in sparse.
-            #
-            # Cases matched in order:
-            #
-            # We already know that we are not summing over D
-            #
-            # - sparse (.,.), dense (  .,.), axis=.  => use sparse multiply and sum
-            #
-            # - sparse (.,.), dense (.,M,N), axis=.  => use dense function
-            #
-            # Now we know that in dense M==1 and/or N==1
-            #
-            # - sparse (.,.), dense (.,.,.), axis=() => use dense multiply
-            #
-            # Now we know that we are summing over M and/or N
-            #
-            # - sparse (.,.), dense (.,1,1), axis=(M,N)  => sum whole sparse
-            #
-            # - sparse (.,.), dense (.,1,1), axis=. => ????
-            #
-            # - sparse (.,.), dense (.,.,.), axis=(M,N) => ????
-            #
-            # - sparse (.,N), dense (.,1,N), axis=(N) => sparse dot
-            #
-            # - sparse (M,.), dense (.,M,1), axis=(M) => sparse dot
-            #
-            # - sparse (1,N), dense (.,M,1), axis=(N)
-            #
-            # - sparse (M,N), dense (.,1,1), axis=(M)
-
-            # - sparse (M,1), dense (.,1,N), axis=()
-
-            # - sparse (1,N), dense (D,M,1), axis=
-            # - sparse (.,.), dense (D,1,.), axis=
-            # sparse (M,1), dense (D,1,N), axis=()
-
-            # - sparse (.,.), dense (.,1,.), axis=(.)
-            # - sparse (.,.), dense (.,.,1), axis=(.)
-
-            # (keep dense only, keep both, sum both, keep sparse, sum sparse)
-
-
-        #ndim = max(np.ndim(y), np.ndim(x))
-        #x = sum_to_shape(x, np.shape(x)[-2:])
-        # for xj in xs:
-        #     print("DEBUG IN MISC")
-        #     print(xj)
-        #     y = y.multiply(xj)
-        return ( #atleast_nd(
-            _sum_sparse(
-                y.multiply(sum_to_shape(x, np.shape(x)[-2:])),
-                axis=axis,
-                keepdims=keepdims
-            )
-            #,
-            #ndim
-        )
-
-    output_axes = (
-        valid_axis if not sumaxis else
-        tuple(a for a in range(max_dim) if a not in valid_axis)
+    function = (
+        _sparse_sum_multiply if any(use_sparse) else
+        _dense_sum_multiply
     )
 
-    # Computes sum(arg[0]*arg[1]*arg[2]*..., axis=axes_to_sum) without
-    # explicitly computing the intermediate product
+    return function(args, axis=axis, keepdims=keepdims, sumaxis=sumaxis)
 
-    # Form a list of pairs: the array in the product and its axes
-    pairs = list()
-    for i in range(len(args)):
-        a = args[i]
-        a_dim = np.ndim(a)
-        pairs.append(a)
-        pairs.append(range(max_dim-a_dim, max_dim))
-
-    # Output axes are those which are not summed
-    pairs.append(output_axes)
-
-    # Compute the sum-product
-    y = np.einsum(*pairs)
-
-    # Restore summed axes as singleton axes
-    if keepdims:
-        d = 0
-        s = ()
-        for k in range(max_dim):
-            if k in axes:
-                # Axis not summed
-                s = s + (np.shape(y)[d],)
-                d += 1
-            else:
-                # Axis was summed
-                s = s + (1,)
-        y = np.reshape(y, s)
-
-    return y
 
 def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
     if axes_to_keep is not None:

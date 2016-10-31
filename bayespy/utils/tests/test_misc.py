@@ -392,40 +392,79 @@ class TestSumMultiply(unittest.TestCase):
         # Check sparse support
         #
 
-        # Sum first axis
         self.check_sum_multiply(
-            'ij,ij->j',
-            (4,),
+            'jk,ijk->ij',
+            (2,3),
             [
                 sparse.rand(3, 4, density=1.0),
-                np.random.randn(3, 4),
+                np.random.randn(2,1,4),
             ],
-            axis=(0,),
+            axis=(2,),
         )
-        # Sum last axis
         self.check_sum_multiply(
-            'ij,ij->i',
-            (3,),
+            'jk,ijk->ij',
+            (2,3),
             [
                 sparse.rand(3, 4, density=1.0),
-                np.random.randn(3, 4),
+                np.random.randn(2,1,4),
             ],
-            axis=(1,),
+            axis=(-1,),
         )
-        # Sum both axes
-        # Sum no axes
-        # Second argument sparse
-        # Both arrays sparse
-        # Dense array more than 2 dim
         self.check_sum_multiply(
-            'jk,ijk->j',
-            (3,),
+            'jk,ijk->ij',
+            (2,3,1),
             [
                 sparse.rand(3, 4, density=1.0),
-                np.random.randn(2, 3, 4),
+                np.random.randn(2,1,4),
             ],
-            axis=(0,2),
+            axis=(-1,),
+            keepdims=True
         )
+        self.check_sum_multiply(
+            'jk,ijk->ij',
+            (2,3,1),
+            [
+                sparse.rand(3, 4, density=1.0),
+                np.random.randn(2,1,4),
+            ],
+            axis=(2,),
+            keepdims=True
+        )
+
+        # # Sum first axis
+        # self.check_sum_multiply(
+        #     'ij,ij->j',
+        #     (4,),
+        #     [
+        #         sparse.rand(3, 4, density=1.0),
+        #         np.random.randn(3, 4),
+        #     ],
+        #     axis=(0,),
+        # )
+        # # Sum last axis
+        # self.check_sum_multiply(
+        #     'ij,ij->i',
+        #     (3,),
+        #     [
+        #         sparse.rand(3, 4, density=1.0),
+        #         np.random.randn(3, 4),
+        #     ],
+        #     axis=(1,),
+        # )
+        # # Sum both axes
+        # # Sum no axes
+        # # Second argument sparse
+        # # Both arrays sparse
+        # # Dense array more than 2 dim
+        # self.check_sum_multiply(
+        #     'jk,ijk->j',
+        #     (3,),
+        #     [
+        #         sparse.rand(3, 4, density=1.0),
+        #         np.random.randn(2, 3, 4),
+        #     ],
+        #     axis=(0,2),
+        # )
 
         # Check errors
         # Inconsistent shapes
