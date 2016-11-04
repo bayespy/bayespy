@@ -47,7 +47,7 @@ from .dot import Dot
 from .dot import SumMultiply
 from .add import Add
 from .take import Take
-from .gaussian import ConcatGaussian
+from .concat_gaussian import ConcatGaussian
 
 from .logpdf import LogPDF
 

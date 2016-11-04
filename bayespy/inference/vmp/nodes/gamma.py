@@ -71,6 +71,7 @@ class GammaMoments(Moments):
         """
         Compute the moments for a fixed value
         """
+        x = np.asanyarray(x)
         if np.any(x < 0):
             raise ValueError("Values must be positive")
         u0 = x
@@ -254,6 +255,12 @@ class Gamma(ExponentialFamily):
                 % (self.name, a, b))
 
 
+    def as_wishart(self, ndim=0):
+        if ndim != 0:
+            raise NotImplementedError()
+        return _GammaToScalarWishart(self, name=self.name + " as Wishart")
+
+
     def as_diagonal_wishart(self):
         return _GammaToDiagonalWishart(self,
                                        name=self.name + " as Wishart")
@@ -383,3 +390,37 @@ class _GammaToDiagonalWishart(Deterministic):
         m1 = np.reshape(m_children[1], np.shape(m_children[1]) + (1,))
 
         return [m0, m1]
+
+
+class _GammaToScalarWishart(Deterministic):
+    """
+    Transform gamma scalar moments to ndim=0 scalar Wishart moments
+    """
+
+    _parent_moments = [GammaMoments()]
+
+
+    @ensureparents
+    def __init__(self, alpha, **kwargs):
+
+        # Check for constant
+        if misc.is_numeric(alpha):
+            alpha = Constant(Gamma)(alpha)
+
+        # FIXME: Put import here to avoid circular dependency import
+        from .wishart import WishartMoments
+        self._moments = WishartMoments(())
+        dims = ( (), () )
+
+        # Construct the node
+        super().__init__(alpha,
+                         dims=self._moments.dims,
+                         **kwargs)
+
+
+    def get_moments(self):
+        return self.parents[0].get_moments()
+
+    @staticmethod
+    def _compute_message_to_parent(index, m_children, *u_parents):
+        return m_children

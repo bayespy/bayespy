@@ -53,7 +53,7 @@ def chol(C, ndim=1):
 
 
 def chol_solve(U, b, out=None, matrix=False, ndim=1):
-    if isinstance(U, np.ndarray):
+    if isinstance(U, np.ndarray) or np.isscalar(U):
         if sparse.issparse(b):
             b = b.toarray()
 
@@ -139,7 +139,7 @@ def chol_solve(U, b, out=None, matrix=False, ndim=1):
 
 
 def chol_inv(U, ndim=1):
-    if isinstance(U, np.ndarray):
+    if isinstance(U, np.ndarray) or np.isscalar(U):
         if ndim == 0:
             return (1 / U) / U
         shape = np.shape(U)[-ndim:]
@@ -163,7 +163,7 @@ def chol_inv(U, ndim=1):
         raise ValueError("Unknown type of Cholesky factor")
 
 def chol_logdet(U, ndim=1):
-    if isinstance(U, np.ndarray):
+    if isinstance(U, np.ndarray) or np.isscalar(U):
         if ndim == 0:
             return 2 * np.log(U)
         U = misc.flatten_axes(U, ndim, ndim)

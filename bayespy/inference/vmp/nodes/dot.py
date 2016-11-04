@@ -268,6 +268,28 @@ class SumMultiply(Deterministic):
                          **kwargs)
 
 
+    def _compute_function(self, *x_parents):
+
+        # TODO: Add unit tests for this function
+
+        (xs, alphas) = (
+            (x_parents, 1) if not self.gaussian_gamma else
+            zip(*x_parents)
+        )
+
+        # Add Ellipsis for the plates
+        in_keys = [[Ellipsis] + k for k in self.in_keys]
+        out_keys = [Ellipsis] + self.out_keys
+
+        samples_and_keys = misc.zipper_merge(xs, in_keys)
+        y = np.einsum(*(samples_and_keys + [out_keys]))
+
+        return (
+            y if not self.gaussian_gamma else
+            (y, misc.multiply(*alphas))
+        )
+
+
     def _compute_moments(self, *u_parents):
 
 

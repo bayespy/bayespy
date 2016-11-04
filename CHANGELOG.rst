@@ -1,3 +1,35 @@
+Version 0.5.5 (2016-11-04)
+++++++++++++++++++++++++++
+
+Fixed
+-----
+
+* Fix critical plate multiplier bug in Take node. The bug caused basically all
+  models with Take node to be incorrect.
+
+* Fix ndim handling in GaussianGamma and Wishart
+
+* Support lists and other array-convertible formats in several nodes
+
+
+Version 0.5.4 (2016-10-27)
+++++++++++++++++++++++++++
+
+Added
+-----
+
+* Add conversion from Gamma to scalar Wishart
+
+* Implement message from GaussianMarkovChain to its input parent node
+
+* Add generic unit test functions for messages and moments
+
+Changed
+-------
+
+* Require NumPy 1.10 or greater
+
+
 Version 0.5.3 (2016-08-17)
 ++++++++++++++++++++++++++
 
