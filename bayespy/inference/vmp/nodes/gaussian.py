@@ -1079,12 +1079,12 @@ class GaussianGammaDistribution(ExponentialFamilyDistribution):
         (x, alpha) = x_alpha
         logalpha = np.log(alpha)
         u0 = x * misc.add_trailing_axes(alpha, self.ndim)
-        u1 = linalg.outer(x, x, ndim=self.ndim) * misc.add_trailing_axes(alpha, self.ndim)
+        u1 = linalg.outer(x, x, ndim=self.ndim) * misc.add_trailing_axes(alpha, 2*self.ndim)
         u2 = alpha
         u3 = logalpha
         u = [u0, u1, u2, u3]
         if self.ndim > 0:
-            D = np.prod(np.shape(x)[-ndim:])
+            D = np.prod(np.shape(x)[-self.ndim:])
         else:
             D = 1
         f = (D/2 - 1) * logalpha - D/2 * np.log(2*np.pi)
