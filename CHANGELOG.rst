@@ -1,3 +1,17 @@
+Dev
++++
+
+Fixed
+-----
+
+* Fix critical plate multiplier bug in Take node. The bug caused basically all
+  models with Take node to be incorrect.
+
+* Fix ndim handling in GaussianGamma and Wishart
+
+* Support lists and other array-convertible formats in several nodes
+
+
 Version 0.5.4 (2016-10-27)
 ++++++++++++++++++++++++++
 
