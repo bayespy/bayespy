@@ -20,7 +20,9 @@ from bayespy.nodes import (Gaussian,
                            GaussianARD,
                            GaussianGamma,
                            Gamma,
-                           Wishart)
+                           Wishart,
+                           ConcatGaussian)
+from ..wishart import WishartMoments
 
 from ...vmp import VB
 
@@ -927,6 +929,9 @@ class TestGaussianGamma(TestCase):
         Test the creation of GaussianGamma node
         """
 
+        # Test 0-ndim Gaussian-Gamma
+        X_alpha = GaussianGamma([1,2], [0.1, 0.2], [0.02, 0.03], [0.03, 0.04], ndim=0)
+
         # Simple construction
         X_alpha = GaussianGamma([1,2,3], np.identity(3), 2, 10)
         self.assertEqual(X_alpha.plates, ())
@@ -1080,37 +1085,67 @@ class TestGaussianGamma(TestCase):
         D = 2
         M = 3
 
-        mu = Gaussian(np.random.randn(M, D), random.covariance(D), plates=(M,))
-        Lambda = Wishart(D + np.random.rand(M), random.covariance(D), plates=(M,))
-        alpha = np.random.rand(M)
-        beta = Gamma(np.random.rand(M), np.random.rand(M), plates=(M,))
+        np.random.seed(42)
 
-        X = GaussianGamma(
-            mu,
-            Lambda,
-            alpha,
-            beta,
+        def check(mu, Lambda, alpha, beta, ndim):
+
+            X = GaussianGamma(
+                mu,
+                (
+                    Lambda if isinstance(Lambda._moments, WishartMoments) else
+                    Lambda.as_wishart(ndim=ndim)
+                ),
+                alpha,
+                beta,
+                ndim=ndim
+            )
+
+            self.assert_moments(
+                X,
+                postprocess=lambda u: [
+                    u[0],
+                    u[1] + linalg.transpose(u[1], ndim=ndim),
+                    u[2],
+                    u[3]
+                ],
+                rtol=1e-5,
+                atol=1e-6,
+                eps=1e-8
+            )
+
+            X.observe(
+                (
+                    np.random.randn(*(X.plates + X.dims[0])),
+                    np.random.rand(*X.plates)
+                )
+            )
+
+            self.assert_message_to_parent(X, mu)
+            self.assert_message_to_parent(
+                X,
+                Lambda,
+                postprocess=lambda m: [
+                    m[0] + linalg.transpose(m[0], ndim=ndim),
+                    m[1],
+                ]
+            )
+            self.assert_message_to_parent(X, beta)
+
+        check(
+            Gaussian(np.random.randn(M, D), random.covariance(D), plates=(M,)),
+            Wishart(D + np.random.rand(M), random.covariance(D), plates=(M,)),
+            np.random.rand(M),
+            Gamma(np.random.rand(M), np.random.rand(M), plates=(M,)),
             ndim=1
         )
 
-        np.random.seed(42)
-
-        self.assert_moments(
-            X,
-            postprocess=lambda u: [
-                u[0],
-                u[1] + linalg.transpose(u[1], ndim=1),
-                u[2],
-                u[3]
-            ],
-            rtol=1e-5,
-            atol=1e-8,
-            eps=1e-8
+        check(
+            GaussianARD(np.random.randn(M, D), np.random.rand(M, D), ndim=0),
+            Gamma(np.random.rand(M, D), np.random.rand(M, D)),
+            np.random.rand(M, D),
+            Gamma(np.random.rand(M, D), np.random.rand(M, D)),
+            ndim=0
         )
-
-        self.assert_message_to_parent(X, mu)
-        self.assert_message_to_parent(X, Lambda)
-        self.assert_message_to_parent(X, beta)
 
         pass
 
@@ -1372,5 +1407,88 @@ class TestGaussianGradient(TestCase):
 
 
         pass
-        
 
+
+class TestConcatGaussian(TestCase):
+
+
+    def test_message_to_parents(self):
+
+        np.random.seed(42)
+
+        N = 5
+        D1 = 3
+        D2 = 4
+        D3 = 2
+
+        X1 = Gaussian(np.random.randn(N, D1), random.covariance(D1))
+        X2 = Gaussian(np.random.randn(N, D2), random.covariance(D2))
+        X3 = np.random.randn(N, D3)
+
+        Z = ConcatGaussian(X1, X2, X3)
+
+        Y = Gaussian(Z, random.covariance(D1 + D2 + D3))
+
+        Y.observe(np.random.randn(*(Y.plates + Y.dims[0])))
+
+        self.assert_message_to_parent(
+            Y,
+            X1,
+            eps=1e-7,
+            rtol=1e-5,
+            atol=1e-5
+        )
+        self.assert_message_to_parent(
+            Y,
+            X2,
+            eps=1e-7,
+            rtol=1e-5,
+            atol=1e-5
+        )
+        pass
+
+
+    def test_moments(self):
+
+        np.random.seed(42)
+
+        N = 4
+        D1 = 2
+        D2 = 3
+
+        X1 = Gaussian(np.random.randn(N, D1), random.covariance(D1))
+        X2 = Gaussian(np.random.randn(N, D2), random.covariance(D2))
+
+        Z = ConcatGaussian(X1, X2)
+
+        u = Z._message_to_child()
+
+        # First moment
+        self.assertAllClose(
+            u[0][...,:D1],
+            X1.u[0]
+        )
+        self.assertAllClose(
+            u[0][...,D1:],
+            X2.u[0]
+        )
+
+        # Second moment
+        self.assertAllClose(
+            u[1][...,:D1,:D1],
+            X1.u[1]
+        )
+        self.assertAllClose(
+            u[1][...,D1:,D1:],
+            X2.u[1]
+        )
+        self.assertAllClose(
+            u[1][...,:D1,D1:],
+            X1.u[0][...,:,None] * X2.u[0][...,None,:]
+        )
+        self.assertAllClose(
+            u[1][...,D1:,:D1],
+            X2.u[0][...,:,None] * X1.u[0][...,None,:]
+        )
+
+        pass

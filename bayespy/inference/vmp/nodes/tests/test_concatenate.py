@@ -112,9 +112,16 @@ class TestConcatenate(TestCase):
         Test the message to child of Concatenate node.
         """
 
+        var = lambda plates, shape: GaussianARD(
+            np.random.randn(*(plates + shape)),
+            np.random.rand(*(plates + shape)),
+            plates=plates,
+            shape=shape
+        )
+
         # Two parents without shapes
-        X1 = GaussianARD(0, 1, plates=(2,), shape=())
-        X2 = GaussianARD(0, 1, plates=(3,), shape=())
+        X1 = var((2,), ())
+        X2 = var((3,), ())
         Y = Concatenate(X1, X2)
         u1 = X1.get_moments()
         u2 = X2.get_moments()
@@ -129,8 +136,8 @@ class TestConcatenate(TestCase):
                             u2[1]*np.ones((3,)))
 
         # Two parents with shapes
-        X1 = GaussianARD(0, 1, plates=(2,), shape=(4,))
-        X2 = GaussianARD(0, 1, plates=(3,), shape=(4,))
+        X1 = var((2,), (4,))
+        X2 = var((3,), (4,))
         Y = Concatenate(X1, X2)
         u1 = X1.get_moments()
         u2 = X2.get_moments()

@@ -222,11 +222,18 @@ class TestGaussianMarkovChain(TestCase):
 
         Y.observe(np.random.randn(N+1, D))
 
-        #self.assert_message_to_parent(X, Mu)
-        #self.assert_message_to_parent(X, Lambda)
+        self.assert_message_to_parent(X, Mu, eps=1e-8)
+        self.assert_message_to_parent(
+            X,
+            Lambda,
+            eps=1e-8,
+            postprocess=lambda u: [
+                u[0] + linalg.transpose(u[0], ndim=1),
+                u[1],
+            ]
+        )
         self.assert_message_to_parent(X, A)
-        #self.assert_message_to_parent(X, V)
-        #self.assert_message_to_parent(X, U)
+        self.assert_message_to_parent(X, V, eps=1e-10, atol=1e-5)
 
         pass
 
@@ -250,6 +257,7 @@ class TestGaussianMarkovChain(TestCase):
             )
 
             Y.observe(np.random.randn(N+1, D))
+            X.update()
 
             # Check gradient messages to parents
             self.assert_message_to_parent(X, Mu)
