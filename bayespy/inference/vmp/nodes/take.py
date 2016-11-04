@@ -128,3 +128,10 @@ class Take(Deterministic):
         if self._plate_axis != -1:
             plates = plates + parent_plates[(self._plate_axis+1):]
         return plates
+
+
+    def _compute_plates_multiplier_from_parent(self, index, parent_multiplier):
+        if parent_multiplier != ():
+            raise NotImplementedError("Take node doesn't yet support plate multipliers")
+
+        return ()
