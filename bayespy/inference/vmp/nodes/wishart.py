@@ -54,6 +54,7 @@ class WishartMoments(Moments):
 
     def compute_fixed_moments(self, Lambda, gradient=None):
         """ Compute moments for fixed x. """
+        Lambda = np.asanyarray(Lambda)
         L = linalg.chol(Lambda, ndim=self.ndim)
         ldet = linalg.chol_logdet(L, ndim=self.ndim)
         u = [Lambda,
@@ -103,11 +104,14 @@ class WishartMoments(Moments):
         if np.ndim(x) < 2 * ndim:
             raise ValueError("Values for Wishart distribution must be at least "
                              "2-D arrays.")
-        if np.shape(x)[-ndim:] != np.shape(x)[-2*ndim:-ndim]:
+        if ndim > 0 and (np.shape(x)[-ndim:] != np.shape(x)[-2*ndim:-ndim]):
             raise ValueError("Values for Wishart distribution must be square "
                              "matrices, thus the two last axes must have equal "
                              "length.")
-        shape = np.shape(x)[-ndim:]
+        shape = (
+            np.shape(x)[-ndim:] if ndim > 0 else
+            ()
+        )
         return cls(shape)
 
 

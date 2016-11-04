@@ -71,6 +71,7 @@ class GammaMoments(Moments):
         """
         Compute the moments for a fixed value
         """
+        x = np.asanyarray(x)
         if np.any(x < 0):
             raise ValueError("Values must be positive")
         u0 = x

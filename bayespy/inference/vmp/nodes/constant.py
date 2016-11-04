@@ -21,7 +21,7 @@ class Constant(Node):
         if not isinstance(moments, Moments) and issubclass(moments, Moments):
             raise ValueError("Give moments as an object instance instead of a class")
         self._moments = moments
-        x = np.asanyarray(x)
+        self.x = x
         # Compute moments
         self.u = self._moments.compute_fixed_moments(x)
         # Dimensions of the moments
@@ -80,3 +80,7 @@ class Constant(Node):
         # Deterministic functions are delta distributions so the lower bound
         # contribuion is zero.
         return 0
+
+
+    def random(self):
+        return self.x

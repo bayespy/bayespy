@@ -383,19 +383,26 @@ class TestCase(unittest.TestCase):
             parent.u = pack(x)
             return child.lower_bound_contribution()
 
-        d = unpack(postprocess(parent._message_from_children()))
+        d = postprocess(pack(unpack(parent._message_from_children())))
 
-        d_num = unpack(postprocess(pack(approx_fprime(
-            unpack(parent.u),
-            cost,
-            eps
-        ))))
+        d_num = postprocess(
+            pack(
+                approx_fprime(
+                    unpack(parent.u),
+                    cost,
+                    eps
+                )
+            )
+        )
 
         # for (i, j) in zip(postprocess(pack(d)), postprocess(pack(d_num))):
         #     print(i)
         #     print(j)
 
-        self.assertAllClose(d, d_num, rtol=rtol, atol=atol)
+        assert len(d_num) == len(d)
+
+        for i in range(len(d)):
+            self.assertAllClose(d[i], d_num[i], rtol=rtol, atol=atol)
 
 
     def assert_moments(self, node, postprocess=lambda u: u, eps=1e-6,
@@ -835,6 +842,10 @@ def sum_multiply_to_plates(*arrays, to_plates=(), from_plates=None, ndim=0):
         y = functools.reduce(np.multiply, arrays)
     y = squeeze_to_dim(y, len(to_plates) + ndim)
     return r * y
+
+
+def multiply(*arrays):
+    return functools.reduce(np.multiply, arrays, 1)
 
 
 def sum_multiply(*args, axis=None, sumaxis=True, keepdims=False):

@@ -410,3 +410,14 @@ class TestTake(TestCase):
         check([[1, 1, 2], [0, 2, 1]], (4, 5), (6,), axis=-2, use_mask=True)
 
         pass
+
+
+    def test_plates_multiplier_from_parent(self):
+
+        X = GaussianARD(np.random.randn(3, 2), 1, ndim=1)
+
+        Y = Take(X, [0, 1, 2, 1, 1])
+
+        self.assertEqual(Y._plates_multiplier_from_parent(0), ())
+
+        pass

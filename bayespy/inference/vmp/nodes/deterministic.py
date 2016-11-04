@@ -147,6 +147,12 @@ class Deterministic(Node):
         # contribuion is zero.
         return 0
 
+
+    def random(self):
+        samples = [parent.random() for parent in self.parents]
+        return self._compute_function(*samples)
+
+
 def tile(X, tiles):
     """
     Tile the plates of the input node.
