@@ -54,6 +54,7 @@ class WishartMoments(Moments):
 
     def compute_fixed_moments(self, Lambda, gradient=None):
         """ Compute moments for fixed x. """
+        Lambda = np.asanyarray(Lambda)
         L = linalg.chol(Lambda, ndim=self.ndim)
         ldet = linalg.chol_logdet(L, ndim=self.ndim)
         u = [Lambda,

@@ -55,6 +55,7 @@ class GaussianMoments(Moments):
         r"""
         Compute the moments for a fixed value
         """
+        x = np.asanyarray(x)
         x = misc.atleast_nd(x, self.ndim)
         return [x, linalg.outer(x, x, ndim=self.ndim)]
 
