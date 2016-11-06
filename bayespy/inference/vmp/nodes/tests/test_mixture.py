@@ -378,9 +378,11 @@ class TestMixture(TestCase):
         N = 10
         K = 3
 
+        # NOTE: Sparse support is very limited and fragile
+
         Z = Categorical(np.ones((N,K))/K, plates=(N,))
-        p = Dirichlet(np.ones((K,D)), plates=(K,))
-        Y = Mixture(Z, Multinomial, 5, p)
+        p = Dirichlet(np.ones((K,1,D)), plates=(K,1))
+        Y = Mixture(Z, Multinomial, 5, p, cluster_plate=-2)
 
         y = sparse.coo_matrix(
             Multinomial(
@@ -388,10 +390,10 @@ class TestMixture(TestCase):
                 Dirichlet(1e-2*np.ones(D), plates=(N,)).random()
             )
             .random()
-        )#.toarray()
+        )
         Y.observe(y)
 
-        #assert(misc.is_sparse(Y.get_moments()[0]))
+        assert(misc.is_sparse(Y.get_moments()[0]))
 
         self.assert_message_to_parent(Y, Z)
         self.assert_message_to_parent(Y, p)

@@ -199,7 +199,7 @@ class TestMultinomial(TestCase):
         y = sparse.coo_matrix(
             Multinomial(
                 5,
-                Dirichlet(1e-2*np.ones(D), plates=(N,)).random()
+                Dirichlet(1e-1*np.ones(D), plates=(N,)).random()
             )
             .random()
         )
