@@ -450,17 +450,19 @@ class ExponentialFamily(Stochastic):
 
             L = L + Z
 
-        if ignore_masked:
-            return (np.sum(np.where(self.mask, L, 0))
-                    * self.broadcasting_multiplier(self.plates,
-                                                   np.shape(L),
-                                                   np.shape(self.mask))
-                    * np.prod(self.plates_multiplier))
-        else:
-            return (np.sum(L)
-                    * self.broadcasting_multiplier(self.plates,
-                                                   np.shape(L))
-                    * np.prod(self.plates_multiplier))
+        return (
+            (
+                np.sum(np.where(self.mask, L, 0))
+                * self.broadcasting_multiplier(self.plates, np.shape(L), np.shape(self.mask))
+                * np.prod(self.plates_multiplier)
+            )
+            if ignore_masked else
+            (
+                np.sum(L)
+                * self.broadcasting_multiplier(self.plates, np.shape(L))
+                * np.prod(self.plates_multiplier)
+            )
+        )
 
 
     def logpdf(self, X, mask=True):
