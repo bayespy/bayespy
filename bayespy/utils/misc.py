@@ -396,10 +396,6 @@ class TestCase(unittest.TestCase):
             )
         )
 
-        # for (i, j) in zip(postprocess(pack(d)), postprocess(pack(d_num))):
-        #     print(i)
-        #     print(j)
-
         assert len(d_num) == len(d)
 
         for i in range(len(d)):
@@ -1007,7 +1003,52 @@ def _sparse_sum_multiply(xs, axis, keepdims, sumaxis):
                 tuple(axes_to_sum) == (-1,) and
                 y.shape[-1] == x.shape[-1]
         ) else
-        not_implemented("Requested sparse matrix sum-multiply not implemented")
+        #
+        # Sum multiply for shapes (M,N) and (K,M,1) over M
+        #
+        (
+            lambda z: (
+                add_singleton_axes(z, [-2]) if keepdims else
+                z
+            )
+        )
+        (
+            np.asarray(x.T.dot(np.squeeze(y, axis=-1).T)).T
+        )
+        if (
+                y.ndim == 3 and
+                y.shape[-1] == 1 and
+                tuple(axes_to_sum) == (-2,) and
+                y.shape[-2] == x.shape[-2]
+        ) else
+        #
+        # Sum multiply for shapes (M,N) and (1,N) over N
+        #
+        (
+            lambda z: (
+                add_singleton_axes(z, [-1]) if keepdims else
+                z
+            )
+        )
+        (
+            np.squeeze(np.asarray(x.dot(y.T)), axis=-1)
+        )
+        if (
+                y.ndim == 2 and
+                y.shape[-2] == 1 and
+                tuple(axes_to_sum) == (-1,) and
+                y.shape[-1] == x.shape[-1]
+        ) else
+        #
+        # Raise error for other cases
+        #
+        not_implemented(
+            "Requested sparse matrix sum-multiply not implemented:\n"
+            "Sparse shape: {0}\n"
+            "Other shape: {1}\n"
+            "Axes to sum: {2}"
+            .format(np.shape(x), np.shape(y), axes_to_sum)
+        )
     )
 
     # def case_2d(x, y, axes_to_sum, keepdims):
