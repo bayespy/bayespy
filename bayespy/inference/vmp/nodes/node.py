@@ -388,7 +388,8 @@ class Node():
 
 
     def _compute_plates_multiplier_from_parent(self, index, plates_multiplier):
-        return self._compute_plates_from_parent(index, plates_multiplier)
+        # TODO/FIXME: How to handle this properly?
+        return plates_multiplier
 
 
     def _plates_to_parent(self, index):
