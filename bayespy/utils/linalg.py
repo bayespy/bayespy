@@ -40,7 +40,10 @@ def chol(C, ndim=1):
         if ndim == 0:
             return np.sqrt(C)
         shape_original = np.shape(C)[-ndim:]
-        C = misc.flatten_axes(C, ndim, ndim)
+        C = (
+            C if ndim == 1 else
+            misc.flatten_axes(C, ndim, ndim)
+        )
         if np.shape(C)[-1] != np.shape(C)[-2]:
             raise ValueError("Not square matrix w.r.t. ndim sense")
         U = np.empty(np.shape(C))
@@ -49,7 +52,10 @@ def chol(C, ndim=1):
                 U[i] = linalg.cho_factor(C[i])[0]
             except np.linalg.linalg.LinAlgError:
                 raise Exception("Matrix not positive definite")
-        return misc.reshape_axes(U, shape_original, shape_original)
+        return (
+            U if ndim == 1 else
+            misc.reshape_axes(U, shape_original, shape_original)
+        )
 
 
 def chol_solve(U, b, out=None, matrix=False, ndim=1):
@@ -61,15 +67,24 @@ def chol_solve(U, b, out=None, matrix=False, ndim=1):
             return (b / U) / U
 
         shape = np.shape(U)[-ndim:]
-        U = misc.flatten_axes(U, ndim, ndim)
+        U = (
+            U if ndim == 1 else
+            misc.flatten_axes(U, ndim, ndim)
+        )
 
         if matrix:
             shape_b = np.shape(b)[-ndim:]
-            B = misc.flatten_axes(b, ndim, ndim)
-            B = transpose(b, ndim=1)
+            B = (
+                b if ndim == 1 else
+                misc.flatten_axes(b, ndim, ndim)
+            )
+            B = transpose(B, ndim=1)
             U = U[...,None,:,:]
         else:
-            B = misc.flatten_axes(b, ndim)
+            B = (
+                b if ndim == 1 else
+                misc.flatten_axes(b, ndim)
+            )
 
         # Allocate memory
         sh_u = U.shape[:-2]
@@ -120,9 +135,15 @@ def chol_solve(U, b, out=None, matrix=False, ndim=1):
 
         if matrix:
             out = transpose(out, ndim=1)
-            out = misc.reshape_axes(out, shape, shape_b)
+            out = (
+                out if ndim == 1 else
+                misc.reshape_axes(out, shape, shape_b)
+            )
         else:
-            out = misc.reshape_axes(out, shape)
+            out = (
+                out if ndim == 1 else
+                misc.reshape_axes(out, shape)
+            )
 
         return out
 
@@ -143,7 +164,10 @@ def chol_inv(U, ndim=1):
         if ndim == 0:
             return (1 / U) / U
         shape = np.shape(U)[-ndim:]
-        U = misc.flatten_axes(U, ndim, ndim)
+        U = (
+            U if ndim == 1 else
+            misc.flatten_axes(U, ndim, ndim)
+        )
         # Allocate memory
         V = np.tile(np.identity(np.shape(U)[-1]), np.shape(U)[:-2]+(1,1))
         for i in misc.nested_iterator(np.shape(U)[:-2]):
@@ -152,7 +176,10 @@ def chol_inv(U, ndim=1):
                 V[i],
                 overwrite_b=True # This would need Fortran order
             )
-        V = misc.reshape_axes(V, shape, shape)
+        V = (
+            V if ndim == 1 else
+            misc.reshape_axes(V, shape, shape)
+        )
         return V
 
     elif isinstance(U, cholmod.Factor):
@@ -166,7 +193,10 @@ def chol_logdet(U, ndim=1):
     if isinstance(U, np.ndarray) or np.isscalar(U):
         if ndim == 0:
             return 2 * np.log(U)
-        U = misc.flatten_axes(U, ndim, ndim)
+        U = (
+            U if ndim == 1 else
+            misc.flatten_axes(U, ndim, ndim)
+        )
         return 2*np.sum(np.log(np.einsum('...ii->...i',U)), axis=-1)
     elif isinstance(U, cholmod.Factor):
         if ndim != 1:
