@@ -1,3 +1,15 @@
+Version 0.5.6 (2016-11-08)
+++++++++++++++++++++++++++
+
+Fixed
+-----
+
+* Remove significant reshaping overhead in Cholesky computations in linalg
+  module
+
+* Fix minor plate multiplier issues
+
+
 Version 0.5.5 (2016-11-04)
 ++++++++++++++++++++++++++
 
