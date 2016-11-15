@@ -369,3 +369,25 @@ class TestMixture(TestCase):
 
         pass
 
+
+    def test_deterministic_mappings(self):
+        x = Categorical([0.8, 0.2])
+        y = Mixture(
+            x,
+            Categorical,
+            [
+                [0.10, 0.90],
+                [0.00, 1.00],
+            ]
+        )
+
+        y.observe(0)
+        x.update()
+        self.assertAllClose(x.u[0], [1, 0])
+
+        y.observe(1)
+        x.update()
+        p = np.array([0.8*0.9, 0.2*1.0])
+        self.assertAllClose(x.u[0], p / np.sum(p))
+
+        pass

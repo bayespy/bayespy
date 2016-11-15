@@ -54,7 +54,10 @@ class ExponentialFamilyDistribution(Distribution):
             axis_sum = tuple(range(-ndims_i,0))
             # Compute the term
             # TODO/FIXME: Use einsum!
-            L = L + np.sum(phi_i * u_i, axis=axis_sum)
+            L = L + np.sum(
+                np.where(u_i != 0, phi_i, 0) * u_i,
+                axis=axis_sum
+            )
         return L
 
 
