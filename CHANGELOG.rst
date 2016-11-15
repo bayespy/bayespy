@@ -1,3 +1,12 @@
+Dev
++++
+
+Fixed
+-----
+
+* Fix deterministic mappings in Mixture, which caused NaNs in results
+
+
 Version 0.5.6 (2016-11-08)
 ++++++++++++++++++++++++++
 
