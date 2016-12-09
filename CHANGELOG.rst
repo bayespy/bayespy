@@ -1,3 +1,12 @@
+Dev
++++
+
+Fixed
+-----
+
+* Implement random sampling for Poisson
+
+
 Version 0.5.7 (2016-11-15)
 ++++++++++++++++++++++++++
 
