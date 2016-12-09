@@ -377,16 +377,17 @@ class TestMixture(TestCase):
         D = 7
         N = 10
         K = 3
+        trials = np.arange(N) + 3
 
         # NOTE: Sparse support is very limited and fragile
 
         Z = Categorical(np.ones((N,K))/K, plates=(N,))
         p = Dirichlet(np.ones((K,1,D)), plates=(K,1))
-        Y = Mixture(Z, Multinomial, 5, p, cluster_plate=-2)
+        Y = Mixture(Z, Multinomial, trials, p, cluster_plate=-2)
 
         y = sparse.coo_matrix(
             Multinomial(
-                5,
+                trials,
                 Dirichlet(1e-2*np.ones(D), plates=(N,)).random()
             )
             .random()

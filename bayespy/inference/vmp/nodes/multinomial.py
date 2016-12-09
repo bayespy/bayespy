@@ -160,7 +160,7 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
             raise ValueError("Counts must be integers")
         if misc.any(x < 0):
             raise ValueError("Counts must be non-negative")
-        if np.any(np.sum(x, axis=-1) != self.N):
+        if np.any(misc.sum(x, axis=-1) != self.N):
             raise ValueError("Counts must sum to the number of trials")
 
         # Moments is just the counts vector

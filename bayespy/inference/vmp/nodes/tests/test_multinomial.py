@@ -192,13 +192,14 @@ class TestMultinomial(TestCase):
 
         D = 100
         N = 50
+        trials = np.arange(N) + 10
 
         p = Dirichlet(np.ones(D))
-        Y = Multinomial(5, p, plates=(N,))
+        Y = Multinomial(trials, p, plates=(N,))
 
         y = sparse.coo_matrix(
             Multinomial(
-                5,
+                trials,
                 Dirichlet(1e-1*np.ones(D), plates=(N,)).random()
             )
             .random()
