@@ -1,3 +1,14 @@
+Version 0.5.8 (2017-05-13)
+++++++++++++++++++++++++++
+
+Fixed
+-----
+
+* Implement random sampling for Poisson
+
+* Update some old licensing information
+
+
 Version 0.5.7 (2016-11-15)
 ++++++++++++++++++++++++++
 

@@ -1,25 +1,9 @@
 ######################################################################
 # Copyright (C) 2015 Jaakko Luttinen
 #
-# This file is licensed under Version 3.0 of the GNU General Public
-# License. See LICENSE for a text of the license.
+# This file is licensed under the MIT License.
 ######################################################################
 
-######################################################################
-# This file is part of BayesPy.
-#
-# BayesPy is free software: you can redistribute it and/or modify it
-# under the terms of the GNU General Public License version 3 as
-# published by the Free Software Foundation.
-#
-# BayesPy is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with BayesPy.  If not, see <http://www.gnu.org/licenses/>.
-######################################################################
 
 """
 Module for Bernoulli using the logistic function for Gaussian
@@ -43,7 +27,7 @@ from bayespy.utils import misc
 class CategoricalDistribution(MultinomialDistribution):
     """
     Class for the VMP formulas of categorical variables.
-    """    
+    """
 
     def __init__(self, categories):
         """
@@ -57,7 +41,7 @@ class CategoricalDistribution(MultinomialDistribution):
             raise ValueError("Number of categoriess must be non-negative")
         self.D = categories
         super().__init__(1)
-        
+
 
     def compute_message_to_parent(self, parent, index, u, u_p):
         """
@@ -79,13 +63,13 @@ class CategoricalDistribution(MultinomialDistribution):
         """
         return super().compute_moments_and_cgf(phi, mask=mask)
 
-        
+
     def compute_cgf_from_parents(self, u_p):
         """
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         return super().compute_cgf_from_parents(u_p)
-    
+
 
     def compute_fixed_moments_and_f(self, x, mask=True):
         """
@@ -110,7 +94,7 @@ class CategoricalDistribution(MultinomialDistribution):
 
         return (u, f)
 
-    
+
     def random(self, *phi, plates=None):
         """
         Draw a random sample from the distribution.
@@ -120,7 +104,7 @@ class CategoricalDistribution(MultinomialDistribution):
         p = np.exp(logp)
         return random.categorical(p, size=plates)
 
-    
+
 class Logistic(ExponentialFamily):
     r"""
 
@@ -149,7 +133,7 @@ class Logistic(ExponentialFamily):
     The log of the logistic function:
 
     .. math::
-    
+
        \log g(x) = -\log(1 + e^{-x}) = \frac{x}{2} - \log(e^{x/2} + e^{-x/2})
 
     The latter term:
@@ -160,7 +144,7 @@ class Logistic(ExponentialFamily):
 
     This is a convex function in the variable :math:`x^2`, thus it can be
     bounded globally with a first order Taylor expansion in the variable x^2:
-    
+
     .. math::
 
        f(x) &\geq f(\xi) + \frac {\partial f(\xi)}{\partial(\xi^2)} (x^2 -

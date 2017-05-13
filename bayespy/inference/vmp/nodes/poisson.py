@@ -120,14 +120,14 @@ class PoissonDistribution(ExponentialFamilyDistribution):
 
         return (u, f)
 
-    
-    def random(self, *phi):
+
+    def random(self, *phi, plates=None):
         """
         Draw a random sample from the distribution.
         """
-        raise NotImplementedError()
+        return np.random.poisson(np.exp(phi[0]), size=plates)
 
-    
+
 class Poisson(ExponentialFamily):
     """
     Node for Poisson random variables.
