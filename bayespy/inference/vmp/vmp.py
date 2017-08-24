@@ -27,10 +27,10 @@ class VB():
     ----------
 
     nodes : nodes
-    
+
         Nodes that form the model. Must include all at least all stochastic
         nodes of the model.
-        
+
     tol : double, optional
 
         Convergence criterion.  Tolerance for the relative change in the VB
@@ -51,8 +51,8 @@ class VB():
     """
 
     def __init__(self,
-                 *nodes, 
-                 tol=1e-5, 
+                 *nodes,
+                 tol=1e-5,
                  autosave_filename=None,
                  autosave_iterations=0,
                  use_logging=False,
@@ -71,20 +71,20 @@ class VB():
         else:
             # By default, don't use logging, just print stuff
             self.print = print
-            
+
         # Remove duplicate nodes
         self.model = misc.unique(nodes)
 
         self.ignore_bound_checks = False
 
         self._figures = {}
-        
+
         self.iter = 0
         self.annealing_changed = False
         self.converged = False
         self.L = np.array(())
         self.cputime = np.array(())
-        self.l = dict(zip(self.model, 
+        self.l = dict(zip(self.model,
                           len(self.model)*[np.array([])]))
         self.autosave_iterations = autosave_iterations
         self.autosave_nodes = None
@@ -156,7 +156,8 @@ class VB():
 
         converged = False
 
-        for i in range(repeat):
+        i = 0
+        while repeat is None or i < repeat:
 
             t = time.clock()
 
@@ -171,6 +172,8 @@ class VB():
             cputime = time.clock() - t
             if self._end_iteration_step(None, cputime, tol=tol, verbose=verbose):
                 return
+
+            i += 1
 
 
     def has_converged(self, tol=None):
@@ -196,7 +199,7 @@ class VB():
             lp = node.lower_bound_contribution()
             L += lp
             self.l[node][self.iter] = lp
-            
+
         return L
 
     def plot_iteration_by_nodes(self, axes=None, diff=False):
@@ -208,7 +211,7 @@ class VB():
 
         if axes is None:
             axes = plt.gca()
-        
+
         D = len(self.l)
         N = self.iter + 1
         if diff:
@@ -243,13 +246,13 @@ class VB():
 
         if self.iter == 0:
             # Check HDF5 version.
-            if h5py.version.hdf5_version_tuple < (1,8,7): 
+            if h5py.version.hdf5_version_tuple < (1,8,7):
                 warnings.warn("WARNING! Your HDF5 version is %s. HDF5 versions "
                               "<1.8.7 are not able to save empty arrays, thus "
                               "you may experience problems if you for instance "
                               "try to save before running any iteration steps."
                               % str(h5py.version.hdf5_version_tuple))
-            
+
 
         # By default, use the same file as for auto-saving
         if not filename:
@@ -276,7 +279,7 @@ class VB():
             misc.write_to_hdf5(h5f, self.iter, 'iter')
             misc.write_to_hdf5(h5f, self.converged, 'converged')
             if self.callback_output is not None:
-                misc.write_to_hdf5(h5f, 
+                misc.write_to_hdf5(h5f,
                                    self.callback_output,
                                    'callback_output')
             boundgroup = h5f.create_group('boundterms')
@@ -314,7 +317,7 @@ class VB():
                 filename = self.autosave_filename
             else:
                 raise Exception("Filename must be given.")
-            
+
         # Open HDF5 file
         h5f = h5py.File(filename, 'r')
 
@@ -354,14 +357,14 @@ class VB():
         finally:
             # Close file
             h5f.close()
-        
+
     def __getitem__(self, name):
         if name in self.model:
             return name
         else:
             # Dictionary for mapping node names to nodes
             dictionary = {node.name: node for node in self.model}
-            return dictionary[name]        
+            return dictionary[name]
 
     def plot(self, *nodes, **kwargs):
         """
@@ -746,7 +749,7 @@ class VB():
                 self.converged = True
 
         # Auto-save, if requested
-        if (self.autosave_iterations > 0 
+        if (self.autosave_iterations > 0
             and np.mod(self.iter+1, self.autosave_iterations) == 0):
 
             if self.autosave_nodes is not None:
