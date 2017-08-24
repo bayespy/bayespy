@@ -169,3 +169,13 @@ def _setup_linear_regression():
     Fh = SumMultiply('i,i', B, Xh)
 
     return locals()
+
+
+def test_ellipse_from_cov():
+    xy = np.random.normal(0, 1, 2)
+    cov = [[1, 0.5], [0.5, 1]]
+    ellipse = bpplt.ellipse_from_cov(xy, cov)
+    assert ellipse.angle == 135
+    np.testing.assert_allclose(ellipse.height, 2.4494897427831779)
+    np.testing.assert_allclose(ellipse.width, 1.4142135623730951)
+    np.testing.assert_allclose(xy, ellipse.center)
