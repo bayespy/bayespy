@@ -130,7 +130,7 @@ class VB():
     def set_callback(self, callback):
         self.callback = callback
 
-    def update(self, *nodes, repeat=1, plot=False, tol=None, verbose=True):
+    def update(self, *nodes, repeat=1, plot=False, tol=None, verbose=True, tqdm=None):
 
         # TODO/FIXME:
         #
@@ -156,6 +156,8 @@ class VB():
 
         converged = False
 
+        if tqdm is not None:
+            tqdm = tqdm(total=repeat)
         i = 0
         while repeat is None or i < repeat:
 
@@ -170,10 +172,12 @@ class VB():
                     self.plot(X)
 
             cputime = time.clock() - t
+            i += 1
+            if tqdm is not None:
+                tqdm.update()
+
             if self._end_iteration_step(None, cputime, tol=tol, verbose=verbose):
                 return
-
-            i += 1
 
 
     def has_converged(self, tol=None):
