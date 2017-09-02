@@ -57,6 +57,9 @@ Making releases
 
  * Push to GitHub: ``git push && git push --tags``
 
+ * Download the release tarball from GitHub and use that in the phases below.
+   This avoids having local garbage in the release.
+
  * Publish in PyPI: ``python setup.py release_pypi``
 
  * Update the documentation web page: ``cd doc && make gh-pages``
