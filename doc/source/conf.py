@@ -360,3 +360,6 @@ epub_copyright = bp.__copyright__
 # Allow duplicate toc entries.
 #epub_tocdup = True
 
+# Read the docs fails to import _tkinter so use Agg backend
+import matplotlib
+matplotlib.use('agg')
