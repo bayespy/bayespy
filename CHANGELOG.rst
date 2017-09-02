@@ -95,7 +95,7 @@ Added
 * Add a node method to obtain the VB lower bound terms that contain the node
 
 Fixed
------
+.....
 
 * Handle empty CLI argument lists in CLI argument parsing
 
