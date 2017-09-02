@@ -1,3 +1,14 @@
+Dev
++++
+
+Added
+-----
+
+* Support tqdm for monitoring the iteration progress (#105).
+
+* Allow VB iteration without maximum number of iteration steps (#104).
+
+
 Version 0.5.8 (2017-05-13)
 ++++++++++++++++++++++++++
 
