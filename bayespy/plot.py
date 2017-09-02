@@ -21,6 +21,8 @@ Functions
    plot
    hinton
    gaussian_mixture_2d
+   ellipse_from_cov
+   ellipse_from_precision
 
 Plotters
 ========
@@ -58,6 +60,7 @@ from scipy import special
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib import colors
+from matplotlib import patches
 #from matplotlib.pyplot import *
 
 from bayespy.inference.vmp.nodes.categorical import CategoricalMoments
@@ -203,7 +206,7 @@ def pdf(Z, x, *args, name=None, axes=None, fig=None, **kwargs):
     if name:
         axes.set_title(r'$q(%s)$' % (name))
         axes.set_xlabel(r'$%s$' % (name))
-        
+
     return retval
 
 
@@ -248,13 +251,13 @@ def contour(Z, x, y, n=None, axes=None, fig=None, **kwargs):
         return axes.contour(X, Y, P, levels, **kwargs)
     else:
         return axes.contour(X, Y, P, **kwargs)
-        
+
 
 
 def plot_gaussian_mc(X, scale=2, **kwargs):
     """
     Plot Gaussian Markov chain as a 1-D function
-    
+
     Parameters
     ----------
     X : node
@@ -276,7 +279,7 @@ def plot_bernoulli(X, axis=-1, scale=2, **kwargs):
 def plot_gaussian(X, axis=-1, scale=2, **kwargs):
     """
     Plot Gaussian node as a 1-D function
-    
+
     Parameters
     ----------
     X : node
@@ -290,7 +293,7 @@ def plot_gaussian(X, axis=-1, scale=2, **kwargs):
     xx = misc.get_diag(u_X[1], ndim=len(X.dims[0]))
     std = scale * np.sqrt(xx - x**2)
     #std = scale * np.sqrt(np.einsum('...ii->...i', xx) - x**2)
-    
+
     return _timeseries_mean_and_error(x, std, axis=axis, **kwargs)
 
 
@@ -321,11 +324,11 @@ def plot(Y, axis=-1, scale=2, center=False, **kwargs):
 
     (mu, var) = Y.get_mean_and_variance()
     std = np.sqrt(var)
-    
-    return _timeseries_mean_and_error(mu, std, 
+
+    return _timeseries_mean_and_error(mu, std,
                                       axis=axis,
                                       scale=scale,
-                                      center=center, 
+                                      center=center,
                                       **kwargs)
 
 
@@ -356,7 +359,7 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, fig=None, ax
     y = np.rollaxis(y, axis)
     if std is not None:
         std = np.rollaxis(std, axis)
-    
+
     y = np.reshape(y, (T, -1))
     if std is not None:
         std = np.reshape(std, (T, -1))
@@ -428,7 +431,7 @@ def _blob(axes, x, y, area, colour):
 def _rectangle(axes, x, y, width, height, **kwargs):
     _x = x - width/2
     _y = y - height/2
-    rectangle = plt.Rectangle((_x, _y), 
+    rectangle = plt.Rectangle((_x, _y),
                               width,
                               height,
                               **kwargs)
@@ -451,7 +454,7 @@ def gaussian_mixture_2d(X, alpha=None, scale=2, fill=False, axes=None, **kwargs)
     scale : float (optional)
        Scale for the covariance ellipses (by default, 2)
     """
-        
+
     if axes is None:
         axes = plt.gca()
 
@@ -462,7 +465,7 @@ def gaussian_mixture_2d(X, alpha=None, scale=2, fill=False, axes=None, **kwargs)
 
     if len(mu_Lambda.plates) != 1:
         raise NotImplementedError("Not yet implemented for more plates")
-    
+
     K = mu_Lambda.plates[0]
 
     width = np.zeros(K)
@@ -511,13 +514,13 @@ def gaussian_mixture_2d(X, alpha=None, scale=2, fill=False, axes=None, **kwargs)
         plt.plot(y[:,0], y[:,1], 'r.')
 
     return
-    
-    
+
+
 def _hinton(W, error=None, vmax=None, square=False, axes=None):
     """
-    Draws a Hinton diagram for visualizing a weight matrix. 
+    Draws a Hinton diagram for visualizing a weight matrix.
 
-    Temporarily disables matplotlib interactive mode if it is on, 
+    Temporarily disables matplotlib interactive mode if it is on,
     otherwise this takes forever.
 
     Originally copied from
@@ -566,13 +569,13 @@ def _hinton(W, error=None, vmax=None, square=False, axes=None):
                     raise Exception("BUG? Value+error greater than max")
                 _rectangle(axes,
                            _x,
-                           _y, 
+                           _y,
                            min(1, np.sqrt((_w+e)/vmax)),
                            min(1, np.sqrt((_w+e)/vmax)),
                            edgecolor=_c,
                            fill=False)
             _blob(axes, _x, _y, min(1, _w/vmax), _c)
-                
+
 
 def matrix(A, axes=None):
 
@@ -581,8 +584,8 @@ def matrix(A, axes=None):
 
     A = np.atleast_2d(A)
     vmax = np.max(np.abs(A))
-    return  axes.imshow(A, 
-                        interpolation='nearest', 
+    return  axes.imshow(A,
+                        interpolation='nearest',
                         cmap='RdBu_r',
                         vmin=-vmax,
                         vmax=vmax)
@@ -597,7 +600,7 @@ def new_matrix(A, vmax=None):
     for i in range(M):
         for j in range(N):
             pass
-    
+
 def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
     """
     Plot the Hinton diagram of a Gaussian node
@@ -672,7 +675,7 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
     std = np.transpose(std, axes=axes)
 
     vmax = np.max(np.abs(x) + scale*std)
-    
+
     if scale == 0:
         _subplots(_hinton, (x, 2), fig=fig, kwargs=dict(vmax=vmax))
     else:
@@ -816,7 +819,7 @@ def beta_hinton(P, square=True):
 
     # Plot Hinton diagram
     return _hinton(p, vmax=1.0, square=square)
-    
+
 
 def dirichlet_hinton(P, square=True):
     """
@@ -835,7 +838,7 @@ def dirichlet_hinton(P, square=True):
     # Plot Hinton diagram
     return _hinton(p, vmax=1.0, square=square)
 
-    
+
 def bernoulli_hinton(Z, square=True):
     """
     Plot a Bernoulli distributed random variable as a Hinton diagram
@@ -852,7 +855,7 @@ def bernoulli_hinton(Z, square=True):
 
     # Plot Hinton diagram
     return _hinton(z, vmax=1.0, square=square)
-    
+
 
 def categorical_hinton(Z, square=True):
     """
@@ -870,7 +873,7 @@ def categorical_hinton(Z, square=True):
 
     # Plot Hinton diagram
     return _hinton(np.squeeze(z), vmax=1.0, square=square)
-    
+
 
 def hinton(X, **kwargs):
     r"""
@@ -932,7 +935,7 @@ def hinton(X, **kwargs):
             return categorical_hinton(X, **kwargs)
 
     return _hinton_figure(X, **kwargs)
-    
+
 
 class Plotter():
     r"""
@@ -941,7 +944,7 @@ class Plotter():
     The purpose of this class is to collect all the parameters needed by a
     plotting function and provide a callable interface which needs only the node
     as the input.
-    
+
     Plotter instances are callable objects that plot a given node using a
     specified plotting function.
 
@@ -964,7 +967,7 @@ class Plotter():
     --------
 
     First, create a gamma variable:
-    
+
     >>> import numpy as np
     >>> from bayespy.nodes import Gamma
     >>> x = Gamma(4, 5)
@@ -979,7 +982,7 @@ class Plotter():
     plotting function for the inference engine as the inference engine
     gives only the node as input.  Thus, we need to create a simple
     plotter wrapper:
-    
+
     >>> p = bpplt.Plotter(bpplt.pdf, np.linspace(0.1, 10, num=100))
 
     Now, this callable object ``p`` needs only the node as the input:
@@ -993,7 +996,7 @@ class Plotter():
     >>> x.plot()                                            # doctest: +ELLIPSIS
     [<matplotlib.lines.Line2D object at 0x...>]
     """
-    
+
 
     def __init__(self, plotter, *args, **kwargs):
         self._args = args
@@ -1016,7 +1019,7 @@ class Plotter():
         kwargs_all.update(kwargs)
         return self._plotter(X, *self._args, fig=fig, **kwargs_all)
 
-        
+
 class PDFPlotter(Plotter):
     r"""
     Plotter of probability density function of a scalar node
@@ -1143,7 +1146,7 @@ def matrix_animation(A, filename=None, fps=25, fig=None, **kwargs):
                                    interval=1000/fps,
                                    blit=False,
                                    repeat=False)
-        
+
     return anim
 
 
@@ -1161,7 +1164,7 @@ def save_animation(anim, filename, fps=25, bitrate=5000, fig=None):
 
     writer = animation.FFMpegFileWriter(fps=fps, bitrate=bitrate)
     writer.setup(fig, filename, 100)
-    anim.save(filename, 
+    anim.save(filename,
               fps=fps,
               writer=writer,
               bitrate=bitrate)
@@ -1209,8 +1212,8 @@ def gaussian_mixture_logpdf(x, w, mu, Sigma):
     # Compute log pdf for each cluster:
     # Shape(lpdf)  = (N, K)
     lpdf = misc.gaussian_logpdf(z, 0, 0, ldet, D)
-    
-    
+
+
 
 def matrixplot(A, colorbar=False, axes=None):
     if axes is None:
@@ -1226,7 +1229,7 @@ def matrixplot(A, colorbar=False, axes=None):
 def contourplot(x1, x2, y, colorbar=False, filled=True, axes=None):
     """ Plots 2D contour plot. x1 and x2 are 1D vectors, y contains
     the function values. y.size must be x1.size*x2.size. """
-    
+
     if axes is None:
         axes = plt.gca()
 
@@ -1237,7 +1240,7 @@ def contourplot(x1, x2, y, colorbar=False, filled=True, axes=None):
         axes.contour(x1, x2, y)
     if colorbar:
         plt.colorbar(ax=axes)
-        
+
 
 def errorplot(y=None, error=None, x=None, lower=None, upper=None,
               color=(0,0,0,1), fillcolor=None, axes=None, **kwargs):
@@ -1288,7 +1291,7 @@ def plotmatrix(X):
     """
     return X.plotmatrix()
 
-    
+
 def _pdf_t(mu, s2, nu, axes=None, scale=4, color='k'):
     """
     """
@@ -1335,7 +1338,7 @@ def _contour_t(mu, Cov, nu, axes=None, scale=4, transpose=False, colors='k'):
     if np.shape(mu) != (2,) or np.shape(Cov) != (2,2) or np.shape(nu) != ():
         print(np.shape(mu), np.shape(Cov), np.shape(nu))
         raise ValueError("Only 2-d t-distribution allowed")
-    
+
     if transpose:
         mu = mu[[1,0]]
         Cov = Cov[np.ix_([1,0],[1,0])]
@@ -1362,3 +1365,50 @@ def _contour_gaussian_gamma(mu, s2, a, b, axes=None, transpose=False):
     """
     """
     pass
+
+
+def ellipse_from_cov(xy, cov, scale=2, **kwargs):
+    """
+    Create an ellipse from a covariance matrix.
+
+    Parameters
+    ----------
+    xy : np.ndarray
+        position of the ellipse
+    cov : np.ndarray
+        covariance matrix
+    scale : float
+        scale of the ellipse (default is three standard deviations)
+    kwargs : dict
+        keyword arguments passed on to `matplotlib.patches.Ellipse`
+
+    Returns
+    -------
+    ellipse : matplotlib.patches.Ellipse
+    """
+    evals, evecs = np.linalg.eigh(cov)
+    angle = np.arctan2(*evecs[::-1, 0])
+    width, height = scale * np.sqrt(evals)
+    return patches.Ellipse(xy, width, height, np.rad2deg(angle), **kwargs)
+
+
+def ellipse_from_precision(xy, precision, scale=2, **kwargs):
+    """
+    Create an ellipse from a covariance matrix.
+
+    Parameters
+    ----------
+    xy : np.ndarray
+        position of the ellipse
+    cov : np.ndarray
+        covariance matrix
+    scale : float
+        scale of the ellipse (default is three standard deviations)
+    kwargs : dict
+        keyword arguments passed on to `matplotlib.patches.Ellipse`
+
+    Returns
+    -------
+    ellipse : matplotlib.patches.Ellipse
+    """
+    return ellipse_from_cov(xy, np.linalg.inv(precision), scale, **kwargs)
