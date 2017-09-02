@@ -19,7 +19,7 @@ welcome.
 Project information
 -------------------
 
-Copyright (C) 2011-2016 Jaakko Luttinen and other contributors (see below)
+Copyright (C) 2011-2017 Jaakko Luttinen and other contributors (see below)
 
 BayesPy including the documentation is licensed under the MIT License. See
 LICENSE file for a text of the license or visit
@@ -31,7 +31,7 @@ http://opensource.org/licenses/MIT.
    :target: https://pypi.python.org/pypi/bayespy
 
 ============== =============================================
-Latest release |release| 
+Latest release |release|
 Documentation  http://bayespy.org
 Repository     https://github.com/bayespy/bayespy.git
 Bug reports    https://github.com/bayespy/bayespy/issues
@@ -69,7 +69,7 @@ Branch               Test status     Test coverage  Documentation
 **master (stable)**  |travismaster|  |covermaster|  |docsmaster|
 **develop (latest)** |travisdevelop| |coverdevelop| |docsdevelop|
 ==================== =============== ============== =============
- 
+
 
 Similar projects
 ----------------
@@ -126,5 +126,7 @@ The list of contributors:
 * Deebul Nair
 
 * Christopher Cramer
+
+* Till Hoffmann
 
 Each file or the git log can be used for more detailed information.
