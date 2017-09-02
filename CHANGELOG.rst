@@ -2,7 +2,7 @@ Dev
 +++
 
 Added
------
+.....
 
 * Support tqdm for monitoring the iteration progress (#105).
 
@@ -15,7 +15,7 @@ Version 0.5.8 (2017-05-13)
 ++++++++++++++++++++++++++
 
 Fixed
------
+.....
 
 * Implement random sampling for Poisson
 
@@ -26,7 +26,7 @@ Version 0.5.7 (2016-11-15)
 ++++++++++++++++++++++++++
 
 Fixed
------
+.....
 
 * Fix deterministic mappings in Mixture, which caused NaNs in results
 
@@ -35,7 +35,7 @@ Version 0.5.6 (2016-11-08)
 ++++++++++++++++++++++++++
 
 Fixed
------
+.....
 
 * Remove significant reshaping overhead in Cholesky computations in linalg
   module
@@ -47,7 +47,7 @@ Version 0.5.5 (2016-11-04)
 ++++++++++++++++++++++++++
 
 Fixed
------
+.....
 
 * Fix critical plate multiplier bug in Take node. The bug caused basically all
   models with Take node to be incorrect.
@@ -61,7 +61,7 @@ Version 0.5.4 (2016-10-27)
 ++++++++++++++++++++++++++
 
 Added
------
+.....
 
 * Add conversion from Gamma to scalar Wishart
 
@@ -70,7 +70,7 @@ Added
 * Add generic unit test functions for messages and moments
 
 Changed
--------
+.......
 
 * Require NumPy 1.10 or greater
 
@@ -79,7 +79,7 @@ Version 0.5.3 (2016-08-17)
 ++++++++++++++++++++++++++
 
 Fixed
------
+.....
 
 * Fix package metadata handling
 
@@ -90,7 +90,7 @@ Version 0.5.2 (2016-08-17)
 ++++++++++++++++++++++++++
 
 Added
------
+.....
 
 * Add a node method to obtain the VB lower bound terms that contain the node
 
