@@ -8,6 +8,8 @@ Added
 
 * Allow VB iteration without maximum number of iteration steps (#104).
 
+* Add ellipse patch creation from covariance or precision (#103).
+
 
 Version 0.5.8 (2017-05-13)
 ++++++++++++++++++++++++++
