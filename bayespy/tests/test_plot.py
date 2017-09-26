@@ -15,6 +15,7 @@ strict unit tests.
 
 import numpy as np
 from matplotlib.testing.decorators import image_comparison
+from nose.plugins.skip import SkipTest
 
 import bayespy.plot as bpplt
 from bayespy.nodes import Bernoulli, Beta, Categorical, Dirichlet, \
@@ -93,6 +94,7 @@ def test_pdf_plot():
     bpplt.pdf(data['tau'], np.linspace(1e-6,1,100), color='k')
     bpplt.pyplot.axvline(data['s']**(-2), color='r')
 
+@SkipTest
 @image_comparison(baseline_images=['contour'], extensions=['png'], remove_text=True)
 def test_contour_plot():
     data = _setup_linear_regression()

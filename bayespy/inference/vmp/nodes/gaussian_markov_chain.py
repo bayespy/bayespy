@@ -70,7 +70,7 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
     Sub-classes implement distribution specific computations.
     """
 
-    
+
     def __init__(self, N, D):
         self.N = N
         self.D = D
@@ -388,7 +388,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
          \end{bmatrix}
          \\
          \begin{bmatrix}
-           \mathbf{A}^T \mathrm{diag}(\boldsymbol{\nu}) & \ldots & \mathbf{A}^T \mathrm{diag}(\boldsymbol{\nu}) 
+           \mathbf{A}^T \mathrm{diag}(\boldsymbol{\nu}) & \ldots & \mathbf{A}^T \mathrm{diag}(\boldsymbol{\nu})
          \end{bmatrix}
        \end{bmatrix}
        \\
@@ -571,7 +571,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         nu_B = u_A_nu[0][...,D:]     # (..., N-1, D, inputs)
         nu_BB = u_A_nu[1][...,D:,D:] # (..., N-1, D, inputs, inputs)
         nu_AB = u_A_nu[1][...,:D,D:] # (..., N-1, D, D, inputs)
-        nu = u_A_nu[2]               # (..., N-1, D)
+        nu = u_A_nu[2] * np.ones(D)  # (..., N-1, D)
         # mu = u_mu[0]           # (..., D)
         # Lambda = u_Lambda[0]   # (..., D, D)
         # A = u_A[0][...,:D]     # (..., N-1, D, D)
@@ -955,7 +955,7 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
         u_v : list of ndarrays
             Moments of parent `v`.
         """
-        
+
         if index == 0:   # mu
             raise NotImplementedError()
         elif index == 1: # Lambda
@@ -972,7 +972,7 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
                            XpXn,
                            S,
                            v)
-            
+
             # m1: (...,D,D,K,D,K)
 
             if np.ndim(v) >= 2 and np.shape(v)[-2] > 1:
@@ -997,7 +997,7 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
                            XpXn,
                            B,
                            np.atleast_2d(v))
-            
+
             # m1: (...,N,K,K)
 
             if np.ndim(v) >= 2 and np.shape(v)[-2] > 1:
@@ -1093,7 +1093,7 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
         if np.ndim(v) >= 2 and np.shape(v)[-2] > 1:
             raise Exception("This implementation is not efficient if "
                             "innovation noise is time-dependent.")
-            phi1[..., :-1, :, :] += np.einsum('...dikjl,...kl,...d->...ij', 
+            phi1[..., :-1, :, :] += np.einsum('...dikjl,...kl,...d->...ij',
                                               BB[...,None,:,:,:,:,:],
                                               SS,
                                               v)
@@ -1103,17 +1103,17 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
             v_BB = np.einsum('...dikjl,...d->...ikjl',
                              BB[...,None,:,:,:,:,:],
                              v)
-            phi1[..., :-1, :, :] += np.einsum('...ikjl,...kl->...ij', 
+            phi1[..., :-1, :, :] += np.einsum('...ikjl,...kl->...ij',
                                               v_BB,
                                               SS)
-            
+
         #phi1[..., :-1, :, :] += np.einsum('...kij,...k->...ij', AA, v)
         phi1 *= -0.5
 
         # Super-diagonal blocks: 0.5 * A.T * V
         # However, don't multiply by 0.5 because there are both super- and
         # sub-diagonal blocks (sum them together)
-        phi2[..., :, :, :] = np.einsum('...jik,...k,...j->...ij', 
+        phi2[..., :, :, :] = np.einsum('...jik,...k,...j->...ij',
                                        B[...,None,:,:,:],
                                        S,
                                        v)
@@ -1211,7 +1211,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     .. bayesnet::
 
        \tikzstyle{latent} += [minimum size=40pt];
-       
+
        \node[latent] (x0) {$\mathbf{x}_0$};
        \node[latent, right=of x0] (x1) {$\mathbf{x}_1$};
        \node[right=of x1] (dots) {$\cdots$};
@@ -1257,7 +1257,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
        \prod^{N-1}_{n=1} p(\mathbf{x}_n | \mathbf{x}_{n-1})
 
     where
-    
+
     .. math::
 
        p(\mathbf{x}_0) &= \mathcal{N}(\mathbf{x}_0 | \boldsymbol{\mu}, \mathbf{\Lambda})
@@ -1268,19 +1268,19 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
        \\
        \mathbf{A}_n & = \sum^{K-1}_{k=0} s_{n,k} \mathbf{B}_k, \quad \text{for }
        n=0,\ldots,N-2.
-       
+
 
     Parameters
     ----------
-    
+
     mu : Gaussian-like node or (...,D)-array
         :math:`\boldsymbol{\mu}`, mean of :math:`x_0`, :math:`D`-dimensional
         with plates (...)
-        
+
     Lambda : Wishart-like node or (...,D,D)-array
         :math:`\mathbf{\Lambda}`, precision matrix of :math:`x_0`,
         :math:`D\times D` -dimensional with plates (...)
-        
+
     B : Gaussian-like node or (...,D,D,K)-array
         :math:`\{\mathbf{B}_k\}_{k=0}^{K-1}`, a set of state dynamics matrix,
         :math:`D \times K`-dimensional with plates (...,D)
@@ -1289,7 +1289,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
         :math:`\{\mathbf{s}_0,\ldots,\mathbf{s}_{N-2}\}`, time-varying weights
         of the linear combination, :math:`K`-dimensional with plates (...,N-1)
-        
+
     nu : gamma-like node or (...,D)-array
         :math:`\boldsymbol{\nu}`, diagonal elements of the precision of the
         innovation process, plates (...,D)
@@ -1300,7 +1300,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     See also
     --------
-    
+
     Gaussian, GaussianARD, Wishart, Gamma, GaussianMarkovChain,
     SwitchingGaussianMarkovChain
 
@@ -1317,7 +1317,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     ----------
 
     :cite:`Luttinen:2014`
-    
+
     """
 
     def __init__(self, mu, Lambda, B, S, nu, n=None, **kwargs):
@@ -1331,7 +1331,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     def _constructor(cls, mu, Lambda, B, S, v, n=None, **kwargs):
         """
         Constructs distribution and moments objects.
-        
+
         Compute the dimensions of phi and u.
 
         The plates and dimensions of the parents should be:
@@ -1378,14 +1378,14 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                 raise Exception(
                     "The number of time instances could not be determined "
                     "automatically. Give the number of time instances.")
-                                 
+
             n = n_S + 1
         elif n_S != 1 and n_S+1 != n:
             raise Exception(
                 "The number of time instances must match the number of last "
-                "plates of parents:" "%d != %d+1" 
+                "plates of parents:" "%d != %d+1"
                 % (n, n_S))
-                                
+
         D = mu.dims[0][0]
         K = B.dims[0][-1]
         M = n #N.get_moments()[0]
@@ -1421,7 +1421,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
             raise Exception("Fifth parent should have a last plate "
                             "equal to the dimensionality of the "
                             "system.")
-        if (len(v.plates) >= 2 
+        if (len(v.plates) >= 2
             and v.plates[-2] != 1
             and v.plates[-2] != M-1):
             raise ValueError("The second last plate of the fifth "
@@ -1460,7 +1460,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
     def __init__(self, N, D, K):
         self.K = K
         super().__init__(N, D)
-        
+
     def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_B,
                                    u_Z, u_v):
         """
@@ -1483,14 +1483,14 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
         u_v : list of ndarrays
             Moments of parent `v`.
         """
-        
+
         if index == 0:   # mu
             raise NotImplementedError()
         elif index == 1: # Lambda
             raise NotImplementedError()
-        
+
         elif index == 2: # B, (...,K,D)x(D)
-            
+
             XnXn = u[1]                   # (...,N,D,D)
             XpXn = u[2]                   # (...,N-1,D,D)
             Z = u_Z[0]                    # (...,N-1,K)
@@ -1506,7 +1506,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
                            XpXn,
                            Z,
                            v)
-            
+
             # m1: (...,K,D,D,D)
 
             m1 = np.einsum('...nij,...nk->...kij',
@@ -1517,7 +1517,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
                                   v)
 
             return [m0, m1]
-    
+
         elif index == 3: # Z, (...,N-1)x(K)
 
             XnXn = u[1]                     # (...,N,D,D)
@@ -1535,7 +1535,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
                 raise ValueError("Innovation noise is time dependent")
             logv = np.squeeze(logv, axis=-2)
 
-            XnXn_v = np.einsum('...nii,...i->...n', 
+            XnXn_v = np.einsum('...nii,...i->...n',
                                XnXn[...,1:,:,:],
                                v)
             XpXn_v_B = np.einsum('...nil,...l,...kli->...nk',
@@ -1637,7 +1637,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
         if np.shape(v)[-2] > 1:
             raise Exception("This implementation is not efficient if "
                             "innovation noise is time-dependent.")
-            phi1[..., :-1, :, :] += np.einsum('...kdij,...nk,...nd->...nij', 
+            phi1[..., :-1, :, :] += np.einsum('...kdij,...nk,...nd->...nij',
                                               BB[...,:,:,:,:],
                                               Z,
                                               v)
@@ -1647,16 +1647,16 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
             v_BB = np.einsum('...kdij,...nd->...nkij',
                              BB[...,:,:,:,:],
                              v)
-            phi1[..., :-1, :, :] += np.einsum('...nkij,...nk->...nij', 
+            phi1[..., :-1, :, :] += np.einsum('...nkij,...nk->...nij',
                                               v_BB,
                                               Z)
-            
+
         phi1 *= -0.5
 
         # Super-diagonal blocks: 0.5 * A.T * V
         # However, don't multiply by 0.5 because there are both super- and
         # sub-diagonal blocks (sum them together)
-        phi2[..., :, :, :] = np.einsum('...kji,...nk,...nj->...nij', 
+        phi2[..., :, :, :] = np.einsum('...kji,...nk,...nj->...nij',
                                        B[...,:,:,:],
                                        Z,
                                        v)
@@ -1704,8 +1704,8 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
             return plates + (self.N-1,self.D)
         else:
             raise ValueError("Invalid parent index.")
-        
-        
+
+
     def plates_from_parent(self, index, plates):
         """
         Compute the plates using information of a parent node.
@@ -1753,7 +1753,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     .. bayesnet::
 
        \tikzstyle{latent} += [minimum size=40pt];
-       
+
        \node[latent] (x0) {$\mathbf{x}_0$};
        \node[latent, right=of x0] (x1) {$\mathbf{x}_1$};
        \node[right=of x1] (dots) {$\cdots$};
@@ -1798,7 +1798,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
        \prod^{N-1}_{n=1} p(\mathbf{x}_n | \mathbf{x}_{n-1})
 
     where
-    
+
     .. math::
 
        p(\mathbf{x}_0) &= \mathcal{N}(\mathbf{x}_0 | \boldsymbol{\mu}, \mathbf{\Lambda})
@@ -1809,19 +1809,19 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
        \\
        \mathbf{A}_n &= \mathbf{B}_{z_n}, \quad \text{for }
        n=0,\ldots,N-2.
-       
+
 
     Parameters
     ----------
-    
+
     mu : Gaussian-like node or (...,D)-array
         :math:`\boldsymbol{\mu}`, mean of :math:`x_0`, :math:`D`-dimensional
         with plates (...)
-        
+
     Lambda : Wishart-like node or (...,D,D)-array
         :math:`\mathbf{\Lambda}`, precision matrix of :math:`x_0`,
         :math:`D\times D` -dimensional with plates (...)
-        
+
     B : Gaussian-like node or (...,D,D,K)-array
         :math:`\{\mathbf{B}_k\}_{k=0}^{K-1}`, a set of state dynamics matrix,
         :math:`D \times K`-dimensional with plates (...,D)
@@ -1829,7 +1829,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     Z : categorical-like node or (...,N-1)-array
         :math:`\{z_0,\ldots,z_{N-2}\}`, time-dependent selection,
         :math:`K`-categorical with plates (...,N-1)
-        
+
     nu : gamma-like node or (...,D)-array
         :math:`\boldsymbol{\nu}`, diagonal elements of the precision of the
         innovation process, plates (...,D)
@@ -1840,7 +1840,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     See also
     --------
-    
+
     Gaussian, GaussianARD, Wishart, Gamma, GaussianMarkovChain,
     VaryingGaussianMarkovChain, Categorical, CategoricalMarkovChain
 
@@ -1866,7 +1866,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     def _constructor(cls, mu, Lambda, B, Z, v, n=None, **kwargs):
         """
         Constructs distribution and moments objects.
-        
+
         Compute the dimensions of phi and u.
 
         The plates and dimensions of the parents should be:
@@ -1913,15 +1913,15 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                 raise Exception(
                     "The number of time instances could not be determined "
                     "automatically. Give the number of time instances.")
-                                 
+
             n = n_Z + 1
         elif n_Z != 1 and n_Z+1 != n:
             raise Exception(
                 "The number of time instances must match the number of last "
-                "plates of parents:" "%d != %d+1" 
+                "plates of parents:" "%d != %d+1"
                 % (n, n_Z))
 
-                                
+
         D = mu.dims[0][0]
         K = Z.dims[0][0]
         M = n #N.get_moments()[0]
@@ -1955,7 +1955,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
             raise Exception("Fifth parent should have a last plate "
                             "equal to the dimensionality of the "
                             "system.")
-        if (len(v.plates) >= 2 
+        if (len(v.plates) >= 2
             and v.plates[-2] != 1
             and v.plates[-2] != M-1):
             raise ValueError("The second last plate of the fifth "
@@ -1963,7 +1963,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
                              "N-1 where N is the number of time "
                              "instances.")
 
-        
+
         dims = ( (M,D), (M,D,D), (M-1,D,D) )
         distribution = SwitchingGaussianMarkovChainDistribution(M, D, K)
         moments = GaussianMarkovChainMoments(M, D)
@@ -2021,7 +2021,7 @@ class _MarkovChainToGaussian(Deterministic):
         Dims = (...)
         """
         return self.plates[:-1]
-        
+
     def _plates_from_parent(self, index):
         # Sub-classes may want to overwrite this if they manipulate plates
         if index != 0:
@@ -2063,12 +2063,12 @@ class _MarkovChainToGaussian(Deterministic):
 
         The messages to a Gaussian are almost correct, there are only
         two minor things to be done:
-        
+
         1) The last plate is changed into a variable/time dimension.
         Because a message mask is applied for plates only, the last
         axis of the mask must be applied to the message because the
         last plate is changed to a variable/time dimension.
-        
+
         2) Because the message does not contain <X(n-1)X(n)> part,
         we'll put the last/third message to None meaning that it is
         empty.
