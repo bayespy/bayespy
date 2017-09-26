@@ -1,3 +1,13 @@
+Dev
++++
+
+Fixed
+.....
+
+* Handle scalar moments of the innovation vector properly in Gaussian Markov
+  chain.
+
+
 Version 0.5.10 (2017-09-02)
 +++++++++++++++++++++++++++
 
