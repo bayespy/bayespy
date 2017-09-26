@@ -7,6 +7,9 @@ Fixed
 * Handle scalar moments of the innovation vector properly in Gaussian Markov
   chain.
 
+* Skip some failing image comparison unit tests. Image comparison tests will be
+  deprecated at some point.
+
 
 Version 0.5.10 (2017-09-02)
 +++++++++++++++++++++++++++
