@@ -1,3 +1,12 @@
+Dev
++++
+
+Changed
+.......
+
+* Skip all image comparison tests for now.
+
+
 Version 0.5.11 (2017-09-26)
 +++++++++++++++++++++++++++
 

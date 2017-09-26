@@ -23,6 +23,7 @@ from bayespy.nodes import Bernoulli, Beta, Categorical, Dirichlet, \
 from bayespy.inference import VB
 from bayespy.utils import random
 
+@SkipTest
 @image_comparison(baseline_images=['gaussian_mixture'], extensions=['png'], remove_text=True)
 def test_gaussian_mixture_plot():
     """
@@ -72,22 +73,26 @@ def test_gaussian_mixture_plot():
     bpplt.pyplot.ylim([-3, 5])
 
 
+@SkipTest
 @image_comparison(baseline_images=['hinton_r'], extensions=['png'], remove_text=True)
 def test_hinton_plot_dirichlet():
     (R,P,Z) = _setup_bernoulli_mixture()
     bpplt.hinton(R)
 
+@SkipTest
 @image_comparison(baseline_images=['hinton_p'], extensions=['png'], remove_text=True)
 def test_hinton_plot_beta():
     (R,P,Z) = _setup_bernoulli_mixture()
     bpplt.hinton(P)
 
+@SkipTest
 @image_comparison(baseline_images=['hinton_z'], extensions=['png'], remove_text=True)
 def test_hinton_plot_categorical():
     (R,P,Z) = _setup_bernoulli_mixture()
     bpplt.hinton(Z)
 
 
+@SkipTest
 @image_comparison(baseline_images=['pdf'], extensions=['png'], remove_text=True)
 def test_pdf_plot():
     data = _setup_linear_regression()
