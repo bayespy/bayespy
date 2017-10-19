@@ -6,6 +6,11 @@ Changed
 
 * Skip all image comparison tests for now.
 
+Fixed
+.....
+
+* Support (0,0)-shape matrices in Cholesky functions.
+
 
 Version 0.5.11 (2017-09-26)
 +++++++++++++++++++++++++++
