@@ -49,7 +49,12 @@ def chol(C, ndim=1):
         U = np.empty(np.shape(C))
         for i in misc.nested_iterator(np.shape(U)[:-2]):
             try:
-                U[i] = linalg.cho_factor(C[i])[0]
+                # Handle (0, 0) matrices. See:
+                # https://github.com/scipy/scipy/issues/8056
+                U[i] = (
+                    np.empty((0,0)) if np.size(C[i]) == 0 else
+                    linalg.cho_factor(C[i])[0]
+                )
             except np.linalg.linalg.LinAlgError:
                 raise Exception("Matrix not positive definite")
         return (
@@ -130,8 +135,15 @@ def chol_solve(U, b, out=None, matrix=False, ndim=1):
             else:
                 ind_out = tuple(ind_b) + (slice(None),)
 
-            out[ind_out] = linalg.cho_solve((U[i], False),
-                                            b.T).T.reshape(orig_shape)
+            out[ind_out] = (
+                # Handle (0, 0) matrices. See:
+                # https://github.com/scipy/scipy/issues/8056
+                np.empty(orig_shape) if np.size(U[i]) == 0 else
+                linalg.cho_solve(
+                    (U[i], False),
+                    b.T
+                ).T.reshape(orig_shape)
+            )
 
         if matrix:
             out = transpose(out, ndim=1)
@@ -171,10 +183,15 @@ def chol_inv(U, ndim=1):
         # Allocate memory
         V = np.tile(np.identity(np.shape(U)[-1]), np.shape(U)[:-2]+(1,1))
         for i in misc.nested_iterator(np.shape(U)[:-2]):
-            V[i] = linalg.cho_solve(
-                (U[i], False),
-                V[i],
-                overwrite_b=True # This would need Fortran order
+            V[i] = (
+                # Handle (0, 0) matrices. See:
+                # https://github.com/scipy/scipy/issues/8056
+                np.empty((0, 0)) if np.size(V[i]) == 0 else
+                linalg.cho_solve(
+                    (U[i], False),
+                    V[i],
+                    overwrite_b=True # This would need Fortran order
+                )
             )
         V = (
             V if ndim == 1 else
@@ -250,11 +267,11 @@ def solve_triangular(U, B, ndim=1, **kwargs):
         # broadcasting rules). Thus, we collect all the axes of B for
         # which U is singleton and form them as a 2-D matrix and then
         # run the solver once.
-        
+
         # Select those axes of B for which U and B are not singleton
         for j in jnd_b:
             ind_b[j] = i[j]
-            
+
         # Collect all the axes for which U is singleton
         b = B[tuple(ind_b) + (slice(None),)]
 
@@ -273,11 +290,11 @@ def solve_triangular(U, B, ndim=1, **kwargs):
         out[ind_out] = linalg.solve_triangular(U[i],
                                                b.T,
                                                **kwargs).T.reshape(orig_shape)
-        
-    return out
-    
 
-    
+    return out
+
+
+
 
 def inner(*args, ndim=1):
     """
@@ -398,7 +415,7 @@ def mvdot(A, b, ndim=1):
     #
     # b = np.asanyarray(b)
     # return gula.inner1d(A, b[...,np.newaxis,:])
-    # 
+    #
     # Use einsum instead:
     if ndim > 0:
         b = misc.add_axes(b, num=ndim, axis=-1-ndim)
@@ -441,7 +458,7 @@ def m_dot(A,b):
     # the last axes of b.  Other axes are broadcasted. If A has shape
     # (..., M, N) and b has shape (..., N), then the result has shape
     # (..., M)
-    
+
     #b = reshape(b, shape(b)[:-1] + (1,) + shape(b)[-1:])
     #return np.dot(A, b)
     return np.einsum('...ik,...k->...i', A, b)
@@ -474,7 +491,7 @@ def block_banded_solve(A, B, y):
     * solution to the system
     * log-determinant
     """
-    
+
     # Number of time instance and dimensionality
     N = np.shape(y)[-2]
     D = np.shape(y)[-1]
@@ -495,7 +512,7 @@ def block_banded_solve(A, B, y):
                                        np.shape(B)[:-3])
     plates_y = misc.broadcasted_shape(plates_VC,
                                       np.shape(y)[:-2])
-                      
+
     V = np.empty(plates_VC+(N,D,D))
     C = np.empty(plates_VC+(N-1,D,D))
     x = np.empty(plates_y+(N,D))
@@ -503,7 +520,7 @@ def block_banded_solve(A, B, y):
     #
     # Forward recursion
     #
-    
+
     # In the forward recursion, store the Cholesky factor in V. So you
     # don't need to recompute them in the backward recursion.
 
@@ -518,16 +535,16 @@ def block_banded_solve(A, B, y):
     ldet = chol_logdet(V[...,0,:,:])
     for n in range(N-1):
         # Compute the solution of the system
-        x[...,n+1,:] = (y[...,n+1,:] 
-                        - mvdot(misc.T(B[...,n,:,:]), 
-                                chol_solve(V[...,n,:,:], 
+        x[...,n+1,:] = (y[...,n+1,:]
+                        - mvdot(misc.T(B[...,n,:,:]),
+                                chol_solve(V[...,n,:,:],
                                            x[...,n,:])))
         # Compute the superdiagonal block of the inverse
-        C[...,n,:,:] = chol_solve(V[...,n,:,:], 
+        C[...,n,:,:] = chol_solve(V[...,n,:,:],
                                   B[...,n,:,:],
                                   matrix=True)
         # Compute the diagonal block
-        V[...,n+1,:,:] = (A[...,n+1,:,:] 
+        V[...,n+1,:,:] = (A[...,n+1,:,:]
                         - mmdot(misc.T(B[...,n,:,:]), C[...,n,:,:]))
         # Ensure symmetry by 0.5*(V+V.T)
         V[...,n+1,:,:] = 0.5 * (V[...,n+1,:,:] + misc.T(V[...,n+1,:,:]))
@@ -543,17 +560,16 @@ def block_banded_solve(A, B, y):
     V[...,-1,:,:] = chol_inv(V[...,-1,:,:])
     for n in reversed(range(N-1)):
         # Compute the solution of the system
-        x[...,n,:] = chol_solve(V[...,n,:,:], 
-                                x[...,n,:] - mvdot(B[...,n,:,:], 
+        x[...,n,:] = chol_solve(V[...,n,:,:],
+                                x[...,n,:] - mvdot(B[...,n,:,:],
                                                    x[...,n+1,:]))
         # Compute the diagonal block of the inverse
-        V[...,n,:,:] = (chol_inv(V[...,n,:,:]) 
-                        + mmdot(C[...,n,:,:], 
-                                mmdot(V[...,n+1,:,:], 
+        V[...,n,:,:] = (chol_inv(V[...,n,:,:])
+                        + mmdot(C[...,n,:,:],
+                                mmdot(V[...,n+1,:,:],
                                 misc.T(C[...,n,:,:]))))
         C[...,n,:,:] = - mmdot(C[...,n,:,:], V[...,n+1,:,:])
         # Ensure symmetry by 0.5*(V+V.T)
         V[...,n,:,:] = 0.5 * (V[...,n,:,:] + misc.T(V[...,n,:,:]))
 
     return (V, C, x, ldet)
-    
