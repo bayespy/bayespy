@@ -1,6 +1,7 @@
 include README*
 include INSTALL*
 include LICENSE
+include CHANGELOG*
 
 # Include header files
 recursive-include bayespy *.h
