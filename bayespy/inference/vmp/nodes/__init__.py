@@ -37,6 +37,7 @@ from .gaussian_markov_chain import VaryingGaussianMarkovChain
 from .gaussian_markov_chain import SwitchingGaussianMarkovChain
 
 from .categorical_markov_chain import CategoricalMarkovChain
+from .categorical_graph import CategoricalGraph
 
 from .mixture import Mixture, MultiMixture
 from .gate import Gate
