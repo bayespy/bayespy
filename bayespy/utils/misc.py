@@ -900,7 +900,10 @@ def sum_multiply(*args, axis=None, sumaxis=True, keepdims=False):
 
     # Compute the sum-product
     try:
-        y = np.einsum(*pairs)
+        # Set optimize=False to work around a einsum broadcasting bug in NumPy 1.14.0:
+        # https://github.com/numpy/numpy/issues/10343
+        # Perhaps it'll be fixed in 1.14.1?
+        y = np.einsum(*pairs, optimize=False)
     except ValueError as err:
         if str(err) == ("If 'op_axes' or 'itershape' is not NULL in "
                         "theiterator constructor, 'oa_ndim' must be greater "
