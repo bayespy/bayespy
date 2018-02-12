@@ -30,6 +30,16 @@ import unittest
 from numpy import testing
 
 
+def eye(index, size, axis=-1):
+    if axis >= 0:
+        raise ValueError("Axis must be negative")
+    ndim = abs(axis)
+    shape = (size,) + (1,) * (ndim - 1)
+    x = np.zeros(shape)
+    x[index] = 1.0
+    return x
+
+
 def flatten_axes(X, *ndims):
     ndim = sum(ndims)
     if np.ndim(X) < ndim:
