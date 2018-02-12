@@ -51,6 +51,7 @@ if __name__ == "__main__":
             'scipy>=0.13.0', # <0.13 have a bug in special.multigammaln
             'matplotlib>=1.2.0',
             'h5py',
+            'junctiontree',
         ]
 
     # Utility function to read the README file.
@@ -117,4 +118,3 @@ if __name__ == "__main__":
             ]
         },
     )
-
