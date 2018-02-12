@@ -292,7 +292,7 @@ def composite_function(function_list):
         return X
     return composite
 
-    
+
 def ceildiv(a, b):
     """
     Compute a divided by b and rounded up.
@@ -324,8 +324,8 @@ class TestCase(unittest.TestCase):
     Adds NumPy's features to Python's unittest.
     """
 
-    def assertAllClose(self, A, B, 
-                       msg="Arrays not almost equal", 
+    def assertAllClose(self, A, B,
+                       msg="Arrays not almost equal",
                        rtol=1e-4,
                        atol=0):
 
@@ -339,7 +339,7 @@ class TestCase(unittest.TestCase):
         pass
 
     def assertMessage(self, M1, M2):
-        
+
         if len(M1) != len(M2):
             self.fail("Message lists have different lengths")
 
@@ -458,7 +458,7 @@ def unique(l):
     """
     seen = set()
     seen_add = seen.add
-    return [ x for x in l if x not in seen and not seen_add(x)]    
+    return [ x for x in l if x not in seen and not seen_add(x)]
 
 def tempfile(prefix='', suffix=''):
     return tmp.NamedTemporaryFile(prefix=prefix, suffix=suffix).name
@@ -469,11 +469,11 @@ def write_to_hdf5(group, data, name):
     """
     try:
         # Try using compression. It doesn't work for scalars.
-        group.create_dataset(name, 
-                             data=data, 
+        group.create_dataset(name,
+                             data=data,
                              compression='gzip')
     except TypeError:
-        group.create_dataset(name, 
+        group.create_dataset(name,
                              data=data)
     except ValueError:
         raise ValueError('Could not write %s' % data)
@@ -689,12 +689,12 @@ def zipper_merge(*lists):
 
     This is known as alternating merge or zipper merge.
     """
-    
+
     return list(sum(zip(*lists), ()))
 
 def remove_whitespace(s):
     return ''.join(s.split())
-    
+
 def is_numeric(a):
     return (np.isscalar(a) or
             isinstance(a, list) or
@@ -736,7 +736,7 @@ def make_equal_length(*shapes):
 
     Add leading 1s to shorter tuples.
     """
-    
+
     # Get maximum length
     max_len = max((len(shape) for shape in shapes))
 
@@ -941,19 +941,19 @@ def sum_multiply(*args, axis=None, sumaxis=True, keepdims=False):
 
 def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
     if axes_to_keep is not None:
-        return sum_multiply(*args, 
-                            axis=axes_to_keep, 
+        return sum_multiply(*args,
+                            axis=axes_to_keep,
                             sumaxis=False,
                             keepdims=keepdims)
     else:
-        return sum_multiply(*args, 
-                            axis=axes_to_sum, 
+        return sum_multiply(*args,
+                            axis=axes_to_sum,
                             sumaxis=True,
                             keepdims=keepdims)
 
 def moveaxis(A, axis_from, axis_to):
     """
-    Move the axis `axis_from` to position `axis_to`. 
+    Move the axis `axis_from` to position `axis_to`.
     """
     if ((axis_from < 0 and abs(axis_from) > np.ndim(A)) or
         (axis_from >= 0 and axis_from >= np.ndim(A)) or
@@ -1282,7 +1282,7 @@ def m_dot(A,b):
     # the last axes of b.  Other axes are broadcasted. If A has shape
     # (..., M, N) and b has shape (..., N), then the result has shape
     # (..., M)
-    
+
     #b = reshape(b, shape(b)[:-1] + (1,) + shape(b)[-1:])
     #return np.dot(A, b)
     return np.einsum('...ik,...k->...i', A, b)
@@ -1367,7 +1367,7 @@ def dist_haversine(c1, c2, radius=6372795):
 
     A = np.sin(dlat/2)**2 + np.cos(lat1)*np.cos(lat2)*(np.sin(dlon/2)**2)
     C = 2 * np.arctan2(np.sqrt(A), np.sqrt(1-A))
-    
+
     return radius * C
 
 def logsumexp(X, axis=None, keepdims=False):
@@ -1376,7 +1376,7 @@ def logsumexp(X, axis=None, keepdims=False):
     """
 
     X = np.asanyarray(X)
-    
+
     maxX = np.amax(X, axis=axis, keepdims=True)
 
     if np.ndim(maxX) > 0:
@@ -1471,7 +1471,7 @@ def mean(X, axis=None, keepdims=False):
     nans = np.isnan(X)
     X = X.copy()
     X[nans] = 0
-    m = (np.sum(X, axis=axis, keepdims=keepdims) / 
+    m = (np.sum(X, axis=axis, keepdims=keepdims) /
          np.sum(~nans, axis=axis, keepdims=keepdims))
     return m
 
