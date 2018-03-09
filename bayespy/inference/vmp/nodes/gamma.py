@@ -90,8 +90,8 @@ class GammaMoments(Moments):
 class GammaDistribution(ExponentialFamilyDistribution):
     """
     Class for the VMP formulas of gamma variables.
-    """    
-    
+    """
+
 
     def compute_message_to_parent(self, parent, index, u_self, u_a, u_b):
         r"""
@@ -119,7 +119,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
         """
         return [-u_parents[1][0],
                 1*u_parents[0][0]]
-    
+
 
     def compute_moments_and_cgf(self, phi, mask=True):
         r"""
@@ -179,7 +179,7 @@ class GammaDistribution(ExponentialFamilyDistribution):
         """
         return random.gamma(phi[1], -1/phi[0], size=plates)
 
-    
+
     def compute_gradient(self, g, u, phi):
         r"""
         Compute the moments and :math:`g(\phi)`.
@@ -217,13 +217,13 @@ class Gamma(ExponentialFamily):
 
     Parameters
     ----------
-    
+
     a : scalar or array
-    
+
         Shape parameter
-        
+
     b : gamma-like node or scalar or array
-    
+
         Rate parameter
     """
 
@@ -233,7 +233,7 @@ class Gamma(ExponentialFamily):
     _parent_moments = (GammaPriorMoments(),
                        GammaMoments())
 
-            
+
     def __init__(self, a, b, **kwargs):
         """
         Create gamma random variable node
@@ -280,12 +280,14 @@ class GammaShape(Stochastic):
     _parent_moments = ()
 
 
-    def __init__(self, **kwargs):
+    def __init__(self, m0=0, m1=0, **kwargs):
         """
         Create gamma random variable node
         """
         super().__init__(dims=self.dims, initialize=False, **kwargs)
         self.u = self._moments.compute_fixed_moments(1)
+        self._m0 = m0
+        self._m1 = m1
         return
 
 
@@ -313,7 +315,9 @@ class GammaShape(Stochastic):
         """
 
         # Maximum likelihood estimate
-        x = misc.invpsi(-m[0]/m[1])
+        m0 = self._m0 + m[0]
+        m1 = self._m1 + m[1]
+        x = misc.invpsi(-m0 / m1)
 
         # Compute moments
         self.u = self._moments.compute_fixed_moments(x)

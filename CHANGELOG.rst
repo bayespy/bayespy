@@ -1,3 +1,12 @@
+Dev
++++
+
+Changed
+.......
+
+* Support "prior" for GammaShape.
+
+
 Version 0.5.12 (2017-10-19)
 +++++++++++++++++++++++++++
 
