@@ -172,11 +172,20 @@ class TestCategorical(TestCase):
 
         def _run(dag, u, ys, **kwargs):
 
+
+            def to_cpt(X):
+                return np.exp(
+                    Dirichlet._ensure_moments(
+                        X,
+                        DirichletMoments
+                    ).get_moments()[0]
+                )
+
+
             def _check(X, y):
                 X.update()
                 cpts = {
-                    name:
-                    np.exp(Dirichlet._ensure_moments(config["table"], DirichletMoments).get_moments()[0])
+                    name: to_cpt(config["table"])
                     for (name, config) in dag.items()
                 }
                 for (name, ind) in y.items():
@@ -485,6 +494,34 @@ class TestCategorical(TestCase):
             lambda cpts: {
                 "x": sumproduct("x,axy->x", cpts["x"], cpts["y"], plates_ndim=0),
                 "y": sumproduct("x,axy->axy", cpts["x"], cpts["y"], plates_ndim=1),
+            },
+            [
+                {"x": 1},
+                {"y": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0]},
+                {"x": 1, "y": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0]},
+            ],
+            plates={"a": 10},
+        )
+
+        # Broadcast plates
+        #
+        # x
+        # |
+        # y
+        _run(
+            {
+                "x": {
+                    "table": random(2),
+                },
+                "y": {
+                    "table": random(2, 3),
+                    "given": ["x"],
+                    "plates": ["a"],
+                },
+            },
+            lambda cpts: {
+                "x": sumproduct("x,axy->x", cpts["x"], np.broadcast_to(cpts["y"], (10,2,3)), plates_ndim=0),
+                "y": sumproduct("x,axy->axy", cpts["x"], np.broadcast_to(cpts["y"], (10,2,3)), plates_ndim=1),
             },
             [
                 {"x": 1},

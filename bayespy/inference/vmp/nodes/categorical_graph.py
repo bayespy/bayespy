@@ -78,6 +78,10 @@ def map_to_plates(x, src, dst):
     )
 
 
+def map_to_shape(sizes, keys):
+    return tuple(sizes[key] for key in keys)
+
+
 class CategoricalGraph():
     """
 
@@ -190,6 +194,10 @@ class CategoricalGraph():
         self._original_sizes = {
             key: size for (key, size) in all_sizes
         }
+        self._factor_shapes = [
+            map_to_shape(self._original_sizes, variable.plates + variable.given + (variable.name,))
+            for variable in self._factor_variables
+        ]
 
         # State
         self._junctiontree = None
@@ -264,6 +272,7 @@ class CategoricalGraph():
                     xs[factor] = e * xs[factor]
             return xs
 
+        # TODO: Validate observation array shapes
 
         # Modify sizes
         self._sizes = self._original_sizes.copy()
@@ -299,7 +308,13 @@ class CategoricalGraph():
         # FIXME: Convert <log p> to exp( <log p> ). Perhaps junctiontree
         # package could support logarithms of the probabilities? Also, note
         # that these don't sum to one, they are non-normalized probabilities.
-        cpts = [np.exp(cpt.get_moments()[0]) for cpt in self._cpts]
+        cpts = [
+            np.broadcast_to(
+                np.exp(cpt.get_moments()[0]),
+                shape
+            )
+            for (shape, cpt) in zip(self._factor_shapes, self._cpts)
+        ]
 
         xs = self._slice_potentials(cpts)
         # Convert to lists..
