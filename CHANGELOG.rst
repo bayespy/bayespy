@@ -1,3 +1,22 @@
+Version 0.5.14 (2018-03-09)
++++++++++++++++++++++++++++
+
+Added
+.....
+
+* Support ``phi_bias`` for exponential family nodes. This can be used for simple
+  regularization.
+
+
+Version 0.5.13 (2018-03-09)
++++++++++++++++++++++++++++
+
+Changed
+.......
+
+* Support "prior" for GammaShape.
+
+
 Version 0.5.12 (2017-10-19)
 +++++++++++++++++++++++++++
 

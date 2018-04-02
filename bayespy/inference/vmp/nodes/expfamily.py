@@ -38,7 +38,7 @@ class ExponentialFamilyDistribution(Distribution):
 
     def compute_cgf_from_parents(self, *u_parents):
         raise NotImplementedError()
-        
+
     def compute_fixed_moments_and_f(self, x, mask=True):
         raise NotImplementedError()
 
@@ -75,12 +75,12 @@ def useconstructor(__init__):
     def constructor_decorator(self, *args, **kwargs):
         if (self.dims is None or
             self._distribution is None or
-            self._moments is None or 
+            self._moments is None or
             self._parent_moments is None):
 
             (args, kwargs, dims, plates, dist, stats, pstats) = \
               self._constructor(*args, **kwargs)
-            
+
             self.dims = dims
             self._distribution = dist
             self._moments = stats
@@ -108,23 +108,25 @@ class ExponentialFamily(Stochastic):
        _compute_weights_to_parent(index, weights)
        _compute_plates_to_parent(self, index, plates)
        _compute_plates_from_parent(self, index, plates)
-    
+
     """
 
     # Sub-classes should overwrite this (possibly using _constructor)
     dims = None
-    
+
     # Sub-classes should overwrite this
     _distribution = None
 
     @useconstructor
-    def __init__(self, *parents, initialize=True, **kwargs):
+    def __init__(self, *parents, initialize=True, phi_bias=None, **kwargs):
 
         self.annealing = 1.0
 
         # Terms for the lower bound (G for latent and F for observed)
         self.g = np.array(np.nan)
         self.f = np.array(np.nan)
+
+        self._phi_bias = phi_bias if phi_bias is not None else len(self.dims) * [0.0]
 
         super().__init__(*parents,
                          initialize=initialize,
@@ -159,8 +161,8 @@ class ExponentialFamily(Stochastic):
                 kwargs,
                 cls.dims,
                 cls._total_plates(kwargs.get('plates'), *parent_plates),
-                cls._distribution, 
-                cls._moments, 
+                cls._distribution,
+                cls._moments,
                 cls._parent_moments)
 
     def _initialize_from_parent_moments(self, *u_parents):
@@ -175,7 +177,7 @@ class ExponentialFamily(Stochastic):
             # TODO/FIXME/BUG: You should use observation mask in order to not
             # overwrite them!
             self._set_moments_and_cgf(u, g, mask=mask)
-        
+
 
     def initialize_from_prior(self):
         u_parents = self._message_from_parents()
@@ -183,10 +185,10 @@ class ExponentialFamily(Stochastic):
 
 
     def initialize_from_parameters(self, *args):
-        u_parents = [p_mom.compute_fixed_moments(x) 
+        u_parents = [p_mom.compute_fixed_moments(x)
                      for (p_mom, x) in zip(self._parent_moments, args)]
         self._initialize_from_parent_moments(*u_parents)
-        
+
 
     def initialize_from_value(self, x, *args):
         # Update moments from value
@@ -217,9 +219,13 @@ class ExponentialFamily(Stochastic):
         # No, because some initialization methods may want to use this.
 
         # This makes correct broadcasting
-        self.phi = self._distribution.compute_phi_from_parents(*u_parents)
-        #self.phi = self._compute_phi_from_parents(*u_parents)
-        self.phi = list(self.phi)
+        self.phi = [
+            a + b
+            for (a, b) in zip(
+                self._distribution.compute_phi_from_parents(*u_parents),
+                self._phi_bias
+            )
+        ]
         # Make sure phi has the correct number of axes. It makes life
         # a bit easier elsewhere.
         for i in range(len(self.phi)):
@@ -257,10 +263,16 @@ class ExponentialFamily(Stochastic):
         """
         u_parents = self._message_from_parents()
         m_children = self._message_from_children()
-        
+
         # TODO/FIXME: Put observed plates to zero?
         # Compute the gradient
-        phi = self._distribution.compute_phi_from_parents(*u_parents)
+        phi = [
+            a + b
+            for (a, b) in zip(
+                self._distribution.compute_phi_from_parents(*u_parents),
+                self._phi_bias
+            )
+        ]
         for i in range(len(self.phi)):
             phi[i] = self.annealing * (phi[i] + m_children[i]) - self.phi[i]
             phi[i] = phi[i] * np.ones(self.get_shape(i))
@@ -277,7 +289,7 @@ class ExponentialFamily(Stochastic):
         gradient is computed by using the Riemannian gradient and chain rules.
         3) Probably you need both Riemannian and normal gradients anyway so you
         can provide it to this function to avoid re-computing it."""
-            
+
         g = self._distribution.compute_gradient(rg, self.u, self.phi)
         for i in range(len(g)):
             g[i] /= self.annealing
@@ -308,7 +320,7 @@ class ExponentialFamily(Stochastic):
         parameters.
         """
         return [np.copy(p) for p in self.phi]
-            
+
 
 
     def _decode_parameters(self, x):
@@ -392,15 +404,21 @@ class ExponentialFamily(Stochastic):
         divided by the anneling coefficient.  That is, phi and cgf of q
         are multiplied by the temperature (inverse annealing
         coefficient).
-        
+
         """
 
         # Annealing temperature
         T = 1 / self.annealing
-        
+
         # Messages from parents
         u_parents = self._message_from_parents()
-        phi = self._distribution.compute_phi_from_parents(*u_parents)
+        phi = [
+            a # + b # TODO: Should the bias be added here or not?
+            for (a, b) in zip(
+                self._distribution.compute_phi_from_parents(*u_parents),
+                self._phi_bias
+            )
+        ]
         # G from parents
         L = self._distribution.compute_cgf_from_parents(*u_parents)
 
@@ -477,14 +495,14 @@ class ExponentialFamily(Stochastic):
             #Z = Z + misc.sum_multiply(phi_d, u_d, axis=axis_sum)
 
         return (self.g + f + Z)
-        
+
 
     def pdf(self, X, mask=True):
         """
         Compute the probability density function of this node.
         """
         return np.exp(self.logpdf(X, mask=mask))
-        
+
 
     def _save(self, group):
         """
@@ -495,14 +513,14 @@ class ExponentialFamily(Stochastic):
         ## if name is None:
         ##     name = self.name
         ## subgroup = group.create_group(name)
-        
+
         for i in range(len(self.phi)):
             misc.write_to_hdf5(group, self.phi[i], 'phi%d' % i)
         misc.write_to_hdf5(group, self.f, 'f')
         misc.write_to_hdf5(group, self.g, 'g')
         super()._save(group)
 
-    
+
     def _load(self, group):
         """
         Load the state of the node from a HDF5 file.
@@ -511,7 +529,7 @@ class ExponentialFamily(Stochastic):
         for i in range(len(self.phi)):
             phii = group['phi%d' % i][...]
             self.phi[i] = phii
-            
+
         self.f = group['f'][...]
         self.g = group['g'][...]
         super()._load(group)
