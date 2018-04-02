@@ -208,9 +208,13 @@ class CategoricalGraph():
         # TODO: Fetch CPTs from Dirichlet parents and make use of potentials
         # from children.
 
+        # FIXME: Convert to lists.. Fix this in junctiontree
+        factors = [list(f) for f in self._factors]
+
         if self._junctiontree is None:
             self._junctiontree = jt.create_junction_tree(
-                self._factors,
+                #self._factors,
+                factors,
                 self._sizes
             )
 
