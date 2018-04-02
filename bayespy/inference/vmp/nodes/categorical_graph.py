@@ -214,8 +214,16 @@ class CategoricalGraph():
                 self._sizes
             )
 
-        xs = self._slice_potentials(self._cpts)
-        u = self._junctiontree.propagate(xs)
+        # Get the numerical probability tables from the Dirichlet nodes
+        #
+        # FIXME: Convert <log p> to exp( <log p> ). Perhaps junctiontree
+        # package could support logarithms of the probabilities? Also, note
+        # that these don't sum to one, they are non-normalized probabilities.
+        cpts = [np.exp(cpt.get_moments()[0]) for cpt in self._cpts]
+
+        xs = self._slice_potentials(cpts)
+        # Convert to lists..
+        u = self._junctiontree.propagate(list(xs))
         u = [ui / np.sum(ui) for ui in self._unslice_potentials(u)]
 
         # For simplicity - and temporarily - marginalize each potential for the variable
