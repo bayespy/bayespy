@@ -233,10 +233,10 @@ class CategoricalGraph():
         # For simplicity - and temporarily - marginalize each potential for the variable
         self.u = {
             variable: misc.sum_product(
-                u[self._variable_factors[variable][0][0]],
-                axes_to_keep=[self._variable_factors[variable][0][1]]
+                u[factors[0][0]],
+                axes_to_keep=[factors[0][1]]
             )
-            for variable in self._sizes.keys()
+            for (variable, factors) in self._variable_factors.items()
         }
 
         return
