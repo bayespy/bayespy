@@ -19,3 +19,4 @@ Examples
    pca
    lssm
    lda
+   jt
