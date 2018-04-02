@@ -7,11 +7,28 @@
 
 import numpy as np
 import junctiontree as jt
+import attr
 
 
-from .node import Moments
+from .node import Node
 from .stochastic import Distribution
+
+from .dirichlet import DirichletMoments
+
 from bayespy.utils import misc
+
+
+@attr.s(frozen=True, slots=True)
+class Variable():
+
+
+    table = attr.ib(converter=lambda x: Node._ensure_moments(x, DirichletMoments))
+    given = attr.ib(converter=tuple, default=())
+    plates = attr.ib(converter=tuple, default=())
+
+    # @plates.validator
+    # def check(self, attribute, value):
+    #     pass
 
 
 class CategoricalGraph():
@@ -68,27 +85,51 @@ class CategoricalGraph():
 
     def __init__(self, dag, plates={}):
 
-        # FIXME: Plates not supported yet
-        if plates != {}:
-            raise NotImplementedError("Plates not yet implemented")
+        # Convert to Variables
+        dag = {
+            name: Variable(**config)
+            for (name, config) in dag.items()
+        }
 
+        # Validate plates (children must have those plates that the parents have)
+
+        # Validate shapes of the CPTs
+
+        # Validate that plate keys and variable keys are unique
+
+        # Mapping: factor -> variables
+        #
+        # The name of the variables contained in each factor. Each CPT means a
+        # factor which contains the variable itself and its parents.
         self._factors = [
-            variable.get("given", []) + [name]
+            variable.plates + variable.given + (name,)
             for (name, variable) in dag.items()
         ]
 
-        self._original_sizes = {
-            name: np.shape(variable["table"])[-1]
-            for (name, variable) in dag.items()
-        }
-
+        # Mapping: variable -> factors
+        #
+        # Reverse mapping, should be done in junctiontree package? For each
+        # variable, find the list of factors in which the variable is included.
         self._variable_factors = {
             variable: [
                 (index, self._factors[index].index(variable) - len(self._factors[index]))
                 for index in range(len(self._factors))
                 if variable in self._factors[index]
             ]
-            for variable in self._original_sizes.keys()
+            for variable in dag.keys()
+        }
+
+        # Number of states for each variable (CPTs are assumed Dirichlet moments here)
+        variable_sizes = {
+            name: variable.table.dims[0][0]
+            for (name, variable) in dag.items()
+        }
+
+        # Sizes of all axes (variables and plates), that is, just combine the
+        # two size dicts
+        all_sizes = list(variable_sizes.items()) + list(plates.items())
+        self._original_sizes = {
+            key: size for (key, size) in all_sizes
         }
 
         # State
@@ -96,12 +137,14 @@ class CategoricalGraph():
         self._sizes = self._original_sizes
         self._slice_potentials = lambda xs: xs
         self._unslice_potentials = lambda xs: xs
-        self.u = None
+        self.u = {
+            variable: np.nan for variable in self._variable_factors.keys()
+        }
 
         # FIXME: Here we just assume fixed arrays as CPTs, not Dirichlet nodes
         # supported yet.
         self._cpts = [
-            variable["table"]
+            variable.table
             for variable in dag.values()
         ]
 
@@ -123,7 +166,8 @@ class CategoricalGraph():
         NOTE: Previously set observed states are reset.
         """
 
-        # Create a function to slice the potential arrays
+        # Create a function to slice the potential arrays. This is used for
+        # observing a variable: only use that state which was observed.
         def slice_potentials(xs):
             xs = xs.copy()
             for (variable, ind) in y.items():
@@ -153,7 +197,9 @@ class CategoricalGraph():
         self._junctiontree = None
         self._slice_potentials = slice_potentials
         self._unslice_potentials = unslice_potentials
-        self.u = None
+        self.u = {
+            variable: np.nan for variable in self._variable_factors.keys()
+        }
 
         return
 
