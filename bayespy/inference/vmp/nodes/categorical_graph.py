@@ -133,6 +133,18 @@ class CategoricalGraph():
 
     """
 
+    # TODO:
+    #
+    # - random
+    # - message to parent
+    # - explicit extra marginals: CategoricalGraph({...}, plates={...}, marginals={...})
+    # - message to children
+    # - multi-dimensional categorical moments, support in mixture
+    # - compare performance to categoricalchain
+    # - implement categorical tree as an example #15 and #20
+    # - implement stochastic block model #51
+    # - example graph #23
+
 
     def __init__(self, dag, plates={}):
 
