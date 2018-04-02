@@ -22,6 +22,7 @@ from bayespy.utils import misc
 class Variable():
 
 
+    name = attr.ib(converter=str)
     table = attr.ib(converter=lambda x: Node._ensure_moments(x, DirichletMoments))
     given = attr.ib(converter=tuple, default=())
     plates = attr.ib(converter=tuple, default=())
@@ -87,7 +88,7 @@ class CategoricalGraph():
 
         # Convert to Variables
         dag = {
-            name: Variable(**config)
+            name: Variable(name=name, **config)
             for (name, config) in dag.items()
         }
 
