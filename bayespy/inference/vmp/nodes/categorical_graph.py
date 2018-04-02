@@ -32,6 +32,52 @@ class Variable():
     #     pass
 
 
+def take(x, ind, axis):
+    """
+    Take elements along the last axis but apply the shape to the leading axes.
+
+    That is, for ind with ndim=2:
+
+    y[i,j] = x_ij[i,j,...,ind[i,j]] for i=1,...,M and j=1,...,N
+
+    """
+    x = np.asanyarray(x)
+    ndim = np.ndim(x)
+    if axis >= 0:
+        axis = axis - ndim
+    if axis >= 0 or axis < -ndim:
+        raise ValueError("Axis out of bounds")
+    shape = np.shape(x)
+    plates = shape[:np.ndim(ind)]
+    n_plates = len(plates)
+    ind_plates = np.ix_(*[range(plate) for plate in plates])
+    inds = list(ind_plates) + [...] + [np.asarray(ind)] + (abs(axis) - 1) * [slice(None)]
+    return np.expand_dims(x[inds], axis)
+
+
+def onehot(index, size, axis=-1, extradims=0):
+    if extradims < 0:
+        raise ValueError("extradims must be non-negative")
+    index = np.reshape(index, np.shape(index) + (extradims + 1) * (1,))
+    return 1.0 * np.moveaxis(
+         np.arange(size) == index,
+        -1,
+        axis
+    )
+
+
+def map_to_plates(x, src, dst):
+    dst_keys = list(range(len(dst)))
+    src_keys = [dst.index(i) for i in src]
+    return np.einsum(
+        np.ones((1,) * len(dst_keys), dtype=np.int),
+        dst_keys,
+        x,
+        src_keys,
+        dst_keys
+    )
+
+
 class CategoricalGraph():
     """
 
@@ -92,19 +138,26 @@ class CategoricalGraph():
             for (name, config) in dag.items()
         }
 
+        self._dag = dag
+
         # Validate plates (children must have those plates that the parents have)
 
         # Validate shapes of the CPTs
 
         # Validate that plate keys and variable keys are unique
 
-        # Mapping: factor -> variables
+        # Fix the order of CPTs. Each CPT corresponds to a factor.
+        self._factor_variables = [variable for variable in dag.values()]
+
+        # Mapping: factor -> variables and plates in the factor
+        #
+        # This is required by Junctiontree package.
         #
         # The name of the variables contained in each factor. Each CPT means a
         # factor which contains the variable itself and its parents.
         self._factors = [
-            variable.plates + variable.given + (name,)
-            for (name, variable) in dag.items()
+            variable.plates + variable.given + (variable.name,)
+            for variable in self._factor_variables
         ]
 
         # Mapping: variable -> factors
@@ -113,7 +166,12 @@ class CategoricalGraph():
         # variable, find the list of factors in which the variable is included.
         self._variable_factors = {
             variable: [
-                (index, self._factors[index].index(variable) - len(self._factors[index]))
+                (
+                    # Factor ID
+                    index,
+                    # The axis of this variable in the CPT array (as a negative axis)
+                    self._factors[index].index(variable) - len(self._factors[index])
+                )
                 for index in range(len(self._factors))
                 if variable in self._factors[index]
             ]
@@ -171,9 +229,20 @@ class CategoricalGraph():
         # observing a variable: only use that state which was observed.
         def slice_potentials(xs):
             xs = xs.copy()
+            # Loop observations
             for (variable, ind) in y.items():
+                ind = np.asarray(ind, dtype=np.int)
+                # Loop all factors that contain the observed variable
                 for (factor, axis) in self._variable_factors[variable]:
-                    xs[factor] = np.take(xs[factor], [ind], axis=axis)
+                    xs[factor] = take(
+                        xs[factor],
+                        map_to_plates(
+                            ind,
+                            src=self._dag[variable].plates,
+                            dst=self._factor_variables[factor].plates
+                        ),
+                        axis
+                    )
             return xs
 
 
@@ -181,9 +250,15 @@ class CategoricalGraph():
             xs = xs.copy()
             for (variable, ind) in y.items():
                 for (factor, axis) in self._variable_factors[variable]:
-                    e = misc.eye(
-                        index=ind,
+                    plates = self._factor_variables[factor].plates
+                    e = onehot(
+                        index=map_to_plates(
+                            ind,
+                            src=self._dag[variable].plates,
+                            dst=plates
+                        ),
                         size=self._original_sizes[variable],
+                        extradims=np.ndim(xs[factor]) - len(plates) - 1,
                         axis=axis,
                     )
                     xs[factor] = e * xs[factor]
@@ -229,15 +304,18 @@ class CategoricalGraph():
         xs = self._slice_potentials(cpts)
         # Convert to lists..
         u = self._junctiontree.propagate(list(xs))
-        u = [ui / np.sum(ui) for ui in self._unslice_potentials(u)]
 
-        # For simplicity - and temporarily - marginalize each potential for the variable
+        def _normalize(p, n_plates=0):
+            return p / np.sum(p, axis=tuple(range(n_plates, np.ndim(p))), keepdims=True)
+
+        u = [
+            _normalize(ui, n_plates=len(variable.plates))
+            for (variable, ui) in zip(self._factor_variables, self._unslice_potentials(u))
+        ]
+
         self.u = {
-            variable: misc.sum_product(
-                u[factors[0][0]],
-                axes_to_keep=[factors[0][1]]
-            )
-            for (variable, factors) in self._variable_factors.items()
+            factor[-1]: ui
+            for (factor, ui) in zip(self._factors, u)
         }
 
         return
