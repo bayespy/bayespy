@@ -592,6 +592,57 @@ class TestCategorical(TestCase):
             plates={"a": 3, "b": 4},
         )
 
+        # Plates from both parents
+        #
+        # x   y
+        #  \ /
+        #   z
+        _run(
+            {
+                "x": {
+                    "table": random(6, 5, 2),
+                    "plates": ["b", "a"],
+                },
+                "y": {
+                    "table": random(5, 4, 3),
+                    "plates": ["a", "c"],
+                },
+                "z": {
+                    "table": random(4, 5, 6, 2, 3, 7),
+                    "plates": ["c", "a", "b"],
+                    "given": ["x", "y"],
+                },
+            },
+            lambda cpts: {
+                "x": sumproduct("bax,acy,cabxyz->bax", cpts["x"], cpts["y"], cpts["z"], plates_ndim=2),
+                "y": sumproduct("bax,acy,cabxyz->acy", cpts["x"], cpts["y"], cpts["z"], plates_ndim=2),
+                "z": sumproduct("bax,acy,cabxyz->cabxyz", cpts["x"], cpts["y"], cpts["z"], plates_ndim=3),
+            },
+            [
+                {"x": np.random.randint(2, size=(6,5))},
+                {"y": np.random.randint(3, size=(5,4))},
+                {"z": np.random.randint(7, size=(4,5,6))},
+                {
+                    "x": np.random.randint(2, size=(6,5)),
+                    "y": np.random.randint(3, size=(5,4))
+                },
+                {
+                    "x": np.random.randint(2, size=(6,5)),
+                    "z": np.random.randint(7, size=(4,5,6)),
+                },
+                {
+                    "y": np.random.randint(3, size=(5,4)),
+                    "z": np.random.randint(7, size=(4,5,6)),
+                },
+                {
+                    "x": np.random.randint(2, size=(6,5)),
+                    "y": np.random.randint(3, size=(5,4)),
+                    "z": np.random.randint(7, size=(4,5,6)),
+                },
+            ],
+            plates={"a": 5, "b": 6, "c": 4},
+        )
+
         # CPT broadcasted to plates
 
         # Error: CPT value negative
