@@ -28,6 +28,28 @@ class ConditionalProbabilityTable():
     plates = attr.ib(converter=tuple, default=())
 
 
+@attr.s(frozen=True, slots=True)
+class Marginal():
+
+
+    name = attr.ib()
+    variables = attr.ib(converter=tuple)
+    plates = attr.ib(converter=tuple, default=())
+
+
+@attr.s(frozen=True, slots=True)
+class Factor():
+
+
+    name = attr.ib()
+    potential = attr.ib()
+    variables = attr.ib(converter=tuple)
+    plates = attr.ib(converter=tuple, default=())
+
+
+def find_index(xs, x):
+    return xs.index(x) - len(xs)
+
 
 def take(x, ind, axis):
     """
@@ -101,7 +123,7 @@ class CategoricalGraph():
     ...         "trials": 10,
     ...     },
     ...     marginals={
-    ...         "y_marg": {
+    ...         "marg_y": {
     ...             "variables": ["y"],
     ...             "plates": ["trials"],
     ...         },
@@ -110,12 +132,12 @@ class CategoricalGraph():
     >>> dag.update()
     >>> print(dag["x"].p)
     >>> print(dag["y"].p)
-    >>> print(dag["y_marg"].p)
+    >>> print(dag["marg_y"].p)
     >>> dag.observe({"y": [1, 2, 0, 0, 2, 2, 1, 2, 1, 0]})
     >>> dag.update()
     >>> print(dag["x"].p)
     >>> print(dag["y"].p)
-    >>> print(dag["y_marg"].p)
+    >>> print(dag["marg_y"].p)
 
     """
 
@@ -132,7 +154,7 @@ class CategoricalGraph():
     # - example graph #23
 
 
-    def __init__(self, dag, plates={}):
+    def __init__(self, dag, plates={}, marginals={}):
 
         # Convert to CPTs
         dag = {
@@ -140,6 +162,11 @@ class CategoricalGraph():
             for (name, config) in dag.items()
         }
 
+        # Convert to Marginals
+        marginals = {
+            name: Marginal(name=name, **config)
+            for (name, config) in marginals.items()
+        }
 
         # Validate plates (children must have those plates that the parents have)
 
@@ -152,15 +179,34 @@ class CategoricalGraph():
         self._cpts = list(dag.values())
         self._dag = dag
 
-        # Mapping: factor -> variables and plates in the factor
+        # Add a factor for each CPT and requested marginal
+        def get_potential(node):
+            return lambda: np.exp(node.table.get_moments()[0])
+        self._factors = [
+            Factor(
+                name=cpt.variable,
+                variables=cpt.given + (cpt.variable,),
+                plates=cpt.plates,
+                potential=get_potential(cpt)
+                #potential=lambda: np.exp(cpt.table.get_moments()[0]),
+            )
+            for cpt in self._cpts
+        ] + [
+            Factor(
+                name=marginal.name,
+                variables=marginal.variables,
+                plates=marginal.plates,
+                potential=lambda: 1.0,
+            )
+            for marginal in marginals.values()
+        ]
+
+        # Mapping: factor -> keys (i.e., variables and plates) in the factor
         #
         # This is required by Junctiontree package.
-        #
-        # The name of the variables contained in each factor. Each CPT means a
-        # factor which contains the variable itself and its parents.
-        self._variables_in_factor = [
-            cpt.plates + cpt.given + (cpt.variable,)
-            for cpt in self._cpts
+        self._keys_in_factor = [
+            factor.plates + factor.variables
+            for factor in self._factors
         ]
 
         # Mapping: variable -> factors
@@ -174,10 +220,10 @@ class CategoricalGraph():
                     # Factor ID
                     index,
                     # The axis of this variable in the CPT array (as a negative axis)
-                    self._variables_in_factor[index].index(variable) - len(self._variables_in_factor[index])
+                    find_index(factor.variables, variable)
                 )
-                for index in range(len(self._variables_in_factor))
-                if variable in self._variables_in_factor[index]
+                for (index, factor) in enumerate(self._factors)
+                if variable in factor.variables
             ]
             for variable in dag.keys()
         }
@@ -195,8 +241,8 @@ class CategoricalGraph():
             key: size for (key, size) in all_sizes
         }
         self._factor_shapes = [
-            map_to_shape(self._original_sizes, cpt.plates + cpt.given + (cpt.variable,))
-            for cpt in self._cpts
+            map_to_shape(self._original_sizes, factor.plates + factor.variables)
+            for factor in self._factors
         ]
 
         # State
@@ -250,7 +296,7 @@ class CategoricalGraph():
             xs = xs.copy()
             for (variable, ind) in y.items():
                 for (factor, axis) in self._factors_with_variable[variable]:
-                    plates = self._cpts[factor].plates
+                    plates = self._factors[factor].plates
                     e = onehot(
                         index=map_to_plates(
                             ind,
@@ -286,11 +332,11 @@ class CategoricalGraph():
         # from children.
 
         # FIXME: Convert to lists.. Fix this in junctiontree
-        factors = [list(f) for f in self._variables_in_factor]
+        factors = [list(f) for f in self._keys_in_factor]
 
         if self._junctiontree is None:
             self._junctiontree = jt.create_junction_tree(
-                #self._variables_in_factor,
+                #self._keys_in_factor,
                 factors,
                 self._sizes
             )
@@ -300,15 +346,12 @@ class CategoricalGraph():
         # FIXME: Convert <log p> to exp( <log p> ). Perhaps junctiontree
         # package could support logarithms of the probabilities? Also, note
         # that these don't sum to one, they are non-normalized probabilities.
-        cpts = [
-            np.broadcast_to(
-                np.exp(cpt.table.get_moments()[0]),
-                shape
-            )
-            for (shape, cpt) in zip(self._factor_shapes, self._cpts)
+        potentials = [
+            np.broadcast_to(factor.potential(), shape)
+            for (shape, factor) in zip(self._factor_shapes, self._factors)
         ]
 
-        xs = self._slice_potentials(cpts)
+        xs = self._slice_potentials(potentials)
         # Convert to lists..
         u = self._junctiontree.propagate(list(xs))
 
@@ -322,7 +365,26 @@ class CategoricalGraph():
 
         self.u = {
             factor[-1]: ui
-            for (factor, ui) in zip(self._variables_in_factor, u)
+            for (factor, ui) in zip(self._keys_in_factor, u)
         }
 
         return
+
+
+    def __getitem__(self, name):
+        return CategoricalMarginal(graph=self, name=name)
+
+
+# @attr.s(frozen=True, slots=True)
+# class CategoricalMarginal():
+
+
+#     graph = attr.ib()
+#     name = attr.ib()
+
+
+#     def get_moments(self):
+#         return [self.graph.get_moments()[self.name]]
+
+
+#     def marginalize(self):
