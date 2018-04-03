@@ -425,6 +425,57 @@ class TestCategorical(TestCase):
             ]
         )
 
+        # With custom marginals
+        #
+        # x
+        # |
+        # y
+        # |
+        # z
+        _run(
+            {
+                "x": {
+                    "table": random(2),
+                },
+                "y": {
+                    "given": ["x"],
+                    "table": random(2, 3),
+                },
+                "z": {
+                    "given": ["y"],
+                    "table": random(3, 4),
+                },
+            },
+            lambda cpts: {
+                "x": sumproduct("x,xy,yz->x", cpts["x"], cpts["y"], cpts["z"]),
+                "y": sumproduct("x,xy,yz->xy", cpts["x"], cpts["y"], cpts["z"]),
+                "z": sumproduct("x,xy,yz->yz", cpts["x"], cpts["y"], cpts["z"]),
+                "marg_y": sumproduct("x,xy,yz->y", cpts["x"], cpts["y"], cpts["z"]),
+                "marg_z": sumproduct("x,xy,yz->z", cpts["x"], cpts["y"], cpts["z"]),
+                "marg_xz": sumproduct("x,xy,yz->xz", cpts["x"], cpts["y"], cpts["z"]),
+            },
+            [
+                {"x": 1},
+                {"y": 2},
+                {"z": 3},
+                {"x": 1, "y": 2},
+                {"x": 1, "z": 3},
+                {"y": 2, "z": 3},
+                {"x": 1, "y": 2, "z": 3},
+            ],
+            marginals={
+                "marg_y": {
+                    "variables": ["y"],
+                },
+                "marg_z": {
+                    "variables": ["z"],
+                },
+                "marg_xz": {
+                    "variables": ["x", "z"],
+                },
+            }
+        )
+
         #
         # PLATES
         #
@@ -641,6 +692,46 @@ class TestCategorical(TestCase):
                 },
             ],
             plates={"a": 5, "b": 6, "c": 4},
+        )
+
+        # With custom marginals
+        #
+        # x
+        # |
+        # y
+        _run(
+            {
+                "x": {
+                    "table": random(3, 4, 2),
+                    "plates": ["a", "b"],
+                },
+                "y": {
+                    "table": random(4, 3, 2, 5),
+                    "given": ["x"],
+                    "plates": ["b", "a"],
+                },
+            },
+            lambda cpts: {
+                "x": sumproduct("abx,baxy->abx", cpts["x"], cpts["y"], plates_ndim=2),
+                "y": sumproduct("abx,baxy->baxy", cpts["x"], cpts["y"], plates_ndim=2),
+                "marg_y": sumproduct("abx,baxy->aby", cpts["x"], cpts["y"], plates_ndim=2),
+            },
+            [
+                {"x": [ [1, 1, 0, 1], [0, 0, 1, 1], [1, 0, 0, 0] ]},
+                {"y": [ [2, 1, 0], [2, 2, 4], [0, 0, 2], [4, 1, 2] ]},
+                {
+                    "x": [ [1, 1, 0, 1], [0, 0, 1, 1], [1, 0, 0, 0] ],
+                    "y": [ [2, 1, 0], [2, 2, 4], [0, 0, 2], [4, 1, 2] ]
+                },
+            ],
+            plates={"a": 3, "b": 4},
+            marginals={
+                "marg_y": {
+                    "variables": ["y"],
+                    # test swapping the order of plates compared to CPT
+                    "plates": ["a", "b"],
+                },
+            },
         )
 
         # CPT broadcasted to plates

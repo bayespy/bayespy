@@ -285,7 +285,7 @@ class CategoricalGraph():
                         map_to_plates(
                             ind,
                             src=self._dag[variable].plates,
-                            dst=self._cpts[factor].plates
+                            dst=self._factors[factor].plates
                         ),
                         axis
                     )
@@ -358,14 +358,9 @@ class CategoricalGraph():
         def _normalize(p, n_plates=0):
             return p / np.sum(p, axis=tuple(range(n_plates, np.ndim(p))), keepdims=True)
 
-        u = [
-            _normalize(ui, n_plates=len(variable.plates))
-            for (variable, ui) in zip(self._cpts, self._unslice_potentials(u))
-        ]
-
         self.u = {
-            factor[-1]: ui
-            for (factor, ui) in zip(self._keys_in_factor, u)
+            factor.name: _normalize(ui, n_plates=len(factor.plates))
+            for (factor, ui) in zip(self._factors, self._unslice_potentials(u))
         }
 
         return
