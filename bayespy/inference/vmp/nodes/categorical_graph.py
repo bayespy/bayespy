@@ -22,14 +22,11 @@ from bayespy.utils import misc
 class Variable():
 
 
-    name = attr.ib(converter=str)
+    name = attr.ib()
     table = attr.ib(converter=lambda x: Node._ensure_moments(x, DirichletMoments))
     given = attr.ib(converter=tuple, default=())
     plates = attr.ib(converter=tuple, default=())
 
-    # @plates.validator
-    # def check(self, attribute, value):
-    #     pass
 
 
 def take(x, ind, axis):
