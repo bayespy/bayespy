@@ -19,10 +19,10 @@ from bayespy.utils import misc
 
 
 @attr.s(frozen=True, slots=True)
-class Variable():
+class ConditionalProbabilityTable():
 
 
-    name = attr.ib()
+    variable = attr.ib()
     table = attr.ib(converter=lambda x: Node._ensure_moments(x, DirichletMoments))
     given = attr.ib(converter=tuple, default=())
     plates = attr.ib(converter=tuple, default=())
@@ -134,13 +134,12 @@ class CategoricalGraph():
 
     def __init__(self, dag, plates={}):
 
-        # Convert to Variables
+        # Convert to CPTs
         dag = {
-            name: Variable(name=name, **config)
+            name: ConditionalProbabilityTable(variable=name, **config)
             for (name, config) in dag.items()
         }
 
-        self._dag = dag
 
         # Validate plates (children must have those plates that the parents have)
 
@@ -148,8 +147,10 @@ class CategoricalGraph():
 
         # Validate that plate keys and variable keys are unique
 
+
         # Fix the order of CPTs. Each CPT corresponds to a factor.
-        self._factor_variables = [variable for variable in dag.values()]
+        self._cpts = list(dag.values())
+        self._dag = dag
 
         # Mapping: factor -> variables and plates in the factor
         #
@@ -157,33 +158,34 @@ class CategoricalGraph():
         #
         # The name of the variables contained in each factor. Each CPT means a
         # factor which contains the variable itself and its parents.
-        self._factors = [
-            variable.plates + variable.given + (variable.name,)
-            for variable in self._factor_variables
+        self._variables_in_factor = [
+            cpt.plates + cpt.given + (cpt.variable,)
+            for cpt in self._cpts
         ]
 
         # Mapping: variable -> factors
         #
-        # Reverse mapping, should be done in junctiontree package? For each
-        # variable, find the list of factors in which the variable is included.
-        self._variable_factors = {
+        # FIXME: Reverse mapping, should be done in junctiontree package? For
+        # each variable, find the list of factors in which the variable is
+        # included.
+        self._factors_with_variable = {
             variable: [
                 (
                     # Factor ID
                     index,
                     # The axis of this variable in the CPT array (as a negative axis)
-                    self._factors[index].index(variable) - len(self._factors[index])
+                    self._variables_in_factor[index].index(variable) - len(self._variables_in_factor[index])
                 )
-                for index in range(len(self._factors))
-                if variable in self._factors[index]
+                for index in range(len(self._variables_in_factor))
+                if variable in self._variables_in_factor[index]
             ]
             for variable in dag.keys()
         }
 
         # Number of states for each variable (CPTs are assumed Dirichlet moments here)
         variable_sizes = {
-            name: variable.table.dims[0][0]
-            for (name, variable) in dag.items()
+            cpt.variable: cpt.table.dims[0][0]
+            for cpt in self._cpts
         }
 
         # Sizes of all axes (variables and plates), that is, just combine the
@@ -193,8 +195,8 @@ class CategoricalGraph():
             key: size for (key, size) in all_sizes
         }
         self._factor_shapes = [
-            map_to_shape(self._original_sizes, variable.plates + variable.given + (variable.name,))
-            for variable in self._factor_variables
+            map_to_shape(self._original_sizes, cpt.plates + cpt.given + (cpt.variable,))
+            for cpt in self._cpts
         ]
 
         # State
@@ -203,17 +205,9 @@ class CategoricalGraph():
         self._slice_potentials = lambda xs: xs
         self._unslice_potentials = lambda xs: xs
         self.u = {
-            variable: np.nan for variable in self._variable_factors.keys()
+            cpt.variable: np.nan for cpt in self._cpts
         }
 
-        # FIXME: Here we just assume fixed arrays as CPTs, not Dirichlet nodes
-        # supported yet.
-        self._cpts = [
-            variable.table
-            for variable in dag.values()
-        ]
-
-        # TODO: Call super?
         return
 
 
@@ -239,13 +233,13 @@ class CategoricalGraph():
             for (variable, ind) in y.items():
                 ind = np.asarray(ind, dtype=np.int)
                 # Loop all factors that contain the observed variable
-                for (factor, axis) in self._variable_factors[variable]:
+                for (factor, axis) in self._factors_with_variable[variable]:
                     xs[factor] = take(
                         xs[factor],
                         map_to_plates(
                             ind,
                             src=self._dag[variable].plates,
-                            dst=self._factor_variables[factor].plates
+                            dst=self._cpts[factor].plates
                         ),
                         axis
                     )
@@ -255,8 +249,8 @@ class CategoricalGraph():
         def unslice_potentials(xs):
             xs = xs.copy()
             for (variable, ind) in y.items():
-                for (factor, axis) in self._variable_factors[variable]:
-                    plates = self._factor_variables[factor].plates
+                for (factor, axis) in self._factors_with_variable[variable]:
+                    plates = self._cpts[factor].plates
                     e = onehot(
                         index=map_to_plates(
                             ind,
@@ -281,7 +275,7 @@ class CategoricalGraph():
         self._slice_potentials = slice_potentials
         self._unslice_potentials = unslice_potentials
         self.u = {
-            variable: np.nan for variable in self._variable_factors.keys()
+            cpt.variable: np.nan for cpt in self._cpts
         }
 
         return
@@ -292,11 +286,11 @@ class CategoricalGraph():
         # from children.
 
         # FIXME: Convert to lists.. Fix this in junctiontree
-        factors = [list(f) for f in self._factors]
+        factors = [list(f) for f in self._variables_in_factor]
 
         if self._junctiontree is None:
             self._junctiontree = jt.create_junction_tree(
-                #self._factors,
+                #self._variables_in_factor,
                 factors,
                 self._sizes
             )
@@ -308,7 +302,7 @@ class CategoricalGraph():
         # that these don't sum to one, they are non-normalized probabilities.
         cpts = [
             np.broadcast_to(
-                np.exp(cpt.get_moments()[0]),
+                np.exp(cpt.table.get_moments()[0]),
                 shape
             )
             for (shape, cpt) in zip(self._factor_shapes, self._cpts)
@@ -323,12 +317,12 @@ class CategoricalGraph():
 
         u = [
             _normalize(ui, n_plates=len(variable.plates))
-            for (variable, ui) in zip(self._factor_variables, self._unslice_potentials(u))
+            for (variable, ui) in zip(self._cpts, self._unslice_potentials(u))
         ]
 
         self.u = {
             factor[-1]: ui
-            for (factor, ui) in zip(self._factors, u)
+            for (factor, ui) in zip(self._variables_in_factor, u)
         }
 
         return
