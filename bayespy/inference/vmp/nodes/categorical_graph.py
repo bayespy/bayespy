@@ -80,53 +80,42 @@ def map_to_shape(sizes, keys):
 
 
 class CategoricalGraph():
-    """
+    """DAG for categorical variables with exact inference
 
-    Some future ideas:
+    The exact inference is uses the Junction tree algorithm.
 
-    X = CategoricalGraph(
-        [
-            Variable(
-                table=[0.8, 0.2],
-            ),
-            Variable(
-                table=[[0.6, 0.4], [0.99, 0.01]],
-                given=[0],
-                plates=['lawns']
-            ),
-            Variable(
-                table=[ [[1.0, 0.0], [0.2, 0.8]],
-                        [[0.1, 0.9], [0.01, 0.99]] ],
-                given=[0, 1],
-                plates=['lawns']
-            ),
-        ]
-        {
-            'rain': [0.8, 0.2],
-            'sprinkler': dict(table=[[0.6, 0.4], [0.99, 0.01]],
-                            given=['rain'],
-                            plates=['lawns'],
-                            platemap="i->i"),
-            'grass wet': dict(table=[ [[1.0, 0.0], [0.2, 0.8]],
-                                    [[0.1, 0.9], [0.01, 0.99]] ],
-                            given=['sprinkler', 'rain'],
-                            plates=['lawns'],
-                            platemap="i->i")
-        },
-        plates={
-            'lawns': 10,
-        },
-        # If needed, one could explicitly give a mapping from the graph plates
-        # to plate axes of other BayesPy nodes:
-        # NO! Use platemap attribute in the Variable class!
-        plates_axes={
-            'lawns': 0,
-        },
-    )
+    A simple example showing basically all available features:
 
-    Hmm.. How to get a child node with arbitrary (joint) marginals?
-
-    X[['rain','sprinkler'],['rain']] ?
+    >>> dag = CategoricalGraph(
+    ...     {
+    ...         "x": {
+    ...             "table": [0.4, 0.6],
+    ...         },
+    ...         "y": {
+    ...             "given": ["x"],
+    ...             "plates": ["trials"],
+    ...             "table": [ [0.1, 0.3, 0.6], [0.8, 0.1, 0.1] ],
+    ...         },
+    ...     },
+    ...     plates={
+    ...         "trials": 10,
+    ...     },
+    ...     marginals={
+    ...         "y_marg": {
+    ...             "variables": ["y"],
+    ...             "plates": ["trials"],
+    ...         },
+    ...     },
+    ... )
+    >>> dag.update()
+    >>> print(dag["x"].p)
+    >>> print(dag["y"].p)
+    >>> print(dag["y_marg"].p)
+    >>> dag.observe({"y": [1, 2, 0, 0, 2, 2, 1, 2, 1, 0]})
+    >>> dag.update()
+    >>> print(dag["x"].p)
+    >>> print(dag["y"].p)
+    >>> print(dag["y_marg"].p)
 
     """
 
