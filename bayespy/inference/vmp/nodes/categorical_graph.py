@@ -29,15 +29,6 @@ class ConditionalProbabilityTable():
 
 
 @attr.s(frozen=True, slots=True)
-class Marginal():
-
-
-    name = attr.ib()
-    variables = attr.ib(converter=tuple)
-    plates = attr.ib(converter=tuple, default=())
-
-
-@attr.s(frozen=True, slots=True)
 class Factor():
 
 
@@ -157,16 +148,10 @@ class CategoricalGraph():
     def __init__(self, dag, plates={}, marginals={}):
 
         # Convert to CPTs
-        dag = {
-            name: ConditionalProbabilityTable(variable=name, **config)
+        cpts = [
+            ConditionalProbabilityTable(variable=name, **config)
             for (name, config) in dag.items()
-        }
-
-        # Convert to Marginals
-        marginals = {
-            name: Marginal(name=name, **config)
-            for (name, config) in marginals.items()
-        }
+        ]
 
         # Validate plates (children must have those plates that the parents have)
 
@@ -174,31 +159,22 @@ class CategoricalGraph():
 
         # Validate that plate keys and variable keys are unique
 
-
-        # Fix the order of CPTs. Each CPT corresponds to a factor.
-        self._cpts = list(dag.values())
-        self._dag = dag
-
         # Add a factor for each CPT and requested marginal
-        def get_potential(node):
-            return lambda: np.exp(node.table.get_moments()[0])
+        def get_potential_function(node):
+            return lambda: np.exp(node.get_moments()[0])
+
+        # All factors: CPTs and explicitly requested (joint) marginals
         self._factors = [
             Factor(
                 name=cpt.variable,
                 variables=cpt.given + (cpt.variable,),
                 plates=cpt.plates,
-                potential=get_potential(cpt)
-                #potential=lambda: np.exp(cpt.table.get_moments()[0]),
+                potential=get_potential_function(cpt.table)
             )
-            for cpt in self._cpts
+            for cpt in cpts
         ] + [
-            Factor(
-                name=marginal.name,
-                variables=marginal.variables,
-                plates=marginal.plates,
-                potential=lambda: 1.0,
-            )
-            for marginal in marginals.values()
+            Factor(name=name, potential=lambda: 1.0, **config)
+            for (name, config) in marginals.items()
         ]
 
         # Mapping: factor -> keys (i.e., variables and plates) in the factor
@@ -215,23 +191,27 @@ class CategoricalGraph():
         # each variable, find the list of factors in which the variable is
         # included.
         self._factors_with_variable = {
-            variable: [
+            cpt.variable: [
                 (
                     # Factor ID
                     index,
                     # The axis of this variable in the CPT array (as a negative axis)
-                    find_index(factor.variables, variable)
+                    find_index(factor.variables, cpt.variable)
                 )
                 for (index, factor) in enumerate(self._factors)
-                if variable in factor.variables
+                if cpt.variable in factor.variables
             ]
-            for variable in dag.keys()
+            for cpt in cpts
         }
 
         # Number of states for each variable (CPTs are assumed Dirichlet moments here)
         variable_sizes = {
             cpt.variable: cpt.table.dims[0][0]
-            for cpt in self._cpts
+            for cpt in cpts
+        }
+        self._variable_plates = {
+            cpt.variable: cpt.plates
+            for cpt in cpts
         }
 
         # Sizes of all axes (variables and plates), that is, just combine the
@@ -251,7 +231,7 @@ class CategoricalGraph():
         self._slice_potentials = lambda xs: xs
         self._unslice_potentials = lambda xs: xs
         self.u = {
-            cpt.variable: np.nan for cpt in self._cpts
+            factor.name: np.nan for factor in self._factors
         }
 
         return
@@ -284,7 +264,7 @@ class CategoricalGraph():
                         xs[factor],
                         map_to_plates(
                             ind,
-                            src=self._dag[variable].plates,
+                            src=self._variable_plates[variable],
                             dst=self._factors[factor].plates
                         ),
                         axis
@@ -300,7 +280,7 @@ class CategoricalGraph():
                     e = onehot(
                         index=map_to_plates(
                             ind,
-                            src=self._dag[variable].plates,
+                            src=self._variable_plates[variable],
                             dst=plates
                         ),
                         size=self._original_sizes[variable],
@@ -321,7 +301,7 @@ class CategoricalGraph():
         self._slice_potentials = slice_potentials
         self._unslice_potentials = unslice_potentials
         self.u = {
-            cpt.variable: np.nan for cpt in self._cpts
+            factor.name: np.nan for factor in self._factors
         }
 
         return
