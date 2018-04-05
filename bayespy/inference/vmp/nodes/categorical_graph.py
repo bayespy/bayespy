@@ -153,6 +153,10 @@ class CategoricalGraph():
             for (name, config) in dag.items()
         ]
 
+        # Inform parents about this new child node
+        for cpt in cpts:
+            cpt.table._add_child(self, cpt.variable)
+
         # Validate plates (children must have those plates that the parents have)
 
         # Validate shapes of the CPTs
@@ -213,6 +217,10 @@ class CategoricalGraph():
             cpt.variable: cpt.plates
             for cpt in cpts
         }
+        self._parent_shapes = {
+            cpt.variable: cpt.table.plates + cpt.table.dims[0]
+            for cpt in cpts
+        }
 
         # Sizes of all axes (variables and plates), that is, just combine the
         # two size dicts
@@ -235,6 +243,12 @@ class CategoricalGraph():
         }
 
         return
+
+
+    def _message_to_parent(self, variable, u_parent):
+        shape = self._parent_shapes[variable]
+        m0 = misc.sum_to_shape(self.u[variable], shape)
+        return [m0]
 
 
     def lower_bound_contribution(self):
