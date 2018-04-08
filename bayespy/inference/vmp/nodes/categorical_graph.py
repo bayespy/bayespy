@@ -394,21 +394,22 @@ class CategoricalMarginal(Deterministic):
 
 
     def __init__(self, graph, name, **kwargs):
-        self.factor = name
+        self.factor_name = name
         # TODO/FIXME: Fix size
-        self._moments = CategoricalMoments(10) #graph._original_sizes[name])
+        shape = map_to_shape(graph._original_sizes, graph._factor_by_name[name].variables)
+        self._moments = CategoricalMoments(shape)
         self._parent_moments = [CategoricalGraphMoments()]
         return super().__init__(graph, **kwargs)
 
 
     def get_moments(self):
-        return [self.parents[0].get_moments()[self.factor]]
+        return [self.parents[0].get_moments()[self.factor_name]]
 
 
     def _plates_from_parent(self, index):
         return map_to_shape(
             self.parents[0]._original_sizes,
-            self.parents[0]._factor_by_name[self.factor].plates
+            self.parents[0]._factor_by_name[self.factor_name].plates
         )
 
 
