@@ -938,3 +938,113 @@ class TestCategorical(TestCase):
         )
 
         pass
+
+
+    def test_message_to_children(self):
+
+        def _run(dag, messages, **kwargs):
+
+            def to_cpt(X):
+                return np.exp(
+                    Dirichlet._ensure_moments(
+                        X,
+                        DirichletMoments
+                    ).get_moments()[0]
+                )
+
+
+            def _check(Y, msg, plates):
+                assert Y.plates == plates
+                m = Y.get_moments()
+                assert len(m) == 1
+                self.assertAllClose(m[0], msg)
+                return
+
+
+            X = CategoricalGraph(dag, **kwargs)
+            X.update()
+            cpts = {
+                name: to_cpt(config["table"])
+                for (name, config) in dag.items()
+            }
+            for (variable, (msg, plates)) in messages(cpts).items():
+                Y = X[variable]
+                _check(Y, msg, plates)
+
+            return
+
+        # Single variable
+        #
+        # x
+        _run(
+            {
+                "x": {
+                    "table": random(3),
+                }
+            },
+            lambda cpts: {"x": (normalize(cpts["x"]), ())},
+        )
+        _run(
+            {
+                "x": {
+                    "table": random(3),
+                    "plates": ["trials"],
+                }
+            },
+            lambda cpts: {
+                "x": (
+                    np.broadcast_to(normalize(cpts["x"]), (10, 3)),
+                    (10,)
+                )
+            },
+            plates={"trials": 10},
+        )
+
+        # Pair
+        #
+        # x
+        # |
+        # y
+        _run(
+            {
+                "x": {
+                    "table": random(10, 2),
+                    "plates": ["a"]
+                },
+                "y": {
+                    "given": ["x"],
+                    "table": random(10, 20, 2, 3),
+                    "plates": ["a", "b"],
+                },
+            },
+            lambda cpts: {
+                "x": (
+                    sumproduct("ax,abxy->ax", cpts["x"], cpts["y"], plates_ndim=1),
+                    (10,)
+                ),
+                "y": (
+                    sumproduct("ax,abxy->abxy", cpts["x"], cpts["y"], plates_ndim=2),
+                    (10, 20)
+                ),
+                "marg_y": (
+                    sumproduct("ax,abxy->bay", cpts["x"], cpts["y"], plates_ndim=2),
+                    (20, 10)
+                ),
+            },
+            marginals={
+                "marg_y": {
+                    "variables": ["y"],
+                    "plates": ["b", "a"],
+                }
+            },
+            plates={
+                "a": 10,
+                "b": 20,
+            }
+        )
+
+        pass
+
+
+    def test_message_from_children(self):
+        pass

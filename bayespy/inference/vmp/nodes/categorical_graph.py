@@ -10,12 +10,18 @@ import junctiontree as jt
 import attr
 
 
-from .node import Node
+from .node import Node, Moments
 from .stochastic import Distribution
+from .deterministic import Deterministic
 
 from .dirichlet import DirichletMoments
+from .categorical import CategoricalMoments
 
 from bayespy.utils import misc
+
+
+class CategoricalGraphMoments(Moments):
+    pass
 
 
 @attr.s(frozen=True, slots=True)
@@ -92,7 +98,7 @@ def map_to_shape(sizes, keys):
     return tuple(sizes[key] for key in keys)
 
 
-class CategoricalGraph():
+class CategoricalGraph(Node):
     """DAG for categorical variables with exact inference
 
     The exact inference is uses the Junction tree algorithm.
@@ -147,6 +153,11 @@ class CategoricalGraph():
 
     def __init__(self, dag, plates={}, marginals={}):
 
+        self._id = Node._id_counter
+        Node._id_counter += 1
+
+        self._moments = CategoricalGraphMoments()
+
         # Convert to CPTs
         cpts = [
             ConditionalProbabilityTable(variable=name, **config)
@@ -180,6 +191,11 @@ class CategoricalGraph():
             Factor(name=name, potential=lambda: 1.0, **config)
             for (name, config) in marginals.items()
         ]
+
+        self._factor_by_name = {
+            factor.name: factor
+            for factor in self._factors
+        }
 
         # Mapping: factor -> keys (i.e., variables and plates) in the factor
         #
@@ -242,7 +258,9 @@ class CategoricalGraph():
             factor.name: np.nan for factor in self._factors
         }
 
-        return
+        self._parent_moments = []
+
+        return super().__init__()
 
 
     def _message_to_parent(self, variable, u_parent):
@@ -256,6 +274,10 @@ class CategoricalGraph():
 
 
     def get_moments(self):
+        return self.u
+
+
+    def _message_to_child(self):
         return self.u
 
 
@@ -364,16 +386,31 @@ class CategoricalGraph():
         return CategoricalMarginal(graph=self, name=name)
 
 
-# @attr.s(frozen=True, slots=True)
-# class CategoricalMarginal():
+    def _get_id_list(self):
+        return [self._id]
 
 
-#     graph = attr.ib()
-#     name = attr.ib()
+class CategoricalMarginal(Deterministic):
 
 
-#     def get_moments(self):
-#         return [self.graph.get_moments()[self.name]]
+    def __init__(self, graph, name, **kwargs):
+        self.factor = name
+        # TODO/FIXME: Fix size
+        self._moments = CategoricalMoments(10) #graph._original_sizes[name])
+        self._parent_moments = [CategoricalGraphMoments()]
+        return super().__init__(graph, **kwargs)
 
 
-#     def marginalize(self):
+    def get_moments(self):
+        return [self.parents[0].get_moments()[self.factor]]
+
+
+    def _plates_from_parent(self, index):
+        return map_to_shape(
+            self.parents[0]._original_sizes,
+            self.parents[0]._factor_by_name[self.factor].plates
+        )
+
+
+    def _message_from_parents(self):
+        return self.parents[0]._message_to_child()
