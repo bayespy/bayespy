@@ -1,3 +1,12 @@
+Dev
++++
+
+Changed
+.......
+
+* Matplotlib was removed from installation requirements.
+
+
 Version 0.5.14 (2018-03-09)
 +++++++++++++++++++++++++++
 

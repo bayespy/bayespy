@@ -6,7 +6,6 @@
 
 
 import numpy as np
-import matplotlib.pyplot as plt
 import functools
 
 from bayespy.utils import misc
@@ -56,7 +55,7 @@ class Moments():
 
       * Write statistic-specific features in one place only. For instance,
         covariance from Gaussian message.
-    
+
       * Different nodes may have identically defined statistic so you need to
         implement related features only once. For instance, Gaussian and
         GaussianARD differ on the prior but the moments are the same.
@@ -139,12 +138,12 @@ class Moments():
         converted_list = [(self.__class__, [])]
 
         # Each iteration step consists of two parts:
-        # 1) form a set of the current classes and all their parent classes 
+        # 1) form a set of the current classes and all their parent classes
         #    recursively
-        # 2) from the current set, apply possible conversions to get a new set 
+        # 2) from the current set, apply possible conversions to get a new set
         #    of classes
         # Repeat these two steps until in step (1) you hit the target class.
-        
+
         while len(converted_list) > 0:
             # Go through all parents recursively so we can then use all
             # converters that are available
@@ -173,7 +172,7 @@ class Moments():
                     if conv_mom_cls not in visited:
                         visited.add(conv_mom_cls)
                         converted_list.append((conv_mom_cls,
-                                               converter_path + [conv])) 
+                                               converter_path + [conv]))
 
         raise self.NoConverterError("No conversion defined from %s to %s"
                                     % (self.__class__.__name__,
@@ -184,7 +183,7 @@ class Moments():
         # This method can't be static because the computation of the moments may
         # depend on, for instance, ndim in Gaussian arrays.
         raise NotImplementedError("compute_fixed_moments not implemented for "
-                                  "%s" 
+                                  "%s"
                                   % (self.__class__.__name__))
 
 
@@ -213,7 +212,7 @@ def ensureparents(func):
         ]
         # parents = list(parents)
         # for (ind, parent) in enumerate(parents):
-        #     parents[ind] = self._ensure_moments(parent, 
+        #     parents[ind] = self._ensure_moments(parent,
         #                                         self._parent_moments[ind])
         # Run the function
         return func(self, *parents, **kwargs)
@@ -276,7 +275,7 @@ class Node():
                 parent._add_child(self, index)
 
         # Check plates
-        parent_plates = [self._plates_from_parent(index) 
+        parent_plates = [self._plates_from_parent(index)
                          for index in range(len(self.parents))]
         if any(p is None for p in parent_plates):
             raise ValueError("Method _plates_from_parent returned None")
@@ -293,7 +292,7 @@ class Node():
         self.children = set()
 
         # Get and validate the plate multiplier
-        parent_plates_multiplier = [self._plates_multiplier_from_parent(index) 
+        parent_plates_multiplier = [self._plates_multiplier_from_parent(index)
                                    for index in range(len(self.parents))]
         #if plates_multiplier is None:
         #    plates_multiplier = parent_plates_multiplier
@@ -432,8 +431,8 @@ class Node():
         ----------
         child : node
         index : int
-           The parent index of this node for the child node.  
-           The child node recognizes its parents by their index 
+           The parent index of this node for the child node.
+           The child node recognizes its parents by their index
            number.
         """
         self.children.add((child, index))
@@ -446,15 +445,15 @@ class Node():
 
     def get_mask(self):
         return self.mask
-    
+
     ## def _get_message_mask(self):
     ##     return self.mask
-    
+
     def _set_mask(self, mask):
         # Sub-classes may overwrite this method if they have some other masks to
         # be combined (for instance, observation mask)
         self.mask = mask
-    
+
     def _update_mask(self):
         # Combine masks from children
         mask = np.array(False)
@@ -470,7 +469,7 @@ class Node():
                              % (self.name,
                                 np.shape(self.mask),
                                 self.plates))
-        
+
         # Tell parents to update their masks
         for parent in self.parents:
             parent._update_mask()
@@ -518,7 +517,7 @@ class Node():
                                 plates_to_parent,
                                 self.__class__.__name__))
 
-        # "Sum" (i.e., logical or) over the plates that have unit length in 
+        # "Sum" (i.e., logical or) over the plates that have unit length in
         # the parent node.
         parent_plates = self.parents[index].plates
         s = misc.axes_to_collapse(np.shape(mask), parent_plates)
@@ -567,7 +566,7 @@ class Node():
                            self.plates,
                            self.name))
         return u
-                
+
     def _message_to_parent(self, index, u_parent=None):
 
         # Compute the message, check plates, apply mask and sum over some plates
@@ -727,7 +726,7 @@ class Node():
         ## respect to the parent). The other arguments are the shape of the message
         ## array and the plates of the parent (with respect to this node).
         ## """
-        
+
         ## # Check broadcasting of the shapes
         ## for arg in args:
         ##     misc.broadcasted_shape(plates, arg)
@@ -737,7 +736,7 @@ class Node():
         ##     if not misc.is_shape_subset(arg, plates):
         ##         raise ValueError("The shapes in args are not a sub-shape of "
         ##                          "plates.")
-            
+
         ## r = 1
         ## for j in range(-len(plates),0):
         ##     mult = True
@@ -750,7 +749,7 @@ class Node():
         ## return r
 
     def move_plates(self, from_plate, to_plate):
-        return _MovePlate(self, 
+        return _MovePlate(self,
                           from_plate,
                           to_plate,
                           name=self.name + ".move_plates")
@@ -771,7 +770,7 @@ class Node():
 
     def set_plotter(self, plotter):
         self._plotter = plotter
-    
+
     def plot(self, fig=None, **kwargs):
         """
         Plot the node distribution using the plotter of the node
@@ -782,6 +781,7 @@ class Node():
         that is, functions that perform plotting for a node.
         """
         if fig is None:
+            import matplotlib.pyplot as plt
             fig = plt.gcf()
         if callable(self._plotter):
             ax = self._plotter(self, fig=fig, **kwargs)
@@ -869,7 +869,7 @@ class Slice(Deterministic):
 
     """
     Basic slicing for plates.
-    
+
     Slicing occurs when index is a slice object (constructed by start:stop:step
     notation inside of brackets), an integer, or a tuple of slice objects and
     integers.
@@ -911,10 +911,10 @@ class Slice(Deterministic):
 
             elif s is None:
                 pass
-                
+
             elif s is Ellipsis:
                 # Index is an ellipsis, e.g., [...]
-                
+
                 if ellipsis_index is None:
                     # Expand ...
                     ellipsis_index = k
@@ -922,7 +922,7 @@ class Slice(Deterministic):
                     # Interpret ... as :
                     num_axis += 1
                     slices[k] = slice(None)
-                    
+
             else:
                 raise TypeError("Invalid argument type: {0}".format(s.__class__))
 
@@ -933,7 +933,7 @@ class Slice(Deterministic):
         # Ellipsis was used or the number of slices was smaller than the number
         # of plate axes)
         expand_len = len(X.plates) - num_axis
-        
+
         if ellipsis_index is not None:
             # Replace Ellipsis with correct number of :
             k = ellipsis_index
@@ -952,12 +952,12 @@ class Slice(Deterministic):
 
         # Index for parent plates
         j = 0
-        
+
         for (k, s) in enumerate(slices):
 
             if misc.is_scalar_integer(s):
                 # Index is an integer, e.g., [3]
-                
+
                 if s < 0:
                     # Handle negative index
                     s += X.plates[j]
@@ -969,7 +969,7 @@ class Slice(Deterministic):
 
             elif isinstance(s, slice):
                 # Index is a slice, e.g., [2:6]
-                
+
                 # Normalize the slice
                 s = slice(*(s.indices(X.plates[j])))
                 if slicelen(s) <= 0:
@@ -995,7 +995,7 @@ class Slice(Deterministic):
         k = 0
         for s in self.slices:
             # Then, each case separately: slice, newaxis, integer
-            
+
             if isinstance(s, slice):
                 # Slice, e.g., [2:5]
                 N = slicelen(s)
@@ -1003,12 +1003,12 @@ class Slice(Deterministic):
                     raise IndexError("Slicing leads to empty plates")
                 plates[k] = N
                 k += 1
-                
+
             elif s is None:
                 # [np.newaxis]
                 plates = plates[:k] + [1] + plates[k:]
                 k += 1
-                
+
             elif misc.is_scalar_integer(s):
                 # Integer, e.g., [3]
                 del plates[k]
@@ -1105,9 +1105,9 @@ class Slice(Deterministic):
         parent = self.parents[0]
 
         # Apply reverse indexing for the message arrays
-        msg = [self.__reverse_indexing(self.slices, 
+        msg = [self.__reverse_indexing(self.slices,
                                        m_child,
-                                       parent.plates, 
+                                       parent.plates,
                                        dims)
                for (m_child, dims) in zip(m, parent.dims)]
 
@@ -1143,7 +1143,7 @@ class Slice(Deterministic):
                         # this. It does not make any difference if you added
                         # leading unit axes
                         u_slices.append(s)
-                    
+
                 else:
                     # slice or integer index
 
@@ -1163,16 +1163,16 @@ class Slice(Deterministic):
                             # The moment is using broadcasting, just pick the
                             # first element
                             u_slices.append(0)
-                            
+
                     j += 1
 
             # Slice the message/moment
             u[n] = u[n][tuple(u_slices)]
-        
+
         return u
 
 def AddPlateAxis(to_plate):
-    
+
     if to_plate >= 0:
         raise Exception("Give negative value for axis index to_plate.")
 
@@ -1196,7 +1196,7 @@ def AddPlateAxis(to_plate):
                 to_plate -= N
                 #self.to_plate = to_plate
 
-            super().__init__(X, 
+            super().__init__(X,
                              dims=X.dims,
                              **kwargs)
 
@@ -1251,7 +1251,7 @@ def AddPlateAxis(to_plate):
                 # Make sure the moments have all the axes
                 #diff = len(self.plates) + len(self.dims[i]) - np.ndim(u[i]) - 1
                 #u[i] = misc.add_leading_axes(u[i], diff)
-                
+
                 # The location of the new axis/plate:
                 axis = np.ndim(u[i]) - abs(to_plate) - len(self.dims[i]) + 1
                 if axis > 0:
@@ -1263,7 +1263,7 @@ def AddPlateAxis(to_plate):
             return u
 
     return _AddPlateAxis
-        
+
 
 class NodeConstantScalar(Node):
     @staticmethod
@@ -1290,7 +1290,7 @@ class NodeConstantScalar(Node):
             # This would need to apply the gradient of the
             # transformation to the computed gradient
             return self.gradient
-            
+
         return (x0, transform, gradient)
 
     def add_to_gradient(self, d):
@@ -1308,6 +1308,3 @@ class NodeConstantScalar(Node):
     def stop_optimization(self):
         #raise Exception("Not implemented for " + str(self.__class__))
         pass
-
-
-    
