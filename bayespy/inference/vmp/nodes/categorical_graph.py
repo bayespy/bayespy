@@ -395,7 +395,7 @@ class CategoricalMarginal(Deterministic):
 
     def __init__(self, graph, name, **kwargs):
         self.factor_name = name
-        # TODO/FIXME: Fix size
+        # TODO/FIXME: Fix support for multiaxes categoricals (joint probability tables)
         shape = map_to_shape(graph._original_sizes, graph._factor_by_name[name].variables)
         self._moments = CategoricalMoments(shape)
         self._parent_moments = [CategoricalGraphMoments()]
