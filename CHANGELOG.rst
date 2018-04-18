@@ -1,3 +1,13 @@
+Version 0.5.17 (2018-04-18)
++++++++++++++++++++++++++++
+
+Changed
+.......
+
+* Import ``plot`` module automatically if possible (i.e., if matplotlib
+  available)
+
+
 Version 0.5.16 (2018-04-17)
 +++++++++++++++++++++++++++
 
@@ -5,6 +15,7 @@ Fixed
 .....
 
 * Fix matplotlib dependency removal.
+
 
 Version 0.5.15 (2018-04-17)
 +++++++++++++++++++++++++++
