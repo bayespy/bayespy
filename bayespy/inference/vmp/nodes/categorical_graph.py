@@ -31,7 +31,6 @@ class ConditionalProbabilityTable():
     variable = attr.ib()
     table = attr.ib(converter=lambda x: Node._ensure_moments(x, DirichletMoments))
     given = attr.ib(converter=tuple, default=())
-    plates = attr.ib(converter=tuple, default=())
 
 
 @attr.s(frozen=True, slots=True)
@@ -41,34 +40,10 @@ class Factor():
     name = attr.ib()
     potential = attr.ib()
     variables = attr.ib(converter=tuple)
-    plates = attr.ib(converter=tuple, default=())
 
 
 def find_index(xs, x):
     return xs.index(x) - len(xs)
-
-
-def take(x, ind, axis):
-    """
-    Take elements along the last axis but apply the shape to the leading axes.
-
-    That is, for ind with ndim=2:
-
-    y[i,j] = x_ij[i,j,...,ind[i,j]] for i=1,...,M and j=1,...,N
-
-    """
-    x = np.asanyarray(x)
-    ndim = np.ndim(x)
-    if axis >= 0:
-        axis = axis - ndim
-    if axis >= 0 or axis < -ndim:
-        raise ValueError("Axis out of bounds")
-    shape = np.shape(x)
-    plates = shape[:np.ndim(ind)]
-    n_plates = len(plates)
-    ind_plates = np.ix_(*[range(plate) for plate in plates])
-    inds = list(ind_plates) + [...] + [np.asarray(ind)] + (abs(axis) - 1) * [slice(None)]
-    return np.expand_dims(x[inds], axis)
 
 
 def onehot(index, size, axis=-1, extradims=0):
@@ -79,18 +54,6 @@ def onehot(index, size, axis=-1, extradims=0):
          np.arange(size) == index,
         -1,
         axis
-    )
-
-
-def map_to_plates(x, src, dst):
-    dst_keys = list(range(len(dst)))
-    src_keys = [dst.index(i) for i in src]
-    return np.einsum(
-        np.ones((1,) * len(dst_keys), dtype=np.int),
-        dst_keys,
-        x,
-        src_keys,
-        dst_keys
     )
 
 
@@ -112,17 +75,12 @@ class CategoricalGraph(Node):
     ...         },
     ...         "y": {
     ...             "given": ["x"],
-    ...             "plates": ["trials"],
     ...             "table": [ [0.1, 0.3, 0.6], [0.8, 0.1, 0.1] ],
     ...         },
-    ...     },
-    ...     plates={
-    ...         "trials": 10,
     ...     },
     ...     marginals={
     ...         "marg_y": {
     ...             "variables": ["y"],
-    ...             "plates": ["trials"],
     ...         },
     ...     },
     ... )
@@ -142,7 +100,7 @@ class CategoricalGraph(Node):
     #
     # - random
     # - message to parent
-    # - explicit extra marginals: CategoricalGraph({...}, plates={...}, marginals={...})
+    # - explicit extra marginals: CategoricalGraph({...}, marginals={...})
     # - message to children
     # - multi-dimensional categorical moments, support in mixture
     # - compare performance to categoricalchain
@@ -151,7 +109,7 @@ class CategoricalGraph(Node):
     # - example graph #23
 
 
-    def __init__(self, dag, plates={}, marginals={}):
+    def __init__(self, dag, marginals={}):
 
         self._id = Node._id_counter
         Node._id_counter += 1
@@ -168,8 +126,6 @@ class CategoricalGraph(Node):
         for cpt in cpts:
             cpt.table._add_child(self, cpt.variable)
 
-        # Validate plates (children must have those plates that the parents have)
-
         # Validate shapes of the CPTs
 
         # Validate that plate keys and variable keys are unique
@@ -183,7 +139,6 @@ class CategoricalGraph(Node):
             Factor(
                 name=cpt.variable,
                 variables=cpt.given + (cpt.variable,),
-                plates=cpt.plates,
                 potential=get_potential_function(cpt.table)
             )
             for cpt in cpts
@@ -197,11 +152,11 @@ class CategoricalGraph(Node):
             for factor in self._factors
         }
 
-        # Mapping: factor -> keys (i.e., variables and plates) in the factor
+        # Mapping: factor -> keys in the factor
         #
         # This is required by Junctiontree package.
         self._keys_in_factor = [
-            factor.plates + factor.variables
+            factor.variables
             for factor in self._factors
         ]
 
@@ -229,10 +184,6 @@ class CategoricalGraph(Node):
             cpt.variable: cpt.table.dims[0][0]
             for cpt in cpts
         }
-        self._variable_plates = {
-            cpt.variable: cpt.plates
-            for cpt in cpts
-        }
         self._parent_shapes = {
             cpt.variable: cpt.table.plates + cpt.table.dims[0]
             for cpt in cpts
@@ -240,12 +191,11 @@ class CategoricalGraph(Node):
 
         # Sizes of all axes (variables and plates), that is, just combine the
         # two size dicts
-        all_sizes = list(variable_sizes.items()) + list(plates.items())
         self._original_sizes = {
-            key: size for (key, size) in all_sizes
+            key: size for (key, size) in variable_sizes.items()
         }
         self._factor_shapes = [
-            map_to_shape(self._original_sizes, factor.plates + factor.variables)
+            map_to_shape(self._original_sizes, factor.variables)
             for factor in self._factors
         ]
 
@@ -296,14 +246,10 @@ class CategoricalGraph(Node):
                 ind = np.asarray(ind, dtype=np.int)
                 # Loop all factors that contain the observed variable
                 for (factor, axis) in self._factors_with_variable[variable]:
-                    xs[factor] = take(
+                    xs[factor] = np.take(
                         xs[factor],
-                        map_to_plates(
-                            ind,
-                            src=self._variable_plates[variable],
-                            dst=self._factors[factor].plates
-                        ),
-                        axis
+                        [ind],
+                        axis=axis
                     )
             return xs
 
@@ -312,15 +258,10 @@ class CategoricalGraph(Node):
             xs = xs.copy()
             for (variable, ind) in y.items():
                 for (factor, axis) in self._factors_with_variable[variable]:
-                    plates = self._factors[factor].plates
                     e = onehot(
-                        index=map_to_plates(
-                            ind,
-                            src=self._variable_plates[variable],
-                            dst=plates
-                        ),
+                        index=ind,
                         size=self._original_sizes[variable],
-                        extradims=np.ndim(xs[factor]) - len(plates) - 1,
+                        extradims=np.ndim(xs[factor]) - 1,
                         axis=axis,
                     )
                     xs[factor] = e * xs[factor]
@@ -371,11 +312,11 @@ class CategoricalGraph(Node):
         # Convert to lists..
         u = self._junctiontree.propagate(list(xs))
 
-        def _normalize(p, n_plates=0):
-            return p / np.sum(p, axis=tuple(range(n_plates, np.ndim(p))), keepdims=True)
+        def _normalize(p):
+            return p / np.sum(p, keepdims=True)
 
         self.u = {
-            factor.name: _normalize(ui, n_plates=len(factor.plates))
+            factor.name: _normalize(ui)
             for (factor, ui) in zip(self._factors, self._unslice_potentials(u))
         }
 
@@ -407,10 +348,7 @@ class CategoricalMarginal(Deterministic):
 
 
     def _plates_from_parent(self, index):
-        return map_to_shape(
-            self.parents[0]._original_sizes,
-            self.parents[0]._factor_by_name[self.factor_name].plates
-        )
+        return ()
 
 
     def _message_from_parents(self):

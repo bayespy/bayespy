@@ -17,7 +17,7 @@ import scipy
 from bayespy.inference.vmp.nodes.dirichlet import DirichletMoments
 from bayespy.nodes import CategoricalGraph, Dirichlet
 
-from ..categorical_graph import take, onehot
+from ..categorical_graph import onehot
 
 from bayespy.utils import random
 from bayespy.utils import misc
@@ -42,10 +42,9 @@ def random(*shape):
     return normalize(np.random.rand(*shape), axis=-1)
 
 
-def sumproduct(*args, plates_ndim=0):
+def sumproduct(*args):
     y = np.einsum(*args)
-    norm_ndim = np.ndim(y) - plates_ndim
-    return normalize(y, axis=tuple(range(-norm_ndim, 0)))
+    return normalize(y)
 
 
 class TestCategorical(TestCase):
@@ -123,48 +122,6 @@ class TestCategorical(TestCase):
                 ],
             ],
         )
-        return
-
-
-    def test_take(self):
-
-        # Scalar indices
-        self.assertAllClose(
-            take([1,2,3], 0, axis=-1),
-            [1]
-        )
-        self.assertAllClose(
-            take([[1,2,3], [4,5,6]], 2, axis=-1),
-            [[3], [6]]
-        )
-        self.assertAllClose(
-            take([[1,2,3], [4,5,6]], 1, axis=-2),
-            [[4,5,6]]
-        )
-
-        # Array indices
-        self.assertAllClose(
-            take([[1,2,3], [4,5,6]], [1, 2], axis=-1),
-            [[2], [6]]
-        )
-        self.assertAllClose(
-            take(
-                [
-                    [[1,2,3,4], [4,5,6,7], [8,9,10,11]],
-                    [[12,13,14,15], [16,17,18,19], [20,21,22,23]],
-                ],
-                [1, 2],
-                axis=-1
-            ),
-            [ [[2],[5],[9]], [[14],[18],[22]] ]
-        )
-
-        # Error: shape mismatches
-
-        # Error: index out of bounds
-
-        # Error: axis out of bounds
-
         return
 
 
@@ -476,266 +433,6 @@ class TestCategorical(TestCase):
             }
         )
 
-        #
-        # PLATES
-        #
-
-        # Single variable
-        #
-        # x
-        _run(
-            {
-                "x": {
-                    "table": random(10, 2),
-                    "plates": ["a"],
-                }
-            },
-            lambda cpts: {"x": normalize(cpts["x"], axis=-1)},
-            [
-                {"x": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0]},
-            ],
-            plates={"a": 10},
-        )
-
-        # Pair with common plates
-        #
-        # x
-        # |
-        # y
-        _run(
-            {
-                "x": {
-                    "table": random(10, 2),
-                    "plates": ["a"],
-                },
-                "y": {
-                    "table": random(10, 2, 3),
-                    "given": ["x"],
-                    "plates": ["a"],
-                },
-            },
-            lambda cpts: {
-                "x": sumproduct("ax,axy->ax", cpts["x"], cpts["y"], plates_ndim=1),
-                "y": sumproduct("ax,axy->axy", cpts["x"], cpts["y"], plates_ndim=1),
-            },
-            [
-                {"x": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0]},
-                {"y": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0]},
-                {"x": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0], "y": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0]},
-            ],
-            plates={"a": 10},
-        )
-
-        # Pair with plates on children only
-        #
-        # x
-        # |
-        # y
-        _run(
-            {
-                "x": {
-                    "table": random(2),
-                },
-                "y": {
-                    "table": random(10, 2, 3),
-                    "given": ["x"],
-                    "plates": ["a"],
-                },
-            },
-            lambda cpts: {
-                "x": sumproduct("x,axy->x", cpts["x"], cpts["y"], plates_ndim=0),
-                "y": sumproduct("x,axy->axy", cpts["x"], cpts["y"], plates_ndim=1),
-            },
-            [
-                {"x": 1},
-                {"y": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0]},
-                {"x": 1, "y": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0]},
-            ],
-            plates={"a": 10},
-        )
-
-        # Broadcast plates
-        #
-        # x
-        # |
-        # y
-        _run(
-            {
-                "x": {
-                    "table": random(2),
-                },
-                "y": {
-                    "table": random(2, 3),
-                    "given": ["x"],
-                    "plates": ["a"],
-                },
-            },
-            lambda cpts: {
-                "x": sumproduct("x,axy->x", cpts["x"], np.broadcast_to(cpts["y"], (10,2,3)), plates_ndim=0),
-                "y": sumproduct("x,axy->axy", cpts["x"], np.broadcast_to(cpts["y"], (10,2,3)), plates_ndim=1),
-            },
-            [
-                {"x": 1},
-                {"y": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0]},
-                {"x": 1, "y": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0]},
-            ],
-            plates={"a": 10},
-        )
-
-        # Pair with common and child-only plates
-        #
-        # x
-        # |
-        # y
-        _run(
-            {
-                "x": {
-                    "table": random(3, 2),
-                    "plates": ["a"],
-                },
-                "y": {
-                    "table": random(4, 3, 2, 5),
-                    "given": ["x"],
-                    "plates": ["b", "a"],
-                },
-            },
-            lambda cpts: {
-                "x": sumproduct("ax,baxy->ax", cpts["x"], cpts["y"], plates_ndim=1),
-                "y": sumproduct("ax,baxy->baxy", cpts["x"], cpts["y"], plates_ndim=2),
-            },
-            [
-                {"x": [1, 1, 0]},
-                {"y": [ [2, 1, 0], [2, 2, 4], [0, 0, 2], [4, 1, 2] ]},
-                {"x": [1, 1, 0], "y": [ [4, 1, 0], [2, 3, 1], [0, 4, 2], [3, 1, 2] ]},
-            ],
-            plates={"a": 3, "b": 4},
-        )
-
-        # Pair with only common plates mapped with crossing
-        #
-        # x
-        # |
-        # y
-        _run(
-            {
-                "x": {
-                    "table": random(3, 4, 2),
-                    "plates": ["a", "b"],
-                },
-                "y": {
-                    "table": random(4, 3, 2, 5),
-                    "given": ["x"],
-                    "plates": ["b", "a"],
-                },
-            },
-            lambda cpts: {
-                "x": sumproduct("abx,baxy->abx", cpts["x"], cpts["y"], plates_ndim=2),
-                "y": sumproduct("abx,baxy->baxy", cpts["x"], cpts["y"], plates_ndim=2),
-            },
-            [
-                {"x": [ [1, 1, 0, 1], [0, 0, 1, 1], [1, 0, 0, 0] ]},
-                {"y": [ [2, 1, 0], [2, 2, 4], [0, 0, 2], [4, 1, 2] ]},
-                {
-                    "x": [ [1, 1, 0, 1], [0, 0, 1, 1], [1, 0, 0, 0] ],
-                    "y": [ [2, 1, 0], [2, 2, 4], [0, 0, 2], [4, 1, 2] ]
-                },
-            ],
-            plates={"a": 3, "b": 4},
-        )
-
-        # Plates from both parents
-        #
-        # x   y
-        #  \ /
-        #   z
-        _run(
-            {
-                "x": {
-                    "table": random(6, 5, 2),
-                    "plates": ["b", "a"],
-                },
-                "y": {
-                    "table": random(5, 4, 3),
-                    "plates": ["a", "c"],
-                },
-                "z": {
-                    "table": random(4, 5, 6, 2, 3, 7),
-                    "plates": ["c", "a", "b"],
-                    "given": ["x", "y"],
-                },
-            },
-            lambda cpts: {
-                "x": sumproduct("bax,acy,cabxyz->bax", cpts["x"], cpts["y"], cpts["z"], plates_ndim=2),
-                "y": sumproduct("bax,acy,cabxyz->acy", cpts["x"], cpts["y"], cpts["z"], plates_ndim=2),
-                "z": sumproduct("bax,acy,cabxyz->cabxyz", cpts["x"], cpts["y"], cpts["z"], plates_ndim=3),
-            },
-            [
-                {"x": np.random.randint(2, size=(6,5))},
-                {"y": np.random.randint(3, size=(5,4))},
-                {"z": np.random.randint(7, size=(4,5,6))},
-                {
-                    "x": np.random.randint(2, size=(6,5)),
-                    "y": np.random.randint(3, size=(5,4))
-                },
-                {
-                    "x": np.random.randint(2, size=(6,5)),
-                    "z": np.random.randint(7, size=(4,5,6)),
-                },
-                {
-                    "y": np.random.randint(3, size=(5,4)),
-                    "z": np.random.randint(7, size=(4,5,6)),
-                },
-                {
-                    "x": np.random.randint(2, size=(6,5)),
-                    "y": np.random.randint(3, size=(5,4)),
-                    "z": np.random.randint(7, size=(4,5,6)),
-                },
-            ],
-            plates={"a": 5, "b": 6, "c": 4},
-        )
-
-        # With custom marginals
-        #
-        # x
-        # |
-        # y
-        _run(
-            {
-                "x": {
-                    "table": random(3, 4, 2),
-                    "plates": ["a", "b"],
-                },
-                "y": {
-                    "table": random(4, 3, 2, 5),
-                    "given": ["x"],
-                    "plates": ["b", "a"],
-                },
-            },
-            lambda cpts: {
-                "x": sumproduct("abx,baxy->abx", cpts["x"], cpts["y"], plates_ndim=2),
-                "y": sumproduct("abx,baxy->baxy", cpts["x"], cpts["y"], plates_ndim=2),
-                "marg_y": sumproduct("abx,baxy->aby", cpts["x"], cpts["y"], plates_ndim=2),
-            },
-            [
-                {"x": [ [1, 1, 0, 1], [0, 0, 1, 1], [1, 0, 0, 0] ]},
-                {"y": [ [2, 1, 0], [2, 2, 4], [0, 0, 2], [4, 1, 2] ]},
-                {
-                    "x": [ [1, 1, 0, 1], [0, 0, 1, 1], [1, 0, 0, 0] ],
-                    "y": [ [2, 1, 0], [2, 2, 4], [0, 0, 2], [4, 1, 2] ]
-                },
-            ],
-            plates={"a": 3, "b": 4},
-            marginals={
-                "marg_y": {
-                    "variables": ["y"],
-                    # test swapping the order of plates compared to CPT
-                    "plates": ["a", "b"],
-                },
-            },
-        )
-
-        # CPT broadcasted to plates
-
         # Error: CPT value negative
 
         # Error: CPT not summing to one
@@ -767,13 +464,11 @@ class TestCategorical(TestCase):
             dag = dag(parents)
 
             def to_cpt(X):
-                return np.exp(
-                    Dirichlet._ensure_moments(
-                        X,
-                        DirichletMoments
-                    ).get_moments()[0]
+                X = Dirichlet._ensure_moments(X, DirichletMoments)
+                return np.broadcast_to(
+                    np.exp(X.get_moments()[0]),
+                    X.plates + X.dims[0]
                 )
-
 
 
             def _check(X, y):
@@ -822,70 +517,28 @@ class TestCategorical(TestCase):
             ]
         )
 
-        # Child has plates
+        # Parent with plates
         _run(
             parents=[
-                Dirichlet(np.random.rand(2)),
+                Dirichlet(np.random.rand(2, 3)),
             ],
             dag=lambda parents: {
                 "x": {
+                    "table": random(2),
+                },
+                "y": {
+                    "given": ["x"],
                     "table": parents[0],
-                    "plates": ["trials"],
                 },
             },
             messages=lambda cpts: [
-                np.einsum("ax->x", normalize(np.broadcast_to(cpts["x"], (10, 2)), axis=-1)),
+                normalize(np.einsum("x,xy->xy", cpts["x"], cpts["y"]))
             ],
             observations=[
-                {"x": np.ones(10, dtype=np.int)},
-            ],
-            plates={
-                "trials": 10,
-            },
-        )
-
-        # Both have plates
-        _run(
-            parents=[
-                Dirichlet(np.random.rand(10, 2), plates=(10,)),
-            ],
-            dag=lambda parents: {
-                "x": {
-                    "table": parents[0],
-                    "plates": ["trials"],
-                },
-            },
-            messages=lambda cpts: [
-                normalize(np.broadcast_to(cpts["x"], (10, 2)), axis=-1),
-            ],
-            observations=[
-                {"x": np.ones(10, dtype=np.int)},
-            ],
-            plates={
-                "trials": 10,
-            },
-        )
-
-        # Both have plates but parent is currently broadcasting them
-        _run(
-            parents=[
-                Dirichlet(np.random.rand(2), plates=(10,)),
-            ],
-            dag=lambda parents: {
-                "x": {
-                    "table": parents[0],
-                    "plates": ["trials"],
-                },
-            },
-            messages=lambda cpts: [
-                normalize(np.broadcast_to(cpts["x"], (10, 2)), axis=-1),
-            ],
-            observations=[
-                {"x": np.ones(10, dtype=np.int)},
-            ],
-            plates={
-                "trials": 10,
-            },
+                {"x": 1},
+                {"y": 0},
+                {"x": 0, "y": 0},
+            ]
         )
 
         # Same parent in multiple CPTs
@@ -953,8 +606,7 @@ class TestCategorical(TestCase):
                 )
 
 
-            def _check(Y, msg, plates):
-                assert Y.plates == plates
+            def _check(Y, msg):
                 m = Y.get_moments()
                 assert len(m) == 1
                 self.assertAllClose(m[0], msg)
@@ -967,9 +619,9 @@ class TestCategorical(TestCase):
                 name: to_cpt(config["table"])
                 for (name, config) in dag.items()
             }
-            for (variable, (msg, plates)) in messages(cpts).items():
+            for (variable, msg) in messages(cpts).items():
                 Y = X[variable]
-                _check(Y, msg, plates)
+                _check(Y, msg)
 
             return
 
@@ -982,22 +634,7 @@ class TestCategorical(TestCase):
                     "table": random(3),
                 }
             },
-            lambda cpts: {"x": (normalize(cpts["x"]), ())},
-        )
-        _run(
-            {
-                "x": {
-                    "table": random(3),
-                    "plates": ["trials"],
-                }
-            },
-            lambda cpts: {
-                "x": (
-                    np.broadcast_to(normalize(cpts["x"]), (10, 3)),
-                    (10,)
-                )
-            },
-            plates={"trials": 10},
+            lambda cpts: {"x": normalize(cpts["x"])},
         )
 
         # Pair
@@ -1008,39 +645,23 @@ class TestCategorical(TestCase):
         _run(
             {
                 "x": {
-                    "table": random(10, 2),
-                    "plates": ["a"]
+                    "table": random(2),
                 },
                 "y": {
                     "given": ["x"],
-                    "table": random(10, 20, 2, 3),
-                    "plates": ["a", "b"],
+                    "table": random(2, 3),
                 },
             },
             lambda cpts: {
-                "x": (
-                    sumproduct("ax,abxy->ax", cpts["x"], cpts["y"], plates_ndim=1),
-                    (10,)
-                ),
-                "y": (
-                    sumproduct("ax,abxy->abxy", cpts["x"], cpts["y"], plates_ndim=2),
-                    (10, 20)
-                ),
-                "marg_y": (
-                    sumproduct("ax,abxy->bay", cpts["x"], cpts["y"], plates_ndim=2),
-                    (20, 10)
-                ),
+                "x": sumproduct("x,xy->x", cpts["x"], cpts["y"]),
+                "y": sumproduct("x,xy->xy", cpts["x"], cpts["y"]),
+                "marg_y": sumproduct("x,xy->y", cpts["x"], cpts["y"]),
             },
             marginals={
                 "marg_y": {
                     "variables": ["y"],
-                    "plates": ["b", "a"],
                 }
             },
-            plates={
-                "a": 10,
-                "b": 20,
-            }
         )
 
         pass
