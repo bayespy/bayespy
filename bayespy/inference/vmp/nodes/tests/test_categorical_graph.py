@@ -15,7 +15,8 @@ import numpy as np
 import scipy
 
 from bayespy.inference.vmp.nodes.dirichlet import DirichletMoments
-from bayespy.nodes import CategoricalGraph, Dirichlet
+from bayespy.nodes import CategoricalGraph, Dirichlet, Mixture, GaussianARD
+from bayespy.inference import VB
 
 from ..categorical_graph import onehot
 
@@ -664,4 +665,91 @@ class TestCategorical(TestCase):
 
 
     def test_message_from_children(self):
-        pass
+
+        def _run(dag, messages, moments, **kwargs):
+
+            class DummyNode():
+                def __init__(self, parent, msg):
+                    parent._add_child(self, 0)
+                    self.msg = msg
+                def _message_to_parent(self, index, u_parent=None):
+                    return [self.msg]
+
+            def to_cpt(X):
+                return np.exp(
+                    Dirichlet._ensure_moments(
+                        X,
+                        DirichletMoments
+                    ).get_moments()[0]
+                )
+
+            def _check(Y, msg):
+                m = Y.get_moments()
+                assert len(m) == 1
+                self.assertAllClose(m[0], msg)
+                return
+
+            X = CategoricalGraph(dag, **kwargs)
+
+            for (variable, message) in messages:
+                DummyNode(X[variable], np.log(message))
+
+            X.update()
+            cpts = {
+                name: to_cpt(config["table"])
+                for (name, config) in dag.items()
+            }
+            msgs = [msg for (_, msg) in messages]
+            for (variable, msg) in moments(cpts, *msgs).items():
+                Y = X[variable]
+                _check(Y, msg)
+
+            return
+
+
+        _run(
+            {
+                "x": {
+                    "table": [0.3, 0.6, 0.1],
+                },
+                "y": {
+                    "given": ["x"],
+                    "table": [ [0.9, 0.1], [0.5, 0.5], [0.1, 0.9] ],
+                },
+            },
+            [
+                ("y", [10, 1]),
+            ],
+            lambda cpts, m0: {
+                "x": normalize(np.einsum("x,xy,y->x", cpts["x"], cpts["y"], m0)),
+                "y": normalize(np.einsum("x,xy,y->y", cpts["x"], cpts["y"], m0)),
+            }
+        )
+
+        _run(
+            {
+                "x": {
+                    "table": [0.3, 0.6, 0.1],
+                },
+                "y": {
+                    "given": ["x"],
+                    "table": [ [0.9, 0.1], [0.5, 0.5], [0.1, 0.9] ],
+                },
+            },
+            [
+                ("y", [10, 1]),
+                ("y", [30, 1]),
+                ("x", [1, 20, 10]),
+            ],
+            lambda cpts, m0, m1, m2: {
+                "x": normalize(np.einsum("x,xy,y,y,x->x", cpts["x"], cpts["y"], m0, m1, m2)),
+                "y": normalize(np.einsum("x,xy,y,y,x->y", cpts["x"], cpts["y"], m0, m1, m2)),
+                "xy": normalize(np.einsum("x,xy,y,y,x->xy", cpts["x"], cpts["y"], m0, m1, m2)),
+            },
+            marginals={
+                "xy": ["x", "y"],
+            }
+        )
+
+        return
+

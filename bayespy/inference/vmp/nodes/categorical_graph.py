@@ -38,7 +38,7 @@ class Factor():
 
 
     name = attr.ib()
-    potential = attr.ib()
+    logpotential = attr.ib()
     variables = attr.ib(converter=tuple)
 
 
@@ -129,19 +129,19 @@ class CategoricalGraph(Node):
         # Validate that plate keys and variable keys are unique
 
         # Add a factor for each CPT and requested marginal
-        def get_potential_function(node):
-            return lambda: np.exp(node.get_moments()[0])
+        def get_logpotential_function(node):
+            return lambda: node.get_moments()[0]
 
         # All factors: CPTs and explicitly requested (joint) marginals
         self._factors = [
             Factor(
                 name=cpt.variable,
                 variables=cpt.given + (cpt.variable,),
-                potential=get_potential_function(cpt.table)
+                logpotential=get_logpotential_function(cpt.table)
             )
             for cpt in cpts
         ] + [
-            Factor(name=name, potential=lambda: 1.0, variables=variables)
+            Factor(name=name, logpotential=lambda: 0.0, variables=variables)
             for (name, variables) in marginals.items()
         ]
 
@@ -150,6 +150,11 @@ class CategoricalGraph(Node):
         self._factor_by_name = {
             factor.name: factor
             for factor in self._factors
+        }
+
+        self._factor_id_by_name = {
+            factor.name: ind
+            for (ind, factor) in enumerate(self._factors)
         }
 
         # Mapping: factor -> keys in the factor
@@ -205,7 +210,8 @@ class CategoricalGraph(Node):
         self._slice_potentials = lambda xs: xs
         self._unslice_potentials = lambda xs: xs
         self.u = {
-            factor.name: np.nan for factor in self._factors
+            factor.name: np.full(shape, np.nan)
+            for (shape, factor) in zip(self._factor_shapes, self._factors)
         }
 
         self._parent_moments = []
@@ -240,11 +246,32 @@ class CategoricalGraph(Node):
         return self.get_moments()
 
 
+    def _message_from_children(self):
+
+        # Collect messages from children
+        ms = [
+            child._message_to_parent(index)
+            for (child, index) in self.children
+        ]
+
+        # Convert and fold message dictionaries to a list
+        msg = [0] * len(self._factors)
+        for m in ms:
+            for (key, value) in m.items():
+                ind = self._factor_id_by_name[key]
+                msg[ind] += value
+
+        return msg
+
+
+
     def observe(self, y):
         """Give dictionary like {"rain": 1, "sunny": 0}.
 
         NOTE: Previously set observed states are reset.
         """
+
+        self.observed = len(y.keys()) > 0
 
         # Create a function to slice the potential arrays. This is used for
         # observing a variable: only use that state which was observed.
@@ -307,14 +334,20 @@ class CategoricalGraph(Node):
                 self._sizes
             )
 
+        # Get the messages from children
+        child_msg = self._message_from_children()
+
         # Get the numerical probability tables from the Dirichlet nodes
         #
         # FIXME: Convert <log p> to exp( <log p> ). Perhaps junctiontree
         # package could support logarithms of the probabilities? Also, note
         # that these don't sum to one, they are non-normalized probabilities.
         potentials = [
-            np.broadcast_to(factor.potential(), shape)
-            for (shape, factor) in zip(self._factor_shapes, self._factors)
+            np.broadcast_to(
+                np.exp(factor.logpotential() + child_m),
+                shape
+            )
+            for (shape, factor, child_m) in zip(self._factor_shapes, self._factors, child_msg)
         ]
 
         xs = self._slice_potentials(potentials)
@@ -347,13 +380,26 @@ class CategoricalMarginal(Deterministic):
         self.factor_name = name
         # TODO/FIXME: Fix support for multiaxes categoricals (joint probability tables)
         shape = map_to_shape(graph._original_sizes, graph._factor_by_name[name].variables)
-        self._moments = CategoricalMoments(shape)
+        #
+        categories = (
+            # If explicit marginal, return as it is
+            shape if name in graph._marginals else
+            # If it is based on a CPT, marginalize so that only the variable
+            # itself is left
+            shape[-1:]
+        )
+        # FIXME: Currently, no support for multi-dimensional categorical moments
+        self._moments = CategoricalMoments(categories[0] if len(categories) == 1 else categories)
         self._parent_moments = [CategoricalGraphMoments()]
-        return super().__init__(graph, **kwargs)
+        return super().__init__(graph, dims=self._moments.dims, **kwargs)
 
 
     def get_moments(self):
         return [self.parents[0].get_moments()[self.factor_name]]
+
+
+    def _message_to_parent(self, index, u_parent=None):
+        return {self.factor_name: self._message_from_children()[0]}
 
 
     def _message_to_child(self):
