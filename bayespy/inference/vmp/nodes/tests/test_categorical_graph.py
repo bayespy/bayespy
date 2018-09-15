@@ -196,7 +196,7 @@ class TestCategorical(TestCase):
             },
             lambda cpts: {
                 "x": sumproduct("x,xy->x", cpts["x"], cpts["y"]),
-                "y": sumproduct("x,xy->xy", cpts["x"], cpts["y"]),
+                "y": sumproduct("x,xy->y", cpts["x"], cpts["y"]),
             },
             [
                 {"x": 1},
@@ -251,8 +251,8 @@ class TestCategorical(TestCase):
             },
             lambda cpts: {
                 "x": sumproduct("x,xy,yz->x", cpts["x"], cpts["y"], cpts["z"]),
-                "y": sumproduct("x,xy,yz->xy", cpts["x"], cpts["y"], cpts["z"]),
-                "z": sumproduct("x,xy,yz->yz", cpts["x"], cpts["y"], cpts["z"]),
+                "y": sumproduct("x,xy,yz->y", cpts["x"], cpts["y"], cpts["z"]),
+                "z": sumproduct("x,xy,yz->z", cpts["x"], cpts["y"], cpts["z"]),
             },
             [
                 {"x": 1},
@@ -292,9 +292,9 @@ class TestCategorical(TestCase):
             },
             lambda cpts: {
                 "x": sumproduct("x,xy,xz,yzv->x", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
-                "y": sumproduct("x,xy,xz,yzv->xy", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
-                "z": sumproduct("x,xy,xz,yzv->xz", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
-                "v": sumproduct("x,xy,xz,yzv->yzv", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
+                "y": sumproduct("x,xy,xz,yzv->y", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
+                "z": sumproduct("x,xy,xz,yzv->z", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
+                "v": sumproduct("x,xy,xz,yzv->v", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
             },
             [
                 {"x": 1},
@@ -344,9 +344,9 @@ class TestCategorical(TestCase):
             },
             lambda cpts: {
                 "x": sumproduct("x,xy,yz,xzv->x", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
-                "y": sumproduct("x,xy,yz,xzv->xy", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
-                "z": sumproduct("x,xy,yz,xzv->yz", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
-                "v": sumproduct("x,xy,yz,xzv->xzv", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
+                "y": sumproduct("x,xy,yz,xzv->y", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
+                "z": sumproduct("x,xy,yz,xzv->z", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
+                "v": sumproduct("x,xy,yz,xzv->v", cpts["x"], cpts["y"], cpts["z"], cpts["v"]),
             },
             [
                 {"x": 1},
@@ -405,10 +405,11 @@ class TestCategorical(TestCase):
             },
             lambda cpts: {
                 "x": sumproduct("x,xy,yz->x", cpts["x"], cpts["y"], cpts["z"]),
-                "y": sumproduct("x,xy,yz->xy", cpts["x"], cpts["y"], cpts["z"]),
-                "z": sumproduct("x,xy,yz->yz", cpts["x"], cpts["y"], cpts["z"]),
-                "marg_y": sumproduct("x,xy,yz->y", cpts["x"], cpts["y"], cpts["z"]),
-                "marg_z": sumproduct("x,xy,yz->z", cpts["x"], cpts["y"], cpts["z"]),
+                "y": sumproduct("x,xy,yz->y", cpts["x"], cpts["y"], cpts["z"]),
+                "z": sumproduct("x,xy,yz->z", cpts["x"], cpts["y"], cpts["z"]),
+                "marg_xyz": sumproduct("x,xy,yz->xyz", cpts["x"], cpts["y"], cpts["z"]),
+                "marg_xy": sumproduct("x,xy,yz->xy", cpts["x"], cpts["y"], cpts["z"]),
+                "marg_yz": sumproduct("x,xy,yz->yz", cpts["x"], cpts["y"], cpts["z"]),
                 "marg_xz": sumproduct("x,xy,yz->xz", cpts["x"], cpts["y"], cpts["z"]),
             },
             [
@@ -421,15 +422,10 @@ class TestCategorical(TestCase):
                 {"x": 1, "y": 2, "z": 3},
             ],
             marginals={
-                "marg_y": {
-                    "variables": ["y"],
-                },
-                "marg_z": {
-                    "variables": ["z"],
-                },
-                "marg_xz": {
-                    "variables": ["x", "z"],
-                },
+                "marg_xyz": ["x", "y", "z"],
+                "marg_xy": ["x", "y"],
+                "marg_yz": ["y", "z"],
+                "marg_xz": ["x", "z"],
             }
         )
 
@@ -654,13 +650,13 @@ class TestCategorical(TestCase):
             },
             lambda cpts: {
                 "x": sumproduct("x,xy->x", cpts["x"], cpts["y"]),
-                "y": sumproduct("x,xy->xy", cpts["x"], cpts["y"]),
+                "y": sumproduct("x,xy->y", cpts["x"], cpts["y"]),
                 "marg_y": sumproduct("x,xy->y", cpts["x"], cpts["y"]),
+                "yx": sumproduct("x,xy->yx", cpts["x"], cpts["y"]),
             },
             marginals={
-                "marg_y": {
-                    "variables": ["y"],
-                }
+                "marg_y": ["y"],
+                "yx": ["y", "x"],
             },
         )
 

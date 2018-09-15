@@ -79,9 +79,7 @@ class CategoricalGraph(Node):
     ...         },
     ...     },
     ...     marginals={
-    ...         "marg_y": {
-    ...             "variables": ["y"],
-    ...         },
+    ...         "marg_y": ["y"],
     ...     },
     ... )
     >>> dag.update()
@@ -143,9 +141,11 @@ class CategoricalGraph(Node):
             )
             for cpt in cpts
         ] + [
-            Factor(name=name, potential=lambda: 1.0, **config)
-            for (name, config) in marginals.items()
+            Factor(name=name, potential=lambda: 1.0, variables=variables)
+            for (name, variables) in marginals.items()
         ]
+
+        self._marginals = marginals.keys()
 
         self._factor_by_name = {
             factor.name: factor
@@ -224,11 +224,20 @@ class CategoricalGraph(Node):
 
 
     def get_moments(self):
-        return self.u
+        return {
+            name: (
+                # If explicit marginal, return as it is
+                p if name in self._marginals else
+                # If it is based on a CPT, marginalize so that only the
+                # variable itself is left
+                np.sum(p, axis=tuple(range(np.ndim(p)-1)))
+            )
+            for (name, p) in self.u.items()
+        }
 
 
     def _message_to_child(self):
-        return self.u
+        return self.get_moments()
 
 
     def observe(self, y):
@@ -345,6 +354,10 @@ class CategoricalMarginal(Deterministic):
 
     def get_moments(self):
         return [self.parents[0].get_moments()[self.factor_name]]
+
+
+    def _message_to_child(self):
+        return self.get_moments()
 
 
     def _plates_from_parent(self, index):
