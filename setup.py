@@ -52,7 +52,7 @@ if __name__ == "__main__":
             'matplotlib>=1.2.0',
             'h5py',
             'attrs',
-            'junctiontree',
+            'junctiontree>=0.1.2',
         ]
 
     # Utility function to read the README file.
