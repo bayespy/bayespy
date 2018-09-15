@@ -753,3 +753,65 @@ class TestCategorical(TestCase):
 
         return
 
+
+    def test_lower_bound_contribution(self):
+
+        # X = CategoricalGraph(
+        #     {
+        #         "x": {
+        #             "table": [0.3, 0.6, 0.1],
+        #         },
+        #         "y": {
+        #             "given": ["x"],
+        #             "table": [ [0.9, 0.1], [0.5, 0.5], [0.1, 0.9] ],
+        #         },
+        #     },
+        # )
+
+        # X.update()
+
+        # np.testing.assert_allclose(
+        #     X.lower_bound_contribution(),
+        #     0.0,
+        # )
+
+        return
+
+
+
+    def test_integration_with_vb(self):
+
+        dag = CategoricalGraph(
+            {
+                "z0": {
+                    "table": [0.3, 0.6, 0.1],
+                },
+                "z1": {
+                    "given": ["z0"],
+                    "table": [ [0.9, 0.1], [0.5, 0.5], [0.1, 0.9] ],
+                },
+            }
+        )
+
+        # Create a mixture and data from it so that it is practically
+        # "impossible" that the data came from the other cluster. That is, far
+        # apart Gaussian clusters and data from the other.
+        Y = Mixture(dag["z1"], GaussianARD, [100, -100], [1, 1], plates=(10,))
+        Y.observe(-100 + np.random.randn(10))
+
+        Q = VB(Y, dag)
+
+        Q.update(repeat=10)
+
+        np.testing.assert_allclose(
+            dag["z1"].get_moments()[0],
+            # Data had strong evidence for the second cluster
+            [0, 1],
+        )
+
+        np.testing.assert_allclose(
+            dag["z0"].get_moments()[0],
+            np.array([0.3*0.1, 0.6*0.5, 0.1*0.9]) / (0.3*0.1 + 0.6*0.5 + 0.1*0.9)
+        )
+
+        return

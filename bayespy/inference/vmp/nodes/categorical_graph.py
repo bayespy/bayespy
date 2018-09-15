@@ -231,7 +231,23 @@ class CategoricalGraph(Node):
 
 
     def lower_bound_contribution(self):
-        raise NotImplementedError()
+        logp = [factor.logpotential() for factor in self._factors]
+        # FIXME: Probably not correct.
+        return sum(
+            (
+                np.inner(
+                    np.ravel(ui),
+                    np.ravel(
+                        # <log p> (prior term)
+                        self._factor_by_name[fname].logpotential()
+                        # -<log q> (entropy term) (also, avoid log(0))
+                        - np.log(np.where(ui == 0, 1.0, ui))
+                    )
+
+                )
+                for (fname, ui) in self.u.items()
+            )
+        )
 
 
     def get_moments(self):
