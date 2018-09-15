@@ -107,7 +107,7 @@ class CategoricalGraph(Node):
     # - example graph #23
 
 
-    def __init__(self, dag, marginals={}):
+    def __init__(self, dag, marginals={}, initialize=True):
 
         self._id = Node._id_counter
         Node._id_counter += 1
@@ -216,7 +216,12 @@ class CategoricalGraph(Node):
 
         self._parent_moments = []
 
-        return super().__init__()
+        super().__init__()
+
+        if initialize:
+            self.update()
+
+        return
 
 
     def _message_to_parent(self, variable, u_parent):
