@@ -30,8 +30,14 @@ class MultinomialMoments(Moments):
 
 
     def __init__(self, categories):
-        self.categories = categories
-        self.dims = ( (categories,), )
+        # Support integer categories for backwards compatibility, but one
+        # should use a tuple of categories. This adds support for
+        # multi-dimensional categorical arrays.
+        try:
+            self.categories = tuple(categories)
+        except TypeError:
+            self.categories = (categories,)
+        self.dims = ( self.categories, )
 
 
     def compute_fixed_moments(self, x):
@@ -54,9 +60,11 @@ class MultinomialMoments(Moments):
 
 
     @classmethod
-    def from_values(cls, x):
-        D = np.shape(x)[-1]
-        return cls( (D,) )
+    def from_values(cls, x, ndim):
+        if ndim <= 0:
+            raise ValueError()
+        categories = np.shape(x)[-ndim:]
+        return cls(categories)
 
 
 class MultinomialDistribution(ExponentialFamilyDistribution):
@@ -222,7 +230,7 @@ class Multinomial(ExponentialFamily):
     :math:`p_0,\ldots,p_{K-1}` for the categories, multinomial distribution is
     gives the probability of any combination of numbers of successes for the
     categories.
-    
+
     The node models the number of successes :math:`x_k \in \{0, \ldots, n\}` in
     :math:`n` trials with probability :math:`p_k` for success in :math:`K`
     categories.
@@ -270,7 +278,7 @@ class Multinomial(ExponentialFamily):
         p = cls._ensure_moments(p, DirichletMoments)
         D = p.dims[0][0]
 
-        moments = MultinomialMoments(D)
+        moments = MultinomialMoments((D,))
         parent_moments = (p._moments,)
 
         parents = [p]

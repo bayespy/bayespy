@@ -54,8 +54,6 @@ class CategoricalMoments(MultinomialMoments):
         The observations are scalar.
         """
         return cls(categories)
-        raise DeprecationWarning()
-        return ( (self.D,), )
 
 
     def get_instance_conversion_kwargs(self):
@@ -63,6 +61,10 @@ class CategoricalMoments(MultinomialMoments):
 
 
     def get_instance_converter(self, categories):
+        try:
+            categories = tuple(categories)
+        except TypeError:
+            categories = (categories,)
         if categories is not None and categories != self.categories:
             raise ValueError(
                 "No automatic conversion from CategoricalMoments to "
@@ -74,7 +76,7 @@ class CategoricalMoments(MultinomialMoments):
 class CategoricalDistribution(MultinomialDistribution):
     """
     Class for the VMP formulas of categorical variables.
-    """    
+    """
 
     def __init__(self, categories):
         """
