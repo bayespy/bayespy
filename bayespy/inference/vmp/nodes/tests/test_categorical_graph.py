@@ -15,7 +15,7 @@ import numpy as np
 import scipy
 
 from bayespy.inference.vmp.nodes.dirichlet import DirichletMoments
-from bayespy.nodes import CategoricalGraph, Dirichlet, Mixture, GaussianARD
+from bayespy.nodes import CategoricalGraph, Dirichlet, Mixture, GaussianARD, Bernoulli
 from bayespy.inference import VB
 
 from ..categorical_graph import onehot
@@ -43,9 +43,10 @@ def random(*shape):
     return normalize(np.random.rand(*shape), axis=-1)
 
 
-def sumproduct(*args):
+def sumproduct(*args, plates_ndim=0):
     y = np.einsum(*args)
-    return normalize(y)
+    norm_ndim = np.ndim(y) - plates_ndim
+    return normalize(y, axis=tuple(range(-norm_ndim, 0)))
 
 
 class TestCategorical(TestCase):
@@ -430,6 +431,72 @@ class TestCategorical(TestCase):
             }
         )
 
+        # Diamond with plates (some probability tables have the plates)
+        #
+        #   x
+        #  / \
+        # y   z
+        #  \ /
+        #   v
+        x = [1, 1, 0, 1, 0, 1]
+        y = [2, 0, 1, 2, 0, 2]
+        z = [0, 3, 3, 3, 1, 2]
+        v = [4, 4, 4, 4, 1, 0]
+        _run(
+            {
+                "x": {
+                    "table": random(2),
+                },
+                "y": {
+                    "given": ["x"],
+                    "table": random(6, 2, 3),
+                },
+                "z": {
+                    "given": ["x"],
+                    "table": random(6, 2, 4),
+                },
+                "v": {
+                    "given": ["y", "z"],
+                    "table": random(3, 4, 5),
+                },
+            },
+            lambda _cpts: (
+                (
+                    lambda cpts: {
+                        "x": sumproduct("ax,axy,axz,ayzv->ax", cpts["x"], cpts["y"], cpts["z"], cpts["v"], plates_ndim=1),
+                        "y": sumproduct("ax,axy,axz,ayzv->ay", cpts["x"], cpts["y"], cpts["z"], cpts["v"], plates_ndim=1),
+                        "z": sumproduct("ax,axy,axz,ayzv->az", cpts["x"], cpts["y"], cpts["z"], cpts["v"], plates_ndim=1),
+                        "v": sumproduct("ax,axy,axz,ayzv->av", cpts["x"], cpts["y"], cpts["z"], cpts["v"], plates_ndim=1),
+                    }
+                )(
+                    {
+                        "x": np.broadcast_to(_cpts["x"], (6, 2)),
+                        "y": np.broadcast_to(_cpts["y"], (6, 2, 3)),
+                        "z": np.broadcast_to(_cpts["z"], (6, 2, 4)),
+                        "v": np.broadcast_to(_cpts["v"], (6, 3, 4, 5)),
+                    }
+                )
+            ),
+            [
+                {"x": x},
+                {"y": y},
+                {"z": z},
+                {"v": v},
+                {"x": x, "y": y},
+                {"x": x, "z": z},
+                {"x": x, "v": v},
+                {"y": y, "z": z},
+                {"y": y, "v": v},
+                {"z": z, "v": v},
+                {"x": x, "y": y, "z": z},
+                {"x": x, "y": y, "v": v},
+                {"x": x, "z": z, "v": v},
+                {"y": y, "z": z, "v": v},
+                {"x": x, "y": y, "z": z, "v": v},
+            ],
+            plates=(6,)
+        )
+
         # Error: CPT value negative
 
         # Error: CPT not summing to one
@@ -587,6 +654,73 @@ class TestCategorical(TestCase):
             ]
         )
 
+        # DAG-plates not in parent
+        _run(
+            parents=[
+                Dirichlet(np.random.rand(2, 3)),
+            ],
+            dag=lambda parents: {
+                "x": {
+                    "table": random(2),
+                },
+                "y": {
+                    "given": ["x"],
+                    "table": parents[0],
+                },
+            },
+            messages=lambda cpts: [
+                np.sum(
+                    normalize(
+                        np.einsum(
+                            "ax,axy->axy",
+                            np.broadcast_to(cpts["x"], (5, 2)),
+                            np.broadcast_to(cpts["y"], (5, 2, 3)),
+                        ),
+                        axis=(1,2)
+                    ),
+                    axis=0
+                )
+            ],
+            observations=[
+                {"x": [1, 1, 0, 0, 1]},
+                {"y": [2, 1, 2, 0, 2]},
+                {"x": [1, 1, 0, 0, 1], "y": [2, 1, 2, 0, 2]},
+            ],
+            plates=(5,)
+        )
+
+        # DAG-plates are in parent
+        _run(
+            parents=[
+                Dirichlet(np.random.rand(5, 2, 3)),
+            ],
+            dag=lambda parents: {
+                "x": {
+                    "table": random(2),
+                },
+                "y": {
+                    "given": ["x"],
+                    "table": parents[0],
+                },
+            },
+            messages=lambda cpts: [
+                normalize(
+                    np.einsum(
+                        "ax,axy->axy",
+                        np.broadcast_to(cpts["x"], (5, 2)),
+                        np.broadcast_to(cpts["y"], (5, 2, 3)),
+                    ),
+                    axis=(1,2)
+                )
+            ],
+            observations=[
+                {"x": [1, 1, 0, 0, 1]},
+                {"y": [2, 1, 2, 0, 2]},
+                {"x": [1, 1, 0, 0, 1], "y": [2, 1, 2, 0, 2]},
+            ],
+            plates=(5,)
+        )
+
         pass
 
 
@@ -661,6 +795,43 @@ class TestCategorical(TestCase):
             },
         )
 
+        # Pair with plates
+        #
+        # x
+        # |
+        # y
+        _run(
+            {
+                "x": {
+                    "table": random(2),
+                },
+                "y": {
+                    "given": ["x"],
+                    "table": random(2, 3),
+                },
+            },
+            lambda _cpts: (
+                (
+                    lambda cpts: {
+                        "x": sumproduct("ax,axy->ax", cpts["x"], cpts["y"], plates_ndim=1),
+                        "y": sumproduct("ax,axy->ay", cpts["x"], cpts["y"], plates_ndim=1),
+                        "marg_y": sumproduct("ax,axy->ay", cpts["x"], cpts["y"], plates_ndim=1),
+                        "yx": sumproduct("ax,axy->ayx", cpts["x"], cpts["y"], plates_ndim=1),
+                    }
+                )(
+                    {
+                        "x": np.broadcast_to(_cpts["x"], (5, 2)),
+                        "y": np.broadcast_to(_cpts["y"], (5, 2, 3)),
+                    }
+                )
+            ),
+            marginals={
+                "marg_y": ["y"],
+                "yx": ["y", "x"],
+            },
+            plates=(5,)
+        )
+
         pass
 
 
@@ -706,7 +877,6 @@ class TestCategorical(TestCase):
 
             return
 
-
         _run(
             {
                 "x": {
@@ -749,6 +919,72 @@ class TestCategorical(TestCase):
             marginals={
                 "xy": ["x", "y"],
             }
+        )
+
+        # Test message from explicit marginal (with plates)
+        _run(
+            {
+                "x": {
+                    "table": [0.3, 0.6, 0.1],
+                },
+                "y": {
+                    "given": ["x"],
+                    "table": [ [0.9, 0.1], [0.5, 0.5], [0.1, 0.9] ],
+                },
+            },
+            [
+                ("y", [[10, 1], [4, 2], [6, 7], [9, 9], [1, 3]]),
+                ("xy", [
+                    [[10, 1], [3, 2], [1, 1]],
+                    [[4, 2], [5, 10], [3, 9]],
+                    [[6, 7], [12, 30], [4, 9]],
+                    [[1, 1], [2, 2], [10, 9]],
+                    [[9, 9], [1, 3], [11, 1]],
+                ]),
+            ],
+            lambda cpts, m_y, m_xy: {
+                "x": sumproduct("x,xy,ay,axy->ax", cpts["x"], cpts["y"], m_y, m_xy, plates_ndim=1),
+                "y": sumproduct("x,xy,ay,axy->ay", cpts["x"], cpts["y"], m_y, m_xy, plates_ndim=1),
+                "xy": sumproduct("x,xy,ay,axy->axy", cpts["x"], cpts["y"], m_y, m_xy, plates_ndim=1),
+            },
+            marginals={
+                "xy": ["x", "y"],
+            },
+            plates=(5,)
+        )
+
+        return
+
+
+    def test_message_from_marginal(self):
+
+        X = CategoricalGraph(
+            {
+                "x": {
+                    "table": [0.3, 0.5, 0.2]
+                }
+            },
+            plates=(5,)
+        )
+
+        x_marg = X["x"]
+
+        Y = Mixture(x_marg, Bernoulli, [0.7, 0.5, 0.9])
+
+        Y.observe([1, 0, 0, 1, 1])
+
+        assert len(X._message_from_children()) == 1
+        self.assertAllClose(
+            X._message_from_children()[0],
+            np.log(
+                [
+                    [0.7, 0.5, 0.9],
+                    [0.3, 0.5, 0.1],
+                    [0.3, 0.5, 0.1],
+                    [0.7, 0.5, 0.9],
+                    [0.7, 0.5, 0.9],
+                ]
+            )
         )
 
         return
