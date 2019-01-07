@@ -1,3 +1,12 @@
+Dev
++++
+
+Fixed
+.....
+
+* Fix mask handling in Gate node.
+
+
 Version 0.5.17 (2018-04-18)
 +++++++++++++++++++++++++++
 

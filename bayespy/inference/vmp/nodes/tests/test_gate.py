@@ -30,7 +30,7 @@ class TestGate(TestCase):
     """
     Unit tests for Gate node.
     """
-    
+
 
     def test_init(self):
         """
@@ -101,7 +101,7 @@ class TestGate(TestCase):
                           Z,
                           X,
                           gated_plate=0)
-        
+
         # None of the parents have the cluster plate axis
         Z = Categorical(np.ones(3)/3)
         X = GaussianARD(0, 1)
@@ -119,7 +119,7 @@ class TestGate(TestCase):
                           X)
 
         pass
-        
+
 
     def test_message_to_child(self):
         """
@@ -187,7 +187,7 @@ class TestGate(TestCase):
         u = Y._message_to_child()
         self.assertAllClose(u[0], 3*np.ones(4))
         self.assertAllClose(u[1], 9*np.ones((4,4)) + 1*np.identity(4))
-        
+
         # Broadcasting the moments on the cluster axis
         Z = 2
         X = GaussianARD(1, 1, shape=(), plates=(3,))
@@ -217,7 +217,7 @@ class TestGate(TestCase):
         self.assertEqual(len(m), 2)
         self.assertAllClose(m[0]*np.ones(3), [0, 0, 0])
         self.assertAllClose(m[1]*np.ones(3), [0, 0, 0])
-        
+
         # Gating scalar node
         Z = 2
         X = GaussianARD([1,2,3], 1, shape=(), plates=(3,))
@@ -229,7 +229,7 @@ class TestGate(TestCase):
         m = F._message_to_parent(1)
         self.assertAllClose(m[0], [0, 0, 10])
         self.assertAllClose(m[1], [0, 0, -0.5])
-        
+
         # Fixed X
         Z = 2
         X = [1,2,3]
@@ -309,7 +309,7 @@ class TestGate(TestCase):
         I = np.identity(2)
         self.assertAllClose(m[0], [[0,0], [0,0], [10,20]])
         self.assertAllClose(m[1], [0*I, 0*I, -0.5*I])
-        
+
         # Broadcasting the moments on the cluster axis
         Z = 2
         X = GaussianARD(2, 1, shape=(), plates=(3,))
@@ -329,5 +329,17 @@ class TestGate(TestCase):
         """
         Test the mask handling in Gate node
         """
+
+        X = GaussianARD(2, 1, shape=(4, 5), plates=(3, 2))
+        F = Gate([0, 0, 1], X)
+
+        self.assertAllClose(
+            F._compute_weights_to_parent(0, [True, False, False]),
+            [True, False, False]
+        )
+        self.assertAllClose(
+            F._compute_weights_to_parent(1, [True, False, False]),
+            [[True], [False], [False]]
+        )
 
         pass
