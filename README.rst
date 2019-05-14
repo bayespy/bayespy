@@ -29,9 +29,11 @@ http://opensource.org/licenses/MIT.
    :target: https://gitter.im/bayespy/bayespy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
 .. |release| image:: https://badge.fury.io/py/bayespy.svg
    :target: https://pypi.python.org/pypi/bayespy
+.. |conda-release| image:: https://anaconda.org/conda-forge/bayespy/badges/installer/conda.svg
+   :target: https://anaconda.org/conda-forge/bayespy
 
 ============== =============================================
-Latest release |release|
+Latest release |release| |conda-release|
 Documentation  http://bayespy.org
 Repository     https://github.com/bayespy/bayespy.git
 Bug reports    https://github.com/bayespy/bayespy/issues
@@ -128,5 +130,7 @@ The list of contributors:
 * Christopher Cramer
 
 * Till Hoffmann
+
+Each file or the git log can be used for more detailed information.
 
 Each file or the git log can be used for more detailed information.
