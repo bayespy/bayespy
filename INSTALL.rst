@@ -42,6 +42,15 @@ The latest release of BayesPy can be installed from PyPI simply as
 .. code-block:: console
     
     pip install bayespy
+    
+Alternatively, you can obtain the latest release with conda 
+(from conda-forge channel). In such case, there is no need to use a virtual 
+environment. Instead, you can install in a conda environment, in any platform,
+with the single command:
+
+.. code-block:: console
+    
+    conda install -c conda-forge bayespy
 
 If you want to install the latest development version of BayesPy, use GitHub
 instead:
