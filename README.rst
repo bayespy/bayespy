@@ -132,5 +132,3 @@ The list of contributors:
 * Till Hoffmann
 
 Each file or the git log can be used for more detailed information.
-
-Each file or the git log can be used for more detailed information.
