@@ -44,17 +44,17 @@ class TestSumMultiply(TestCase):
         self.assertEqual(A.dims, ((), ()))
         A = SumMultiply('i', X)
         self.assertEqual(A.dims, ((), ()))
-        
+
         A = SumMultiply(X, ['i'], ['i'])
         self.assertEqual(A.dims, ((1,), (1,1)))
         A = SumMultiply('i->i', X)
         self.assertEqual(A.dims, ((1,), (1,1)))
-        
+
         A = SumMultiply(X, ['i'], Y, ['j'], ['i','j'])
         self.assertEqual(A.dims, ((1,3), (1,3,1,3)))
         A = SumMultiply('i,j->ij', X, Y)
         self.assertEqual(A.dims, ((1,3), (1,3,1,3)))
-        
+
         A = SumMultiply(V, [], X, ['i'], Y, ['i'], [])
         self.assertEqual(A.dims, ((), ()))
         A = SumMultiply(',i,i->', V, X, Y)
@@ -82,7 +82,7 @@ class TestSumMultiply(TestCase):
         # Error: too many keys
         self.assertRaises(ValueError,
                           SumMultiply,
-                          Y, 
+                          Y,
                           ['i', 'j'])
         self.assertRaises(ValueError,
                           SumMultiply,
@@ -128,7 +128,7 @@ class TestSumMultiply(TestCase):
         self.assertRaises(ValueError,
                           SumMultiply,
                           'i->ii',
-                          X)                          
+                          X)
         # String has too many '->'
         self.assertRaises(ValueError,
                           SumMultiply,
@@ -154,7 +154,7 @@ class TestSumMultiply(TestCase):
                           'i,i->i',
                           X,
                           Xh)
-        
+
 
     def test_message_to_child(self):
         """
@@ -255,7 +255,7 @@ class TestSumMultiply(TestCase):
                         X3,
                         [9],
                         [])
-                            
+
 
         # Outer product of two vectors
         X1 = GaussianARD(np.random.randn(2),
@@ -378,7 +378,7 @@ class TestSumMultiply(TestCase):
                         [1,2],
                         X2,
                         [2])
-        
+
         # Complex sum-product of 0-D, 1-D, 2-D and 3-D arrays
         V = GaussianARD(np.random.randn(7,6,5),
                         np.random.rand(7,6,5),
@@ -421,6 +421,24 @@ class TestSumMultiply(TestCase):
                         ['j','i','k'],
                         ['k'])
 
+        # Test with constant nodes
+        N = 10
+        D = 5
+        a = np.random.randn(N, D)
+        B = Gaussian(
+            np.random.randn(D),
+            random.covariance(D),
+        )
+        X = SumMultiply('i,i->', B, a)
+        np.testing.assert_allclose(
+            X.get_moments()[0],
+            np.einsum('ni,i->n', a, B.get_moments()[0]),
+        )
+        np.testing.assert_allclose(
+            X.get_moments()[1],
+            np.einsum('ni,nj,ij->n', a, a, B.get_moments()[1]),
+        )
+
         #
         # Gaussian-gamma parents
         #
@@ -447,8 +465,38 @@ class TestSumMultiply(TestCase):
         self.assertAllClose(u[2], x2[2])
         self.assertAllClose(u[3], x2[3])
 
+        # Test with constant nodes
+        N = 10
+        M = 8
+        D = 5
+        a = np.random.randn(N, 1, D)
+        B = GaussianGamma(
+            np.random.randn(M, D),
+            random.covariance(D, size=(M,)),
+            np.random.rand(M),
+            np.random.rand(M),
+            ndim=1,
+        )
+        X = SumMultiply('i,i->', B, a)
+        np.testing.assert_allclose(
+            X.get_moments()[0],
+            np.einsum('nmi,mi->nm', a, B.get_moments()[0]),
+        )
+        np.testing.assert_allclose(
+            X.get_moments()[1],
+            np.einsum('nmi,nmj,mij->nm', a, a, B.get_moments()[1]),
+        )
+        np.testing.assert_allclose(
+            X.get_moments()[2],
+            B.get_moments()[2],
+        )
+        np.testing.assert_allclose(
+            X.get_moments()[3],
+            B.get_moments()[3],
+        )
+
         pass
-    
+
 
     def test_message_to_parent(self):
         """
@@ -457,7 +505,7 @@ class TestSumMultiply(TestCase):
 
         data = 2
         tau = 3
-        
+
         def check_message(true_m0, true_m1, parent, *args, F=None):
             if F is None:
                 A = SumMultiply(*args)
@@ -503,7 +551,7 @@ class TestSumMultiply(TestCase):
                       X2,
                       [9],
                       [9])
-        
+
         # Check: key not in output
         X1 = GaussianARD(np.random.randn(2),
                          np.random.rand(2),
@@ -628,7 +676,7 @@ class TestSumMultiply(TestCase):
                       X2,
                       ['i'],
                       ['i'])
-        
+
         # Check: other parent's moments broadcasts over plates when node has the
         # same plates
         X1 = GaussianARD(np.random.randn(5,4,3),
@@ -653,7 +701,7 @@ class TestSumMultiply(TestCase):
                       X2,
                       ['i'],
                       ['i'])
-        
+
         # Check: other parent's moments broadcasts over plates when node does
         # not have that plate
         X1 = GaussianARD(np.random.randn(3),
@@ -669,7 +717,7 @@ class TestSumMultiply(TestCase):
         m0 = tau * data * np.sum(np.ones((5,4,3)) * x2[0], axis=(0,1))
         m1 = -0.5 * tau * np.sum(np.ones((5,4,1,1))
                                  * misc.identity(3)
-                                 * x2[1], 
+                                 * x2[1],
                                  axis=(0,1))
         check_message(m0, m1, 0,
                       'i,i->i',
@@ -681,7 +729,7 @@ class TestSumMultiply(TestCase):
                       X2,
                       ['i'],
                       ['i'])
-        
+
         # Check: other parent's moments broadcasts over plates when the node
         # only broadcasts that plate
         X1 = GaussianARD(np.random.randn(3),
@@ -697,7 +745,7 @@ class TestSumMultiply(TestCase):
         m0 = tau * data * np.sum(np.ones((5,4,3)) * x2[0], axis=(0,1), keepdims=True)
         m1 = -0.5 * tau * np.sum(np.ones((5,4,1,1))
                                  * misc.identity(3)
-                                 * x2[1], 
+                                 * x2[1],
                                  axis=(0,1),
                                  keepdims=True)
         check_message(m0, m1, 0,
@@ -710,7 +758,7 @@ class TestSumMultiply(TestCase):
                       X2,
                       ['i'],
                       ['i'])
-        
+
         # Check: broadcasted dimensions
         X1 = GaussianARD(np.random.randn(1,1),
                          np.random.rand(1,1),
@@ -720,9 +768,9 @@ class TestSumMultiply(TestCase):
                          np.random.rand(3,2),
                          ndim=2)
         x2 = X2.get_moments()
-        m0 = tau * data * np.sum(np.ones((3,2)) * x2[0], 
+        m0 = tau * data * np.sum(np.ones((3,2)) * x2[0],
                                  keepdims=True)
-        m1 = -0.5 * tau * np.sum(misc.identity(3,2) * x2[1], 
+        m1 = -0.5 * tau * np.sum(misc.identity(3,2) * x2[1],
                                  keepdims=True)
         check_message(m0, m1, 0,
                       'ij,ij->ij',
@@ -892,6 +940,13 @@ class TestSumMultiply(TestCase):
         self.assertAllClose(m[3], m3)
 
         pass
+
+
+    def test_compute_moments(self):
+
+
+        return
+
 
 def check_performance(scale=1e2):
     """

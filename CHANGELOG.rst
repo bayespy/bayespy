@@ -1,3 +1,13 @@
+Dev
++++
+
+Fixed
+.....
+
+* Improve memory and CPU usage in ``SumMultiply`` when some input nodes are just
+  constants (e.g., NumPy arrays).
+
+
 Version 0.5.18 (2019-01-07)
 +++++++++++++++++++++++++++
 

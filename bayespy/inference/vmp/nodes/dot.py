@@ -13,23 +13,24 @@ from .node import Node
 from .deterministic import Deterministic
 from .gaussian import Gaussian, GaussianMoments
 from .gaussian import GaussianGammaMoments
+from .ml import DeltaMoments
 
 
 class SumMultiply(Deterministic):
     r"""
     Node for computing general products and sums of Gaussian nodes.
-    
+
     The node is similar to `numpy.einsum`, which is a very general
     function for computing dot products, sums, products and other sums
     of products of arrays.
-    
+
     For instance, consider the following arrays:
 
     >>> import numpy as np
     >>> X = np.random.randn(2, 3, 4)
     >>> Y = np.random.randn(3, 5)
     >>> Z = np.random.randn(4, 2)
-    
+
     Then, the Einstein summation can be used as:
 
     >>> np.einsum('abc,bd,ca->da', X, Y, Z)
@@ -42,18 +43,18 @@ class SumMultiply(Deterministic):
     >>> X = GaussianARD(0, 1, shape=(2, 3, 4))
     >>> Y = GaussianARD(0, 1, shape=(3, 5))
     >>> Z = GaussianARD(0, 1, shape=(4, 2))
-        
+
     Then, similarly to `numpy.einsum`, SumMultiply could be used as:
 
     >>> from bayespy.nodes import SumMultiply
     >>> SumMultiply('abc,bd,ca->da', X, Y, Z)
     <bayespy.inference.vmp.nodes.dot.SumMultiply object at 0x...>
-    
+
     or
 
     >>> SumMultiply(X, [0,1,2], Y, [1,3], Z, [2,0], [3,0])
     <bayespy.inference.vmp.nodes.dot.SumMultiply object at 0x...>
-        
+
     which is similar to the alternative syntax of numpy.einsum.
 
     This node operates similarly as numpy.einsum. However, you must use all the
@@ -78,7 +79,7 @@ class SumMultiply(Deterministic):
 
     Sum over the rows:
     'ij->j'
-    
+
     Inner product of three vectors:
     'i,i,i'
 
@@ -150,8 +151,8 @@ class SumMultiply(Deterministic):
             # Split strings into key lists using single character keys
             keysets = [list(string_in) for string_in in strings_in]
             keys_out = list(string_out)
-            
-            
+
+
         else:
             # This is the format:
             # SumMultiply(X, [0,2], Y, [2], Z, [2,1], [0,1])
@@ -165,7 +166,7 @@ class SumMultiply(Deterministic):
             # Node and axis mapping are given in turns
             nodes = args[::2]
             keysets = args[1::2]
-            
+
         # Find all the keys (store only once each)
         full_keyset = []
         for keyset in keysets:
@@ -176,23 +177,45 @@ class SumMultiply(Deterministic):
         # Input and output messages are Gaussian unless there is at least one
         # Gaussian-gamma message from the parents
         self.gaussian_gamma = False
+        self.is_constant = []
         for i in range(len(nodes)):
             try:
+                # First, try to handle the node as a "constant" with so-called
+                # delta moments. These consume much less memory as only the
+                # "value" (or the first moment) is used.
                 nodes[i] = self._ensure_moments(
                     nodes[i],
-                    GaussianMoments,
+                    DeltaMoments,
                     ndim=len(keysets[i])
                 )
-            except GaussianMoments.NoConverterError:
-                self.gaussian_gamma = True
+            except DeltaMoments.NoConverterError:
+                self.is_constant.append(False)
+                try:
+                    # Second, try to convert to gaussian moments. These moments
+                    # will consume more memory as it calculates the second
+                    # moment too.
+                    nodes[i] = self._ensure_moments(
+                        nodes[i],
+                        GaussianMoments,
+                        ndim=len(keysets[i])
+                    )
+                except GaussianMoments.NoConverterError:
+                    self.gaussian_gamma = True
+            else:
+                self.is_constant.append(True)
+
         if self.gaussian_gamma:
             nodes = [
-                self._ensure_moments(
-                    node,
-                    GaussianGammaMoments,
-                    ndim=len(keyset)
+                (
+                    self._ensure_moments(
+                        node,
+                        GaussianGammaMoments,
+                        ndim=len(keyset)
+                    )
+                    if not is_const else
+                    node
                 )
-                for (node, keyset) in zip(nodes, keysets)
+                for (node, keyset, is_const) in zip(nodes, keysets, self.is_constant)
             ]
 
         self._parent_moments = tuple(node._moments for node in nodes)
@@ -294,10 +317,24 @@ class SumMultiply(Deterministic):
 
 
         # Compute the number of plate axes for each node
-        plate_counts0 = [(np.ndim(u_parent[0]) - len(keys))
-                         for (keys,u_parent) in zip(self.in_keys, u_parents)]
-        plate_counts1 = [(np.ndim(u_parent[1]) - 2*len(keys))
-                         for (keys,u_parent) in zip(self.in_keys, u_parents)]
+        plate_counts0 = [
+            (np.ndim(u_parent[0]) - len(keys))
+            for (keys,u_parent) in zip(self.in_keys, u_parents)
+        ]
+        plate_counts1 = [
+            (
+                # Gaussian moments: Use second moments "matrix"
+                (np.ndim(u_parent[1]) - 2*len(keys))
+                if not is_const else
+                # Delta moments: Use first moment "vector"
+                (np.ndim(u_parent[0]) - len(keys))
+            )
+            for (keys, u_parent, is_const) in zip(
+                    self.in_keys,
+                    u_parents,
+                    self.is_constant
+            )
+        ]
         # The number of plate axes for the output
         N0 = max(plate_counts0)
         N1 = max(plate_counts1)
@@ -310,25 +347,58 @@ class SumMultiply(Deterministic):
         out_all_keys = list(range(D+N0-1, D-1, -1)) + self.out_keys
         #nodes_dim_keys = self.nodes_dim_keys
         in_all_keys = [list(range(D+plate_count-1, D-1, -1)) + keys
-                      for (plate_count, keys) in zip(plate_counts0, 
+                      for (plate_count, keys) in zip(plate_counts0,
                                                      self.in_keys)]
         u0 = [u[0] for u in u_parents]
-        
+
         args = misc.zipper_merge(u0, in_all_keys) + [out_all_keys]
         x0 = np.einsum(*args)
 
         #
         # Compute the covariance
         #
-        out_all_keys = (list(range(2*D+N1-1, 2*D-1, -1)) 
-                        + [D+key for key in self.out_keys] 
+        out_all_keys = (list(range(2*D+N1-1, 2*D-1, -1))
+                        + [D+key for key in self.out_keys]
                         + self.out_keys)
-        in_all_keys = [list(range(2*D+plate_count-1, 2*D-1, -1)) 
-                       + [D+key for key in node_keys]
-                       + node_keys
-                       for (plate_count, node_keys) in zip(plate_counts1, 
-                                                           self.in_keys)]
-        u1 = [u[1] for u in u_parents]
+        in_all_keys = [
+            x
+            for (plate_count, node_keys, is_const) in zip(
+                    plate_counts1,
+                    self.in_keys,
+                    self.is_constant,
+            )
+            for x in (
+                    # Gaussian moments: Use the second moment
+                    [
+                        list(range(2*D+plate_count-1, 2*D-1, -1))
+                        + [D+key for key in node_keys]
+                        + node_keys
+                    ]
+                    if not is_const else
+                    # Delta moments: Use the first moment tiwce
+                    [
+                        (
+                            list(range(2*D+plate_count-1, 2*D-1, -1))
+                            + [D+key for key in node_keys]
+                        ),
+                        (
+                            list(range(2*D+plate_count-1, 2*D-1, -1))
+                            + node_keys
+                        ),
+                    ]
+            )
+        ]
+        u1 = [
+            x
+            for (u, is_const) in zip(u_parents, self.is_constant)
+            for x in (
+                    # Gaussian moments: Use the second moment
+                    [u[1]]
+                    if not is_const else
+                    # Delta moments: Use the first moment twice
+                    [u[0], u[0]]
+            )
+        ]
         args = misc.zipper_merge(u1, in_all_keys) + [out_all_keys]
         x1 = np.einsum(*args)
 
@@ -339,8 +409,8 @@ class SumMultiply(Deterministic):
         x2 = 1
         x3 = 0
         for i in range(len(u_parents)):
-            x2 = x2 * u_parents[i][2]
-            x3 = x3 + u_parents[i][3]
+            x2 = x2 * (1 if self.is_constant[i] else u_parents[i][2])
+            x3 = x3 + (0 if self.is_constant[i] else u_parents[i][3])
 
         return [x0, x1, x2, x3]
 
@@ -350,12 +420,17 @@ class SumMultiply(Deterministic):
         u = self.get_moments()
         u[1] -= u[0]**2
         return u
-        
+
 
     def _message_to_parent(self, index, u_parent=None):
         """
         Compute the message and mask to a parent node.
         """
+
+        if self.is_constant[index]:
+            raise NotImplementedError(
+                "Message to DeltaMoments parent not yet implemented."
+            )
 
         # Check index
         if index >= len(self.parents):
@@ -381,7 +456,7 @@ class SumMultiply(Deterministic):
         #
 
         msg = [None, None]
-        
+
         # Compute the two messages
         for ind in range(2):
 
@@ -409,7 +484,7 @@ class SumMultiply(Deterministic):
             # Mask and its keysr
             mask_num_plates = np.ndim(mask)
             mask_plates = np.shape(mask)
-            mask_plate_keys = list(range(N + mask_num_plates, 
+            mask_plate_keys = list(range(N + mask_num_plates,
                                          N,
                                          -1))
             result_num_plates = max(result_num_plates,
@@ -423,12 +498,12 @@ class SumMultiply(Deterministic):
                     num_dims = (ind+1) * len(self.in_keys[k])
                     num_plates = np.ndim(u[ind]) - num_dims
                     plates = np.shape(u[ind])[:num_plates]
-                    plate_keys = list(range(N + num_plates, 
+                    plate_keys = list(range(N + num_plates,
                                             N,
                                             -1))
                     dim_keys = self.in_keys[k]
                     if ind == 1:
-                        dim_keys = ([key + self.N_keys 
+                        dim_keys = ([key + self.N_keys
                                      for key in self.in_keys[k]]
                                     + dim_keys)
                     args.append(u[ind])
@@ -516,7 +591,7 @@ class SumMultiply(Deterministic):
             # plates of the parent. In order to avoid this broadcasting and
             # summing, it is more efficient to just multiply by the correct
             # factor.
-            r = self.broadcasting_multiplier(self.plates, 
+            r = self.broadcasting_multiplier(self.plates,
                                              result_plates,
                                              parent.plates)
             if r != 1:
