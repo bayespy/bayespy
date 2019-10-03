@@ -495,19 +495,35 @@ class SumMultiply(Deterministic):
             # Moments and keys of other parents
             for (k, u) in enumerate(u_parents):
                 if k != index:
-                    num_dims = (ind+1) * len(self.in_keys[k])
-                    num_plates = np.ndim(u[ind]) - num_dims
-                    plates = np.shape(u[ind])[:num_plates]
+                    num_dims = (
+                        (ind+1) * len(self.in_keys[k])
+                        if not self.is_constant[k] else
+                        len(self.in_keys[k])
+                    )
+                    ui = (
+                        u[ind] if not self.is_constant[k] else
+                        u[0]
+                    )
+                    num_plates = np.ndim(ui) - num_dims
+                    plates = np.shape(ui)[:num_plates]
                     plate_keys = list(range(N + num_plates,
                                             N,
                                             -1))
-                    dim_keys = self.in_keys[k]
-                    if ind == 1:
-                        dim_keys = ([key + self.N_keys
-                                     for key in self.in_keys[k]]
-                                    + dim_keys)
-                    args.append(u[ind])
-                    args.append(plate_keys + dim_keys)
+                    if ind == 0:
+                        args.append(ui)
+                        args.append(plate_keys + self.in_keys[k])
+                    else:
+                        in_keys2 = [key + self.N_keys for key in self.in_keys[k]]
+                        if not self.is_constant[k]:
+                            # Gaussian moments: Use second moment once
+                            args.append(ui)
+                            args.append(plate_keys + in_keys2 + self.in_keys[k])
+                        else:
+                            # Delta moments: Use first moment twice
+                            args.append(ui)
+                            args.append(plate_keys + self.in_keys[k])
+                            args.append(ui)
+                            args.append(plate_keys + in_keys2)
 
                     result_num_plates = max(result_num_plates, num_plates)
                     result_plates = misc.broadcasted_shape(result_plates,
@@ -598,8 +614,11 @@ class SumMultiply(Deterministic):
                 msg[ind] *= r
 
         if self.gaussian_gamma:
-            alphas = [u_parents[i][2]
-                      for i in range(len(u_parents)) if i != index]
+            alphas = [
+                (u_parents[i][2] if not is_const else 1.0)
+                for (i, is_const) in zip(range(len(u_parents)), self.is_constant)
+                if i != index
+            ]
             m2 = self._compute_message(m[2], mask, *alphas,
                                        ndim=0,
                                        plates_from=self.plates,

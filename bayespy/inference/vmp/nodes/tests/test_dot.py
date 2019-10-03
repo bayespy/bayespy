@@ -909,6 +909,36 @@ class TestSumMultiply(TestCase):
                       ['i'],
                       F=F)
 
+        # Test with constant nodes
+        N = 10
+        M = 8
+        D = 5
+        K = 3
+        a = np.random.randn(N, D)
+        B = Gaussian(
+            np.random.randn(D),
+            random.covariance(D),
+        )
+        C = GaussianARD(
+            np.random.randn(M, 1, D, K),
+            np.random.rand(M, 1, D, K),
+            ndim=2
+        )
+        F = SumMultiply('i,i,ij->', a, B, C)
+        tau = np.random.rand(M, N)
+        Y = GaussianARD(F, tau, plates=(M,N))
+        y = np.random.randn(M, N)
+        Y.observe(y)
+        (m0, m1) = F._message_to_parent(1)
+        np.testing.assert_allclose(
+            m0,
+            np.einsum('mn,ni,mnik->i', tau*y, a, C.get_moments()[0]),
+        )
+        np.testing.assert_allclose(
+            m1,
+            np.einsum('mn,ni,nj,mnikjl->ij', -0.5*tau, a, a, C.get_moments()[1]),
+        )
+
         # Check: Gaussian-gamma parents
         X1 = GaussianGamma(
             np.random.randn(2),
@@ -939,6 +969,40 @@ class TestSumMultiply(TestCase):
         self.assertAllClose(m[2], m2)
         self.assertAllClose(m[3], m3)
 
+        # Delta moments
+        N = 10
+        M = 8
+        D = 5
+        a = np.random.randn(N, D)
+        B = GaussianGamma(
+            np.random.randn(D),
+            random.covariance(D),
+            np.random.rand(),
+            np.random.rand(),
+            ndim=1
+        )
+        F = SumMultiply('i,i->', a, B)
+        tau = np.random.rand(M, N)
+        Y = GaussianARD(F, tau, plates=(M,N))
+        y = np.random.randn(M, N)
+        Y.observe(y)
+        (m0, m1, m2, m3) = F._message_to_parent(1)
+        np.testing.assert_allclose(
+            m0,
+            np.einsum('mn,ni->i', tau*y, a),
+        )
+        np.testing.assert_allclose(
+            m1,
+            np.einsum('mn,ni,nj->ij', -0.5*tau, a, a),
+        )
+        np.testing.assert_allclose(
+            m2,
+            np.einsum('mn->', -0.5*tau*y**2),
+        )
+        np.testing.assert_allclose(
+            m3,
+            np.einsum('mn->', 0.5*np.ones(np.shape(tau))),
+        )
         pass
 
 
