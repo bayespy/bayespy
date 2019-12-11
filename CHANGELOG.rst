@@ -1,10 +1,10 @@
-Dev
-+++
+Version 0.5.19 (2019-12-11)
++++++++++++++++++++++++++++
 
 Fixed
 .....
 
-* Improve memory and CPU usage in ``SumMultiply`` when some input nodes are just
+* Improve memory usage in ``SumMultiply`` when some input nodes are just
   constants (e.g., NumPy arrays).
 
 
