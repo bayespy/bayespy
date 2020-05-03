@@ -7,7 +7,12 @@
 from . import utils
 from . import inference
 from . import nodes
-from . import plot
+
+try:
+    from . import plot
+except ImportError:
+    # Matplotlib not available
+    pass
 
 from ._meta import __author__, __copyright__, __contact__, __license__
 

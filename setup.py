@@ -49,7 +49,6 @@ if __name__ == "__main__":
             'numpy>=1.10.0', # 1.10 implements broadcast_to
                              # 1.8 implements broadcasting in numpy.linalg
             'scipy>=0.13.0', # <0.13 have a bug in special.multigammaln
-            'matplotlib>=1.2.0',
             'h5py',
             'attrs',
             'junctiontree>=0.1.2',

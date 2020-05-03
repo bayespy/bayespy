@@ -19,7 +19,18 @@ class DeltaMoments(Moments):
 
     def __init__(self, shape):
         self.shape = shape
+        self.dims = (shape,)
         return super().__init__()
+
+
+    @classmethod
+    def from_values(cls, x, ndim):
+        if np.ndim(x) < ndim:
+            raise ValueError("Broadcasting not (yet) supported in DeltaMoments")
+        if ndim == 0:
+            return cls(())
+        else:
+            return cls(np.shape(x)[-ndim:])
 
 
     def get_converter(self, moments_to):

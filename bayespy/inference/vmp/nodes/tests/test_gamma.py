@@ -16,7 +16,7 @@ from scipy import special
 from numpy import testing
 
 from .. import gaussian
-from bayespy.nodes import (Gaussian, 
+from bayespy.nodes import (Gaussian,
                            GaussianARD,
                            GaussianGamma,
                            Gamma,
@@ -31,9 +31,66 @@ from bayespy.utils import random
 from bayespy.utils.misc import TestCase
 
 
+class TestGamma(TestCase):
+
+
+    def test_lower_bound_contribution(self):
+
+        a = 15
+        b = 21
+        y = 4
+        x = Gamma(a, b)
+        x.observe(y)
+        testing.assert_allclose(
+            x.lower_bound_contribution(),
+            (
+                a * np.log(b) +
+                (a - 1) * np.log(y) -
+                b * y -
+                special.gammaln(a)
+            )
+        )
+
+        # Just one latent node so we'll get exact marginal likelihood
+        #
+        # p(Y) = p(Y,X)/p(X|Y) = p(Y|X) * p(X) / p(X|Y)
+        a = 2.3
+        b = 4.1
+        x = 1.9
+        y = 4.8
+        tau = Gamma(a, b)
+        Y = GaussianARD(x, tau)
+        Y.observe(y)
+        mu = x
+        nu = 2 * a
+        s2 = b / a
+        a_post = a + 0.5
+        b_post = b + 0.5*(y - x)**2
+        tau.update()
+        testing.assert_allclose(
+            [-b_post, a_post],
+            tau.phi
+        )
+        testing.assert_allclose(
+            Y.lower_bound_contribution() + tau.lower_bound_contribution(), # + tau.g,
+            (
+                special.gammaln((nu+1)/2)
+                - special.gammaln(nu/2)
+                - 0.5 * np.log(nu)
+                - 0.5 * np.log(np.pi)
+                - 0.5 * np.log(s2)
+                - 0.5 * (nu + 1) * np.log(
+                    1 + (y - mu)**2 / (nu * s2)
+                )
+            )
+        )
+
+        return
+
+
 class TestGammaGradient(TestCase):
     """Numerically check Riemannian gradient of several nodes.
-    
+
     Using VB-EM update equations will take a unit length step to the
     Riemannian gradient direction.  Thus, the change caused by a VB-EM
     update and the Riemannian gradient should be equal.
@@ -45,7 +102,7 @@ class TestGammaGradient(TestCase):
         #
         # Without observations
         #
-        
+
         # Construct model
         a = np.random.rand()
         b = np.random.rand()
@@ -53,7 +110,7 @@ class TestGammaGradient(TestCase):
         # Random initialization
         tau.initialize_from_parameters(np.random.rand(),
                                        np.random.rand())
-        # Initial parameters 
+        # Initial parameters
         phi0 = tau.phi
         # Gradient
         g = tau.get_riemannian_gradient()
@@ -69,7 +126,7 @@ class TestGammaGradient(TestCase):
         #
         # With observations
         #
-        
+
         # Construct model
         a = np.random.rand()
         b = np.random.rand()
@@ -80,7 +137,7 @@ class TestGammaGradient(TestCase):
         # Random initialization
         tau.initialize_from_parameters(np.random.rand(),
                                        np.random.rand())
-        # Initial parameters 
+        # Initial parameters
         phi0 = tau.phi
         # Gradient
         g = tau.get_riemannian_gradient()
@@ -94,7 +151,7 @@ class TestGammaGradient(TestCase):
                             phi1[1] - phi0[1])
 
         pass
-        
+
 
 
     def test_gradient(self):
@@ -106,7 +163,7 @@ class TestGammaGradient(TestCase):
         #
         # Without observations
         #
-        
+
         # Construct model
         a = np.random.rand(D)
         b = np.random.rand(D)
@@ -115,7 +172,7 @@ class TestGammaGradient(TestCase):
         # Random initialization
         tau.initialize_from_parameters(np.random.rand(D),
                                        np.random.rand(D))
-        # Initial parameters 
+        # Initial parameters
         phi0 = tau.phi
         # Gradient
         rg = tau.get_riemannian_gradient()
@@ -139,7 +196,7 @@ class TestGammaGradient(TestCase):
             tau.set_parameters([p0[0], p1])
             l1 = Q.compute_lowerbound(ignore_masked=False)
             g_num[1][i] = (l1 - l0) / eps
-                
+
         # Check
         self.assertAllClose(g[0],
                             g_num[0])
@@ -149,7 +206,7 @@ class TestGammaGradient(TestCase):
         #
         # With observations
         #
-        
+
         # Construct model
         a = np.random.rand(D)
         b = np.random.rand(D)
@@ -161,7 +218,7 @@ class TestGammaGradient(TestCase):
         # Random initialization
         tau.initialize_from_parameters(np.random.rand(D),
                                        np.random.rand(D))
-        # Initial parameters 
+        # Initial parameters
         phi0 = tau.phi
         # Gradient
         rg = tau.get_riemannian_gradient()
@@ -185,7 +242,7 @@ class TestGammaGradient(TestCase):
             tau.set_parameters([p0[0], p1])
             l1 = Q.compute_lowerbound(ignore_masked=False)
             g_num[1][i] = (l1 - l0) / eps
-                
+
         # Check
         self.assertAllClose(g[0],
                             g_num[0])
@@ -193,5 +250,3 @@ class TestGammaGradient(TestCase):
                             g_num[1])
 
         pass
-        
-

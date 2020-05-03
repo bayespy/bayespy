@@ -77,11 +77,11 @@ class Gate(Deterministic):
 
         if Z.dims != ( (K,), ):
             raise ValueError("Inconsistent number of clusters")
-        
+
         self.K = K
 
         super().__init__(Z, X, dims=dims, **kwargs)
-            
+
 
     def _compute_moments(self, u_Z, u_X):
         """
@@ -103,7 +103,7 @@ class Gate(Deterministic):
             ui = misc.sum_product(z, x, axes_to_sum=-1)
             u.append(ui)
         return u
-    
+
 
     def _compute_message_to_parent(self, index, m_child, u_Z, u_X):
         """
@@ -134,7 +134,7 @@ class Gate(Deterministic):
             return m
 
         elif index == 1:
-            
+
             m = []
             for i in range(len(m_child)):
                 # Make the moments of Z and the message from children
@@ -158,9 +158,9 @@ class Gate(Deterministic):
                 # Move the axis to the correct position
                 mi = misc.moveaxis(mi, -1, gated_axis)
                 m.append(mi)
-                
+
             return m
-        
+
         else:
             raise ValueError("Invalid parent index")
 
@@ -173,9 +173,11 @@ class Gate(Deterministic):
         elif index == 1:
             if self.gated_plate >= 0:
                 raise ValueError("Gated plate axis must be negative")
-            if np.ndim(weights) >= abs(self.gated_plate):
-                mask = np.expand_dims(weights, axis=self.gated_plate)
-            return weights
+            return (
+                np.expand_dims(weights, axis=self.gated_plate)
+                if np.ndim(weights) >= abs(self.gated_plate) else
+                weights
+            )
         else:
             raise ValueError("Invalid parent index")
 

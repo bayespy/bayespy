@@ -11,7 +11,6 @@ import scipy as sp
 import scipy.linalg.decomp_cholesky as decomp
 import scipy.linalg as linalg
 import scipy.special as special
-import matplotlib.pyplot as plt
 import time
 import profile
 import scipy.spatial.distance as distance
@@ -63,7 +62,7 @@ def gp_posterior_moment_function(m, k, x, y, noise=None):
 
     def get_moments(xh, covariance=1, mean=True):
         (kh,) = k(x, xh)
-        
+
         # Function for computing posterior moments
         if mean:
             # Mean vector
@@ -118,7 +117,7 @@ def gp_posterior_moment_function(m, k, x, y, noise=None):
 
 ##     def get_moments(xh, covariance=1, mean=True):
 ##         (kh,) = k(x, xh)
-        
+
 ##         # Function for computing posterior moments
 ##         if mean:
 ##             # Mean vector
@@ -156,7 +155,7 @@ def gp_cov_se(D2, overwrite=False):
 
 def gp_cov_delta(N):
     return np.identity(N)
-        
+
 
 def squared_distance(x1, x2):
     # Reshape arrays to 2-D arrays
@@ -203,7 +202,7 @@ def gp_preprocess_inputs(*args):
             args[0] = gp_standardize_input(args[0])
     else:
         args[0] = gp_standardize_input(args[0])
-        
+
     return args
 
 def covfunc_delta(theta, *inputs, gradient=False):
@@ -338,13 +337,13 @@ class NodeCovarianceFunction(Node):
             else:
                 gradient_params.append([])
                 params[ind] = params[ind][0]
-                
+
         def cov(*inputs, gradient=False):
 
             if gradient:
                 grads = [[grad[0] for grad in gradient_params[ind]]
                          for ind in range(len(gradient_params))]
-                
+
                 (K, dK) = self.covfunc(params,
                                        *inputs,
                                        gradient=grads)
@@ -358,7 +357,7 @@ class NodeCovarianceFunction(Node):
                 for grad in gradient_params:
                     dK += grad
                 return (K, dK)
-                    
+
             else:
                 K = self.covfunc(params,
                                  *inputs,
@@ -413,7 +412,7 @@ class NodeCovarianceFunctionSquaredExponential(NodeCovarianceFunction):
                                         **kwargs)
 
 class NodeMultiCovarianceFunction(NodeCovarianceFunction):
-    
+
     def __init__(self, *args, **kwargs):
         NodeCovarianceFunction.__init__(self,
                                         None,
@@ -459,17 +458,17 @@ class NodeConstantGaussianProcess(Node):
                 return [self.f(x)]
 
         return func
-    
+
 
 # At least for now, simplify this GP node such that a GP is either
 # observed or latent. If it is observed, it doesn't take messages from
 # children, actually, it should not even have children!
 
 
-            
+
 #class NodeMultiGaussianProcess(NodeVariable):
 class NodeMultiGaussianProcess(Stochastic):
-    
+
 
     def __init__(self, m, k, **kwargs):
 
@@ -487,7 +486,7 @@ class NodeMultiGaussianProcess(Stochastic):
                               plates=(),
                               dims=[(np.inf,), (np.inf,np.inf)],
                               **kwargs)
-    
+
 
     def message_to_parent(self, index):
         if index == 0:
@@ -532,8 +531,8 @@ class NodeMultiGaussianProcess(Stochastic):
     # - i.e., mean and/or (co)variance for x
     # - covariance for x1 and x2
 
-            
-        
+
+
     def lower_bound_contribution(self, gradient=False):
         m = self.parents[0].message_to_child(gradient=gradient)
         k = self.parents[1].message_to_child(gradient=gradient)
@@ -559,7 +558,7 @@ class NodeMultiGaussianProcess(Stochastic):
             f0 = np.vstack([(f-m) for (f,m) in zip(self.f,mu)])
             # Full covariance matrix
             K_full = np.bmat(K)
-            
+
             try:
                 U = chol(K_full)
             except linalg.LinAlgError:
@@ -579,7 +578,7 @@ class NodeMultiGaussianProcess(Stochastic):
                 # Send the derivative message
                 func += d
                 #func(d)
-                
+
             for (dK, func) in dKs:
                 # Compute derivative w.r.t. covariance matrix
                 d = 0.5 * (np.dot(z, np.dot(dK, z))
@@ -597,13 +596,13 @@ class NodeMultiGaussianProcess(Stochastic):
         ## Let f1 be observed and f2 latent function values.
 
         # Compute <log p(f1,f2|m,k)>
-    
+
         #L = gaussian_logpdf(sum_product(np.outer(self.f,self.f) + self.Cov,
-                                        
+
 
         # Compute <log q(f2)>
-        
-            
+
+
 
 
     def update(self):
@@ -641,7 +640,7 @@ class NodeMultiGaussianProcess(Stochastic):
             self.u = gp_posterior_moment_function(m, k, x, y, covariance=V)
             self.x = x
             self.f = y
-            
+
 
 
 
@@ -667,7 +666,7 @@ class NodeGaussianProcess(Stochastic):
                               plates=(),
                               dims=[(np.inf,), (np.inf,np.inf)],
                               **kwargs)
-    
+
 
     def message_to_parent(self, index):
         if index == 0:
@@ -712,8 +711,8 @@ class NodeGaussianProcess(Stochastic):
     # - i.e., mean and/or (co)variance for x
     # - covariance for x1 and x2
 
-            
-        
+
+
     def lower_bound_contribution(self, gradient=False):
         m = self.parents[0].message_to_child(gradient=gradient)
         k = self.parents[1].message_to_child(gradient=gradient)
@@ -736,7 +735,7 @@ class NodeGaussianProcess(Stochastic):
         # Log pdf
         if self.observed:
             f0 = self.f - mu
-            
+
             #print('hereiam')
             #print(K)
             try:
@@ -758,7 +757,7 @@ class NodeGaussianProcess(Stochastic):
                 # Send the derivative message
                 func += d
                 #func(d)
-                
+
             for (dK, func) in dKs:
                 # Compute derivative w.r.t. covariance matrix
                 d = 0.5 * (np.dot(z, np.dot(dK, z))
@@ -776,13 +775,13 @@ class NodeGaussianProcess(Stochastic):
         ## Let f1 be observed and f2 latent function values.
 
         # Compute <log p(f1,f2|m,k)>
-    
+
         #L = gaussian_logpdf(sum_product(np.outer(self.f,self.f) + self.Cov,
-                                        
+
 
         # Compute <log q(f2)>
-        
-            
+
+
 
 
     def update(self):
@@ -820,6 +819,3 @@ class NodeGaussianProcess(Stochastic):
             self.u = gp_posterior_moment_function(m, k, x, y, covariance=V)
             self.x = x
             self.f = y
-            
-
-

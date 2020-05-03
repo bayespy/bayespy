@@ -1,3 +1,50 @@
+Version 0.5.19 (2019-12-11)
++++++++++++++++++++++++++++
+
+Fixed
+.....
+
+* Improve memory usage in ``SumMultiply`` when some input nodes are just
+  constants (e.g., NumPy arrays).
+
+
+Version 0.5.18 (2019-01-07)
++++++++++++++++++++++++++++
+
+Fixed
+.....
+
+* Fix mask handling in Gate node.
+
+
+Version 0.5.17 (2018-04-18)
++++++++++++++++++++++++++++
+
+Changed
+.......
+
+* Import ``plot`` module automatically if possible (i.e., if matplotlib
+  available)
+
+
+Version 0.5.16 (2018-04-17)
++++++++++++++++++++++++++++
+
+Fixed
+.....
+
+* Fix matplotlib dependency removal.
+
+
+Version 0.5.15 (2018-04-17)
++++++++++++++++++++++++++++
+
+Changed
+.......
+
+* Matplotlib was removed from installation requirements.
+
+
 Version 0.5.14 (2018-03-09)
 +++++++++++++++++++++++++++
 

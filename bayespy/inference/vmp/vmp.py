@@ -6,7 +6,6 @@
 
 
 import numpy as np
-import matplotlib.pyplot as plt
 import warnings
 import time
 import h5py
@@ -214,6 +213,7 @@ class VB():
         """
 
         if axes is None:
+            import matplotlib.pyplot as plt
             axes = plt.gca()
 
         D = len(self.l)
@@ -385,6 +385,7 @@ class VB():
                 try:
                     fignum = self._figures[node]
                 except KeyError:
+                    import matplotlib.pyplot as plt
                     fig = plt.figure()
                     self._figures[node] = fig.number
                 else:

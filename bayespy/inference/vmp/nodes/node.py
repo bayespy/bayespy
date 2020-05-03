@@ -6,7 +6,6 @@
 
 
 import numpy as np
-import matplotlib.pyplot as plt
 import functools
 
 from bayespy.utils import misc
@@ -782,6 +781,7 @@ class Node():
         that is, functions that perform plotting for a node.
         """
         if fig is None:
+            import matplotlib.pyplot as plt
             fig = plt.gcf()
         if callable(self._plotter):
             ax = self._plotter(self, fig=fig, **kwargs)
