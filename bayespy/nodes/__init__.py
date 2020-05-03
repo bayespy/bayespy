@@ -68,6 +68,13 @@ Nodes for dynamic variables:
    SwitchingGaussianMarkovChain
    VaryingGaussianMarkovChain
 
+Nodes for graphs:
+
+.. autosummary::
+   :toctree: generated/
+
+   CategoricalGraph
+
 Other stochastic nodes:
 
 .. autosummary::
@@ -102,4 +109,3 @@ Deterministic nodes
 # Currently, model construction and the inference network are not separated so
 # the model is constructed using variational message passing nodes.
 from bayespy.inference.vmp.nodes import *
-
