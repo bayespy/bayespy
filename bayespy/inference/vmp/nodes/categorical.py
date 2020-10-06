@@ -40,7 +40,7 @@ class CategoricalMoments(MultinomialMoments):
             raise ValueError("Invalid category index")
 
         u0 = np.zeros((np.size(x), self.categories))
-        u0[[np.arange(np.size(x)), np.ravel(x)]] = 1
+        u0[(np.arange(np.size(x)), np.ravel(x))] = 1
         u0 = np.reshape(u0, np.shape(x) + (self.categories,))
 
         return [u0]
@@ -74,7 +74,7 @@ class CategoricalMoments(MultinomialMoments):
 class CategoricalDistribution(MultinomialDistribution):
     """
     Class for the VMP formulas of categorical variables.
-    """    
+    """
 
     def __init__(self, categories):
         """
@@ -104,7 +104,7 @@ class CategoricalDistribution(MultinomialDistribution):
 
         # Form a binary matrix with only one non-zero (1) in the last axis
         u0 = np.zeros((np.size(x), self.D))
-        u0[[np.arange(np.size(x)), np.ravel(x)]] = 1
+        u0[(np.arange(np.size(x)), np.ravel(x))] = 1
         u0 = np.reshape(u0, np.shape(x) + (self.D,))
         u = [u0]
 

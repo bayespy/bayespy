@@ -1,3 +1,12 @@
+Dev
++++
+
+Fixed
+.....
+
+* Fix sequence indexing in Categorical moments.
+
+
 Version 0.5.19 (2019-12-11)
 +++++++++++++++++++++++++++
 
