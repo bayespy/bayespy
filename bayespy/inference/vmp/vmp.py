@@ -170,7 +170,7 @@ class VB():
                 if X in plot_nodes:
                     self.plot(X)
 
-            cputime = time.clock() - t
+            cputime = time.time() - t
             i += 1
             if tqdm is not None:
                 tqdm.update()
@@ -665,7 +665,7 @@ class VB():
         for x in collapsed:
             self[x].update()
 
-        cputime = time.clock() - t
+        cputime = time.time() - t
         self._end_iteration_step('PS', cputime)
 
 
