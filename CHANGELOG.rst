@@ -1,3 +1,12 @@
+Version 0.5.21 (2021-03-04)
++++++++++++++++++++++++++++
+
+Fixed
+.....
+
+* Use ``time.time`` instead of the deprecated ``time.clock``.
+
+
 Version 0.5.20 (2020-10-06)
 +++++++++++++++++++++++++++
 
