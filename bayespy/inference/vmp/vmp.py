@@ -160,7 +160,7 @@ class VB():
         i = 0
         while repeat is None or i < repeat:
 
-            t = time.clock()
+            t = time.time()
 
             # Update nodes
             for node in nodes:
@@ -170,7 +170,7 @@ class VB():
                 if X in plot_nodes:
                     self.plot(X)
 
-            cputime = time.clock() - t
+            cputime = time.time() - t
             i += 1
             if tqdm is not None:
                 tqdm.update()
@@ -491,7 +491,7 @@ class VB():
 
         for i in range(maxiter):
 
-            t = time.clock()
+            t = time.time()
 
             # Get gradients
             if riemannian and method == 'gradient':
@@ -607,7 +607,7 @@ class VB():
             scale = scale * np.sqrt(2)
             p = p_new
 
-            cputime = time.clock() - t
+            cputime = time.time() - t
             if self._end_iteration_step('OPT', cputime, tol=tol, verbose=verbose):
                 break
 
@@ -621,7 +621,7 @@ class VB():
         if collapsed is None:
             collapsed = []
 
-        t = time.clock()
+        t = time.time()
 
         # Update all nodes
         for x in nodes:
@@ -665,7 +665,7 @@ class VB():
         for x in collapsed:
             self[x].update()
 
-        cputime = time.clock() - t
+        cputime = time.time() - t
         self._end_iteration_step('PS', cputime)
 
 
@@ -716,10 +716,10 @@ class VB():
                     self.callback_output = np.concatenate((self.callback_output,z),
                                                           axis=-1)
 
-        t = time.clock()
+        t = time.time()
         L = self.loglikelihood_lowerbound()
         if bound_cpu_time:
-            cputime += time.clock() - t
+            cputime += time.time() - t
 
         self.cputime[self.iter] = cputime
         self.L[self.iter] = L
