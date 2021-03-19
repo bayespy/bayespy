@@ -1,15 +1,15 @@
 Dev
-***
++++
 
 Added
------
+.....
 
 * Support ``initialize_from_random`` and ``initialize_from_value`` for
   ``CategoricalMarkovChain``.
 
 
 Version 0.5.22 (2021-03-19)
-***************************
++++++++++++++++++++++++++++
 
 Fixed
 .....
