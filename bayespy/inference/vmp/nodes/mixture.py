@@ -19,7 +19,7 @@ from .node import Node
 from .expfamily import ExponentialFamily, \
                        ExponentialFamilyDistribution, \
                        useconstructor
-                       
+
 from .categorical import Categorical, \
                          CategoricalMoments
 
@@ -27,14 +27,23 @@ class MixtureDistribution(ExponentialFamilyDistribution):
     """
     Class for the VMP formulas of mixture variables.
     """
-    
 
-    def __init__(self, distribution, cluster_plate, n_clusters, ndims, 
+
+    def __init__(self, distribution, cluster_plate, n_clusters, ndims,
                  ndims_parents):
         """
         Create VMP formula node for a mixture variable
         """
-        self.distribution = distribution
+        self.raw_distribution = distribution
+        try:
+            self.squeezed_distribution = distribution.squeeze(cluster_plate)
+        except ValueError as err:
+            raise ValueError(
+                "Cannot mix over plate axis {0}: {1}".format(
+                    cluster_plate,
+                    str(err),
+                )
+            ) from err
         self.cluster_plate = cluster_plate
         self.ndims = ndims
         self.ndims_parents = ndims_parents
@@ -55,7 +64,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             # Compute g:
             # Shape(g)      = [Nn,..,K,..,N0]
-            g = self.distribution.compute_cgf_from_parents(*(u_parents[1:]))
+            g = self.raw_distribution.compute_cgf_from_parents(*(u_parents[1:]))
             # Reshape(g):
             # Shape(g)      = [Nn,..,N0,K]
             if np.ndim(g) < abs(self.cluster_plate):
@@ -67,38 +76,30 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             # Compute phi:
             # Shape(phi)    = [Nn,..,K,..,N0,Dd,..,D0]
-            phi = self.distribution.compute_phi_from_parents(*(u_parents[1:]))
-            # Move phi axis:
-            # Shape(phi)    = [Nn,..,N0,K,Dd,..,D0]
-            for ind in range(len(phi)):
-                if self.cluster_plate < 0:
-                    axis_from = self.cluster_plate-self.ndims[ind]
-                else:
-                    raise RuntimeError("Cluster plate axis must be negative")
-                axis_to = -1-self.ndims[ind]
-                if np.ndim(phi[ind]) >= abs(axis_from):
-                    # Cluster plate axis exists, move it to the correct position
-                    phi[ind] = misc.moveaxis(phi[ind], axis_from, axis_to)
-                else:
-                    # No cluster plate axis, just add a new axis to the correct
-                    # position, if phi has something on that axis
-                    if np.ndim(phi[ind]) >= abs(axis_to):
-                        phi[ind] = np.expand_dims(phi[ind], axis=axis_to)
+            phi = self.raw_distribution.compute_phi_from_parents(*(u_parents[1:]))
 
             # Reshape u:
-            # Shape(u)      = [Nn,..,N0,1,Dd,..,D0]
-            u_self = list()
-            for ind in range(len(u)):
-                u_self.append(np.expand_dims(u[ind],
-                                             axis=(-1-self.ndims[ind])))
+            # Shape(u) =    = [Nn,..,1,..,N0,Dd,..,D0]
+            u_reshaped = [
+                np.expand_dims(ui, self.cluster_plate - ndimi)
+                if np.ndim(ui) >= abs(self.cluster_plate - ndimi) else
+                ui
+                for (ui, ndimi) in zip(u, self.ndims)
+            ]
 
             # Compute logpdf:
-            # Shape(L)      = [Nn,..,N0,K]
-            L = self.distribution.compute_logpdf(u_self, phi, g, 0, self.ndims)
+            # Shape(L)      = [Nn,..,K,..,N0]
+            L = self.raw_distribution.compute_logpdf(
+                u_reshaped,
+                phi,
+                g,
+                0,
+                self.ndims,
+            )
 
-            # Sum over other than the cluster dimensions? No!
-            # Hmm.. I think the message passing method will do
-            # that automatically
+            # Move axis:
+            # Shape(L)      = [Nn,..,N0,K]
+            L = np.moveaxis(L, self.cluster_plate, -1)
 
             m = [L]
 
@@ -111,7 +112,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             index_for_parent = index - 1
 
             # Reshape u:
-            # Shape(u)      = [Nn,..1,..,N0,Dd,..,D0]
+            # Shape(u_self)  = [Nn,..1,..,N0,Dd,..,D0]
             u_self = list()
             for ind in range(len(u)):
                 if self.cluster_plate < 0:
@@ -121,10 +122,13 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                 u_self.append(np.expand_dims(u[ind], axis=cluster_axis))
 
             # Message from the mixed distribution
-            m = self.distribution.compute_message_to_parent(parent,
-                                                            index_for_parent,
-                                                            u_self,
-                                                            *(u_parents[1:]))
+            # Shape(m)       = [Nn,..,K,..,N0,Dd,..,D0]
+            m = self.raw_distribution.compute_message_to_parent(
+                parent,
+                index_for_parent,
+                u_self,
+                *(u_parents[1:])
+            )
 
             # Note: The cluster assignment probabilities can be considered as
             # weights to plate elements. These weights need to mapped properly
@@ -137,9 +141,10 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
             # Compute weights (i.e., cluster assignment probabilities) and map
             # the plates properly.
+            # Shape(p)       = [Nn,..,K,..,N0]
             p = misc.atleast_nd(u_parents[0][0], abs(self.cluster_plate))
             p = misc.moveaxis(p, -1, self.cluster_plate)
-            p = self.distribution.compute_weights_to_parent(
+            p = self.raw_distribution.compute_weights_to_parent(
                 index_for_parent,
                 p,
             )
@@ -166,7 +171,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                 raise ValueError("Cluster plate axis must be negative")
             if np.ndim(weights) >= abs(self.cluster_plate):
                 weights = np.expand_dims(weights, axis=self.cluster_plate)
-            return self.distribution.compute_weights_to_parent(
+            return self.raw_distribution.compute_weights_to_parent(
                 index-1,
                 weights
             )
@@ -179,7 +184,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         # Compute weighted average of the parameters
 
         # Cluster parameters
-        Phi = self.distribution.compute_phi_from_parents(*(u_parents[1:]))
+        Phi = self.raw_distribution.compute_phi_from_parents(*(u_parents[1:]))
         # Contributions/weights/probabilities
         P = u_parents[0][0]
 
@@ -239,17 +244,17 @@ class MixtureDistribution(ExponentialFamilyDistribution):
                           "parameter of that cluster is -inf, thus "
                           "0*(-inf)=nan. Solution: Use parameters that assign "
                           "non-zero probabilities for the whole domain.")
-            
+
         return phi
 
-    
+
     def compute_moments_and_cgf(self, phi, mask=True):
         """
         Compute the moments and :math:`g(\phi)`.
         """
-        return self.distribution.compute_moments_and_cgf(phi, mask=mask)
+        return self.squeezed_distribution.compute_moments_and_cgf(phi, mask=mask)
 
-    
+
     def compute_cgf_from_parents(self, *u_parents):
         """
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
@@ -263,7 +268,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
         # Compute g for clusters:
         # Shape(g)      = [Nn,..,K,..,N0]
-        g = self.distribution.compute_cgf_from_parents(*(u_parents[1:]))
+        g = self.raw_distribution.compute_cgf_from_parents(*(u_parents[1:]))
 
         # Move cluster axis to last:
         # Shape(g)      = [Nn,..,N0,K]
@@ -287,14 +292,14 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
         return g
 
-    
+
     def compute_fixed_moments_and_f(self, x, mask=True):
         """
         Compute the moments and :math:`f(x)` for a fixed value.
         """
-        return self.distribution.compute_fixed_moments_and_f(x, mask=True)
+        return self.squeezed_distribution.compute_fixed_moments_and_f(x, mask=True)
 
-    
+
     def plates_to_parent(self, index, plates):
         """
         Resolves the plate mapping to a parent.
@@ -315,9 +320,9 @@ class MixtureDistribution(ExponentialFamilyDistribution):
             plates.insert(knd, self.K)
             plates = tuple(plates)
 
-            return self.distribution.plates_to_parent(index-1, plates)
+            return self.raw_distribution.plates_to_parent(index-1, plates)
 
-        
+
     def plates_from_parent(self, index, plates):
         """
         Resolve the plate mapping from a parent.
@@ -328,8 +333,8 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         if index == 0:
             return plates
         else:
-            plates = self.distribution.plates_from_parent(index-1, plates)
-            
+            plates = self.raw_distribution.plates_from_parent(index-1, plates)
+
             # Remove the cluster plate, if the parent has it
             plates = list(plates)
             if len(plates) >= abs(self.cluster_plate):
@@ -341,14 +346,14 @@ class MixtureDistribution(ExponentialFamilyDistribution):
         """
         Draw a random sample from the distribution.
         """
-        return self.distribution.random(*phi, plates=plates)
+        return self.squeezed_distribution.random(*phi, plates=plates)
 
 
     def compute_gradient(self, g, u, phi):
         r"""
         Compute the standard gradient with respect to the natural parameters.
         """
-        return self.distribution.compute_gradient(g, u, phi)
+        return self.squeezed_distribution.compute_gradient(g, u, phi)
 
 
 class Mixture(ExponentialFamily):
@@ -384,7 +389,7 @@ class Mixture(ExponentialFamily):
         Mixed distribution
 
     params : types specified by the mixed distribution
-    
+
         Parameters of the mixed distribution.  If some parameters should
         vary between clusters, those parameters' plate axis
         `cluster_plate` should have a size which equals the number of
@@ -393,7 +398,7 @@ class Mixture(ExponentialFamily):
         clusters.
 
     cluster_plate : int, optional
-    
+
         Negative integer defining which plate axis is used for the
         clusters in the parameters. That plate axis is ignored from the
         parameters when considering the plates for this node. By
@@ -425,7 +430,7 @@ class Mixture(ExponentialFamily):
         self.cluster_plate = cluster_plate
         super().__init__(z, node_class, *params, cluster_plate=cluster_plate,
                          **kwargs)
-        
+
 
     @classmethod
     def _constructor(cls, z, node_class, *args, cluster_plate=-1, **kwargs):
@@ -434,7 +439,7 @@ class Mixture(ExponentialFamily):
         """
         if cluster_plate >= 0:
             raise ValueError("Cluster plate axis must be negative")
-        
+
         # Get the stuff for the mixed distribution
         (parents, _, dims, mixture_plates, distribution, moments, parent_moments) = \
           node_class._constructor(*args)
@@ -443,11 +448,11 @@ class Mixture(ExponentialFamily):
         if len(mixture_plates) < abs(cluster_plate):
             raise ValueError("The mixed distribution does not have a plates "
                              "axis for the cluster plate axis")
-        
+
         # Resolve the number of clusters
         mixture_plates = list(mixture_plates)
         K = mixture_plates.pop(cluster_plate)
-        
+
         # Convert a node to get the number of clusters
         z = cls._ensure_moments(z, CategoricalMoments, categories=K)
         if z.dims[0][0] != K:
@@ -460,10 +465,10 @@ class Mixture(ExponentialFamily):
                    for (p_i, m_i) in zip(parents, parent_moments)]
         ndims_parents = [[len(dims_i) for dims_i in parent.dims]
                          for parent in parents]
-                          
-        
+
+
         # Convert the distribution to a mixture
-        distribution = MixtureDistribution(distribution, 
+        distribution = MixtureDistribution(distribution,
                                            cluster_plate,
                                            K,
                                            ndims,
@@ -478,10 +483,10 @@ class Mixture(ExponentialFamily):
                 kwargs,
                 dims,
                 plates,
-                distribution, 
-                moments, 
+                distribution,
+                moments,
                 parent_moments)
-    
+
 
     def integrated_logpdf_from_parents(self, x, index):
 

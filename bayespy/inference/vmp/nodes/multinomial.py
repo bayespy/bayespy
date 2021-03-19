@@ -212,6 +212,24 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
         """
         return u[0] * (g - linalg.inner(g, u[0])[...,None] / self.N)
 
+    def squeeze(self, axis):
+        try:
+            N_squeezed = np.squeeze(self.N, axis)
+        except ValueError as err:
+            raise ValueError(
+                "The number of trials must be constant over a squeezed axis, "
+                "so the corresponding array axis must be singleton. "
+                "Cannot squeeze axis {0} from a multinomial distribution "
+                "because the number of trials arrays has shape {2}, so "
+                "the given axis has length {1} != 1. ".format(
+                    axis,
+                    np.shape(self.N)[axis],
+                    np.shape(self.N),
+                )
+            ) from err
+        else:
+            return MultinomialDistribution(N_squeezed)
+
 
 class Multinomial(ExponentialFamily):
     r"""
@@ -222,7 +240,7 @@ class Multinomial(ExponentialFamily):
     :math:`p_0,\ldots,p_{K-1}` for the categories, multinomial distribution is
     gives the probability of any combination of numbers of successes for the
     categories.
-    
+
     The node models the number of successes :math:`x_k \in \{0, \ldots, n\}` in
     :math:`n` trials with probability :math:`p_k` for success in :math:`K`
     categories.

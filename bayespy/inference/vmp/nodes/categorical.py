@@ -123,6 +123,9 @@ class CategoricalDistribution(MultinomialDistribution):
         p = np.exp(logp)
         return random.categorical(p, size=plates)
 
+    def squeeze(self, axis):
+        return self
+
 
 class Categorical(ExponentialFamily):
     r"""
