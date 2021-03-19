@@ -12,35 +12,19 @@ addons:
 # http://repo.continuum.io/pkgs/free/linux-64/index.html
 matrix:
   include:
-    # Drop Python 3.3 tests because Anaconda doesn't have NumPy 1.10 for Python 3.3
-    #
-    # - python: 3.3
-    #   env:
-    #     - PYTHONVERSION==3.3
-    #     - NUMPYVERSION==1.10.0
-    #     - SCIPYVERSION==0.13.0
-    #     - MATPLOTLIBVERSION==1.3.0  # matplotlib 1.2.0 fails unit tests
-    #                                 # because of small offsets in plotting
-    #                                 # compared to more recent versions
-    # - python: 3.3
-    #   env:
-    #     - PYTHONVERSION==3.3
-    #     - NUMPYVERSION=
-    #     - SCIPYVERSION=
-    #     - MATPLOTLIBVERSION=
-    - python: 3.4
+    - python: 3.6
       env:
-        - PYTHONVERSION==3.4
-        - NUMPYVERSION==1.10.0
-        - SCIPYVERSION=
-        - MATPLOTLIBVERSION=
-    - python: 3.4
-      env:
-        - PYTHONVERSION==3.4
+        - PYTHONVERSION==3.6
         - NUMPYVERSION=
         - SCIPYVERSION=
         - MATPLOTLIBVERSION=
-    - python: 3.5
+    - python: 3.7
+      env:
+        - PYTHONVERSION==3.5
+        - NUMPYVERSION=
+        - SCIPYVERSION=
+        - MATPLOTLIBVERSION=
+    - python: 3.8
       env:
         - PYTHONVERSION==3.5
         - NUMPYVERSION=

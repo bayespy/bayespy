@@ -516,7 +516,7 @@ def put(x, indices, y, axis=-1, ufunc=np.add):
 
        >>> x = np.zeros(3)
        >>> put(x, [2, 2, 0, 2, 2], 1)
-       array([ 1.,  0.,  4.])
+       array([1., 0., 4.])
 
     `y` must broadcast to the shape of `np.take(x, indices)`:
 
@@ -524,9 +524,9 @@ def put(x, indices, y, axis=-1, ufunc=np.add):
 
        >>> x = np.zeros((3,4))
        >>> put(x, [[2, 2, 0, 2, 2], [1, 2, 1, 2, 1]], np.ones((2,1,4)), axis=0)
-       array([[ 1.,  1.,  1.,  1.],
-              [ 3.,  3.,  3.,  3.],
-              [ 6.,  6.,  6.,  6.]])
+       array([[1., 1., 1., 1.],
+              [3., 3., 3., 3.],
+              [6., 6., 6., 6.]])
 
     """
     #x = np.copy(x)

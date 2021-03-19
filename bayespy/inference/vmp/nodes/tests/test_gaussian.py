@@ -16,7 +16,7 @@ from scipy import special
 from numpy import testing
 
 from .. import gaussian
-from bayespy.nodes import (Gaussian, 
+from bayespy.nodes import (Gaussian,
                            GaussianARD,
                            GaussianGamma,
                            Gamma,
@@ -49,40 +49,40 @@ class TestGaussianFunctions(TestCase):
         Cov = np.random.randn(4,3,2,2)
         self.assertAllClose(gaussian.rotate_covariance(Cov, R),
                             np.einsum('...ik,...kl,...lj', R, Cov, R.T))
-        
+
         # Check array, first axis
         R = np.random.randn(2,2)
         Cov = np.random.randn(2,3,3,2,3,3)
         self.assertAllClose(gaussian.rotate_covariance(Cov, R,
                                                        ndim=3,
                                                        axis=-3),
-                            np.einsum('...ik,...kablcd,...lj->...iabjcd', 
-                                      R, 
+                            np.einsum('...ik,...kablcd,...lj->...iabjcd',
+                                      R,
                                       Cov,
                                       R.T))
         self.assertAllClose(gaussian.rotate_covariance(Cov, R,
                                                        ndim=3,
                                                        axis=0),
-                            np.einsum('...ik,...kablcd,...lj->...iabjcd', 
-                                      R, 
+                            np.einsum('...ik,...kablcd,...lj->...iabjcd',
+                                      R,
                                       Cov,
                                       R.T))
-        
+
         # Check array, middle axis
         R = np.random.randn(2,2)
         Cov = np.random.randn(3,2,3,3,2,3)
         self.assertAllClose(gaussian.rotate_covariance(Cov, R,
                                                        ndim=3,
                                                        axis=-2),
-                            np.einsum('...ik,...akbcld,...lj->...aibcjd', 
-                                      R, 
+                            np.einsum('...ik,...akbcld,...lj->...aibcjd',
+                                      R,
                                       Cov,
                                       R.T))
         self.assertAllClose(gaussian.rotate_covariance(Cov, R,
                                                        ndim=3,
                                                        axis=1),
-                            np.einsum('...ik,...akbcld,...lj->...aibcjd', 
-                                      R, 
+                            np.einsum('...ik,...akbcld,...lj->...aibcjd',
+                                      R,
                                       Cov,
                                       R.T))
 
@@ -92,15 +92,15 @@ class TestGaussianFunctions(TestCase):
         self.assertAllClose(gaussian.rotate_covariance(Cov, R,
                                                        ndim=3,
                                                        axis=-1),
-                            np.einsum('...ik,...abkcdl,...lj->...abicdj', 
-                                      R, 
+                            np.einsum('...ik,...abkcdl,...lj->...abicdj',
+                                      R,
                                       Cov,
                                       R.T))
         self.assertAllClose(gaussian.rotate_covariance(Cov, R,
                                                        ndim=3,
                                                        axis=2),
-                            np.einsum('...ik,...abkcdl,...lj->...abicdj', 
-                                      R, 
+                            np.einsum('...ik,...abkcdl,...lj->...abicdj',
+                                      R,
                                       Cov,
                                       R.T))
 
@@ -110,28 +110,28 @@ class TestGaussianFunctions(TestCase):
         self.assertAllClose(gaussian.rotate_covariance(Cov, R,
                                                        ndim=3,
                                                        axis=-2),
-                            np.einsum('...ik,...akbcld,...lj->...aibcjd', 
-                                      R, 
+                            np.einsum('...ik,...akbcld,...lj->...aibcjd',
+                                      R,
                                       Cov,
                                       R.T))
         self.assertAllClose(gaussian.rotate_covariance(Cov, R,
                                                        ndim=3,
                                                        axis=1),
-                            np.einsum('...ik,...akbcld,...lj->...aibcjd', 
-                                      R, 
+                            np.einsum('...ik,...akbcld,...lj->...aibcjd',
+                                      R,
                                       Cov,
                                       R.T))
 
         pass
 
-    
+
 class TestGaussianARD(TestCase):
 
     def test_init(self):
         """
         Test the constructor of GaussianARD
         """
-        
+
         def check_init(true_plates, true_shape, mu, alpha, **kwargs):
             X = GaussianARD(mu, alpha, **kwargs)
             self.assertEqual(X.dims, (true_shape, true_shape+true_shape),
@@ -144,9 +144,9 @@ class TestGaussianARD(TestCase):
         #
 
         # Use ndim=0 for constant mu
-        check_init((), 
-                   (), 
-                   0, 
+        check_init((),
+                   (),
+                   0,
                    1)
         check_init((3,2),
                    (),
@@ -293,7 +293,7 @@ class TestGaussianARD(TestCase):
                                       ndim=2),
                           np.ones((2,3)),
                           shape=(2,2))
-                          
+
         pass
 
     def test_message_to_child(self):
@@ -323,10 +323,10 @@ class TestGaussianARD(TestCase):
                         ndim=3)
         (u0, u1) = X._message_to_child()
         self.assertAllClose(u0, 2*np.ones((2,3,4)))
-        self.assertAllClose(u1, 
+        self.assertAllClose(u1,
                             2**2 * np.ones((2,3,4,2,3,4))
                             + 1/3 * misc.identity(2,3,4))
-                            
+
 
         # Check the formula for dim-broadcasted mu
         X = GaussianARD(2*np.ones((3,1)),
@@ -334,30 +334,30 @@ class TestGaussianARD(TestCase):
                         ndim=3)
         (u0, u1) = X._message_to_child()
         self.assertAllClose(u0, 2*np.ones((2,3,4)))
-        self.assertAllClose(u1, 
+        self.assertAllClose(u1,
                             2**2 * np.ones((2,3,4,2,3,4))
                             + 1/3 * misc.identity(2,3,4))
-                            
+
         # Check the formula for dim-broadcasted alpha
         X = GaussianARD(2*np.ones((2,3,4)),
                         3*np.ones((3,1)),
                         ndim=3)
         (u0, u1) = X._message_to_child()
         self.assertAllClose(u0, 2*np.ones((2,3,4)))
-        self.assertAllClose(u1, 
+        self.assertAllClose(u1,
                             2**2 * np.ones((2,3,4,2,3,4))
                             + 1/3 * misc.identity(2,3,4))
-                            
+
         # Check the formula for dim-broadcasted mu and alpha
         X = GaussianARD(2*np.ones((3,1)),
                         3*np.ones((3,1)),
                         shape=(2,3,4))
         (u0, u1) = X._message_to_child()
         self.assertAllClose(u0, 2*np.ones((2,3,4)))
-        self.assertAllClose(u1, 
+        self.assertAllClose(u1,
                             2**2 * np.ones((2,3,4,2,3,4))
                             + 1/3 * misc.identity(2,3,4))
-                            
+
         # Check the formula for dim-broadcasted mu with plates
         mu = GaussianARD(2*np.ones((5,1,3,4)),
                          np.ones((5,1,3,4)),
@@ -369,7 +369,7 @@ class TestGaussianARD(TestCase):
                         plates=(5,))
         (u0, u1) = X._message_to_child()
         self.assertAllClose(u0, 2*np.ones((5,2,3,4)))
-        self.assertAllClose(u1, 
+        self.assertAllClose(u1,
                             2**2 * np.ones((5,2,3,4,2,3,4))
                             + 1/3 * misc.identity(2,3,4))
 
@@ -383,7 +383,7 @@ class TestGaussianARD(TestCase):
                             1/(3+1) * (3*2 + 1*10))
         self.assertAllClose(u1,
                             (1/(3+1) * (3*2 + 1*10))**2 + 1/(3+1))
-        
+
         pass
 
     def test_message_to_parent_mu(self):
@@ -463,7 +463,7 @@ class TestGaussianARD(TestCase):
                             -0.5 * 2 * 3*misc.identity(2,1))
 
         # Check plates for smaller mu than node
-        mu = GaussianARD(0,1, 
+        mu = GaussianARD(0,1,
                          shape=(3,),
                          plates=(4,1,1))
         X = GaussianARD(mu,
@@ -487,7 +487,7 @@ class TestGaussianARD(TestCase):
                                             [False, True, False, True]])
         (m0, m1) = mu._message_from_children()
         self.assertAllClose(m0,
-                            (2*3 * np.ones((2,1,3)) 
+                            (2*3 * np.ones((2,1,3))
                              * np.array([[[3]], [[2]]])))
         self.assertAllClose(m1,
                             (-0.5*2 * misc.identity(3)
@@ -505,7 +505,7 @@ class TestGaussianARD(TestCase):
         X.observe(3*np.ones((2,4,3)), mask=mask)
         (m0, m1) = mu._message_from_children()
         self.assertAllClose(m0,
-                            2*3 * np.sum(np.ones((2,4,3))*mask[...,None], 
+                            2*3 * np.sum(np.ones((2,4,3))*mask[...,None],
                                          axis=-2,
                                          keepdims=True))
         self.assertAllClose(m1,
@@ -543,12 +543,12 @@ class TestGaussianARD(TestCase):
         self.assertAllClose(m0,
                             2*3 * np.sum(np.ones(3), axis=-1, keepdims=True))
         self.assertAllClose(m1,
-                            -0.5*2 * np.sum(np.identity(3), 
-                                            axis=(-1,-2), 
+                            -0.5*2 * np.sum(np.identity(3),
+                                            axis=(-1,-2),
                                             keepdims=True))
 
         pass
-        
+
     def test_message_to_parent_alpha(self):
         """
         Test the message from GaussianARD the 2nd parent (alpha).
@@ -616,7 +616,7 @@ class TestGaussianARD(TestCase):
 
         # Check plates for smaller mu than node
         tau = Gamma(np.ones((4,1,2,3))*1e10, 1e10)
-        X = GaussianARD(GaussianARD(1, 1, 
+        X = GaussianARD(GaussianARD(1, 1,
                                     shape=(3,),
                                     plates=(4,1,1)),
                         tau,
@@ -640,12 +640,12 @@ class TestGaussianARD(TestCase):
                                             [False, True, True, False]])
         (m0, m1) = tau._message_from_children()
         self.assertAllClose(m0 * np.ones((4,3)),
-                            (-0.5 * (2**2 - 2*2*1 + 1**2) 
-                             * np.ones((4,3)) 
+                            (-0.5 * (2**2 - 2*2*1 + 1**2)
+                             * np.ones((4,3))
                              * np.array([[1], [1], [2], [0]])))
         self.assertAllClose(m1 * np.ones((4,3)),
                             0.5 * np.array([[1], [1], [2], [0]]) * np.ones((4,3)))
-        
+
         # Check non-ARD Gaussian child
         mu = np.array([1,2])
         alpha = np.array([3,4])
@@ -669,7 +669,7 @@ class TestGaussianARD(TestCase):
                                 + np.outer(mu, mu)))
         self.assertAllClose(m1 * np.ones(2),
                             0.5 * np.ones(2))
-        
+
         pass
 
 
@@ -706,14 +706,14 @@ class TestGaussianARD(TestCase):
         Cov = np.linalg.inv(np.diag(alpha) + V)
         mu = np.dot(Cov, np.dot(V, y) + alpha*m)
         x2 = np.outer(mu, mu) + Cov
-        logH_X = (+ 2*0.5*(1+np.log(2*np.pi)) 
+        logH_X = (+ 2*0.5*(1+np.log(2*np.pi))
                   + 0.5*np.log(np.linalg.det(Cov)))
-        logp_X = (- 2*0.5*np.log(2*np.pi) 
+        logp_X = (- 2*0.5*np.log(2*np.pi)
                   + 0.5*np.log(np.linalg.det(np.diag(alpha)))
                   - 0.5*np.sum(np.diag(alpha)
-                               * (x2 
-                                  - np.outer(mu,m) 
-                                  - np.outer(m,mu) 
+                               * (x2
+                                  - np.outer(mu,m)
+                                  - np.outer(m,mu)
                                   + np.outer(m,m))))
         self.assertAllClose(logp_X + logH_X,
                             X.lower_bound_contribution())
@@ -736,15 +736,15 @@ class TestGaussianARD(TestCase):
             Cov = 1/(2+3)
             mu = Cov * (2*1 + 3*4)
             x2 = mu**2 + Cov
-            logH_X = (+ 0.5*(1+np.log(2*np.pi)) 
+            logH_X = (+ 0.5*(1+np.log(2*np.pi))
                       + 0.5*np.log(Cov))
-            logp_X = (- 0.5*np.log(2*np.pi) 
-                      + 0.5*np.log(2) 
+            logp_X = (- 0.5*np.log(2*np.pi)
+                      + 0.5*np.log(2)
                       - 0.5*2*(x2 - 2*mu*1 + 1**2+1))
             r = np.prod(X.get_shape(0))
             self.assertAllClose(r * (logp_X + logH_X),
                                 X.lower_bound_contribution())
-            
+
         # Test scalar formula
         check_lower_bound((), ())
 
@@ -770,7 +770,7 @@ class TestGaussianARD(TestCase):
         # BUG: Scalar parents for array variable caused einsum error
         check_lower_bound((), (),
                           shape=(3,))
-        
+
         # BUG: Log-det was summed over plates
         check_lower_bound((), (),
                           shape=(3,),
@@ -802,39 +802,39 @@ class TestGaussianARD(TestCase):
             pass
 
         # Rotate vector
-        check((3,), (),    
-              '...jk,...k->...j', 
+        check((3,), (),
+              '...jk,...k->...j',
               '...mk,...kl,...nl->...mn')
-        check((3,), (2,4), 
-              '...jk,...k->...j', 
+        check((3,), (2,4),
+              '...jk,...k->...j',
               '...mk,...kl,...nl->...mn')
 
         # Rotate array
-        check((2,3,4), (), 
-              '...jc,...abc->...abj', 
+        check((2,3,4), (),
+              '...jc,...abc->...abj',
               '...mc,...abcdef,...nf->...abmden',
               axis=-1)
-        check((2,3,4), (5,6), 
-              '...jc,...abc->...abj', 
+        check((2,3,4), (5,6),
+              '...jc,...abc->...abj',
               '...mc,...abcdef,...nf->...abmden',
               axis=-1)
-        check((2,3,4), (), 
-              '...jb,...abc->...ajc', 
+        check((2,3,4), (),
+              '...jb,...abc->...ajc',
               '...mb,...abcdef,...ne->...amcdnf',
               axis=-2)
-        check((2,3,4), (5,6), 
-              '...jb,...abc->...ajc', 
+        check((2,3,4), (5,6),
+              '...jb,...abc->...ajc',
               '...mb,...abcdef,...ne->...amcdnf',
               axis=-2)
-        check((2,3,4), (), 
-              '...ja,...abc->...jbc', 
+        check((2,3,4), (),
+              '...ja,...abc->...jbc',
               '...ma,...abcdef,...nd->...mbcnef',
               axis=-3)
-        check((2,3,4), (5,6), 
-              '...ja,...abc->...jbc', 
+        check((2,3,4), (5,6),
+              '...ja,...abc->...jbc',
               '...ma,...abcdef,...nd->...mbcnef',
               axis=-3)
-        
+
         pass
 
     def test_rotate_plates(self):
@@ -890,10 +890,10 @@ class TestGaussianARD(TestCase):
         alpha = 2 * np.ones((3, 2))
         X.initialize_from_prior()
         u = X._message_to_child()
-        self.assertAllClose(u[0]*np.ones((3,2)), 
+        self.assertAllClose(u[0]*np.ones((3,2)),
                             mu)
-        self.assertAllClose(u[1]*np.ones((3,2,2)), 
-                            linalg.outer(mu, mu, ndim=1) + 
+        self.assertAllClose(u[1]*np.ones((3,2,2)),
+                            linalg.outer(mu, mu, ndim=1) +
                             misc.diag(1/alpha, ndim=1))
 
         # Parameter initialization
@@ -902,7 +902,7 @@ class TestGaussianARD(TestCase):
         X.initialize_from_parameters(mu, alpha)
         u = X._message_to_child()
         self.assertAllClose(u[0], mu)
-        self.assertAllClose(u[1], linalg.outer(mu, mu, ndim=1) + 
+        self.assertAllClose(u[1], linalg.outer(mu, mu, ndim=1) +
                                   misc.diag(1/alpha, ndim=1))
 
         # Value initialization
@@ -916,13 +916,13 @@ class TestGaussianARD(TestCase):
         X.initialize_from_random()
 
         pass
-        
+
 
 class TestGaussianGamma(TestCase):
     """
     Unit tests for GaussianGamma node.
     """
-    
+
 
     def test_init(self):
         """
@@ -946,17 +946,17 @@ class TestGaussianGamma(TestCase):
         X_alpha = GaussianGamma(np.ones((4,3)), np.identity(3), 2, 10)
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
-        
+
         # Plates in Lambda
         X_alpha = GaussianGamma(np.ones(3), np.ones((4,3,3))*np.identity(3), 2, 10)
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
-        
+
         # Plates in a
         X_alpha = GaussianGamma(np.ones(3), np.identity(3), np.ones(4), 10)
         self.assertEqual(X_alpha.plates, (4,))
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
-        
+
         # Plates in Lambda
         X_alpha = GaussianGamma(np.ones(3), np.identity(3), 2, np.ones(4))
         self.assertEqual(X_alpha.plates, (4,))
@@ -966,16 +966,16 @@ class TestGaussianGamma(TestCase):
         self.assertRaises(ValueError,
                           GaussianGamma,
                           np.ones((4,3)),
-                          np.identity(3), 
+                          np.identity(3),
                           2,
                           10,
                           plates=())
-        
+
         # Inconsistent plates
         self.assertRaises(ValueError,
                           GaussianGamma,
                           np.ones((4,3)),
-                          np.identity(3), 
+                          np.identity(3),
                           2,
                           10,
                           plates=(5,))
@@ -993,9 +993,9 @@ class TestGaussianGamma(TestCase):
         X_alpha = GaussianGamma(mu_tau, np.identity(3), 5, 5)
         self.assertEqual(X_alpha.plates, ())
         self.assertEqual(X_alpha.dims, ( (3,), (3,3), (), () ))
-        
+
         pass
-        
+
 
     def test_message_to_child(self):
         """
@@ -1014,7 +1014,7 @@ class TestGaussianGamma(TestCase):
         self.assertAllClose(u[0],
                             tau[...,None] * mu)
         self.assertAllClose(u[1],
-                            (linalg.inv(Lambda) 
+                            (linalg.inv(Lambda)
                              + tau[...,None,None] * linalg.outer(mu, mu)))
         self.assertAllClose(u[2],
                             tau)
@@ -1056,8 +1056,8 @@ class TestGaussianGamma(TestCase):
         Cov_mu = mumu - linalg.outer(mu, mu)
         (Lambda, _) = Lambda._message_to_child()
         (b, _) = b._message_to_child()
-        (tau, logtau) = Gamma(a, 
-                              b + 0.5*np.sum(Lambda*Cov_mu, 
+        (tau, logtau) = Gamma(a,
+                              b + 0.5*np.sum(Lambda*Cov_mu,
                                              axis=(-1,-2)))._message_to_child()
         self.assertAllClose(u[0] * np.ones((4,1)),
                             np.ones((4,1)) * tau[...,None] * mu)
@@ -1068,7 +1068,7 @@ class TestGaussianGamma(TestCase):
                             np.ones(4) * tau)
         self.assertAllClose(u[3] * np.ones(4),
                             np.ones(4) * logtau)
-        
+
         pass
 
 
@@ -1164,7 +1164,8 @@ class TestGaussian(TestCase):
 
         self.assert_moments(
             Y,
-            lambda u: [u[0], u[1] + u[1].T]
+            lambda u: [u[0], u[1] + u[1].T],
+            rtol=1e-3,
         )
 
         Y.observe(np.random.randn(D))
@@ -1179,7 +1180,7 @@ class TestGaussian(TestCase):
 
 class TestGaussianGradient(TestCase):
     """Numerically check Riemannian gradient of several nodes.
-    
+
     Using VB-EM update equations will take a unit length step to the
     Riemannian gradient direction.  Thus, the change caused by a VB-EM
     update and the Riemannian gradient should be equal.
@@ -1193,7 +1194,7 @@ class TestGaussianGradient(TestCase):
         #
         # Without observations
         #
-        
+
         # Construct model
         mu = np.random.randn(D)
         Lambda = random.covariance(D)
@@ -1202,7 +1203,7 @@ class TestGaussianGradient(TestCase):
         mu0 = np.random.randn(D)
         Lambda0 = random.covariance(D)
         X.initialize_from_parameters(mu0, Lambda0)
-        # Initial parameters 
+        # Initial parameters
         phi0 = X.phi
         # Gradient
         g = X.get_riemannian_gradient()
@@ -1221,7 +1222,7 @@ class TestGaussianGradient(TestCase):
         #
         # With observations
         #
-        
+
         # Construct model
         mu = np.random.randn(D)
         Lambda = random.covariance(D)
@@ -1233,7 +1234,7 @@ class TestGaussianGradient(TestCase):
         mu0 = np.random.randn(D)
         Lambda0 = random.covariance(D)
         X.initialize_from_parameters(mu0, Lambda0)
-        # Initial parameters 
+        # Initial parameters
         phi0 = X.phi
         # Gradient
         g = X.get_riemannian_gradient()
@@ -1247,7 +1248,7 @@ class TestGaussianGradient(TestCase):
                             phi1[1] - phi0[1])
 
         pass
-        
+
 
     def test_gradient(self):
         """Test standard gradient of a Gaussian node."""
@@ -1258,7 +1259,7 @@ class TestGaussianGradient(TestCase):
         #
         # Without observations
         #
-        
+
         # Construct model
         mu = np.random.randn(D)
         Lambda = random.covariance(D)
@@ -1268,7 +1269,7 @@ class TestGaussianGradient(TestCase):
         Lambda0 = random.covariance(D)
         X.initialize_from_parameters(mu0, Lambda0)
         Q = VB(X)
-        # Initial parameters 
+        # Initial parameters
         phi0 = X.phi
         # Gradient
         rg = X.get_riemannian_gradient()
@@ -1295,7 +1296,7 @@ class TestGaussianGradient(TestCase):
                 l1 = Q.compute_lowerbound(ignore_masked=False)
                 g_num[1][i,j] = (l1 - l0) / (2*eps)
                 g_num[1][j,i] = (l1 - l0) / (2*eps)
-                
+
         # Check
         self.assertAllClose(g[0],
                             g_num[0])
@@ -1305,7 +1306,7 @@ class TestGaussianGradient(TestCase):
         #
         # With observations
         #
-        
+
         # Construct model
         mu = np.random.randn(D)
         Lambda = random.covariance(D)
@@ -1318,7 +1319,7 @@ class TestGaussianGradient(TestCase):
         Y = Gaussian(X, V)
         Y.observe(np.random.randn(D))
         Q = VB(Y, X)
-        # Initial parameters 
+        # Initial parameters
         phi0 = X.phi
         # Gradient
         rg = X.get_riemannian_gradient()
@@ -1345,7 +1346,7 @@ class TestGaussianGradient(TestCase):
                 l1 = Q.compute_lowerbound()
                 g_num[1][i,j] = (l1 - l0) / (2*eps)
                 g_num[1][j,i] = (l1 - l0) / (2*eps)
-                
+
         # Check
         self.assertAllClose(g[0],
                             g_num[0])
@@ -1370,7 +1371,7 @@ class TestGaussianGradient(TestCase):
         mu0 = np.random.randn(*(X.get_shape(0)))
         Lambda0 = random.covariance(D, size=X.plates)
         X.initialize_from_parameters(mu0, Lambda0)
-        # Initial parameters 
+        # Initial parameters
         phi0 = X.phi
         # Gradient
         rg = X.get_riemannian_gradient()
@@ -1398,7 +1399,7 @@ class TestGaussianGradient(TestCase):
                     l1 = Q.compute_lowerbound()
                     g_num[1][k,i,j] = (l1 - l0) / (2*eps)
                     g_num[1][k,j,i] = (l1 - l0) / (2*eps)
-                
+
         # Check
         self.assertAllClose(g[0],
                             g_num[0])

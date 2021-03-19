@@ -38,7 +38,7 @@ class Take(Deterministic):
     >>> alpha = Gamma([1, 2, 3], [1, 1, 1])
     >>> x = Take(alpha, [1, 1, 2, 2, 1, 0])
     >>> x.get_moments()[0]
-    array([ 2.,  2.,  3.,  3.,  2.,  1.])
+    array([2., 2., 3., 3., 2., 1.])
     """
 
 

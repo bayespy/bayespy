@@ -28,11 +28,11 @@ class Add(Deterministic):
     >>> Z = nodes.Add(X, Y)
     >>> print("Mean:\n", Z.get_moments()[0])
     Mean:
-     [[ 1.  1.]]
+     [[1. 1.]]
     >>> print("Second moment:\n", Z.get_moments()[1])
     Second moment:
-     [[[ 3.  1.]
-      [ 1.  3.]]]
+     [[[3. 1.]
+      [1. 3.]]]
 
     Notes
     -----
@@ -109,7 +109,7 @@ class Add(Deterministic):
                 xi_xj = linalg.outer(u_parents[i][0], u_parents[j][0], ndim=self.ndim)
                 xj_xi = linalg.transpose(xi_xj, ndim=self.ndim)
                 u1 = u1 + xi_xj + xj_xi
-                                                                     
+
         return [u0, u1]
 
 
@@ -133,7 +133,7 @@ class Add(Deterministic):
         Thus, the message for :math:`i`-th parent is
 
         .. math::
-        
+
            \phi_{x_i}^{(1)} = \mathbf{m}_1 + 2 \mathbf{M}_2 \sum_{j\neq i} \mathbf{x}_j
            \\
            \phi_{x_i}^{(2)} = \mathbf{M}_2
@@ -150,5 +150,5 @@ class Add(Deterministic):
                   ndim=self.ndim))
 
         m1 = m[1]
-            
+
         return [m0, m1]
