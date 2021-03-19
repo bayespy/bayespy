@@ -5,7 +5,7 @@ Fixed
 .....
 
 * Fix #122: Add support for arrays of number of trials in a mixture of
-  multinomials.
+  multinomials and binomials.
 
 
 Version 0.5.21 (2021-03-04)

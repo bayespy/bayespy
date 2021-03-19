@@ -63,7 +63,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
     Class for the VMP formulas of binomial variables.
     """
 
-    
+
     def __init__(self, N):
         N = np.asanyarray(N)
         if not misc.isinteger(N):
@@ -87,7 +87,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         else:
             raise ValueError("Incorrect parent index")
 
-    
+
     def compute_phi_from_parents(self, u_p, mask=True):
         """
         Compute the natural parameter vector given parent moments.
@@ -97,7 +97,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         phi0 = logp0 - logp1
         return [phi0]
 
-    
+
     def compute_moments_and_cgf(self, phi, mask=True):
         """
         Compute the moments and :math:`g(\phi)`.
@@ -106,7 +106,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         g = -self.N * np.log1p(np.exp(phi[0]))
         return ( [u0], g )
 
-        
+
     def compute_cgf_from_parents(self, u_p):
         """
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
@@ -115,7 +115,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         logp1 = u_p[0][...,1]
         return self.N * logp1
 
-    
+
     def compute_fixed_moments_and_f(self, x, mask=True):
         """
         Compute the moments and :math:`f(x)` for a fixed value.
@@ -133,7 +133,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
              special.gammaln(self.N-x+1))
         return (u, f)
 
-    
+
     def random(self, *phi, plates=None):
         """
         Draw a random sample from the distribution.
@@ -141,7 +141,25 @@ class BinomialDistribution(ExponentialFamilyDistribution):
         p = random.logodds_to_probability(phi[0])
         return np.random.binomial(self.N, p, size=plates)
 
-    
+    def squeeze(self, axis):
+        try:
+            N_squeezed = np.squeeze(self.N, axis)
+        except ValueError as err:
+            raise ValueError(
+                "The number of trials must be constant over a squeezed axis, "
+                "so the corresponding array axis must be singleton. "
+                "Cannot squeeze axis {0} from a binomial distribution "
+                "because the number of trials arrays has shape {2}, so "
+                "the given axis has length {1} != 1. ".format(
+                    axis,
+                    np.shape(self.N)[axis],
+                    np.shape(self.N),
+                )
+            ) from err
+        else:
+            return BinomialDistribution(N_squeezed)
+
+
 class Binomial(ExponentialFamily):
     r"""
     Node for binomial random variables.
@@ -157,11 +175,11 @@ class Binomial(ExponentialFamily):
     ----------
 
     n : scalar or array
-    
+
         Number of trials
-        
+
     p : beta-like node or scalar or array
-    
+
         Probability of a success in a trial
 
     Examples
@@ -213,7 +231,7 @@ class Binomial(ExponentialFamily):
                  moments,
                  parent_moments)
 
-    
+
     def __str__(self):
         """
         Print the distribution using standard parameterization.
