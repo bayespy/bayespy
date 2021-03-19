@@ -51,27 +51,9 @@ install:
   - pip install -e .[dev,doc]
   - pip freeze
 
-
-# Select a proper matplotlib backend
-before_script:
-  - mkdir -p ~/.config/matplotlib
-  - "echo backend : Agg > ~/.config/matplotlib/matplotlibrc"
-
 # Run unit tests for the code, docstrings and documentation
 script:
   - travis_wait 30 python -m nose -c setup.cfg
-  - cd doc
-  - travis_wait 50 make doctest
-  - cd ..
-
-# Run doctests only for recent enough NumPy.
-# - python -c "import sys; import numpy; from distutils.version import StrictVersion; sys.exit(StrictVersion(numpy.__version__) < StrictVersion('1.11'))"
-# - if [ $? -eq 0]; then travis_wait 50 make doctest; fi
-
-# if tests fail, upload images to imgur
-after_failure:
-  - wget http://imgur.com/tools/imgurbash.sh
-  - for img in result_images/test_plot/*.png; do echo -e "\n$img"; bash imgurbash.sh $img; done
 
 # check coverage
 after_script:
