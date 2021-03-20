@@ -50,6 +50,8 @@ extensions = [
     'nbsphinx',
     ]
 
+bibtex_bibfiles = ["references.bib"]
+
 # Image format for math
 imgmath_image_format = 'svg'
 

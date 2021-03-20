@@ -26,7 +26,7 @@ class TestMultinomial(TestCase):
     Unit tests for Multinomial node
     """
 
-    
+
     def test_init(self):
         """
         Test the creation of multinomial nodes.
@@ -50,7 +50,7 @@ class TestMultinomial(TestCase):
         X = Multinomial(n, Dirichlet([2,1,9], plates=(3,4)))
         self.assertEqual(X.plates,
                          (3,4))
-        
+
 
         # Probabilities not a vector
         self.assertRaises(ValueError,
@@ -94,7 +94,7 @@ class TestMultinomial(TestCase):
 
         pass
 
-    
+
     def test_moments(self):
         """
         Test the moments of multinomial nodes.
@@ -120,7 +120,7 @@ class TestMultinomial(TestCase):
         u = X._message_to_child()
         self.assertAllClose(u[0],
                             p*n)
-        
+
         # Test plates in n
         n = np.random.randint(1, 10, size=(3,))
         p = np.random.dirichlet([1,1,1,1])
@@ -167,10 +167,10 @@ class TestMultinomial(TestCase):
         X = Multinomial(10, [0.3, 0.5, 0.2])
         l = X.lower_bound_contribution()
         self.assertAllClose(l, 0.0)
-        
+
         pass
 
-    
+
     def test_mixture(self):
         """
         Test multinomial mixture
@@ -186,3 +186,72 @@ class TestMultinomial(TestCase):
 
         pass
 
+    def test_mixture_with_count_array(self):
+        """
+        Test multinomial mixture
+        """
+
+        p0 = [0.1, 0.5, 0.2, 0.2]
+        p1 = [0.5, 0.1, 0.1, 0.3]
+        p2 = [0.3, 0.2, 0.1, 0.4]
+        counts = [[10], [5], [3]]
+        X = Mixture(2, Multinomial, counts, [p0, p1, p2])
+        u = X._message_to_child()
+        self.assertAllClose(
+            u[0],
+            np.array(counts)*np.array(p2)
+        )
+
+        # Multi-mixture and count array
+        # Shape(p) = (2, 1, 3) + (4,)
+        p = [
+            [[
+                [0.1, 0.5, 0.2, 0.2],
+                [0.5, 0.1, 0.1, 0.3],
+                [0.3, 0.2, 0.1, 0.4],
+            ]],
+            [[
+                [0.3, 0.2, 0.1, 0.4],
+                [0.5, 0.1, 0.2, 0.2],
+                [0.4, 0.1, 0.2, 0.3],
+            ]],
+        ]
+        # Shape(Z1) = (1, 3) + (2,) -> () + (2,)
+        Z1 = 1
+        # Shape(Z2) = (1,) + (3,) -> () + (3,)
+        Z2 = 2
+        # Shape(counts) = (5, 1)
+        counts = [[10], [5], [3], [2], [4]]
+        # Shape(X) = (5,) + (4,)
+        X = Mixture(
+            Z1,
+            Mixture,
+            Z2,
+            Multinomial,
+            counts,
+            p,
+            # NOTE: We mix over axes -3 and -1. But as we first mix over the
+            # default (-1), then the next mixing happens over -2 (because one
+            # axis was already dropped).
+            cluster_plate=-2,
+        )
+        self.assertAllClose(
+            X._message_to_child()[0],
+            np.array(counts)[:,0,None] * np.array(p)[Z1,:,Z2]
+        )
+
+        # Can't have non-singleton axis in counts over the mixed axis
+        p0 = [0.1, 0.5, 0.2, 0.2]
+        p1 = [0.5, 0.1, 0.1, 0.3]
+        p2 = [0.3, 0.2, 0.1, 0.4]
+        counts = [10, 5, 3]
+        self.assertRaises(
+            ValueError,
+            Mixture,
+            2,
+            Multinomial,
+            counts,
+            [p0, p1, p2],
+        )
+
+        return

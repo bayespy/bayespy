@@ -43,10 +43,28 @@ class CategoricalMarkovChainMoments(Moments):
         """
         Compute the moments for a fixed value
         """
-        raise NotImplementedError("compute_fixed_moments not implemented for "
-                                  "%s" 
-                                  % (self.__class__.__name__))
 
+        # Check that x is valid
+        x = np.asanyarray(x)
+        if not misc.isinteger(x):
+            raise ValueError("Values must be integers")
+        if np.any(x < 0) or np.any(x >= self.categories):
+            raise ValueError("Invalid category index")
+
+        plates = np.shape(x)[:-1]
+
+        u0_size = np.prod(plates)
+        u0 = np.zeros((u0_size, self.categories))
+        u0[(np.arange(u0_size), np.ravel(x[...,0]))] = 1.0
+
+        us_size = u0_size * (self.length - 1)
+        us = np.zeros((us_size, self.categories, self.categories))
+        us[(np.arange(us_size), np.ravel(x[...,:-1]), np.ravel(x[...,1:]))] = 1.0
+
+        return [
+            np.reshape(u0, plates + (self.categories,)),
+            np.reshape(us, plates + (self.length-1, self.categories, self.categories)),
+        ]
 
     @classmethod
     def from_values(cls, x, categories):
@@ -61,7 +79,7 @@ class CategoricalMarkovChainMoments(Moments):
 class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
     """
     Class for the VMP formulas of categorical Markov chain variables.
-    """    
+    """
 
 
     def __init__(self, categories, states):
@@ -121,7 +139,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         return 0
-        
+
     def compute_fixed_moments_and_f(self, x, mask=True):
         """
         Compute the moments and :math:`f(x)` for a fixed value.
@@ -141,11 +159,11 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
             return plates + (self.N-1, self.K)
         else:
             raise ValueError("Parent index out of bounds")
-        
+
     def plates_from_parent(self, index, plates):
         """
         Resolve the plate mapping from a parent.
-        
+
         Given the plates of a parent's moments, this method returns the plates
         that the moments has for this distribution.
         """
@@ -156,13 +174,13 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         else:
             raise ValueError("Parent index out of bounds")
 
-        
+
     def random(self, *phi, plates=None):
         """
         Draw a random sample from the distribution.
         """
         # Convert natural parameters to transition probabilities
-        p0 = np.exp(phi[0] - misc.logsumexp(phi[0], 
+        p0 = np.exp(phi[0] - misc.logsumexp(phi[0],
                                             axis=-1,
                                             keepdims=True))
         P = np.exp(phi[1] - misc.logsumexp(phi[1],
@@ -191,14 +209,14 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
             # Draw next state
             z = random.categorical(P[ind])
             Z[...,n+1] = z
-            
+
         return Z
 
-    
+
 class CategoricalMarkovChain(ExponentialFamily):
     r"""
     Node for categorical Markov chain random variables.
-    
+
     The node models a Markov chain which has a discrete set of K possible states
     and the next state depends only on the previous state and the state
     transition probabilities.  The graphical model is shown below:
@@ -206,7 +224,7 @@ class CategoricalMarkovChain(ExponentialFamily):
     .. bayesnet::
 
        \tikzstyle{latent} += [minimum size=30pt];
-       
+
        \node[latent] (x0) {$x_0$};
        \node[latent, right=of x0] (x1) {$x_1$};
        \node[right=of x1] (dots) {$\cdots$};
@@ -229,7 +247,7 @@ class CategoricalMarkovChain(ExponentialFamily):
         p(x_0, \ldots, x_{N-1}) &= p(x_0) \prod^{N-1}_{n=1} p(x_n|x_{n-1}),
 
     where
-    
+
     .. math::
 
         p(x_0=k) &= \pi_k, \quad \text{for } k \in \{0,\ldots,K-1\},
@@ -244,25 +262,25 @@ class CategoricalMarkovChain(ExponentialFamily):
 
     Parameters
     ----------
-    
+
     pi : Dirichlet-like node or (...,K)-array
-    
+
         :math:`\boldsymbol{\pi}`, probabilities for the first
         state. :math:`K`-dimensional Dirichlet.
-        
+
     A : Dirichlet-like node or (K,K)-array or (...,1,K,K)-array or (...,N-1,K,K)-array
-    
+
         :math:`\mathbf{A}`, probabilities for state
         transitions. :math:`K`-dimensional Dirichlet with plates (K,) or
         (...,1,K) or (...,N-1,K).
-        
+
     states : int, optional
-    
+
         :math:`N`, the length of the chain.
 
     See also
     --------
-    
+
     Categorical, Dirichlet, GaussianMarkovChain, Mixture,
     SwitchingGaussianMarkovChain
     """
@@ -406,7 +424,7 @@ class CategoricalMarkovChainToCategorical(Deterministic):
             return self.plates[:-1]
         else:
             raise ValueError("Parent index out of bounds")
-    
+
     def _plates_from_parent(self, index):
         if index == 0:
             N = self.parents[0].dims[1][0]

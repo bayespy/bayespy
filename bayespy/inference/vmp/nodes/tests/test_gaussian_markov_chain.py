@@ -40,7 +40,7 @@ def kalman_filter(y, U, A, V, mu0, Cov0, out=None):
         observations multiplied by the precision matrix U (and possibly
         other transformation matrices).
     U : (N,D,D) array or N-list of (D,D) arrays
-        Precision matrix (i.e., inverse covariance matrix) of the observation 
+        Precision matrix (i.e., inverse covariance matrix) of the observation
         noise for each time instance.
     A : (N-1,D,D) array or (N-1)-list of (D,D) arrays
         Dynamic matrix for each time instance.
@@ -108,7 +108,7 @@ def rts_smoother(mu, Cov, A, V, removethis=None):
     mu : (N,D) array
         Mean of the states from Kalman filter.
     Cov : (N,D,D) array
-        Covariance of the states from Kalman filter. 
+        Covariance of the states from Kalman filter.
     A : (N-1,D,D) array or (N-1)-list of (D,D) arrays
         Dynamic matrix for each time instance.
     V : (N-1,D,D) array or (N-1)-list of (D,D) arrays
@@ -178,7 +178,7 @@ class TestGaussianMarkovChain(TestCase):
         Y = Gaussian(X, np.identity(D))
 
         return (Y, X, Mu, Lambda, A, V)
-        
+
 
     def test_plates(self):
         """
@@ -217,7 +217,9 @@ class TestGaussianMarkovChain(TestCase):
                 u[0],
                 u[1] + linalg.transpose(u[1], ndim=1),
                 u[2]
-            ]
+            ],
+            rtol=1e-3,
+            atol=1e-6,
         )
 
         Y.observe(np.random.randn(N+1, D))
@@ -371,7 +373,7 @@ class TestGaussianMarkovChain(TestCase):
         # Prior mean
         mu_prior = np.zeros(D*N)
         mu_prior[:D] = np.dot(icov0,mu0)
-        # Data 
+        # Data
         Cov = np.linalg.inv(U + np.identity(D*N))
         mu = np.dot(Cov, mu_prior + y.flatten())
         # Moments
@@ -397,23 +399,23 @@ class TestGaussianMarkovChain(TestCase):
         xx = np.reshape(xx, (N*D, N*D))
         mu = np.reshape(mu, (N*D,))
         ldet = -logdet0 - np.sum(np.ones((N-1,D))*logdetx)
-        P = random.gaussian_logpdf(np.einsum('...ij,...ij', 
-                                                   xx, 
+        P = random.gaussian_logpdf(np.einsum('...ij,...ij',
+                                                   xx,
                                                    U),
-                                         np.einsum('...i,...i', 
-                                                   mu, 
+                                         np.einsum('...i,...i',
+                                                   mu,
                                                    mu_prior),
-                                         np.einsum('...ij,...ij', 
+                                         np.einsum('...ij,...ij',
                                                    mumu0,
                                                    icov0),
                                          -ldet,
                                          N*D)
-                                                   
+
         # The VB bound from the net
         l = X.lower_bound_contribution()
 
         self.assertAllClose(l, H+P)
-                                                   
+
 
         # Compute the true bound <log p(X|...)> + H(X)
 
@@ -527,7 +529,7 @@ class TestGaussianMarkovChain(TestCase):
         #
         # Test Lambda
         #
-            
+
         # Simple
         check(4,3,
               Lambda=Wishart(10+np.random.rand(),
@@ -619,7 +621,7 @@ class TestGaussianMarkovChain(TestCase):
         #
         # Test v
         #
-        
+
         # Simple
         check(4,3,
               V=Gamma(np.random.rand(1,3),
@@ -688,8 +690,8 @@ class TestGaussianMarkovChain(TestCase):
                             Cov[(0,1),(1,2),None,None])
 
         pass
-        
-        
+
+
 
     def test_smoothing(self):
         """
@@ -723,7 +725,7 @@ class TestGaussianMarkovChain(TestCase):
         #
         # Simulate data
         #
-        
+
         X = np.empty((N,D))
         Y = np.empty((N,D))
 
@@ -742,7 +744,7 @@ class TestGaussianMarkovChain(TestCase):
         # Construct VB model
         Xh = GaussianMarkovChain(np.zeros(D), np.identity(D), A, 1/v, n=N)
         Yh = Gaussian(Xh, np.identity(D), plates=(N,))
-        # Put data 
+        # Put data
         Yh.observe(Y)
         # Run inference
         Xh.update()
@@ -764,7 +766,7 @@ class TestGaussianMarkovChain(TestCase):
         #
         self.assertTrue(np.allclose(Xh_vb, Xh))
         self.assertTrue(np.allclose(CovXh_vb, CovXh))
-        
+
 
 class TestVaryingGaussianMarkovChain(TestCase):
 
@@ -778,7 +780,7 @@ class TestVaryingGaussianMarkovChain(TestCase):
                   plates_B=(),
                   plates_S=(),
                   plates_v=()):
-            
+
             D = 3
             K = 2
             N = 4
@@ -955,7 +957,7 @@ class TestVaryingGaussianMarkovChain(TestCase):
         #
         # Test Lambda
         #
-            
+
         # Simple
         check(4,3,2,
               Lambda=Wishart(10+np.random.rand(),
@@ -1030,7 +1032,7 @@ class TestVaryingGaussianMarkovChain(TestCase):
         #
         # Test S
         #
-            
+
         # Simple
         check(4,3,2,
               S=GaussianARD(np.random.randn(4-1,2),
@@ -1071,7 +1073,7 @@ class TestVaryingGaussianMarkovChain(TestCase):
         #
         # Test v
         #
-        
+
         # Simple
         check(4,3,2,
               V=Gamma(np.random.rand(1,3),
@@ -1119,7 +1121,7 @@ class TestVaryingGaussianMarkovChain(TestCase):
                             np.random.rand(4-1,2),
                             shape=(2,),
                             plates=(4-1,)))
-                            
+
         pass
 
     def test_message_to_mu(self):
@@ -1141,5 +1143,3 @@ class TestVaryingGaussianMarkovChain(TestCase):
     def test_message_to_v(self):
         # TODO
         pass
-
-

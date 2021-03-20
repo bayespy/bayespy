@@ -1,3 +1,41 @@
+Dev
++++
+
+Added
+.....
+
+* Support ``initialize_from_random`` and ``initialize_from_value`` for
+  ``CategoricalMarkovChain``.
+
+
+Version 0.5.22 (2021-03-19)
++++++++++++++++++++++++++++
+
+Fixed
+.....
+
+* Fix #122: Add support for arrays of number of trials in a mixture of
+  multinomials and binomials.
+
+
+Version 0.5.21 (2021-03-04)
++++++++++++++++++++++++++++
+
+Fixed
+.....
+
+* Use ``time.time`` instead of the deprecated ``time.clock``.
+
+
+Version 0.5.20 (2020-10-06)
++++++++++++++++++++++++++++
+
+Fixed
+.....
+
+* Fix sequence indexing in Categorical moments.
+
+
 Version 0.5.19 (2019-12-11)
 +++++++++++++++++++++++++++
 

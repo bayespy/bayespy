@@ -70,7 +70,16 @@ class Distribution():
         """
         raise NotImplementedError()
 
-        
+    def squeeze(self, axis):
+        """Squeeze a plate axis from the distribution
+
+        The default implementation does no changes to the distribution.
+        Override if needed.
+
+        """
+        return self
+
+
 class Stochastic(Node):
     """
     Base class for nodes that are stochastic.
@@ -84,7 +93,7 @@ class Stochastic(Node):
        lowerbound(self)
        _compute_dims
        initialize_from_prior()
-    
+
 
     If you want to be able to observe the variable:
        _compute_fixed_moments_and_f
@@ -94,7 +103,7 @@ class Stochastic(Node):
        _compute_weights_to_parent(index, weights)
        _compute_plates_to_parent(self, index, plates)
        _compute_plates_from_parent(self, index, plates)
-    
+
     """
 
     # Sub-classes must over-write this
@@ -148,7 +157,7 @@ class Stochastic(Node):
         """
         return [self._id]
 
-    
+
     def _compute_plates_to_parent(self, index, plates):
         return self._distribution.plates_to_parent(index, plates)
 
@@ -162,15 +171,15 @@ class Stochastic(Node):
 
     def get_moments(self):
         # Just for safety, do not return a reference to the moment list of this
-        # node but instead create a copy of the list. 
+        # node but instead create a copy of the list.
         return [ui for ui in self.u]
 
     def _get_message_and_mask_to_parent(self, index, u_parent=None):
         u_parents = self._message_from_parents(exclude=index)
         u_parents[index] = u_parent
-        m = self._distribution.compute_message_to_parent(self.parents[index], 
-                                                         index, 
-                                                         self.u, 
+        m = self._distribution.compute_message_to_parent(self.parents[index],
+                                                         index,
+                                                         self.u,
                                                          *u_parents)
         mask = self._distribution.compute_weights_to_parent(index, self.mask) != 0
         return (m, mask)
@@ -229,11 +238,11 @@ class Stochastic(Node):
 
             # TODO/FIXME/BUG: The mask of observations is not used, observations
             # may be overwritten!!! ???
-            
+
             # Hah, this function is used to set the observations! The caller
             # should be careful what mask he uses! If you want to set only
             # latent variables, then use such a mask.
-            
+
             # Use mask to update only unobserved plates and keep the
             # observed as before
             np.copyto(self.u[ind],
@@ -258,7 +267,7 @@ class Stochastic(Node):
                     "plates properly."
                     % (self.name,
                        ind,
-                       np.shape(self.u[ind]), 
+                       np.shape(self.u[ind]),
                        shape,
                        self.plates,
                        self.dims[ind]))
@@ -361,7 +370,7 @@ class Stochastic(Node):
 
     def __str__(self):
         """
-        
+
         """
         raise NotImplementedError("String representation not yet implemented for "
                                   "node class %s" % (self.__class__.__name__))

@@ -234,7 +234,7 @@ def Choose(z, *nodes):
        >>> x2 = bp.nodes.GaussianARD(20, 1)
        >>> x = bp.nodes.Choose(z, x0, x1, x2)
        >>> print(x.get_moments()[0])
-       [  0.   0.  20.  10.]
+       [ 0.  0. 20. 10.]
 
     This is basically just a thin wrapper over applying Gate node over the
     concatenation of the nodes.
