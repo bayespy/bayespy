@@ -35,22 +35,12 @@ if __name__ == "__main__":
         raise RuntimeError("BayesPy requires Python 3. You are running Python "
                            "{0}.".format(python_version))
 
-    # This is annoying: Because readthedocs.org doesn't support depending on
-    # h5py, we need to remove that dependency if we are on the readthedocs
-    # servers..
-    ON_RTD = os.environ.get('READTHEDOCS') == 'True'
-    if ON_RTD:
-        # Workaround for https://github.com/rtfd/readthedocs.org/issues/2149
-        install_requires = [
-            'sphinx>=1.4.0'
-        ]
-    else:
-        install_requires = [
-            'numpy>=1.10.0', # 1.10 implements broadcast_to
-                             # 1.8 implements broadcasting in numpy.linalg
-            'scipy>=0.13.0', # <0.13 have a bug in special.multigammaln
-            'h5py',
-        ]
+    install_requires = [
+        'numpy>=1.10.0', # 1.10 implements broadcast_to
+                            # 1.8 implements broadcasting in numpy.linalg
+        'scipy>=0.13.0', # <0.13 have a bug in special.multigammaln
+        'h5py',
+    ]
 
     # Utility function to read the README file.
     # Used for the long_description.  It's nice, because now 1) we have a top level
@@ -116,4 +106,3 @@ if __name__ == "__main__":
             ]
         },
     )
-
