@@ -39,9 +39,9 @@ class CategoricalMoments(MultinomialMoments):
         if np.any(x < 0) or np.any(x >= self.categories):
             raise ValueError("Invalid category index")
 
-        u0 = np.zeros((np.size(x), self.categories))
+        u0 = np.zeros((np.size(x),) + self.categories)
         u0[(np.arange(np.size(x)), np.ravel(x))] = 1
-        u0 = np.reshape(u0, np.shape(x) + (self.categories,))
+        u0 = np.reshape(u0, np.shape(x) + self.categories)
 
         return [u0]
 

@@ -20,7 +20,7 @@ from bayespy.inference import VB
 
 from ..categorical_graph import onehot
 
-from bayespy.utils import random
+from bayespy.utils import random as bp_random
 from bayespy.utils import misc
 
 from bayespy.utils.misc import TestCase
@@ -992,24 +992,54 @@ class TestCategorical(TestCase):
 
     def test_lower_bound_contribution(self):
 
-        # X = CategoricalGraph(
-        #     {
-        #         "x": {
-        #             "table": [0.3, 0.6, 0.1],
-        #         },
-        #         "y": {
-        #             "given": ["x"],
-        #             "table": [ [0.9, 0.1], [0.5, 0.5], [0.1, 0.9] ],
-        #         },
-        #     },
-        # )
+        cpt_x = [0.3, 0.6, 0.1]
+        cpt_y = [ [0.9, 0.1], [0.5, 0.5], [0.1, 0.9] ]
+        X = CategoricalGraph(
+            {
+                "x": {
+                    "table": cpt_x,
+                },
+                "y": {
+                    "given": ["x"],
+                    "table": cpt_y,
+                },
+            },
+        )
 
-        # X.update()
+        Y = Mixture(X["y"], GaussianARD, [-1, 1], 1)
 
-        # np.testing.assert_allclose(
-        #     X.lower_bound_contribution(),
-        #     0.0,
-        # )
+        X.update()
+        Y.update()
+
+        # Without observations, there's no likelihood term
+        np.testing.assert_allclose(
+            X.lower_bound_contribution(),
+            0.0,
+        )
+
+        # Test with observation node below the graph
+        Y.observe(-2)
+        X.update()
+
+        np.testing.assert_allclose(
+            Y.lower_bound_contribution() + X.lower_bound_contribution(),
+            np.log(np.einsum(
+                "x,xy,y->",
+                # P(x)
+                cpt_x,
+                # P(y|x)
+                cpt_y,
+                # P(obs|y)
+                np.exp([
+                    bp_random.gaussian_logpdf(
+                        (-2)**2, (-2)*(-1), (-1)**2, 0, 1
+                    ),
+                    bp_random.gaussian_logpdf(
+                        (-2)**2, (-2)*1, 1**2, 0, 1
+                    ),
+                ])
+            ))
+        )
 
         return
 

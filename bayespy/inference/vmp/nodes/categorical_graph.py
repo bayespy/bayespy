@@ -246,6 +246,11 @@ class CategoricalGraph(Node):
             factor.name: np.full(shape, np.nan)
             for (shape, factor) in zip(self._factor_shapes, self._factors)
         }
+        self.phi = {
+            factor.name: np.full(shape, np.nan)
+            for (shape, factor) in zip(self._factor_shapes, self._factors)
+        }
+        self.g = np.nan
 
         self._parent_moments = []
 
@@ -264,23 +269,24 @@ class CategoricalGraph(Node):
 
 
     def lower_bound_contribution(self):
-        logp = [factor.logpotential() for factor in self._factors]
-        # FIXME: Probably not correct.
         return sum(
             (
-                np.inner(
-                    np.ravel(ui),
+                self.mask * np.inner(
+                    # FIXME: Using self.mask like this doesn't work correctly
+                    # with plates. One should add plate axes to the mask.
+                    np.ravel(self.mask * ui),
                     np.ravel(
                         # <log p> (prior term)
                         self._factor_by_name[fname].logpotential()
-                        # -<log q> (entropy term) (also, avoid log(0))
-                        - np.log(np.where(ui == 0, 1.0, ui))
+                        # -<log q> (entropy term)
+                        - self.phi[fname]
                     )
 
                 )
                 for (fname, ui) in self.u.items()
             )
-        )
+            # FIXME: Plate handling should be fixed here too..
+        ) - self.mask * self.g
 
 
     def get_moments(self):
@@ -399,31 +405,58 @@ class CategoricalGraph(Node):
             return np.exp(x - np.amax(x, axis=axs, keepdims=True))
 
         # Get the numerical probability tables from the Dirichlet nodes
-        #
+        logpotentials = [
+            np.broadcast_to(
+                factor.logpotential() + child_m,
+                shape
+            )
+            for (shape, factor, child_m) in zip(
+                    self._factor_shapes,
+                    self._factors,
+                    child_msg,
+            )
+        ]
+
+        self.phi = {
+            factor.name: lp
+            for (factor, lp) in zip(self._factors, logpotentials)
+        }
+
         # FIXME: Convert <log p> to exp( <log p> ). Perhaps junctiontree
         # package could support logarithms of the probabilities? Also, note
         # that these don't sum to one, they are non-normalized probabilities.
+        # But at least do some numerical normalization to help a bit avoiding
+        # underflow in the junction tree algorithm. It would be better to do
+        # such normalization in the junction tree algorithm though.
+        maxs = [
+            np.amax(lp)
+            for lp in logpotentials
+        ]
         potentials = [
-            exp(
-                np.broadcast_to(
-                    factor.logpotential() + child_m,
-                    shape
-                )
-            )
-            for (shape, factor, child_m) in zip(self._factor_shapes, self._factors, child_msg)
+            np.exp(lp - np.amax(lp))
+            for (lp, m) in zip(logpotentials, maxs)
         ]
 
         xs = self._slice_potentials(potentials)
-        # Convert to lists..
-        u = self._junctiontree.propagate(list(xs))
+        u = self._unslice_potentials(
+            # Convert to lists..
+            self._junctiontree.propagate(list(xs))
+        )
+
+        # Note that the normalization is (in principle) the same for all
+        # factors, so it doesn't matter which factor we use here.
+        self.g = -np.log(np.sum(u[0])) - np.sum(maxs)
 
         def _normalize(p):
             norm_axes = tuple(range(len(self.plates), np.ndim(p)))
             return p / np.sum(p, keepdims=True, axis=norm_axes)
 
         self.u = {
+            # Note that the normalization is in principle the same for all
+            # factors, but let's normalize them all independently for numerical
+            # reasons.
             factor.name: _normalize(ui)
-            for (factor, ui) in zip(self._factors, self._unslice_potentials(u))
+            for (factor, ui) in zip(self._factors, u)
         }
 
         return
