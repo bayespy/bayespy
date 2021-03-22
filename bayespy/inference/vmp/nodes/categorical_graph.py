@@ -252,6 +252,12 @@ class CategoricalGraph(Node):
         }
         self.g = np.nan
 
+        self.observed = False
+        self._observed = {
+            factor.name: False
+            for factor in self._factors
+        }
+
         self._parent_moments = []
 
         super().__init__(plates=plates, **kwargs)
@@ -279,7 +285,7 @@ class CategoricalGraph(Node):
                         # <log p> (prior term)
                         self._factor_by_name[fname].logpotential()
                         # -<log q> (entropy term)
-                        - self.phi[fname]
+                        - (not self._observed[fname]) * self.phi[fname]
                     )
 
                 )
@@ -327,7 +333,8 @@ class CategoricalGraph(Node):
                     msg[ind] += value[(Ellipsis,) + newaxes + (slice(None),)]
         return msg
 
-
+    def _set_mask(self, mask):
+        self.mask = np.logical_or(mask, self.observed)
 
     def observe(self, y):
         """Give dictionary like {"rain": 1, "sunny": 0}.
@@ -380,6 +387,18 @@ class CategoricalGraph(Node):
         self.u = {
             factor.name: np.nan for factor in self._factors
         }
+        self.phi = {
+            factor.name: np.nan for factor in self._factors
+        }
+        self.g = np.nan
+
+        observed_keys = y.keys()
+        self._observed = {
+            factor.name: factor.name in observed_keys
+            for factor in self._factors
+        }
+
+        self._update_mask()
 
         return
 
@@ -422,6 +441,8 @@ class CategoricalGraph(Node):
             for (factor, lp) in zip(self._factors, logpotentials)
         }
 
+        lps_sliced = self._slice_potentials(logpotentials)
+
         # FIXME: Convert <log p> to exp( <log p> ). Perhaps junctiontree
         # package could support logarithms of the probabilities? Also, note
         # that these don't sum to one, they are non-normalized probabilities.
@@ -430,17 +451,16 @@ class CategoricalGraph(Node):
         # such normalization in the junction tree algorithm though.
         maxs = [
             np.amax(lp)
-            for lp in logpotentials
+            for lp in lps_sliced
         ]
         potentials = [
             np.exp(lp - np.amax(lp))
-            for (lp, m) in zip(logpotentials, maxs)
+            for (lp, m) in zip(lps_sliced, maxs)
         ]
 
-        xs = self._slice_potentials(potentials)
+        # Run the junction tree message-passing algorithm
         u = self._unslice_potentials(
-            # Convert to lists..
-            self._junctiontree.propagate(list(xs))
+            self._junctiontree.propagate(potentials)
         )
 
         # Note that the normalization is (in principle) the same for all

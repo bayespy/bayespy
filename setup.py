@@ -41,7 +41,7 @@ if __name__ == "__main__":
         'scipy>=0.13.0', # <0.13 have a bug in special.multigammaln
         'h5py',
         'attrs',
-        'junctiontree>=0.1.2',
+        'junctiontree>=0.2.4',
     ]
 
     # Utility function to read the README file.
