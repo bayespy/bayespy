@@ -8,6 +8,10 @@
 import numpy as np
 from scipy import optimize
 
+
+_epsilon = np.sqrt(np.finfo(float).eps)
+
+
 def minimize(f, x0, maxiter=None, verbose=False):
     """
     Simple wrapper for SciPy's optimize.
@@ -20,7 +24,7 @@ def minimize(f, x0, maxiter=None, verbose=False):
     opt = optimize.minimize(f, x0, jac=True, method='CG', options=options)
     return opt.x
 
-def check_gradient(f, x0, verbose=True, epsilon=optimize.optimize._epsilon, return_abserr=False):
+def check_gradient(f, x0, verbose=True, epsilon=_epsilon, return_abserr=False):
     """
     Simple wrapper for SciPy's gradient checker.
 
