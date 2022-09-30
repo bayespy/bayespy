@@ -1,3 +1,12 @@
+Dev
++++
+
+Fixed
+.....
+
+* Fix versioning in PyPI release tarballs.
+
+
 Version 0.5.23 (2022-09-30)
 +++++++++++++++++++++++++++
 
