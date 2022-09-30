@@ -992,8 +992,72 @@ class TestCategorical(TestCase):
 
     def test_lower_bound_contribution(self):
 
-        cpt_x = [0.3, 0.6, 0.1]
-        cpt_y = [ [0.9, 0.1], [0.5, 0.5], [0.1, 0.9] ]
+        # cpt_x = [0.3, 0.6, 0.1]
+        # cpt_y = [ [0.9, 0.1], [0.5, 0.5], [0.1, 0.9] ]
+        # X = CategoricalGraph(
+        #     {
+        #         "x": {
+        #             "table": cpt_x,
+        #         },
+        #         "y": {
+        #             "given": ["x"],
+        #             "table": cpt_y,
+        #         },
+        #     },
+        # )
+
+        # Y = Mixture(X["y"], GaussianARD, [-1, 1], 1)
+
+        # X.update()
+        # Y.update()
+
+        # # Without observations, there's no likelihood term
+        # np.testing.assert_allclose(
+        #     X.lower_bound_contribution(),
+        #     0.0,
+        # )
+
+        # # Test with observation node below the graph
+        # Y.observe(-2)
+        # X.update()
+
+        # np.testing.assert_allclose(
+        #     Y.lower_bound_contribution() + X.lower_bound_contribution(),
+        #     np.log(np.einsum(
+        #         "x,xy,y->",
+        #         # P(x)
+        #         cpt_x,
+        #         # P(y|x)
+        #         cpt_y,
+        #         # P(obs|y)
+        #         np.exp([
+        #             bp_random.gaussian_logpdf(
+        #                 (-2)**2, (-2)*(-1), (-1)**2, 0, 1
+        #             ),
+        #             bp_random.gaussian_logpdf(
+        #                 (-2)**2, (-2)*1, 1**2, 0, 1
+        #             ),
+        #         ])
+        #     ))
+        # )
+        # return
+
+        # # Test observations in the graph
+        # X = CategoricalGraph(
+        #     {"x": {"table": [0.6, 0.2, 0.1, 0.1]}},
+        # )
+        # X.observe({"x": 1})
+        # X.update()
+        # np.testing.assert_allclose(
+        #     X.lower_bound_contribution(),
+        #     np.log(0.2),
+        # )
+
+        #
+        cpt_x = np.array([0.3, 0.6, 0.1])
+        cpt_y = np.array([ [0.9, 0.1], [0.5, 0.5], [0.1, 0.9] ])
+        cpt_z = np.array([ [0.1, 0.2, 0.3, 0.4], [0.2, 0.3, 0.4, 0.1] ])
+
         X = CategoricalGraph(
             {
                 "x": {
@@ -1003,43 +1067,31 @@ class TestCategorical(TestCase):
                     "given": ["x"],
                     "table": cpt_y,
                 },
+                "z": {
+                    "given": ["y"],
+                    "table": cpt_z,
+                },
             },
         )
-
-        Y = Mixture(X["y"], GaussianARD, [-1, 1], 1)
-
+        X.observe({"y": 1})
         X.update()
-        Y.update()
-
-        # Without observations, there's no likelihood term
         np.testing.assert_allclose(
             X.lower_bound_contribution(),
-            0.0,
-        )
-
-        # Test with observation node below the graph
-        Y.observe(-2)
-        X.update()
-
-        np.testing.assert_allclose(
-            Y.lower_bound_contribution() + X.lower_bound_contribution(),
             np.log(np.einsum(
-                "x,xy,y->",
+                "x,x,z->",
                 # P(x)
                 cpt_x,
                 # P(y|x)
-                cpt_y,
-                # P(obs|y)
-                np.exp([
-                    bp_random.gaussian_logpdf(
-                        (-2)**2, (-2)*(-1), (-1)**2, 0, 1
-                    ),
-                    bp_random.gaussian_logpdf(
-                        (-2)**2, (-2)*1, 1**2, 0, 1
-                    ),
-                ])
+                cpt_y[:,1],
+                # P(z|y)
+                cpt_z[1,:],
             ))
         )
+        # FIX IDEA: For observations, use arrays that have -np.inf for the
+        # values that weren't the observed value.?
+
+        # Test observations in the graph and outside. The variable observed in
+        # the graph is also the parent of the observed other node.
 
         return
 

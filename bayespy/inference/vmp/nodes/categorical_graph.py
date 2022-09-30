@@ -441,6 +441,11 @@ class CategoricalGraph(Node):
             for (factor, lp) in zip(self._factors, logpotentials)
         }
 
+        # In order to calculate the lower bound terms, observed and not
+        # observed variables need to be handled slightly differently. For the
+        # non-observed variables, normalize phi so that they sum to one
+        # similarly as normal "CPTs" do. For the observed variables, don't do this normalization, but instead slice phi
+
         lps_sliced = self._slice_potentials(logpotentials)
 
         # FIXME: Convert <log p> to exp( <log p> ). Perhaps junctiontree
@@ -465,7 +470,40 @@ class CategoricalGraph(Node):
 
         # Note that the normalization is (in principle) the same for all
         # factors, so it doesn't matter which factor we use here.
-        self.g = -np.log(np.sum(u[0])) - np.sum(maxs)
+        #
+        # FIXME: Take observations into account! Perhaps scale observations to
+        # 1 somehow..??
+        #p = self._unslice_potentials(self._slice_potentials(self.phi))
+        lps = self._unslice_potentials(lps_sliced)
+        self.g = -np.log(np.sum(u[0])) - np.sum(maxs) + (
+            sum(
+                # FIXME: Plates shouldn't be summed over.
+                np.log(np.sum(np.exp(lp)))
+                for (lp, factor) in zip(lps_sliced, self._factors)
+                if self._observed[factor.name]
+            )
+            # np.log(sum(
+            #     # FIXME: Plates shouldn't be summed over.
+            #     np.sum(p) * np.exp(m)
+            #     for (p, factor, m) in zip(potentials, self._factors, maxs)
+            #     # np.sum(np.exp(lp))
+            #     # for (lp, factor) in zip(lps_sliced, self._factors)
+            #     if self._observed[factor.name]
+            # ))
+            # np.log(sum(
+            #     # FIXME: Plates shouldn't be summed over.
+            #     np.sum(p) * np.exp(m)
+            #     for (p, factor, m) in zip(potentials, self._factors, maxs)
+            #     # np.sum(np.exp(lp))
+            #     # for (lp, factor) in zip(lps_sliced, self._factors)
+            #     if self._observed[factor.name]
+            # ))
+        )
+
+        #breakpoint()
+
+        # foo = "bar"
+        # breakpoint()
 
         def _normalize(p):
             norm_axes = tuple(range(len(self.plates), np.ndim(p)))
