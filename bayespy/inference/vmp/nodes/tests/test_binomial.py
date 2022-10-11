@@ -43,7 +43,7 @@ class TestBinomial(TestCase):
         X = Binomial(10, 0.7*np.ones((4,3)))
         self.assertEqual(X.plates,
                          (4,3))
-        n = np.ones((4,3), dtype=np.int)
+        n = np.ones((4,3), dtype=np.int64)
         X = Binomial(n, 0.7)
         self.assertEqual(X.plates,
                          (4,3))

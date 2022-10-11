@@ -126,7 +126,7 @@ class TestBandedSolve(misc.TestCase):
         # Random sizes of the blocks
         #D = np.random.randint(5, 10, size=N)
         # Fixed sizes of the blocks
-        D = 5*np.ones(N, dtype=np.int)
+        D = 5*np.ones(N, dtype=np.int64)
 
         # Some helpful variables to create the covariances
         W = [np.random.randn(D[i], 2*D[i])

@@ -43,7 +43,7 @@ class TestMultinomial(TestCase):
         X = Multinomial(10, 0.25*np.ones((2,3,4)))
         self.assertEqual(X.plates,
                          (2,3))
-        n = 10 * np.ones((3,4), dtype=np.int)
+        n = 10 * np.ones((3,4), dtype=np.int64)
         X = Multinomial(n, [0.1, 0.3, 0.6])
         self.assertEqual(X.plates,
                          (3,4))
