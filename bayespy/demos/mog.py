@@ -28,12 +28,12 @@ def gaussianmix_model(N, K, D, covariance='full'):
     z = nodes.Categorical(alpha,
                           plates=(N,),
                           name='z')
-    # K D-dimensional component means
-    X = nodes.GaussianARD(0, 1e-3,
-                          shape=(D,),
-                          plates=(K,),
-                          name='X')
     if covariance.lower() == 'full':
+        # K D-dimensional component means
+        X = nodes.GaussianARD(0, 1e-3,
+                            shape=(D,),
+                            plates=(K,),
+                            name='X')
         # K D-dimensional component covariances
         Lambda = nodes.Wishart(D, 0.01*np.identity(D),
                                plates=(K,),
@@ -41,15 +41,23 @@ def gaussianmix_model(N, K, D, covariance='full'):
         # N D-dimensional observation vectors
         Y = nodes.Mixture(z, nodes.Gaussian, X, Lambda, plates=(N,), name='Y')
     elif covariance.lower() == 'diagonal':
+        # K D-dimensional component means
+        X = nodes.GaussianARD(0, 1e-3,
+                            plates=(D,K,),
+                            name='X')
         # Inverse variances
-        Lambda = nodes.Gamma(1e-3, 1e-3, plates=(K, D), name='Lambda')
+        Lambda = nodes.Gamma(1e-3, 1e-3, plates=(D,K), name='Lambda')
         # N D-dimensional observation vectors
-        Y = nodes.Mixture(z, nodes.GaussianARD, X, Lambda, plates=(N,), name='Y')
+        Y = nodes.Mixture(z[...,None], nodes.GaussianARD, X, Lambda, plates=(N,D), name='Y')
     elif covariance.lower() == 'isotropic':
+        # K D-dimensional component means
+        X = nodes.GaussianARD(0, 1e-3,
+                            plates=(D,K,),
+                            name='X')
         # Inverse variances
-        Lambda = nodes.Gamma(1e-3, 1e-3, plates=(K, 1), name='Lambda')
+        Lambda = nodes.Gamma(1e-3, 1e-3, plates=(D,K), name='Lambda')
         # N D-dimensional observation vectors
-        Y = nodes.Mixture(z, nodes.GaussianARD, X, Lambda, plates=(N,), name='Y')
+        Y = nodes.Mixture(z[...,None], nodes.GaussianARD, X, Lambda, plates=(N,D), name='Y')
 
     z.initialize_from_random()
 
@@ -60,7 +68,7 @@ def gaussianmix_model(N, K, D, covariance='full'):
 def run(N=50, K=5, D=2):
 
     # Generate data
-    N1 = np.floor(0.5*N)
+    N1 = int(np.floor(0.5*N))
     N2 = N - N1
     y = np.vstack([np.random.normal(0, 0.5, size=(N1,D)),
                    np.random.normal(10, 0.5, size=(N2,D))])

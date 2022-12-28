@@ -382,10 +382,10 @@ class VB():
             node = self[node]
             if node.has_plotter():
 
+                import matplotlib.pyplot as plt
                 try:
                     fignum = self._figures[node]
                 except KeyError:
-                    import matplotlib.pyplot as plt
                     fig = plt.figure()
                     self._figures[node] = fig.number
                 else:

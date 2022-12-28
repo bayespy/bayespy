@@ -145,8 +145,8 @@ def _subplots(plotfunc, *args, fig=None, kwargs=None):
     broadcasted_plates = misc.broadcasted_shape(*plates)
 
     # Subplot indexing layout
-    M = np.prod(broadcasted_plates[-2::-2])
-    N = np.prod(broadcasted_plates[-1::-2])
+    M = int(np.prod(broadcasted_plates[-2::-2]))
+    N = int(np.prod(broadcasted_plates[-1::-2]))
     strides_subplot = [np.prod(broadcasted_plates[(j+2)::2]) * N
                        if ((len(broadcasted_plates)-j) % 2) == 0 else
                        np.prod(broadcasted_plates[(j+2)::2])
@@ -162,7 +162,7 @@ def _subplots(plotfunc, *args, fig=None, kwargs=None):
             broadcasted_args.append(args[n][0][i])
 
         # Plot the subplot using the given function
-        ind_subplot = np.einsum('i,i', ind, strides_subplot)
+        ind_subplot = int(np.einsum('i,i', ind, strides_subplot))
         axes = fig.add_subplot(M, N, ind_subplot+1)
         plotfunc(*broadcasted_args, axes=axes, **kwargs)
 

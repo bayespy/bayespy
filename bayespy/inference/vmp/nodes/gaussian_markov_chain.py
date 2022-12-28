@@ -1126,8 +1126,8 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
         Compute CGF using the moments of the parents.
         """
 
-        return _compute_cgf_for_gaussian_markov_chain(u_mu[1],
-                                                      u_Lambda[0],
+        u_mumu_Lambda = linalg.inner(u_Lambda[0], u_mu[1], ndim=2)
+        return _compute_cgf_for_gaussian_markov_chain(u_mumu_Lambda,
                                                       u_Lambda[1],
                                                       u_v[1],
                                                       self.N)
@@ -1668,8 +1668,8 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
         Compute CGF using the moments of the parents.
         """
 
-        return _compute_cgf_for_gaussian_markov_chain(u_mu[1],
-                                                      u_Lambda[0],
+        u_mumu_Lambda = linalg.inner(u_Lambda[0], u_mu[1], ndim=2)
+        return _compute_cgf_for_gaussian_markov_chain(u_mumu_Lambda,
                                                       u_Lambda[1],
                                                       u_v[1],
                                                       self.N)
@@ -1880,17 +1880,18 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
         """
 
         # Infer the number of dynamic matrices
-        B = cls._ensure_moments(B, GaussianMoments, ndim=2)
+        B = cls._ensure_moments(B, GaussianMoments, ndim=1)
         K = B.plates[-2]
 
         mu = cls._ensure_moments(mu, GaussianMoments, ndim=1)
-        Lambda = cls._ensure_moments(Lambda, WishartMoments)
+        Lambda = cls._ensure_moments(Lambda, WishartMoments, ndim=1)
         Z = cls._ensure_moments(Z, CategoricalMoments, categories=K)
         v = cls._ensure_moments(v, GammaMoments)
 
         parent_moments = (
             mu._moments,
             Lambda._moments,
+            B._moments,
             Z._moments,
             v._moments
         )

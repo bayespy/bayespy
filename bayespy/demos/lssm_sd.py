@@ -142,7 +142,7 @@ def model(M=20, N=100, D=10, K=3):
     return Q
 
 
-def infer(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
+def infer(y, D, K, rotate=False, debug=False, maxiter=100, mask=True,
           plot_C=True, monitor=False, update_hyper=0, autosave=None):
     
     """
@@ -163,6 +163,7 @@ def infer(y, D, K, rotate=True, debug=False, maxiter=100, mask=True,
 
     # Set up rotation speed-up
     if rotate:
+        raise NotImplementedError()
         # Initial rotate the D-dimensional state space (X, A, C)
         # Do not update hyperparameters
         rotA_init = transformations.RotateGaussianARD(Q['A'])
@@ -249,7 +250,7 @@ def simulate_data(N):
 
 @bpplt.interactive
 def demo(N=1000, maxiter=100, D=3, K=2, seed=42, plot=True, debug=False,
-        rotate=True, monitor=True):
+        rotate=False, monitor=True):
     """
     Run the demo for linear state-space model with switching dynamics.
     """

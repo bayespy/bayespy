@@ -119,7 +119,7 @@ def model(M, N, D, K):
     X = VaryingGaussianMarkovChain(np.zeros(D),         # mean of x0
                                    1e-3*np.identity(D), # prec of x0
                                    A,                   # dynamics matrices
-                                   S._convert(GaussianMoments)[1:], # temporal weights
+                                   S._ensure_moments(S, GaussianMoments, ndim=1)[1:], # temporal weights
                                    np.ones(D),          # innovation
                                    n=N,                 # time instances
                                    name='X',
@@ -208,6 +208,8 @@ def infer(y, D, K,
 
     # Set up rotation speed-up
     if rotate:
+
+        raise NotImplementedError()
         
         # Initial rotate the D-dimensional state space (X, A, C)
         # Does not update hyperparameters
@@ -300,7 +302,7 @@ def simulate_data(N):
 
 
 @bpplt.interactive
-def demo(N=1000, D=5, K=4, seed=42, maxiter=200, rotate=True, debug=False,
+def demo(N=1000, D=5, K=4, seed=42, maxiter=200, rotate=False, debug=False,
          precompute=False, plot=True):
 
     # Seed for random number generator

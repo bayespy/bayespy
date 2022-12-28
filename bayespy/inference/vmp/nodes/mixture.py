@@ -507,18 +507,18 @@ class Mixture(ExponentialFamily):
 
             # Shape(u) = [M1,..,Mm,N1,..,1,..,Nn,D1,..,Dd]
             # Shape(f) = [M1,..,Mm,N1,..,1,..,Nn]
-            (u, f) = self._distribution.distribution.compute_fixed_moments_and_f(x)
+            (u, f) = self._distribution.raw_distribution.compute_fixed_moments_and_f(x)
             f = np.expand_dims(f, axis=self.cluster_plate)
             for i in range(len(u)):
                 ndim_i = len(self.dims[i])
                 cluster_axis = self.cluster_plate - ndim_i
                 u[i] = np.expand_dims(u[i], axis=cluster_axis)
             # Shape(phi) = [N1,..,K,..,Nn,D1,..,Dd]
-            phi = self._distribution.distribution.compute_phi_from_parents(*(u_parents[1:]))
+            phi = self._distribution.raw_distribution.compute_phi_from_parents(*(u_parents[1:]))
             # Shape(g) = [N1,..,K,..,Nn]
-            g = self._distribution.distribution.compute_cgf_from_parents(*(u_parents[1:]))
+            g = self._distribution.raw_distribution.compute_cgf_from_parents(*(u_parents[1:]))
             # Shape(lpdf) = [M1,..,Mm,N1,..,K,..,Nn]
-            lpdf = self._distribution.distribution.compute_logpdf(u, phi, g, f, self.ndims)
+            lpdf = self._distribution.raw_distribution.compute_logpdf(u, phi, g, f, self.ndims)
 
             # From logpdf to pdf, but avoid over/underflow
             lpdf_max = np.max(lpdf, axis=self.cluster_plate, keepdims=True)

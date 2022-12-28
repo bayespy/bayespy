@@ -1561,7 +1561,7 @@ class RotateSwitchingMarkovChain(RotateGaussianMarkovChain):
     def __init__(self, X, B, Z, B_rotator):
         self.X_node = X
         self.B_node = B
-        self.Z_node = Z._convert(CategoricalMoments)
+        self.Z_node = Z._moments.get_converter(CategoricalMoments)(Z)
         self.B_rotator = B_rotator
 
         (N,D) = self.X_node.dims[0]
