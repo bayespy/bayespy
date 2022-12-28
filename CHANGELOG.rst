@@ -1,3 +1,12 @@
+Dev
++++
+
+Fixed
+.....
+
+* Fix a few bugs which caused demos to fail.
+
+
 Version 0.5.24 (2022-09-30)
 +++++++++++++++++++++++++++
 
