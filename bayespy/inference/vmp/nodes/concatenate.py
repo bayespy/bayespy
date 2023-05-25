@@ -70,7 +70,7 @@ class Concatenate(Deterministic):
         )
 
         # Compute start indices for each parent on the concatenated plate axis
-        self._indices = np.zeros(len(nodes)+1, dtype=np.int)
+        self._indices = np.zeros(len(nodes)+1, dtype=np.int64)
         self._indices[1:] = np.cumsum([int(parent.plates[axis])
                                        for parent in self.parents])
         self._lengths = [parent.plates[axis] for parent in self.parents]

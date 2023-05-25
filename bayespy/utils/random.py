@@ -284,7 +284,7 @@ def categorical(p, size=None):
         for ind in inds:
             z[ind] = np.searchsorted(P[ind], x[ind])
 
-    return z.astype(np.int)
+    return z.astype(int)
 
 
 def multinomial(n, p, size=None):
@@ -313,7 +313,7 @@ def multinomial(n, p, size=None):
     for i in misc.nested_iterator(size):
         x[i] = np.random.multinomial(n[i], p[i])
 
-    return x.astype(np.int)
+    return x.astype(int)
 
 
 def gamma(a, b, size=None):

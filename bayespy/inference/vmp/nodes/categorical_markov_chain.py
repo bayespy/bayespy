@@ -189,7 +189,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         # Explicit broadcasting
         P = P * np.ones(plates)[...,None,None,None]
         # Allocate memory
-        Z = np.zeros(plates + (self.N,), dtype=np.int)
+        Z = np.zeros(plates + (self.N,), dtype=np.int64)
         # Draw initial state
         Z[...,0] = random.categorical(p0, size=plates)
         # Create [0,1,2,...,len(plate_axis)] indices for each plate axis and

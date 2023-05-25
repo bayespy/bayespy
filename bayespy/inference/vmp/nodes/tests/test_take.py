@@ -89,7 +89,7 @@ class TestTake(TestCase):
 
         # Test matrix indices, no shape
         X = GaussianARD(1, 1, plates=(3,), shape=(2,))
-        Y = Take(X, np.ones((4, 5), dtype=np.int))
+        Y = Take(X, np.ones((4, 5), dtype=np.int64))
         self.assertEqual(
             Y.plates,
             (4, 5),
@@ -113,7 +113,7 @@ class TestTake(TestCase):
 
         # Test vector indices with more plate axes
         X = GaussianARD(1, 1, plates=(4, 2), shape=())
-        Y = Take(X, np.ones(3, dtype=np.int))
+        Y = Take(X, np.ones(3, dtype=np.int64))
         self.assertEqual(
             Y.plates,
             (4, 3),
@@ -125,7 +125,7 @@ class TestTake(TestCase):
 
         # Test take on other plate axis
         X = GaussianARD(1, 1, plates=(4, 2), shape=())
-        Y = Take(X, np.ones(3, dtype=np.int), plate_axis=-2)
+        Y = Take(X, np.ones(3, dtype=np.int64), plate_axis=-2)
         self.assertEqual(
             Y.plates,
             (3, 2),
@@ -141,7 +141,7 @@ class TestTake(TestCase):
             ValueError,
             Take,
             X,
-            np.ones(3, dtype=np.int),
+            np.ones(3, dtype=np.int64),
             plate_axis=0,
         )
 

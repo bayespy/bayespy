@@ -355,7 +355,7 @@ class TestCase(unittest.TestCase):
                     ]
                 )
             ]
-        ).astype(np.int)
+        ).astype(int)
 
         def pack(x):
             return [
