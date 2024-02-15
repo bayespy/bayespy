@@ -61,6 +61,7 @@ if __name__ == "__main__":
                 'sphinxcontrib-bayesnet',
                 'sphinxcontrib-bibtex',
                 'nbsphinx',
+                'matplotlib',
             ],
             'dev': [
                 'nose',
