@@ -28,6 +28,7 @@ ENV
 # temp files
 .DS_Store
 *.swp
+.direnv
 
 # test artifacts
 /.coverage
