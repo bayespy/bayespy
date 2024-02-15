@@ -5,6 +5,9 @@ on:
     branches:
       - 'develop'
 
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
 jobs:
 
   build:
@@ -26,9 +29,9 @@ jobs:
       run: |
         cd doc
         make html
-        chmod -R ugo+rw build/html
+        chmod -R ugo+rX build/html
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-pages-artifact@v3
       with:
         name: github-pages
         path: doc/build/html/
