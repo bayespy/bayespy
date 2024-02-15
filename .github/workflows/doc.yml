@@ -23,7 +23,7 @@ jobs:
         python-version: '3.8'
     - name: Install dependencies
       run: |
-        sudo apt-get install pandoc
+        sudo apt-get install pandoc dvisvgm texlive-full
         pip install -e .[doc]
     - name: Build doc
       run: |

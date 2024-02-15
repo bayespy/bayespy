@@ -8,6 +8,12 @@ mkShell {
   PYTHONPATH = toString ./.;
 
   buildInputs = [
+
+    pandoc
+    # Full LaTeX needed for anyfontsize.sty
+    # Medium LaTeX would be sufficient for dvisvgm
+    texlive.combined.scheme-full
+
     (
       python3.withPackages (
         ps: with ps; [
