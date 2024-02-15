@@ -20,6 +20,7 @@ jobs:
         python-version: '3.8'
     - name: Install dependencies
       run: |
+        sudo apt-get install pandoc
         pip install -e .[doc]
     - name: Build doc
       run: |
