@@ -26,6 +26,7 @@ jobs:
       run: |
         cd doc
         make html
+        chmod -R ugo+rw build/html
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
