@@ -26,6 +26,11 @@ jobs:
       run: |
         cd doc
         make html
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: github-pages
+        path: doc/build/html/
 
   deploy:
 
