@@ -27,9 +27,6 @@ if ON_RTD:
 
 import bayespy as bp
 
-# Use the 'Read the Docs' theme
-html_theme = 'sphinx_rtd_theme'
-
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
 
