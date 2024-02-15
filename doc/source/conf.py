@@ -41,7 +41,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
     'sphinx.ext.doctest',
-    'numpydoc',
+    'sphinx.ext.napoleon',
     'matplotlib.sphinxext.plot_directive',
     'sphinx.ext.autosummary',
     'sphinxcontrib.tikz',

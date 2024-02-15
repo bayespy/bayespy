@@ -60,7 +60,6 @@ if __name__ == "__main__":
                 'sphinxcontrib-tikz>=0.4.2',
                 'sphinxcontrib-bayesnet',
                 'sphinxcontrib-bibtex',
-                'numpydoc>=0.5',
                 'nbsphinx',
             ],
             'dev': [
