@@ -1,3 +1,12 @@
+Dev
++++
+
+Fixed
+.....
+
+* Fix dtype in categorical Markov chain fixed moments calculation.
+
+
 Version 0.5.26 (2023-05-25)
 +++++++++++++++++++++++++++
 

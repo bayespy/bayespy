@@ -53,7 +53,7 @@ class CategoricalMarkovChainMoments(Moments):
 
         plates = np.shape(x)[:-1]
 
-        u0_size = np.prod(plates)
+        u0_size = np.prod(plates, dtype=int)
         u0 = np.zeros((u0_size, self.categories))
         u0[(np.arange(u0_size), np.ravel(x[...,0]))] = 1.0
 
