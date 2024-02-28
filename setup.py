@@ -40,6 +40,7 @@ if __name__ == "__main__":
                             # 1.8 implements broadcasting in numpy.linalg
         'scipy>=0.13.0', # <0.13 have a bug in special.multigammaln
         'h5py',
+        'truncnorm',
     ]
 
     # Utility function to read the README file.

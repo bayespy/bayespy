@@ -1,3 +1,12 @@
+Dev
++++
+
+Fixed
+.....
+
+* Add missing truncnorm package to setup.py
+
+
 Version 0.6.0 (2024-02-28)
 ++++++++++++++++++++++++++
 
