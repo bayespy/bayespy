@@ -12,6 +12,7 @@ Module for the Gaussian distribution and similar distributions.
 import numpy as np
 
 from scipy import special
+import truncnorm
 
 from bayespy.utils import (random,
                            misc,
@@ -326,7 +327,15 @@ class GaussianDistribution(ExponentialFamilyDistribution):
     def __init__(self, shape):
         self.shape = shape
         self.ndim = len(shape)
+        self.set_limits(None, None)
         super().__init__()
+
+
+    def set_limits(self, minimum=None, maximum=None):
+        self.minimum = minimum
+        self.maximum = maximum
+        self.has_limits = minimum is not None or maximum is not None
+        return
 
 
     def compute_message_to_parent(self, parent, index, u, u_mu_Lambda):
@@ -410,15 +419,31 @@ class GaussianDistribution(ExponentialFamilyDistribution):
         # TODO: Compute -2*phi[1] and simplify the formulas
         L = linalg.chol(-2*phi[1], ndim=self.ndim)
         k = np.shape(phi[0])[-1]
-        # Moments
-        u0 = linalg.chol_solve(L, phi[0], ndim=self.ndim)
-        u1 = (linalg.outer(u0, u0, ndim=self.ndim)
-              + linalg.chol_inv(L, ndim=self.ndim))
-        u = [u0, u1]
+        Cov = linalg.chol_inv(L, ndim=self.ndim)
+        mu = linalg.chol_solve(L, phi[0], ndim=self.ndim)
         # G
-        g = (-0.5 * linalg.inner(u[0], phi[0], ndim=self.ndim)
+        g = (-0.5 * linalg.inner(mu, phi[0], ndim=self.ndim)
              + 0.5 * linalg.chol_logdet(L, ndim=self.ndim))
-        return (u, g)
+
+        if self.has_limits:
+            if self.ndim != 1:
+                raise NotImplementedError("Limits for ndim!=1 not yet supported")
+            (p, u0, u1)= truncnorm.moments(
+                mu,
+                Cov,
+                self.minimum,
+                self.maximum,
+                2,
+            )
+            logp = np.log(p)
+        else:
+            u0 = mu
+            u1 = Cov + linalg.outer(u0, u0, ndim=self.ndim)
+            logp = 0
+
+        u = [u0, u1]
+
+        return (u, g - logp)
 
 
     def compute_cgf_from_parents(self, u_mu_Lambda):
@@ -1396,6 +1421,20 @@ class Gaussian(_GaussianTemplate):
         u = self._parent_moments[0].compute_fixed_moments(mu, Lambda)
         self._initialize_from_parent_moments(u)
 
+
+    def observe_limits(self, minimum=-np.inf, maximum=np.inf):
+        self._distribution.set_limits(minimum, maximum)
+        self._update_mask()
+        return
+
+    def _set_mask(self, mask):
+        self.mask = np.logical_or(
+            mask,
+            np.logical_or(
+                self.observed,
+                self._distribution.has_limits,
+            ),
+        )
 
     def __str__(self):
         ndim = len(self.dims[0])

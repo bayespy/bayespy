@@ -16,13 +16,27 @@ mkShell {
 
     (
       python3.withPackages (
-        ps: with ps; [
+        ps: with ps; let
+          truncnorm = buildPythonPackage rec {
+            pname = "truncnorm";
+            version = "0.0.2";
+            src = fetchPypi {
+              pname = pname;
+              version = version;
+              sha256 = "sha256-D6spzLLfdmUaE2+J+A6Va7CZzeb9prJr3nb5SNAWmOg=";
+            };
+            doCheck = false;
+            buildInputs = [ setuptools_scm ];
+            propagatedBuildInputs = [ scipy numpy ];
+          };
+        in [
 
           # Core
           numpy
           scipy
           h5py
           matplotlib
+          truncnorm
 
           # Dev
           ipython
