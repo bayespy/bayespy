@@ -43,7 +43,7 @@ class ExponentialFamilyDistribution(Distribution):
         raise NotImplementedError()
 
     def compute_logpdf(self, u, phi, g, f, ndims):
-        """ Compute E[log p(X)] given E[u], E[phi], E[g] and
+        r""" Compute E[log p(X)] given E[u], E[phi], E[g] and
         E[f]. Does not sum over plates."""
 
         # TODO/FIXME: Should I take into account what is latent or
@@ -141,7 +141,7 @@ class ExponentialFamily(Stochastic):
     @classmethod
     @ensureparents
     def _constructor(cls, *parents, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
 
         If __init__ uses useconstructor decorator, this method is called to
@@ -204,7 +204,7 @@ class ExponentialFamily(Stochastic):
         self._set_moments_and_cgf(u, np.inf, mask=mask)
 
     def initialize_from_random(self):
-        """
+        r"""
         Set the variable to a random sample from the current distribution.
         """
         #self.initialize_from_prior()
@@ -353,7 +353,7 @@ class ExponentialFamily(Stochastic):
 
 
     def _update_moments_and_cgf(self):
-        """
+        r"""
         Update moments and cgf based on current phi.
         """
         # Mask for plates to update (i.e., unobserved plates)
@@ -367,7 +367,7 @@ class ExponentialFamily(Stochastic):
 
 
     def observe(self, x, *args, mask=True):
-        """
+        r"""
         Fix moments, compute f and propagate mask.
         """
 
@@ -481,7 +481,7 @@ class ExponentialFamily(Stochastic):
 
 
     def logpdf(self, X, mask=True):
-        """
+        r"""
         Compute the log probability density function Q(X) of this node.
         """
         if mask is not True:
@@ -498,14 +498,14 @@ class ExponentialFamily(Stochastic):
 
 
     def pdf(self, X, mask=True):
-        """
+        r"""
         Compute the probability density function of this node.
         """
         return np.exp(self.logpdf(X, mask=mask))
 
 
     def _save(self, group):
-        """
+        r"""
         Save the state of the node into a HDF5 file.
 
         group can be the root
@@ -522,7 +522,7 @@ class ExponentialFamily(Stochastic):
 
 
     def _load(self, group):
-        """
+        r"""
         Load the state of the node from a HDF5 file.
         """
         # TODO/FIXME: Check that the shapes are correct!
@@ -536,7 +536,7 @@ class ExponentialFamily(Stochastic):
 
 
     def random(self):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         return self._distribution.random(*(self.phi), plates=self.plates)

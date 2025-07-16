@@ -35,7 +35,7 @@ from bayespy.utils.misc import TestCase
 class TestGaussianFunctions(TestCase):
 
     def test_rotate_covariance(self):
-        """
+        r"""
         Test the Gaussian array covariance rotation.
         """
         # Check matrix
@@ -128,7 +128,7 @@ class TestGaussianFunctions(TestCase):
 class TestGaussianARD(TestCase):
 
     def test_init(self):
-        """
+        r"""
         Test the constructor of GaussianARD
         """
 
@@ -297,7 +297,7 @@ class TestGaussianARD(TestCase):
         pass
 
     def test_message_to_child(self):
-        """
+        r"""
         Test moments of GaussianARD.
         """
 
@@ -387,7 +387,7 @@ class TestGaussianARD(TestCase):
         pass
 
     def test_message_to_parent_mu(self):
-        """
+        r"""
         Test that GaussianARD computes the message to the 1st parent correctly.
         """
 
@@ -550,7 +550,7 @@ class TestGaussianARD(TestCase):
         pass
 
     def test_message_to_parent_alpha(self):
-        """
+        r"""
         Test the message from GaussianARD the 2nd parent (alpha).
         """
 
@@ -674,7 +674,7 @@ class TestGaussianARD(TestCase):
 
 
     def test_message_to_parents(self):
-        """ Check gradient passed to inputs parent node """
+        r""" Check gradient passed to inputs parent node """
         D = 3
 
         X = Gaussian(np.random.randn(D), random.covariance(D))
@@ -690,7 +690,7 @@ class TestGaussianARD(TestCase):
 
 
     def test_lowerbound(self):
-        """
+        r"""
         Test the variational Bayesian lower bound term for GaussianARD.
         """
 
@@ -779,7 +779,7 @@ class TestGaussianARD(TestCase):
         pass
 
     def test_rotate(self):
-        """
+        r"""
         Test the rotation of Gaussian ARD arrays.
         """
 
@@ -879,7 +879,7 @@ class TestGaussianARD(TestCase):
 
 
     def test_initialization(self):
-        """
+        r"""
         Test initialization methods of GaussianARD
         """
 
@@ -925,7 +925,7 @@ class TestGaussianGamma(TestCase):
 
 
     def test_init(self):
-        """
+        r"""
         Test the creation of GaussianGamma node
         """
 
@@ -998,7 +998,7 @@ class TestGaussianGamma(TestCase):
 
 
     def test_message_to_child(self):
-        """
+        r"""
         Test the message to child of GaussianGamma node.
         """
 
@@ -1073,7 +1073,7 @@ class TestGaussianGamma(TestCase):
 
 
     def test_mask_to_parent(self):
-        """
+        r"""
         Test the mask handling in GaussianGamma node
         """
 
@@ -1154,7 +1154,7 @@ class TestGaussian(TestCase):
 
 
     def test_message_to_parents(self):
-        """ Check gradient passed to inputs parent node """
+        r""" Check gradient passed to inputs parent node """
         D = 3
 
         X = Gaussian(np.random.randn(D), random.covariance(D))
@@ -1188,7 +1188,7 @@ class TestGaussianGradient(TestCase):
 
 
     def test_riemannian_gradient(self):
-        """Test Riemannian gradient of a Gaussian node."""
+        r"""Test Riemannian gradient of a Gaussian node."""
         D = 3
 
         #
@@ -1251,7 +1251,7 @@ class TestGaussianGradient(TestCase):
 
 
     def test_gradient(self):
-        """Test standard gradient of a Gaussian node."""
+        r"""Test standard gradient of a Gaussian node."""
         D = 3
 
         np.random.seed(42)

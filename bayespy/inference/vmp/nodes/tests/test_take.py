@@ -23,7 +23,7 @@ class TestTake(TestCase):
 
 
     def test_parent_validity(self):
-        """
+        r"""
         Test that the parent nodes are validated properly
         """
 
@@ -174,7 +174,7 @@ class TestTake(TestCase):
 
 
     def test_moments(self):
-        """
+        r"""
         Test moments computation in Take node
         """
 
@@ -305,7 +305,7 @@ class TestTake(TestCase):
 
 
     def test_message_to_parent(self):
-        """
+        r"""
         Test parent message computation in Take node
         """
 

@@ -97,7 +97,7 @@ class TestGammaGradient(TestCase):
     """
 
     def test_riemannian_gradient(self):
-        """Test Riemannian gradient of a Gamma node."""
+        r"""Test Riemannian gradient of a Gamma node."""
 
         #
         # Without observations
@@ -155,7 +155,7 @@ class TestGammaGradient(TestCase):
 
 
     def test_gradient(self):
-        """Test standard gradient of a Gamma node."""
+        r"""Test standard gradient of a Gamma node."""
         D = 3
 
         np.random.seed(42)

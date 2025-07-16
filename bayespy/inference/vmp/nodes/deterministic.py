@@ -39,7 +39,7 @@ class Deterministic(Node):
         super().__init__(*args, plates=None, notify_parents=False, **kwargs)
 
     def _get_id_list(self):
-        """
+        r"""
         Returns the stochastic ID list.
 
         This method is used to check that same stochastic nodes are not direct
@@ -83,21 +83,21 @@ class Deterministic(Node):
         
 
     def _compute_moments(self, *u_parents):
-        """
+        r"""
         Compute the moments given the moments of the parents.
         """
         raise NotImplementedError()
 
 
     def _compute_message_to_parent(self, index, m_children, *u_parents):
-        """
+        r"""
         Compute the message to a parent.
         """
         raise NotImplementedError()
 
     
     def _add_child(self, child, index):
-        """
+        r"""
         Add a child node.
 
         Only child nodes that are stochastic (or have stochastic children
@@ -125,7 +125,7 @@ class Deterministic(Node):
             parent._add_child(self, ind)
 
     def _remove_child(self, child, index):
-        """
+        r"""
         Remove a child node.
 
         Only child nodes that are stochastic (or have stochastic children
@@ -287,7 +287,7 @@ def tile(X, tiles):
             return m
 
         def _compute_moments(self, u_X):
-            """
+            r"""
             Tile the plates of the parent's moments.
             """
             # Utilize broadcasting: If a tiled axis is unit length in u_X, there

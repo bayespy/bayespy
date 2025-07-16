@@ -75,7 +75,7 @@ class Bernoulli(ExponentialFamily):
 
 
     def __init__(self, p, **kwargs):
-        """
+        r"""
         Create Bernoulli node.
         """
         super().__init__(p, **kwargs)
@@ -83,7 +83,7 @@ class Bernoulli(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, p, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
         """
         p = cls._ensure_moments(p, BetaMoments)
@@ -100,7 +100,7 @@ class Bernoulli(ExponentialFamily):
 
 
     def __str__(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         p = 1 / (1 + np.exp(-self.phi[0]))
@@ -120,7 +120,7 @@ class CategoricalToBernoulli(Deterministic):
 
     
     def __init__(self, Z, **kwargs):
-        """
+        r"""
         Create a categorical MC moments to categorical moments conversion node.
         """
         # Convert parent to proper type. Z must be a node.
@@ -137,7 +137,7 @@ class CategoricalToBernoulli(Deterministic):
 
         
     def _compute_moments(self, u_Z):
-        """
+        r"""
         Compute the moments given the moments of the parents.
         """
         u0 = u_Z[0][...,0]
@@ -146,7 +146,7 @@ class CategoricalToBernoulli(Deterministic):
 
 
     def _compute_message_to_parent(self, index, m, u_Z):
-        """
+        r"""
         Compute the message to a parent.
         """
         if index == 0:

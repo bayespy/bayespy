@@ -15,7 +15,7 @@ class WarnAsError(Plugin):
 
 
     def options(self, parser, env):
-        """
+        r"""
         Add options to command line.
         """
         super().options(parser, env)
@@ -26,7 +26,7 @@ class WarnAsError(Plugin):
 
 
     def configure(self, options, conf):
-        """
+        r"""
         Configure plugin.
         """
         super().configure(options, conf)
@@ -35,7 +35,7 @@ class WarnAsError(Plugin):
 
 
     def prepareTestRunner(self, runner):
-        """
+        r"""
         Treat warnings as errors.
         """
         if self.enabled:

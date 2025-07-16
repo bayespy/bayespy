@@ -25,7 +25,7 @@ class TestBeta(TestCase):
 
     
     def test_init(self):
-        """
+        r"""
         Test the creation of beta nodes.
         """
 
@@ -74,7 +74,7 @@ class TestBeta(TestCase):
 
     
     def test_moments(self):
-        """
+        r"""
         Test the moments of beta nodes.
         """
 
@@ -87,7 +87,7 @@ class TestBeta(TestCase):
 
     
     def test_random(self):
-        """
+        r"""
         Test random sampling of beta nodes.
         """
 

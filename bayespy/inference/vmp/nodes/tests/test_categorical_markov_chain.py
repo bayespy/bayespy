@@ -21,7 +21,7 @@ from bayespy.inference.vmp.nodes import CategoricalMarkovChain, \
 class TestCategoricalMarkovChain(misc.TestCase):
 
     def test_init(self):
-        """
+        r"""
         Test the creation of CategoricalMarkovChain object
         """
 
@@ -62,7 +62,7 @@ class TestCategoricalMarkovChain(misc.TestCase):
         pass
     
     def test_message_to_child(self):
-        """
+        r"""
         Test the message of CategoricalMarkovChain to child
         """
 
@@ -156,7 +156,7 @@ class TestCategoricalMarkovChain(misc.TestCase):
 
 
     def test_random(self):
-        """
+        r"""
         Test random sampling of categorical Markov chain
         """
 

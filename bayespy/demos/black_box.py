@@ -49,7 +49,7 @@ def run(M=10, N=100, D=5, seed=42, maxiter=100, plot=True):
 
     # Some arbitrary log likelihood
     def logpdf(y, f):
-        """
+        r"""
         exp(f) / (1 + exp(f)) = 1/(1+exp(-f))
 
         -log(1+exp(-f)) = -log(exp(0)+exp(-f))

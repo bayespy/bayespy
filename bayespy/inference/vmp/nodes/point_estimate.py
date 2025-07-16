@@ -161,7 +161,7 @@ class Constant(Node):
 
 
     def _get_id_list(self):
-        """
+        r"""
         Returns the stochastic ID list.
 
         This method is used to check that same stochastic nodes are not direct

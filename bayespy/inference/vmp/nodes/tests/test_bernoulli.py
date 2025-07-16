@@ -28,7 +28,7 @@ class TestBernoulli(TestCase):
 
     
     def test_init(self):
-        """
+        r"""
         Test the creation of Bernoulli nodes.
         """
 
@@ -71,7 +71,7 @@ class TestBernoulli(TestCase):
 
     
     def test_moments(self):
-        """
+        r"""
         Test the moments of Bernoulli nodes.
         """
 
@@ -109,7 +109,7 @@ class TestBernoulli(TestCase):
 
 
     def test_mixture(self):
-        """
+        r"""
         Test mixture of Bernoulli
         """
         P = Mixture([2,0,0], Bernoulli, [0.1, 0.2, 0.3])
@@ -120,7 +120,7 @@ class TestBernoulli(TestCase):
 
 
     def test_observed(self):
-        """
+        r"""
         Test observation of Bernoulli node
         """
         Z = Bernoulli(0.3)
@@ -129,7 +129,7 @@ class TestBernoulli(TestCase):
 
 
     def test_random(self):
-        """
+        r"""
         Test random sampling in Bernoulli node
         """
         p = [1.0, 0.0]

@@ -35,7 +35,7 @@ class ConcentrationMoments(Moments):
 
 
     def compute_fixed_moments(self, alpha):
-        """
+        r"""
         Compute the moments for a fixed value
         """
 
@@ -53,7 +53,7 @@ class ConcentrationMoments(Moments):
 
     @classmethod
     def from_values(cls, alpha):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
         """
         if np.ndim(alpha) < 1:
@@ -74,7 +74,7 @@ class DirichletMoments(Moments):
 
 
     def compute_fixed_moments(self, p):
-        """
+        r"""
         Compute the moments for a fixed value
         """
         # Check that probabilities are non-negative
@@ -95,7 +95,7 @@ class DirichletMoments(Moments):
 
     @classmethod
     def from_values(cls, x):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
         """
         if np.ndim(x) < 1:
@@ -238,7 +238,7 @@ class Concentration(Stochastic):
 
 
     def __init__(self, D, regularization=True, **kwargs):
-        """
+        r"""
         ML estimation node for concentration parameters.
 
         Parameters
@@ -366,7 +366,7 @@ class Dirichlet(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, alpha, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
         """
         # Number of categories
@@ -390,7 +390,7 @@ class Dirichlet(ExponentialFamily):
 
 
     def __str__(self):
-        """
+        r"""
         Show distribution as a string
         """
         alpha = self.phi[0]

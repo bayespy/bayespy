@@ -31,7 +31,7 @@ class BetaMoments(DirichletMoments):
 
 
     def compute_fixed_moments(self, p):
-        """
+        r"""
         Compute the moments for a fixed value
         """
         p = np.asanyarray(p)[...,None] * [1,-1] + [0,1]
@@ -41,7 +41,7 @@ class BetaMoments(DirichletMoments):
 
     @classmethod
     def from_values(cls, p):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
         """
         return cls()
@@ -57,35 +57,35 @@ class BetaDistribution(DirichletDistribution):
 
 
     def compute_message_to_parent(self, parent, index, u_self, u_alpha):
-        """
+        r"""
         Compute the message to a parent node.
         """
         return super().compute_message_to_parent(parent, index, u_self, u_alpha)
 
     
     def compute_phi_from_parents(self, u_alpha, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         return super().compute_phi_from_parents(u_alpha, mask=mask)
 
     
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
         """
         return super().compute_moments_and_cgf(phi, mask)
 
     
     def compute_cgf_from_parents(self, u_alpha):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         return super().compute_cgf_from_parents(u_alpha)
 
     
     def compute_fixed_moments_and_f(self, p, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         p = np.asanyarray(p)[...,None] * [1,-1] + [0,1]
@@ -93,7 +93,7 @@ class BetaDistribution(DirichletDistribution):
 
 
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         p = super().random(*phi, plates=plates)
@@ -141,7 +141,7 @@ class Beta(Dirichlet):
 
 
     def __init__(self, alpha, **kwargs):
-        """
+        r"""
         Create beta node
         """
         super().__init__(alpha, **kwargs)
@@ -149,7 +149,7 @@ class Beta(Dirichlet):
 
     @classmethod
     def _constructor(cls, alpha, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
         """
 
@@ -175,7 +175,7 @@ class Beta(Dirichlet):
 
 
     def __str__(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         a = self.phi[0][...,0]

@@ -28,7 +28,7 @@ class TestBinomial(TestCase):
 
 
     def test_init(self):
-        """
+        r"""
         Test the creation of binomial nodes.
         """
 
@@ -89,7 +89,7 @@ class TestBinomial(TestCase):
 
 
     def test_moments(self):
-        """
+        r"""
         Test the moments of binomial nodes.
         """
 
@@ -150,7 +150,7 @@ class TestBinomial(TestCase):
 
 
     def test_mixture(self):
-        """
+        r"""
         Test binomial mixture
         """
 
@@ -163,7 +163,7 @@ class TestBinomial(TestCase):
 
 
     def test_observed(self):
-        """
+        r"""
         Test observation of Bernoulli node
         """
         Z = Binomial(10, 0.3)
@@ -180,7 +180,7 @@ class TestBinomial(TestCase):
         pass
 
     def test_random(self):
-        """
+        r"""
         Test random sampling in Binomial node
         """
         N = [ [5], [50] ]
@@ -190,7 +190,7 @@ class TestBinomial(TestCase):
         self.assertArrayEqual(Z, np.ones((3,2,2))*N*p)
 
     def test_mixture_with_count_array(self):
-        """
+        r"""
         Test binomial mixture with varying number of trials
         """
 

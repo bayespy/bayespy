@@ -27,7 +27,7 @@ class TestPoisson(TestCase):
 
     
     def test_init(self):
-        """
+        r"""
         Test the creation of Poisson nodes.
         """
 
@@ -64,7 +64,7 @@ class TestPoisson(TestCase):
 
     
     def test_moments(self):
-        """
+        r"""
         Test the moments of Poisson nodes.
         """
 

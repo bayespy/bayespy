@@ -31,7 +31,7 @@ from bayespy.utils.misc import TestCase
 class TestRotateGaussianARD(TestCase):
 
     def test_cost_function(self):
-        """
+        r"""
         Test the speed-up rotation of Gaussian ARD arrays.
         """
 
@@ -289,7 +289,7 @@ class TestRotateGaussianARD(TestCase):
         pass
 
     def test_cost_gradient(self):
-        """
+        r"""
         Test gradient of the rotation cost function for Gaussian ARD arrays.
         """
 
@@ -726,7 +726,7 @@ class TestRotateGaussianARD(TestCase):
 class TestRotateGaussianMarkovChain(TestCase):
 
     def test_cost_function(self):
-        """
+        r"""
         Test the cost function of the speed-up rotation for Markov chain
         """
 
@@ -807,7 +807,7 @@ class TestRotateGaussianMarkovChain(TestCase):
         pass
 
     def test_cost_gradient(self):
-        """
+        r"""
         Test the gradient of the speed-up rotation for Markov chain
         """
 
@@ -987,7 +987,7 @@ class TestRotateGaussianMarkovChain(TestCase):
 class TestRotateVaryingMarkovChain(TestCase):
 
     def test_cost_function(self):
-        """
+        r"""
         Test the speed-up rotation of Markov chain with time-varying dynamics
         """
 
@@ -1075,7 +1075,7 @@ class TestRotateVaryingMarkovChain(TestCase):
 
 
     def test_cost_gradient(self):
-        """
+        r"""
         Test the gradient of the rotation for MC with time-varying dynamics
         """
 

@@ -502,7 +502,7 @@ class CovarianceFunction(ef.Node):
 
 
     def __call__(self, x1, x2):
-        """ Compute covariance matrix for inputs x1 and x2. """
+        r""" Compute covariance matrix for inputs x1 and x2. """
         covfunc = self.message_to_child()
         return covfunc(x1, x2)[0]
 

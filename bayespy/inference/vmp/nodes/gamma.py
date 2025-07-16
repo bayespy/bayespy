@@ -40,7 +40,7 @@ class GammaPriorMoments(Moments):
 
 
     def compute_fixed_moments(self, a):
-        """
+        r"""
         Compute the moments for a fixed value
         """
         a = np.asanyarray(a)
@@ -53,7 +53,7 @@ class GammaPriorMoments(Moments):
 
     @classmethod
     def from_values(cls, a):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
         """
         return cls()
@@ -68,7 +68,7 @@ class GammaMoments(Moments):
 
 
     def compute_fixed_moments(self, x):
-        """
+        r"""
         Compute the moments for a fixed value
         """
         x = np.asanyarray(x)
@@ -81,7 +81,7 @@ class GammaMoments(Moments):
 
     @classmethod
     def from_values(cls, x):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
         """
         return cls()
@@ -235,14 +235,14 @@ class Gamma(ExponentialFamily):
 
 
     def __init__(self, a, b, **kwargs):
-        """
+        r"""
         Create gamma random variable node
         """
         super().__init__(a, b, **kwargs)
 
 
     def __str__(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         a = self.phi[1]
@@ -281,7 +281,7 @@ class GammaShape(Stochastic):
 
 
     def __init__(self, m0=0, m1=0, **kwargs):
-        """
+        r"""
         Create gamma random variable node
         """
         super().__init__(dims=self.dims, initialize=False, **kwargs)

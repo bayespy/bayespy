@@ -78,7 +78,7 @@ class Moments():
 
 
     def get_instance_converter(self, **kwargs):
-        """Default converter within a moments class is an identity.
+        r"""Default converter within a moments class is an identity.
 
         Override this method when moment class instances are not identical if
         they have different attributes.
@@ -93,7 +93,7 @@ class Moments():
 
 
     def get_instance_conversion_kwargs(self):
-        """
+        r"""
         Override this method when moment class instances are not identical if
         they have different attributes.
         """
@@ -108,7 +108,7 @@ class Moments():
 
 
     def get_converter(self, moments_to):
-        """
+        r"""
         Finds conversion to another moments type if possible.
 
         Note that a conversion from moments A to moments B may require
@@ -314,7 +314,7 @@ class Node():
 
 
     def _get_id_list(self):
-        """
+        r"""
         Returns the stochastic ID list.
 
         This method is used to check that same stochastic nodes are not direct
@@ -409,7 +409,7 @@ class Node():
 
     @property
     def plates_multiplier(self):
-        """ Plate multiplier is applied to messages to parents """
+        r""" Plate multiplier is applied to messages to parents """
         return self.__plates_multiplier
 
 
@@ -424,7 +424,7 @@ class Node():
         return self.plates + self.dims[ind]
 
     def _add_child(self, child, index):
-        """
+        r"""
         Add a child node.
 
         Parameters
@@ -438,7 +438,7 @@ class Node():
         self.children.add((child, index))
 
     def _remove_child(self, child, index):
-        """
+        r"""
         Remove a child node.
         """
         self.children.remove((child, index))
@@ -476,7 +476,7 @@ class Node():
 
 
     def _compute_weights_to_parent(self, index, weights):
-        """Compute the mask used for messages sent to parent[index].
+        r"""Compute the mask used for messages sent to parent[index].
 
         The mask tells which plates in the messages are active. This method is
         used for obtaining the mask which is used to set plates in the messages
@@ -490,7 +490,7 @@ class Node():
 
 
     def _mask_to_parent(self, index):
-        """
+        r"""
         Get the mask with respect to parent[index].
 
         The mask tells which plate connections are active. The mask is "summed"
@@ -697,7 +697,7 @@ class Node():
         raise NotImplementedError()
 
     def delete(self):
-        """
+        r"""
         Delete this node and the children
         """
         for (ind, parent) in enumerate(self.parents):
@@ -763,7 +763,7 @@ class Node():
                      name=(self.name+".__getitem__"))
 
     def has_plotter(self):
-        """
+        r"""
         Return True if the node has a plotter
         """
         return callable(self._plotter)
@@ -772,7 +772,7 @@ class Node():
         self._plotter = plotter
 
     def plot(self, fig=None, **kwargs):
-        """
+        r"""
         Plot the node distribution using the plotter of the node
 
         Because the distributions are in general very difficult to plot, the
@@ -793,7 +793,7 @@ class Node():
 
     @staticmethod
     def _compute_message(*arrays, plates_from=(), plates_to=(), ndim=0):
-        """
+        r"""
         A general function for computing messages by sum-multiply
 
         The function computes the product of the input arrays and then sums to
@@ -1019,7 +1019,7 @@ class Slice(Deterministic):
 
     @staticmethod
     def __reverse_indexing(slices, m_child, plates, dims):
-        """
+        r"""
         A helpful function for performing reverse indexing/slicing
         """
 
@@ -1082,7 +1082,7 @@ class Slice(Deterministic):
 
 
     def _compute_weights_to_parent(self, index, weights):
-        """
+        r"""
         Compute the mask to the parent node.
         """
         if index != 0:
@@ -1096,7 +1096,7 @@ class Slice(Deterministic):
 
 
     def _compute_message_to_parent(self, index, m, u):
-        """
+        r"""
         Compute the message to a parent node.
         """
 
@@ -1114,7 +1114,7 @@ class Slice(Deterministic):
         return msg
 
     def _compute_moments(self, u):
-        """
+        r"""
         Get the moments with an added plate axis.
         """
 
@@ -1222,7 +1222,7 @@ def AddPlateAxis(to_plate):
 
 
         def _compute_message_to_parent(self, index, m, *u_parents):
-            """
+            r"""
             Compute the message to a parent node.
             """
 
@@ -1238,7 +1238,7 @@ def AddPlateAxis(to_plate):
             return m
 
         def _compute_moments(self, u):
-            """
+            r"""
             Get the moments with an added plate axis.
             """
 
@@ -1268,7 +1268,7 @@ def AddPlateAxis(to_plate):
 class NodeConstantScalar(Node):
     @staticmethod
     def compute_fixed_u_and_f(x):
-        """ Compute u(x) and f(x) for given x. """
+        r""" Compute u(x) and f(x) for given x. """
         return ([x], 0)
 
     def __init__(self, a, **kwargs):

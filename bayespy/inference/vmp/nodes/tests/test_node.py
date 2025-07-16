@@ -27,7 +27,7 @@ from bayespy.utils import misc
 class TestMoments(unittest.TestCase):
 
     def test_converter(self):
-        """
+        r"""
         Tests complex conversions for moment classes
         """
         
@@ -174,7 +174,7 @@ class TestNode(misc.TestCase):
                                 err_msg="Incorrect message.")
 
     def test_message_to_parent(self):
-        """
+        r"""
         Test plate handling in _message_to_parent.
         """
 
@@ -331,7 +331,7 @@ class TestNode(misc.TestCase):
 
 
     def test_compute_message(self):
-        """
+        r"""
         Test the general sum-multiply function for message computations
         """
 
@@ -450,7 +450,7 @@ class TestNode(misc.TestCase):
 class TestSlice(misc.TestCase):
 
     def test_init(self):
-        """
+        r"""
         Test the constructor of the X[..] node operator.
         """
 
@@ -622,7 +622,7 @@ class TestSlice(misc.TestCase):
         pass
 
     def test_message_to_child(self):
-        """
+        r"""
         Test message to child of X[..] node operator.
         """
 
@@ -787,7 +787,7 @@ class TestSlice(misc.TestCase):
         pass
 
     def test_message_to_parent(self):
-        """
+        r"""
         Test message to parent of X[..] node operator.
         """
 

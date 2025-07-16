@@ -32,7 +32,7 @@ from bayespy.utils.misc import TestCase
 class TestSumMultiply(TestCase):
 
     def test_parent_validity(self):
-        """
+        r"""
         Test that the parent nodes are validated properly in SumMultiply
         """
         V = GaussianARD(1, 1)
@@ -157,7 +157,7 @@ class TestSumMultiply(TestCase):
 
 
     def test_message_to_child(self):
-        """
+        r"""
         Test the message from SumMultiply to its children.
         """
 
@@ -499,7 +499,7 @@ class TestSumMultiply(TestCase):
 
 
     def test_message_to_parent(self):
-        """
+        r"""
         Test the message from SumMultiply node to its parents.
         """
 

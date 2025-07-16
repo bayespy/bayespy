@@ -78,7 +78,7 @@ class Concatenate(Deterministic):
 
 
     def _get_id_list(self):
-        """
+        r"""
         Parents don't need to be independent for this node so remove duplicates
         """
         return list(set(super()._get_id_list()))

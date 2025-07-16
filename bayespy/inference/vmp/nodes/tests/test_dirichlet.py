@@ -25,7 +25,7 @@ class TestDirichlet(TestCase):
 
     
     def test_init(self):
-        """
+        r"""
         Test the creation of Dirichlet nodes.
         """
 
@@ -66,7 +66,7 @@ class TestDirichlet(TestCase):
 
     
     def test_moments(self):
-        """
+        r"""
         Test the moments of Dirichlet nodes.
         """
 
@@ -79,7 +79,7 @@ class TestDirichlet(TestCase):
 
 
     def test_constant(self):
-        """
+        r"""
         Test the constant moments of Dirichlet nodes.
         """
 

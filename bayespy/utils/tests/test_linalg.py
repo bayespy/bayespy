@@ -17,7 +17,7 @@ from .. import linalg
 class TestDot(misc.TestCase):
 
     def test_dot(self):
-        """
+        r"""
         Test dot product multiple multi-dimensional arrays.
         """
 
@@ -112,7 +112,7 @@ class TestDot(misc.TestCase):
 class TestBandedSolve(misc.TestCase):
 
     def test_block_banded_solve(self):
-        """
+        r"""
         Test the Gaussian elimination algorithm for block-banded matrices.
         """
 

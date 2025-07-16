@@ -181,7 +181,7 @@ class TestGaussianMarkovChain(TestCase):
 
 
     def test_plates(self):
-        """
+        r"""
         Test that plates are handled correctly.
         """
 
@@ -199,7 +199,7 @@ class TestGaussianMarkovChain(TestCase):
 
 
     def test_message_to_parents(self):
-        """ Check gradient passed to inputs parent node """
+        r""" Check gradient passed to inputs parent node """
         N = 3
         D = 2
 
@@ -241,7 +241,7 @@ class TestGaussianMarkovChain(TestCase):
 
 
     def test_message_to_parents_with_inputs(self):
-        """ Check gradient passed to inputs parent node """
+        r""" Check gradient passed to inputs parent node """
 
         def check(Mu, Lambda, A, V, U):
 
@@ -339,7 +339,7 @@ class TestGaussianMarkovChain(TestCase):
 
 
     def test_message_to_child(self):
-        """
+        r"""
         Test the updating of GaussianMarkovChain.
 
         Check that the moments and the lower bound contribution are computed
@@ -694,7 +694,7 @@ class TestGaussianMarkovChain(TestCase):
 
 
     def test_smoothing(self):
-        """
+        r"""
         Test the posterior estimation of GaussianMarkovChain.
 
         Create time-variant dynamics and compare the results of BayesPy VB
@@ -771,7 +771,7 @@ class TestGaussianMarkovChain(TestCase):
 class TestVaryingGaussianMarkovChain(TestCase):
 
     def test_plates_from_parents(self):
-        """
+        r"""
         Test that VaryingGaussianMarkovChain deduces plates correctly
         """
         def check(plates_X,

@@ -1005,7 +1005,7 @@ class Plotter():
 
 
     def __call__(self, X, fig=None, **kwargs):
-        """
+        r"""
         Plot the node using the specified plotting function
 
         Parameters

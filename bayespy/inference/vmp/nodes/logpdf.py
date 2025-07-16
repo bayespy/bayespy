@@ -73,7 +73,7 @@ class LogPDF(ExponentialFamily):
 
 
     def observe(self, x, *args, mask=True):
-        """
+        r"""
         Fix moments, compute f and propagate mask.
         """
 

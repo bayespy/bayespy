@@ -28,7 +28,7 @@ class CategoricalMoments(MultinomialMoments):
     """
 
     def compute_fixed_moments(self, x):
-        """
+        r"""
         Compute the moments for a fixed value
         """
 
@@ -48,7 +48,7 @@ class CategoricalMoments(MultinomialMoments):
 
     @classmethod
     def from_values(cls, x, categories):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
 
         The observations are scalar.
@@ -77,7 +77,7 @@ class CategoricalDistribution(MultinomialDistribution):
     """
 
     def __init__(self, categories):
-        """
+        r"""
         Create VMP formula node for a categorical variable
 
         `categories` is the total number of categories.
@@ -91,7 +91,7 @@ class CategoricalDistribution(MultinomialDistribution):
 
 
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
 
@@ -115,7 +115,7 @@ class CategoricalDistribution(MultinomialDistribution):
 
 
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         logp = phi[0]
@@ -152,7 +152,7 @@ class Categorical(ExponentialFamily):
 
 
     def __init__(self, p, **kwargs):
-        """
+        r"""
         Create Categorical node.
         """
         super().__init__(p, **kwargs)
@@ -160,7 +160,7 @@ class Categorical(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, p, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
 
         This method is called if useconstructor decorator is used for __init__.
@@ -191,7 +191,7 @@ class Categorical(ExponentialFamily):
 
 
     def __str__(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         p = self.u[0]

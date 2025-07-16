@@ -41,7 +41,7 @@ def _student_logpdf(y, mu, Cov, nu):
 class TestWishart(TestCase):
 
     def test_lower_bound(self):
-        """
+        r"""
         Test the Wishart VB lower bound
         """
 
@@ -77,7 +77,7 @@ class TestWishart(TestCase):
 
 
     def test_moments(self):
-        """
+        r"""
         Test the moments of Wishart node
         """
 

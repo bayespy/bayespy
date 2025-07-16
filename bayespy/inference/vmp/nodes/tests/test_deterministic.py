@@ -46,7 +46,7 @@ class TestTile(unittest.TestCase):
 
 
     def test_message_to_children(self):
-        """
+        r"""
         Test the moments of Tile node.
         """
         # Define th check function
@@ -157,7 +157,7 @@ class TestTile(unittest.TestCase):
 
 
     def test_message_to_parent(self):
-        """
+        r"""
         Test the parent message of Tile node.
         """
         # Define th check function
@@ -271,7 +271,7 @@ class TestTile(unittest.TestCase):
 
 
     def test_mask_to_parent(self):
-        """
+        r"""
         Test the mask message to parent of Tile node.
         """
         # Define th check function
