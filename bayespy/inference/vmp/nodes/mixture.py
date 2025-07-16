@@ -490,7 +490,7 @@ class Mixture(ExponentialFamily):
 
     def integrated_logpdf_from_parents(self, x, index):
 
-        """ Approximates the posterior predictive pdf \int p(x|parents)
+        r""" Approximates the posterior predictive pdf \int p(x|parents)
         q(parents) dparents in log-scale as \int q(parents_i) exp( \int
         q(parents_\i) \log p(x|parents) dparents_\i ) dparents_i."""
 
