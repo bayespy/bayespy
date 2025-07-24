@@ -40,7 +40,6 @@ mkShell {
 
           # Dev
           ipython
-          nose
 
           # Docs
           sphinx
