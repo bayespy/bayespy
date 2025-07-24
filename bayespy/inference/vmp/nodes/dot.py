@@ -111,7 +111,7 @@ class SumMultiply(Deterministic):
     """
 
     def __init__(self, *args, iterator_axis=None, **kwargs):
-        """
+        r"""
         SumMultiply(Node1, map1, Node2, map2, ..., NodeN, mapN [, map_out])
         """
 
@@ -423,7 +423,7 @@ class SumMultiply(Deterministic):
 
 
     def _message_to_parent(self, index, u_parent=None):
-        """
+        r"""
         Compute the message and mask to a parent node.
         """
 
@@ -634,7 +634,7 @@ class SumMultiply(Deterministic):
 
 
 def Dot(*args, **kwargs):
-    """
+    r"""
     Node for computing inner product of several Gaussian vectors.
 
     This is a simple wrapper of the much more general SumMultiply. For now, it

@@ -24,7 +24,7 @@ from bayespy.utils import linalg
 
 
 class MultinomialMoments(Moments):
-    """
+    r"""
     Class for the moments of multinomial variables.
     """
 
@@ -35,7 +35,7 @@ class MultinomialMoments(Moments):
 
 
     def compute_fixed_moments(self, x):
-        """
+        r"""
         Compute the moments for a fixed value
 
         `x` must be a vector of counts.
@@ -60,13 +60,13 @@ class MultinomialMoments(Moments):
 
 
 class MultinomialDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     Class for the VMP formulas of multinomial variables.
     """
 
 
     def __init__(self, trials):
-        """
+        r"""
         Create VMP formula node for a multinomial variable
 
         `trials` is the total number of trials.
@@ -81,7 +81,7 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
 
 
     def compute_message_to_parent(self, parent, index, u, u_p):
-        """
+        r"""
         Compute the message to a parent node.
         """
         if index == 0:
@@ -91,7 +91,7 @@ class MultinomialDistribution(ExponentialFamilyDistribution):
 
 
     def compute_phi_from_parents(self, u_p, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         logp = u_p[0]
@@ -266,7 +266,7 @@ class Multinomial(ExponentialFamily):
 
 
     def __init__(self, n, p, **kwargs):
-        """
+        r"""
         Create Multinomial node.
         """
         super().__init__(n, p, **kwargs)
@@ -274,7 +274,7 @@ class Multinomial(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, n, p, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
 
         This method is called if useconstructor decorator is used for __init__.
@@ -307,7 +307,7 @@ class Multinomial(ExponentialFamily):
 
 
     def __str__(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         logsum_p = misc.logsumexp(self.phi[0], axis=-1, keepdims=True)

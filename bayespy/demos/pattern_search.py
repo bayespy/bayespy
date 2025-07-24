@@ -33,7 +33,7 @@ from bayespy.demos import pca
 
 
 def run(M=40, N=100, D_y=6, D=8, seed=42, rotate=False, maxiter=1000, debug=False, plot=True):
-    """
+    r"""
     Run pattern search demo for PCA.
     """
 
@@ -131,4 +131,3 @@ if __name__ == '__main__':
 
     run(**kwargs)
     plt.show()
-

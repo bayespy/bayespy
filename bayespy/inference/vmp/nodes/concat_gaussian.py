@@ -7,7 +7,7 @@ from .deterministic import Deterministic
 
 
 class ConcatGaussian(Deterministic):
-    """Concatenate Gaussian vectors along the variable axis (not plate axis)
+    r"""Concatenate Gaussian vectors along the variable axis (not plate axis)
 
     NOTE: This concatenates on the variable axis! That is, the dimensionality
     of the resulting Gaussian vector is the sum of the dimensionalities of the

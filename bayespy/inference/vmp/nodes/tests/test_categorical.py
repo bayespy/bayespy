@@ -26,13 +26,13 @@ from bayespy.utils.misc import TestCase
 
 
 class TestCategorical(TestCase):
-    """
+    r"""
     Unit tests for Categorical node
     """
 
     
     def test_init(self):
-        """
+        r"""
         Test the creation of categorical nodes.
         """
 
@@ -85,7 +85,7 @@ class TestCategorical(TestCase):
 
     
     def test_moments(self):
-        """
+        r"""
         Test the moments of categorical nodes.
         """
 
@@ -125,7 +125,7 @@ class TestCategorical(TestCase):
 
 
     def test_observed(self):
-        """
+        r"""
         Test observed categorical nodes
         """
 
@@ -173,7 +173,7 @@ class TestCategorical(TestCase):
 
     
     def test_constant(self):
-        """
+        r"""
         Test constant categorical nodes
         """
 
@@ -206,7 +206,7 @@ class TestCategorical(TestCase):
 
 
     def test_initialization(self):
-        """
+        r"""
         Test initialization of categorical nodes
         """
 
@@ -226,7 +226,7 @@ class TestCategorical(TestCase):
 
 
     def test_gradient(self):
-        """
+        r"""
         Check the Euclidean gradient of the categorical node
         """
 

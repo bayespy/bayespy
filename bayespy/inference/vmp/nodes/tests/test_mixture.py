@@ -32,7 +32,7 @@ from bayespy.utils.misc import TestCase
 class TestMixture(TestCase):
 
     def test_init(self):
-        """
+        r"""
         Test the creation of Mixture node
         """
 
@@ -58,7 +58,7 @@ class TestMixture(TestCase):
         
 
     def test_message_to_child(self):
-        """
+        r"""
         Test the message to child of Mixture node.
         """
 
@@ -107,7 +107,7 @@ class TestMixture(TestCase):
         pass
 
     def test_message_to_parent(self):
-        """
+        r"""
         Test the message to parents of Mixture node.
         """
 
@@ -280,7 +280,7 @@ class TestMixture(TestCase):
 
 
     def test_lowerbound(self):
-        """
+        r"""
         Test log likelihood lower bound for Mixture node
         """
 
@@ -293,7 +293,7 @@ class TestMixture(TestCase):
         pass
 
     def test_mask_to_parent(self):
-        """
+        r"""
         Test the mask handling in Mixture node
         """
 
@@ -322,7 +322,7 @@ class TestMixture(TestCase):
 
 
     def test_nans(self):
-        """
+        r"""
         Test multinomial mixture
         """
 
@@ -356,7 +356,7 @@ class TestMixture(TestCase):
 
 
     def test_random(self):
-        """
+        r"""
         Test random sampling of mixture node
         """
 

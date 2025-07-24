@@ -19,13 +19,13 @@ from bayespy.utils import random
 from bayespy.utils.misc import TestCase
 
 class TestBeta(TestCase):
-    """
+    r"""
     Unit tests for Beta node
     """
 
     
     def test_init(self):
-        """
+        r"""
         Test the creation of beta nodes.
         """
 
@@ -74,7 +74,7 @@ class TestBeta(TestCase):
 
     
     def test_moments(self):
-        """
+        r"""
         Test the moments of beta nodes.
         """
 
@@ -87,7 +87,7 @@ class TestBeta(TestCase):
 
     
     def test_random(self):
-        """
+        r"""
         Test random sampling of beta nodes.
         """
 

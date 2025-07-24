@@ -66,7 +66,7 @@ class GaussianMarkovChainMoments(Moments):
 
 
 class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     Sub-classes implement distribution specific computations.
     """
 
@@ -87,7 +87,7 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
         raise NotImplementedError()
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and the cumulant-generating function.
 
         This basically performs the filtering and smoothing for the variable.
@@ -126,7 +126,7 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
         raise NotImplementedError()
 
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute u(x) and f(x) for given x.
         """
         u0 = x
@@ -138,7 +138,7 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
         return (u, f)
 
     def plates_to_parent(self, index, plates):
-        """
+        r"""
         Computes the plates of this node with respect to a parent.
 
         Child classes must implement this.
@@ -151,7 +151,7 @@ class TemplateGaussianMarkovChainDistribution(ExponentialFamilyDistribution):
         raise NotImplementedError()
 
     def plates_from_parent(self, index, plates):
-        """
+        r"""
         Compute the plates using information of a parent node.
 
         Child classes must implement this.
@@ -250,7 +250,7 @@ class _TemplateGaussianMarkovChain(ExponentialFamily):
 
 def _compute_cgf_for_gaussian_markov_chain(mumu_Lambda, logdet_Lambda,
                                            logdet_nu, N):
-    """
+    r"""
     Compute CGF using the moments of the parents.
     """
 
@@ -540,7 +540,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
 
     def compute_phi_from_parents(self, u_mu_Lambda, u_A_nu, *u_inputs, mask=True):
-        """
+        r"""
         Compute the natural parameters using parents' moments.
 
         Parameters
@@ -627,7 +627,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
         return (phi0, phi1, phi2)
 
     def compute_cgf_from_parents(self, u_mu_Lambda, u_A_nu, *u_inputs):
-        """
+        r"""
         Compute CGF using the moments of the parents.
         """
         g = _compute_cgf_for_gaussian_markov_chain(u_mu_Lambda[1],
@@ -658,7 +658,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
 
 
     def plates_to_parent(self, index, plates):
-        """
+        r"""
         Computes the plates of this node with respect to a parent.
 
         If this node has plates (...), the latent dimensionality is D
@@ -683,7 +683,7 @@ class GaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
             raise ValueError("Invalid parent index.")
 
     def plates_from_parent(self, index, plates):
-        """
+        r"""
         Compute the plates using information of a parent node.
 
         If the plates of the parents are:
@@ -786,7 +786,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
 
     def __init__(self, mu, Lambda, A, nu, n=None, inputs=None, **kwargs):
-        """
+        r"""
         Create GaussianMarkovChain node.
         """
         super().__init__(mu, Lambda, A, nu, n=n, inputs=inputs, **kwargs)
@@ -794,7 +794,7 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     @classmethod
     def _constructor(cls, mu, Lambda, A, nu, n=None, inputs=None, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
 
         Compute the dimensions of phi and u.
@@ -928,14 +928,14 @@ class GaussianMarkovChain(_TemplateGaussianMarkovChain):
 
 
 class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
-    """
+    r"""
     Sub-classes implement distribution specific computations.
     """
 
 
     def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_B,
                                    u_S, u_v):
-        """
+        r"""
         Compute a message to a parent.
 
         Parameters
@@ -1037,7 +1037,7 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
 
     def compute_phi_from_parents(self, u_mu, u_Lambda, u_B, u_S, u_v,
                                  mask=True):
-        """
+        r"""
         Compute the natural parameters using parents' moments.
 
         Parameters
@@ -1122,7 +1122,7 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
         return (phi0, phi1, phi2)
 
     def compute_cgf_from_parents(self, u_mu, u_Lambda, u_B, u_S, u_v):
-        """
+        r"""
         Compute CGF using the moments of the parents.
         """
 
@@ -1133,7 +1133,7 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
                                                       self.N)
 
     def plates_to_parent(self, index, plates):
-        """
+        r"""
         Computes the plates of this node with respect to a parent.
 
         If this node has plates (...), the latent dimensionality is D
@@ -1164,7 +1164,7 @@ class VaryingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribu
             raise ValueError("Invalid parent index.")
 
     def plates_from_parent(self, index, plates):
-        """
+        r"""
         Compute the plates using information of a parent node.
 
         If the plates of the parents are:
@@ -1321,7 +1321,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
     """
 
     def __init__(self, mu, Lambda, B, S, nu, n=None, **kwargs):
-        """
+        r"""
         Create VaryingGaussianMarkovChain node.
         """
         super().__init__(mu, Lambda, B, S, nu, n=n, **kwargs)
@@ -1329,7 +1329,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     @classmethod
     def _constructor(cls, mu, Lambda, B, S, v, n=None, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
 
         Compute the dimensions of phi and u.
@@ -1452,7 +1452,7 @@ class VaryingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
 
 class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistribution):
-    """
+    r"""
     Sub-classes implement distribution specific computations.
     """
 
@@ -1463,7 +1463,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
 
     def compute_message_to_parent(self, parent, index, u, u_mu, u_Lambda, u_B,
                                    u_Z, u_v):
-        """
+        r"""
         Compute a message to a parent.
 
         Parameters
@@ -1582,7 +1582,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
 
     def compute_phi_from_parents(self, u_mu, u_Lambda, u_B, u_Z, u_v,
                                  mask=True):
-        """
+        r"""
         Compute the natural parameters using parents' moments.
 
         Parameters
@@ -1664,7 +1664,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
         return (phi0, phi1, phi2)
 
     def compute_cgf_from_parents(self, u_mu, u_Lambda, u_B, u_Z, u_v):
-        """
+        r"""
         Compute CGF using the moments of the parents.
         """
 
@@ -1675,7 +1675,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
                                                       self.N)
 
     def plates_to_parent(self, index, plates):
-        """
+        r"""
         Computes the plates of this node with respect to a parent.
 
         If this node has plates (...), the latent dimensionality is D
@@ -1707,7 +1707,7 @@ class SwitchingGaussianMarkovChainDistribution(TemplateGaussianMarkovChainDistri
 
 
     def plates_from_parent(self, index, plates):
-        """
+        r"""
         Compute the plates using information of a parent node.
 
         If the plates of the parents are:
@@ -1856,7 +1856,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
 
     def __init__(self, mu, Lambda, B, Z, nu, n=None, **kwargs):
-        """
+        r"""
         Create SwitchingGaussianMarkovChain node.
         """
         super().__init__(mu, Lambda, B, Z, nu, n=n, **kwargs)
@@ -1864,7 +1864,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
     @classmethod
     def _constructor(cls, mu, Lambda, B, Z, v, n=None, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
 
         Compute the dimensions of phi and u.
@@ -1986,7 +1986,7 @@ class SwitchingGaussianMarkovChain(_TemplateGaussianMarkovChain):
 
 
 class _MarkovChainToGaussian(Deterministic):
-    """
+    r"""
     Transform a Gaussian Markov chain node into a Gaussian node.
 
     This node is deterministic.
@@ -2005,7 +2005,7 @@ class _MarkovChainToGaussian(Deterministic):
 
 
     def _plates_to_parent(self, index):
-        """
+        r"""
         Return the number of plates to the parent node.
 
         Normally, the parent sees the same number of plates as the
@@ -2033,7 +2033,7 @@ class _MarkovChainToGaussian(Deterministic):
         return plates
 
     def _compute_moments(self, u):
-        """
+        r"""
         Transform the moments of a GMC to moments of a Gaussian.
 
         There is no need to worry about the plates and variable
@@ -2059,7 +2059,7 @@ class _MarkovChainToGaussian(Deterministic):
 
     @staticmethod
     def _compute_message_to_parent(index, m_children, *u_parents):
-        """
+        r"""
         Transform a message to a Gaussian into a message to a GMC.
 
         The messages to a Gaussian are almost correct, there are only

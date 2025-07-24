@@ -13,7 +13,7 @@ FALSE = 0
 TRUE = 1
 
 def _or(p_false, p_true):
-    """
+    r"""
     Build probability table for OR-operation of two parents
 
     p_false: Probability table to use if both are FALSE

@@ -1286,7 +1286,7 @@ class _GaussianTemplate(ExponentialFamily):
 
 
     def translate(self, b, debug=False):
-        """
+        r"""
         Transforms the current posterior by adding a bias to the mean
 
         Parameters

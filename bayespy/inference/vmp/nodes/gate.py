@@ -19,7 +19,7 @@ from .concatenate import Concatenate
 
 
 class Gate(Deterministic):
-    """
+    r"""
     Deterministic gating of one node.
 
     Gating is performed over one plate axis.
@@ -32,7 +32,7 @@ class Gate(Deterministic):
     """
 
     def __init__(self, Z, X, gated_plate=-1, moments=None, **kwargs):
-        """
+        r"""
         Constructor for the gating node.
 
         Parameters
@@ -84,7 +84,7 @@ class Gate(Deterministic):
 
 
     def _compute_moments(self, u_Z, u_X):
-        """
+        r"""
         """
 
         u = []
@@ -106,7 +106,7 @@ class Gate(Deterministic):
 
 
     def _compute_message_to_parent(self, index, m_child, u_Z, u_X):
-        """
+        r"""
         """
         if index == 0:
             m0 = 0
@@ -166,7 +166,7 @@ class Gate(Deterministic):
 
 
     def _compute_weights_to_parent(self, index, weights):
-        """
+        r"""
         """
         if index == 0:
             return weights
@@ -183,7 +183,7 @@ class Gate(Deterministic):
 
 
     def _compute_plates_to_parent(self, index, plates):
-        """
+        r"""
         """
         if index == 0:
             return plates
@@ -202,7 +202,7 @@ class Gate(Deterministic):
 
 
     def _compute_plates_from_parent(self, index, plates):
-        """
+        r"""
         """
         if index == 0:
             return plates
@@ -217,7 +217,7 @@ class Gate(Deterministic):
 
 
 def Choose(z, *nodes):
-    """Choose plate elements from nodes based on a categorical variable.
+    r"""Choose plate elements from nodes based on a categorical variable.
 
     For instance:
 

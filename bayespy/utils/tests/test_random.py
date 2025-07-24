@@ -62,12 +62,12 @@ class TestCeilDiv(misc.TestCase):
 
 
 class TestDirichlet(misc.TestCase):
-    """
+    r"""
     Unit tests for the Dirichlet random sampling
     """
 
     def test(self):
-        """
+        r"""
         Test random sampling from the Dirichlet distribution.
         """
 
@@ -100,7 +100,7 @@ class TestDirichlet(misc.TestCase):
 class TestAlphaBetaRecursion(misc.TestCase):
     
     def test(self):
-        """
+        r"""
         Test the results of alpha-beta recursion for Markov chains
         """
 

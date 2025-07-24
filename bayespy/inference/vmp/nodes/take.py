@@ -12,7 +12,7 @@ from bayespy.utils import misc
 
 
 class Take(Deterministic):
-    """
+    r"""
     Choose elements/sub-arrays along a plate axis
 
     Basically, applies `np.take` on a plate axis. Allows advanced mapping of

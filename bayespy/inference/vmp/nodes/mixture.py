@@ -24,14 +24,14 @@ from .categorical import Categorical, \
                          CategoricalMoments
 
 class MixtureDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     Class for the VMP formulas of mixture variables.
     """
 
 
     def __init__(self, distribution, cluster_plate, n_clusters, ndims,
                  ndims_parents):
-        """
+        r"""
         Create VMP formula node for a mixture variable
         """
         self.raw_distribution = distribution
@@ -51,7 +51,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
 
     def compute_message_to_parent(self, parent, index, u, *u_parents):
-        """
+        r"""
         Compute the message to a parent node.
         """
 
@@ -161,7 +161,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
 
     def compute_weights_to_parent(self, index, weights):
-        """
+        r"""
         Maps the mask to the plates of a parent.
         """
         if index == 0:
@@ -178,7 +178,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
 
     def compute_phi_from_parents(self, *u_parents, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         # Compute weighted average of the parameters
@@ -249,14 +249,14 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
         """
         return self.squeezed_distribution.compute_moments_and_cgf(phi, mask=mask)
 
 
     def compute_cgf_from_parents(self, *u_parents):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
 
@@ -294,14 +294,14 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
 
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         return self.squeezed_distribution.compute_fixed_moments_and_f(x, mask=True)
 
 
     def plates_to_parent(self, index, plates):
-        """
+        r"""
         Resolves the plate mapping to a parent.
 
         Given the plates of the node's moments, this method returns the plates
@@ -324,7 +324,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
 
     def plates_from_parent(self, index, plates):
-        """
+        r"""
         Resolve the plate mapping from a parent.
 
         Given the plates of a parent's moments, this method returns the plates
@@ -343,7 +343,7 @@ class MixtureDistribution(ExponentialFamilyDistribution):
 
 
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         return self.squeezed_distribution.random(*phi, plates=plates)
@@ -434,7 +434,7 @@ class Mixture(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, z, node_class, *args, cluster_plate=-1, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
         """
         if cluster_plate >= 0:
@@ -490,7 +490,7 @@ class Mixture(ExponentialFamily):
 
     def integrated_logpdf_from_parents(self, x, index):
 
-        """ Approximates the posterior predictive pdf \int p(x|parents)
+        r""" Approximates the posterior predictive pdf \int p(x|parents)
         q(parents) dparents in log-scale as \int q(parents_i) exp( \int
         q(parents_\i) \log p(x|parents) dparents_\i ) dparents_i."""
 
@@ -546,7 +546,7 @@ class Mixture(ExponentialFamily):
 
 
 def MultiMixture(thetas, *mixture_args, **kwargs):
-    """Creates a mixture over several axes using as many categorical variables.
+    r"""Creates a mixture over several axes using as many categorical variables.
 
     The mixings are assumed to be separate, that is, inner mixings don't affect
     the parameters of outer mixings.

@@ -54,7 +54,7 @@ class Add(Deterministic):
     """
 
     def __init__(self, *nodes, **kwargs):
-        """
+        r"""
         Add(X1, X2, ...)
         """
 
@@ -95,7 +95,7 @@ class Add(Deterministic):
 
 
     def _compute_moments(self, *u_parents):
-        """
+        r"""
         Compute the moments of the sum
         """
 
@@ -114,7 +114,7 @@ class Add(Deterministic):
 
 
     def _compute_message_to_parent(self, index, m, *u_parents):
-        """
+        r"""
         Compute the message to a parent node.
 
         .. math::

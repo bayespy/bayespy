@@ -22,7 +22,7 @@ from bayespy.utils import misc
 
 
 class PoissonMoments(Moments):
-    """
+    r"""
     Class for the moments of Poisson variables
     """
 
@@ -31,7 +31,7 @@ class PoissonMoments(Moments):
 
 
     def compute_fixed_moments(self, x):
-        """
+        r"""
         Compute the moments for a fixed value
         """
         # Make sure the values are integers in valid range
@@ -44,7 +44,7 @@ class PoissonMoments(Moments):
 
     @classmethod
     def from_values(cls, x):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
 
         The realizations are scalars, thus the shape of the moment is ().
@@ -53,13 +53,13 @@ class PoissonMoments(Moments):
 
 
 class PoissonDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     Class for the VMP formulas of Poisson variables.
     """
 
 
     def compute_message_to_parent(self, parent, index, u, u_lambda):
-        """
+        r"""
         Compute the message to a parent node.
         """
         if index == 0:
@@ -71,7 +71,7 @@ class PoissonDistribution(ExponentialFamilyDistribution):
 
 
     def compute_phi_from_parents(self, u_lambda, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         l = u_lambda[0]
@@ -81,7 +81,7 @@ class PoissonDistribution(ExponentialFamilyDistribution):
 
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
         """
         u0 = np.exp(phi[0])
@@ -91,7 +91,7 @@ class PoissonDistribution(ExponentialFamilyDistribution):
 
         
     def compute_cgf_from_parents(self, u_lambda):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         l = u_lambda[0]
@@ -100,7 +100,7 @@ class PoissonDistribution(ExponentialFamilyDistribution):
     
 
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
 
@@ -122,14 +122,14 @@ class PoissonDistribution(ExponentialFamilyDistribution):
 
 
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         return np.random.poisson(np.exp(phi[0]), size=plates)
 
 
 class Poisson(ExponentialFamily):
-    """
+    r"""
     Node for Poisson random variables.
 
     The node uses Poisson distribution:
@@ -160,14 +160,14 @@ class Poisson(ExponentialFamily):
 
 
     def __init__(self, l, **kwargs):
-        """
+        r"""
         Create Poisson random variable node
         """
         super().__init__(l, **kwargs)
 
         
     def __str__(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         l = self.u[0]

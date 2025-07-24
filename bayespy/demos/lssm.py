@@ -32,7 +32,7 @@ import bayespy.plot as bpplt
 
 
 def model(M=10, N=100, D=3):
-    """
+    r"""
     Construct linear state-space model.
 
     See, for instance, the following publication:
@@ -114,7 +114,7 @@ def infer(y, D,
           plot_C=True,
           monitor=True,
           autosave=None):
-    """
+    r"""
     Apply linear state-space model for the given data.
     """
         
@@ -194,7 +194,7 @@ def infer(y, D,
 
 
 def simulate_data(M, N):
-    """
+    r"""
     Generate a dataset using linear state-space model.
 
     The process has two latent oscillation components and one random walk
@@ -224,7 +224,7 @@ def simulate_data(M, N):
 @bpplt.interactive
 def demo(M=6, N=200, D=3, maxiter=100, debug=False, seed=42, rotate=True,
          precompute=False, plot=True, monitor=True):
-    """
+    r"""
     Run the demo for linear state-space model.
     """
 

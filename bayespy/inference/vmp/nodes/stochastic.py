@@ -14,7 +14,7 @@ import h5py
 from .node import Node
 
 class Distribution():
-    """
+    r"""
     A base class for the VMP formulas of variables.
 
     Sub-classes implement distribution specific computations.
@@ -31,14 +31,14 @@ class Distribution():
 
 
     def compute_message_to_parent(self, parent, index, u_self, *u_parents):
-        """
+        r"""
         Compute the message to a parent node.
         """
         raise NotImplementedError()
 
 
     def compute_weights_to_parent(self, index, weights):
-        """
+        r"""
         Maps the mask to the plates of a parent.
         """
         # Sub-classes may need to overwrite this method
@@ -46,7 +46,7 @@ class Distribution():
 
 
     def plates_to_parent(self, index, plates):
-        """
+        r"""
         Resolves the plate mapping to a parent.
 
         Given the plates of the node's moments, this method returns the plates
@@ -55,7 +55,7 @@ class Distribution():
         return plates
 
     def plates_from_parent(self, index, plates):
-        """
+        r"""
         Resolve the plate mapping from a parent.
 
         Given the plates of a parent's moments, this method returns the plates
@@ -65,13 +65,13 @@ class Distribution():
 
 
     def random(self, *params, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         raise NotImplementedError()
 
     def squeeze(self, axis):
-        """Squeeze a plate axis from the distribution
+        r"""Squeeze a plate axis from the distribution
 
         The default implementation does no changes to the distribution.
         Override if needed.
@@ -81,7 +81,7 @@ class Distribution():
 
 
 class Stochastic(Node):
-    """
+    r"""
     Base class for nodes that are stochastic.
 
     u
@@ -140,7 +140,7 @@ class Stochastic(Node):
 
 
     def _get_id_list(self):
-        """
+        r"""
         Returns the stochastic ID list.
 
         This method is used to check that same stochastic nodes are not direct
@@ -283,7 +283,7 @@ class Stochastic(Node):
 
 
     def observe(self, x, mask=True):
-        """
+        r"""
         Fix moments, compute f and propagate mask.
         """
         raise NotImplementedError()
@@ -318,7 +318,7 @@ class Stochastic(Node):
 
 
     def _save(self, group):
-        """
+        r"""
         Save the state of the node into a HDF5 file.
 
         group can be the root
@@ -339,7 +339,7 @@ class Stochastic(Node):
 
 
     def _load(self, group):
-        """
+        r"""
         Load the state of the node from a HDF5 file.
         """
         # TODO/FIXME: Check that the shapes are correct!
@@ -355,21 +355,21 @@ class Stochastic(Node):
 
 
     def random(self):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         raise NotImplementedError()
 
 
     def show(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         print(str(self))
 
 
     def __str__(self):
-        """
+        r"""
 
         """
         raise NotImplementedError("String representation not yet implemented for "

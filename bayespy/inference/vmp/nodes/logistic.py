@@ -25,12 +25,12 @@ from bayespy.utils import misc
 
 
 class CategoricalDistribution(MultinomialDistribution):
-    """
+    r"""
     Class for the VMP formulas of categorical variables.
     """
 
     def __init__(self, categories):
-        """
+        r"""
         Create VMP formula node for a categorical variable
 
         `categories` is the total number of categories.
@@ -44,35 +44,35 @@ class CategoricalDistribution(MultinomialDistribution):
 
 
     def compute_message_to_parent(self, parent, index, u, u_p):
-        """
+        r"""
         Compute the message to a parent node.
         """
         return super().compute_message_to_parent(parent, index, u, u_p)
 
 
     def compute_phi_from_parents(self, u_p, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         return super().compute_phi_from_parents(u_p, mask=mask)
 
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
         """
         return super().compute_moments_and_cgf(phi, mask=mask)
 
 
     def compute_cgf_from_parents(self, u_p):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         return super().compute_cgf_from_parents(u_p)
 
 
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
 
@@ -96,7 +96,7 @@ class CategoricalDistribution(MultinomialDistribution):
 
 
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         logp = phi[0]
@@ -201,7 +201,7 @@ class Logistic(ExponentialFamily):
 
 
     def __init__(self, x, **kwargs):
-        """
+        r"""
         """
         super().__init__(x, **kwargs)
 
@@ -209,7 +209,7 @@ class Logistic(ExponentialFamily):
     @classmethod
     @ensureparents
     def _constructor(cls, x, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
         """
 
@@ -231,7 +231,7 @@ class Logistic(ExponentialFamily):
 
 
     def __str__(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         raise NotImplementedError()

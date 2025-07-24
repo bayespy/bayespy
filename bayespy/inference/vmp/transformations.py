@@ -59,7 +59,7 @@ class RotationOptimizer():
                check_gradient=False,
                verbose=False,
                check_bound=False):
-        """
+        r"""
         Optimize the rotation of two separate model blocks jointly.
 
         If some variable is the dot product of two Gaussians, rotating the two
@@ -103,7 +103,7 @@ class RotationOptimizer():
             return (c, np.ravel(dc))
 
         def get_bound_terms(r, gradient=False):
-            """
+            r"""
             Returns a dictionary of bound terms for the nodes.
             """
             # Gradient not yet implemented..
@@ -234,7 +234,7 @@ class RotateGaussian():
         self.X.rotate(R, inv=inv, logdet=logdet)
 
     def setup(self):
-        """
+        r"""
         This method should be called just before optimization.
         """
         
@@ -374,7 +374,7 @@ def sum_to_plates(V, plates_to, plates_from=None, ndim=0):
         return r * misc.sum_to_shape(V, shape_to)
 
 class RotateGaussianARD():
-    """
+    r"""
     Rotation parameter expansion for :class:`bayespy.nodes.GaussianARD`
     
     The model:
@@ -390,7 +390,7 @@ class RotateGaussianARD():
     * X and alpha do not contain any observed values
     """
     def __init__(self, X, *alpha, axis=-1, precompute=False, subset=None):
-        """
+        r"""
         Precompute tells whether to compute some moments once in the setup
         function instead of every time in the bound function.  However, they are
         computed a bit differently in the bound function so it can be useful
@@ -473,7 +473,7 @@ class RotateGaussianARD():
             self.node_alpha.update()
 
     def setup(self, plate_axis=None):
-        """
+        r"""
         This method should be called just before optimization.
 
         For efficiency, sum over axes that are not in mu, alpha nor rotation.
@@ -691,7 +691,7 @@ class RotateGaussianARD():
 
 
     def _compute_bound(self, R, logdet=None, inv=None, Q=None, gradient=False, terms=False):
-        """
+        r"""
         Rotate q(X) and q(alpha).
 
         Assume:
@@ -994,7 +994,7 @@ class RotateGaussianARD():
                                   plates_from=plates_X[:-1])
         
         def psi(v):
-            """
+            r"""
             Compute: d/dQ 1/2*trace(diag(v)*<(X-mu)*(X-mu)>)
 
             = Q*<X>'*R'*diag(v)*R*<X> + ones * Q diag( tr(R'*diag(v)*R*Cov) ) 
@@ -1236,7 +1236,7 @@ class RotateGaussianMarkovChain():
         return (A_XpXn, A_XpXp_A, CovA_XpXp)
 
     def setup(self):
-        """
+        r"""
         This method should be called just before optimization.
         """
 
@@ -1296,7 +1296,7 @@ class RotateGaussianMarkovChain():
         #self.v = self.X_node.parents[3].get_moments()[0]
 
     def _compute_bound(self, R, logdet=None, inv=None, gradient=False, terms=False):
-        """
+        r"""
         Rotate q(X) as X->RX: q(X)=N(R*mu, R*Cov*R')
 
         Assume:
@@ -1542,7 +1542,7 @@ class RotateVaryingMarkovChain(RotateGaussianMarkovChain):
 
 
 class RotateSwitchingMarkovChain(RotateGaussianMarkovChain):
-    """
+    r"""
     Rotation for :class:`bayespy.nodes.VaryingGaussianMarkovChain`
 
     Assume the following model.

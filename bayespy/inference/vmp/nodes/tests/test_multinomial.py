@@ -22,13 +22,13 @@ from bayespy.utils.misc import TestCase
 
 
 class TestMultinomial(TestCase):
-    """
+    r"""
     Unit tests for Multinomial node
     """
 
 
     def test_init(self):
-        """
+        r"""
         Test the creation of multinomial nodes.
         """
 
@@ -96,7 +96,7 @@ class TestMultinomial(TestCase):
 
 
     def test_moments(self):
-        """
+        r"""
         Test the moments of multinomial nodes.
         """
 
@@ -159,7 +159,7 @@ class TestMultinomial(TestCase):
 
 
     def test_lower_bound(self):
-        """
+        r"""
         Test lower bound for multinomial node.
         """
 
@@ -172,7 +172,7 @@ class TestMultinomial(TestCase):
 
 
     def test_mixture(self):
-        """
+        r"""
         Test multinomial mixture
         """
 
@@ -187,7 +187,7 @@ class TestMultinomial(TestCase):
         pass
 
     def test_mixture_with_count_array(self):
-        """
+        r"""
         Test multinomial mixture
         """
 

@@ -68,7 +68,7 @@ def pca():
 
 
 def mixture_of_gaussians():
-    """Collapsed Riemannian conjugate gradient demo
+    r"""Collapsed Riemannian conjugate gradient demo
 
     This is similar although not exactly identical to an experiment in
     (Hensman et al 2012).

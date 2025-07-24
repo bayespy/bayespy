@@ -17,7 +17,7 @@ class LogPDFDistribution(Distribution):
 
 
 class LogPDF(ExponentialFamily):
-    """
+    r"""
     General node with arbitrary probability density function
     """
 
@@ -73,7 +73,7 @@ class LogPDF(ExponentialFamily):
 
 
     def observe(self, x, *args, mask=True):
-        """
+        r"""
         Fix moments, compute f and propagate mask.
         """
 
@@ -101,4 +101,3 @@ class LogPDF(ExponentialFamily):
         # Observed nodes should not be ignored
         self.observed = mask
         self._update_mask()
-

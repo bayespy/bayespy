@@ -27,7 +27,7 @@ from bayespy.utils import misc, random
 
 
 class BinomialMoments(PoissonMoments):
-    """
+    r"""
     Class for the moments of binomial variables
     """
 
@@ -38,7 +38,7 @@ class BinomialMoments(PoissonMoments):
 
 
     def compute_fixed_moments(self, x):
-        """
+        r"""
         Compute the moments for a fixed value
         """
         # Make sure the values are integers in valid range
@@ -49,7 +49,7 @@ class BinomialMoments(PoissonMoments):
 
 
     def compute_dims_from_values(self, x):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
 
         The realizations are scalars, thus the shape of the moment is ().
@@ -59,7 +59,7 @@ class BinomialMoments(PoissonMoments):
 
 
 class BinomialDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     Class for the VMP formulas of binomial variables.
     """
 
@@ -75,7 +75,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
 
 
     def compute_message_to_parent(self, parent, index, u_self, u_p):
-        """
+        r"""
         Compute the message to a parent node.
         """
         if index == 0:
@@ -89,7 +89,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
 
 
     def compute_phi_from_parents(self, u_p, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         logp0 = u_p[0][...,0]
@@ -99,7 +99,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
 
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
         """
         u0 = self.N / (1 + np.exp(-phi[0]))
@@ -108,7 +108,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
 
 
     def compute_cgf_from_parents(self, u_p):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         logp0 = u_p[0][...,0]
@@ -117,7 +117,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
 
 
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         # Make sure the values are integers in valid range
@@ -135,7 +135,7 @@ class BinomialDistribution(ExponentialFamilyDistribution):
 
 
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         p = random.logodds_to_probability(phi[0])
@@ -205,7 +205,7 @@ class Binomial(ExponentialFamily):
 
 
     def __init__(self, n, p, **kwargs):
-        """
+        r"""
         Create binomial node
         """
         super().__init__(n, p, **kwargs)
@@ -213,7 +213,7 @@ class Binomial(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, n, p, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
         """
         p = cls._ensure_moments(p, BetaMoments)
@@ -233,7 +233,7 @@ class Binomial(ExponentialFamily):
 
 
     def __str__(self):
-        """
+        r"""
         Print the distribution using standard parameterization.
         """
         p = 1 / (1 + np.exp(-self.phi[0]))

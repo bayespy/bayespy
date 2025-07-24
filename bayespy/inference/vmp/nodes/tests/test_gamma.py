@@ -89,7 +89,7 @@ class TestGamma(TestCase):
 
 
 class TestGammaGradient(TestCase):
-    """Numerically check Riemannian gradient of several nodes.
+    r"""Numerically check Riemannian gradient of several nodes.
 
     Using VB-EM update equations will take a unit length step to the
     Riemannian gradient direction.  Thus, the change caused by a VB-EM
@@ -97,7 +97,7 @@ class TestGammaGradient(TestCase):
     """
 
     def test_riemannian_gradient(self):
-        """Test Riemannian gradient of a Gamma node."""
+        r"""Test Riemannian gradient of a Gamma node."""
 
         #
         # Without observations
@@ -155,7 +155,7 @@ class TestGammaGradient(TestCase):
 
 
     def test_gradient(self):
-        """Test standard gradient of a Gamma node."""
+        r"""Test standard gradient of a Gamma node."""
         D = 3
 
         np.random.seed(42)

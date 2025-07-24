@@ -30,7 +30,7 @@ class WishartPriorMoments(Moments):
 
 
     def compute_fixed_moments(self, n):
-        """ Compute moments for fixed x. """
+        r""" Compute moments for fixed x. """
         u0 = np.asanyarray(n)
         u1 = special.multigammaln(0.5*u0, self.k)
         return [u0, u1]
@@ -38,7 +38,7 @@ class WishartPriorMoments(Moments):
 
     @classmethod
     def from_values(cls, x, d):
-        """ Compute the dimensions of phi or u. """
+        r""" Compute the dimensions of phi or u. """
         return cls(d)
 
 
@@ -53,7 +53,7 @@ class WishartMoments(Moments):
 
 
     def compute_fixed_moments(self, Lambda, gradient=None):
-        """ Compute moments for fixed x. """
+        r""" Compute moments for fixed x. """
         Lambda = np.asanyarray(Lambda)
         L = linalg.chol(Lambda, ndim=self.ndim)
         ldet = linalg.chol_logdet(L, ndim=self.ndim)
@@ -100,7 +100,7 @@ class WishartMoments(Moments):
 
     @classmethod
     def from_values(cls, x, ndim):
-        """ Compute the dimensions of phi and u. """
+        r""" Compute the dimensions of phi and u. """
         if np.ndim(x) < 2 * ndim:
             raise ValueError("Values for Wishart distribution must be at least "
                              "2-D arrays.")
@@ -116,7 +116,7 @@ class WishartMoments(Moments):
 
 
 class WishartDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     Sub-classes implement distribution specific computations.
 
     Distribution for :math:`k \times k` symmetric positive definite matrix.
@@ -253,7 +253,7 @@ class Wishart(ExponentialFamily):
 
 
     def __init__(self, n, V, **kwargs):
-        """
+        r"""
         Create Wishart node.
         """
         super().__init__(n, V, **kwargs)
@@ -261,7 +261,7 @@ class Wishart(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, n, V, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
         """
 

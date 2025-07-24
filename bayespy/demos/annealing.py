@@ -32,7 +32,7 @@ from bayespy.demos import pca
 
 
 def run(N=500, seed=42, maxiter=100, plot=True):
-    """
+    r"""
     Run deterministic annealing demo for 1-D Gaussian mixture.
     """
 
@@ -124,4 +124,3 @@ if __name__ == '__main__':
     run(**kwargs)
 
     plt.show()
-

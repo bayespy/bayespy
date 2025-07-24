@@ -231,7 +231,7 @@ def logdet_chol(U):
 
 
 def logdet_tri(R):
-    """
+    r"""
     Logarithm of the absolute value of the determinant of a triangular matrix.
     """
     return np.sum(np.log(np.abs(np.einsum('...ii->...i', R))))
@@ -297,7 +297,7 @@ def solve_triangular(U, B, ndim=1, **kwargs):
 
 
 def inner(*args, ndim=1):
-    """
+    r"""
     Compute inner product.
 
     The number of arrays is arbitrary.  The number of dimensions is arbitrary.
@@ -307,7 +307,7 @@ def inner(*args, ndim=1):
 
 
 def outer(A, B, ndim=1):
-    """
+    r"""
     Computes outer product over the last axes of A and B.
 
     The other axes are broadcasted. Thus, if A has shape (..., N) and B has
@@ -335,7 +335,7 @@ def outer(A, B, ndim=1):
 
 
 def _dot(A, B):
-    """
+    r"""
     Dot product which handles broadcasting properly.
 
     Future NumPy will have a better built-in implementation for this.
@@ -356,7 +356,7 @@ def _dot(A, B):
     return Y
 
 def dot(*arrays):
-    """
+    r"""
     Compute matrix-matrix product.
 
     You can give multiple arrays, the dot product is computed from left to
@@ -380,14 +380,14 @@ def dot(*arrays):
         return Y
 
 def tracedot(A, B):
-    """
+    r"""
     Computes trace(A*B).
     """
     return np.einsum('...ij,...ji->...', A, B)
 
 
 def inv(A, ndim=1):
-    """
+    r"""
     General array inversion.
 
     Supports broadcasting and inversion of multidimensional arrays.  For
@@ -405,7 +405,7 @@ def inv(A, ndim=1):
 
 
 def mvdot(A, b, ndim=1):
-    """
+    r"""
     Compute matrix-vector product.
 
     Applies broadcasting.
@@ -428,7 +428,7 @@ def mvdot(A, b, ndim=1):
     ## #return np.einsum('...ik,...k->...i', A, b)
 
 def mmdot(A, B, ndim=1):
-    """
+    r"""
     Compute matrix-matrix product.
 
     Applies broadcasting.
@@ -442,7 +442,7 @@ def mmdot(A, B, ndim=1):
     #return np.einsum('...ik,...kj->...ij', A, B)
 
 def transpose(X, ndim=1):
-    """
+    r"""
     Transpose the matrix.
     """
     for n in range(ndim):
@@ -466,7 +466,7 @@ def m_dot(A,b):
     #return np.sum(A*b[...,np.newaxis,:], axis=(-1,))
 
 def block_banded_solve(A, B, y):
-    """
+    r"""
     Invert symmetric, banded, positive-definite matrix.
 
     A contains the diagonal blocks.

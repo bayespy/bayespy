@@ -41,7 +41,7 @@ import bayespy.plot as bpplt
 
 
 def model(M, N, D, K):
-    """
+    r"""
     Construct the linear state-space model with time-varying dynamics
 
     For reference, see the following publication:
@@ -287,7 +287,7 @@ def infer(y, D, K,
 
 
 def simulate_data(N):
-    """
+    r"""
     Generate a signal with changing frequency
     """
 

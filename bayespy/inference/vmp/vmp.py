@@ -199,7 +199,7 @@ class VB():
         return L
 
     def plot_iteration_by_nodes(self, axes=None, diff=False):
-        """
+        r"""
         Plot the cost function per node during the iteration.
 
         Handy tool for debugging.
@@ -364,7 +364,7 @@ class VB():
             return dictionary[name]
 
     def plot(self, *nodes, **kwargs):
-        """
+        r"""
         Plot the distribution of the given nodes (or all nodes)
         """
 
@@ -400,7 +400,7 @@ class VB():
 
 
     def get_gradients(self, *nodes, euclidian=False):
-        """
+        r"""
         Computes gradients (both Riemannian and normal)
         """
         rg = [self[node].get_riemannian_gradient() for node in nodes]
@@ -413,7 +413,7 @@ class VB():
 
 
     def get_parameters(self, *nodes):
-        """
+        r"""
         Get parameters of the nodes
         """
         return [self[node].get_parameters()
@@ -421,7 +421,7 @@ class VB():
 
 
     def set_parameters(self, x, *nodes):
-        """
+        r"""
         Set parameters of the nodes
         """
         for (node, xi) in zip(nodes, x):
@@ -430,7 +430,7 @@ class VB():
 
 
     def gradient_step(self, *nodes, scale=1.0):
-        """
+        r"""
         Update nodes by taking a gradient ascent step
         """
         p = self.add(self.get_parameters(*nodes),
@@ -441,7 +441,7 @@ class VB():
 
 
     def dot(self, x1, x2):
-        """
+        r"""
         Computes dot products of given vectors (in parameter format)
         """
         v = 0
@@ -454,7 +454,7 @@ class VB():
 
 
     def add(self, x1, x2, scale=1):
-        """
+        r"""
         Add two vectors (in parameter format)
         """
         v = []
@@ -469,7 +469,7 @@ class VB():
 
     def optimize(self, *nodes, maxiter=10, verbose=True, method='fletcher-reeves',
                  riemannian=True, collapsed=None, tol=None):
-        """
+        r"""
         Optimize nodes using Riemannian conjugate gradient
         """
 
@@ -606,7 +606,7 @@ class VB():
 
 
     def pattern_search(self, *nodes, collapsed=None, maxiter=3):
-        """Perform simple pattern search :cite:`Honkela:2003`.
+        r"""Perform simple pattern search :cite:`Honkela:2003`.
 
         Some of the variables can be collapsed.
         """
@@ -663,7 +663,7 @@ class VB():
 
 
     def set_annealing(self, annealing):
-        """
+        r"""
         Set deterministic annealing from range (0, 1].
 
         With 1, no annealing, standard updates.
@@ -680,7 +680,7 @@ class VB():
 
 
     def _append_iterations(self, iters):
-        """
+        r"""
         Append some arrays for more iterations
         """
         self.L = np.append(self.L, misc.nans(iters))
@@ -691,7 +691,7 @@ class VB():
 
 
     def _end_iteration_step(self, method, cputime, tol=None, verbose=True, bound_cpu_time=True):
-        """
+        r"""
         Do some routines after each iteration step
         """
 

@@ -27,13 +27,13 @@ from bayespy.utils.misc import TestCase
 
 
 class TestGate(TestCase):
-    """
+    r"""
     Unit tests for Gate node.
     """
 
 
     def test_init(self):
-        """
+        r"""
         Test the creation of Gate node
         """
 
@@ -122,7 +122,7 @@ class TestGate(TestCase):
 
 
     def test_message_to_child(self):
-        """
+        r"""
         Test the message to child of Gate node.
         """
 
@@ -201,7 +201,7 @@ class TestGate(TestCase):
 
 
     def test_message_to_parent(self):
-        """
+        r"""
         Test the message to parents of Gate node.
         """
 
@@ -326,7 +326,7 @@ class TestGate(TestCase):
 
 
     def test_mask_to_parent(self):
-        """
+        r"""
         Test the mask handling in Gate node
         """
 

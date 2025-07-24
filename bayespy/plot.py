@@ -85,7 +85,7 @@ pyplot = plt
 
 
 def interactive(function):
-    """A decorator for forcing functions to use the interactive mode.
+    r"""A decorator for forcing functions to use the interactive mode.
 
     Parameters
     ----------
@@ -112,7 +112,7 @@ def interactive(function):
 
 
 def _subplots(plotfunc, *args, fig=None, kwargs=None):
-    """Create a collection of subplots
+    r"""Create a collection of subplots
 
     Each subplot is created with the same plotting function.
 
@@ -168,7 +168,7 @@ def _subplots(plotfunc, *args, fig=None, kwargs=None):
 
 
 def pdf(Z, x, *args, name=None, axes=None, fig=None, **kwargs):
-    """
+    r"""
     Plot probability density function of a scalar variable.
 
     Parameters
@@ -211,7 +211,7 @@ def pdf(Z, x, *args, name=None, axes=None, fig=None, **kwargs):
 
 
 def contour(Z, x, y, n=None, axes=None, fig=None, **kwargs):
-    """
+    r"""
     Plot 2-D probability density function of a 2-D variable.
 
     Parameters
@@ -255,7 +255,7 @@ def contour(Z, x, y, n=None, axes=None, fig=None, **kwargs):
 
 
 def plot_gaussian_mc(X, scale=2, **kwargs):
-    """
+    r"""
     Plot Gaussian Markov chain as a 1-D function
 
     Parameters
@@ -267,7 +267,7 @@ def plot_gaussian_mc(X, scale=2, **kwargs):
 
 
 def plot_bernoulli(X, axis=-1, scale=2, **kwargs):
-    """
+    r"""
     Plot Bernoulli node as a 1-D function
     """
     X = X._ensure_moments(X, BernoulliMoments)
@@ -277,7 +277,7 @@ def plot_bernoulli(X, axis=-1, scale=2, **kwargs):
 
 
 def plot_gaussian(X, axis=-1, scale=2, **kwargs):
-    """
+    r"""
     Plot Gaussian node as a 1-D function
 
     Parameters
@@ -298,7 +298,7 @@ def plot_gaussian(X, axis=-1, scale=2, **kwargs):
 
 
 def plot(Y, axis=-1, scale=2, center=False, **kwargs):
-    """
+    r"""
     Plot a variable or an array as 1-D function with errorbars
     """
     if misc.is_numeric(Y):
@@ -419,7 +419,7 @@ def _timeseries_mean_and_error(y, std, *args, axis=-1, center=True, fig=None, ax
 
 
 def _blob(axes, x, y, area, colour):
-    """
+    r"""
     Draws a square-shaped blob with the given area (< 1) at
     the given coordinates.
     """
@@ -440,7 +440,7 @@ def _rectangle(axes, x, y, width, height, **kwargs):
 
 
 def gaussian_mixture_2d(X, alpha=None, scale=2, fill=False, axes=None, **kwargs):
-    """
+    r"""
     Plot Gaussian mixture as ellipses in 2-D
 
     Parameters
@@ -517,7 +517,7 @@ def gaussian_mixture_2d(X, alpha=None, scale=2, fill=False, axes=None, **kwargs)
 
 
 def _hinton(W, error=None, vmax=None, square=False, axes=None):
-    """
+    r"""
     Draws a Hinton diagram for visualizing a weight matrix.
 
     Temporarily disables matplotlib interactive mode if it is on,
@@ -602,7 +602,7 @@ def new_matrix(A, vmax=None):
             pass
 
 def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
-    """
+    r"""
     Plot the Hinton diagram of a Gaussian node
     """
 
@@ -686,7 +686,7 @@ def gaussian_hinton(X, rows=None, cols=None, scale=1, fig=None):
 
 
 def _hinton_figure(x, rows=None, cols=None, fig=None, square=True):
-    """
+    r"""
     Plot the Hinton diagram of a Gaussian node
     """
 
@@ -786,7 +786,7 @@ def timeseries_categorical_mc(Z, fig=None):
 
 
 def gamma_hinton(alpha, square=True, **kwargs):
-    """
+    r"""
     Plot a beta distributed random variable as a Hinton diagram
     """
 
@@ -804,7 +804,7 @@ def gamma_hinton(alpha, square=True, **kwargs):
 
 
 def beta_hinton(P, square=True):
-    """
+    r"""
     Plot a beta distributed random variable as a Hinton diagram
     """
 
@@ -822,7 +822,7 @@ def beta_hinton(P, square=True):
 
 
 def dirichlet_hinton(P, square=True):
-    """
+    r"""
     Plot a beta distributed random variable as a Hinton diagram
     """
 
@@ -840,7 +840,7 @@ def dirichlet_hinton(P, square=True):
 
 
 def bernoulli_hinton(Z, square=True):
-    """
+    r"""
     Plot a Bernoulli distributed random variable as a Hinton diagram
     """
 
@@ -858,7 +858,7 @@ def bernoulli_hinton(Z, square=True):
 
 
 def categorical_hinton(Z, square=True):
-    """
+    r"""
     Plot a Bernoulli distributed random variable as a Hinton diagram
     """
 
@@ -1005,7 +1005,7 @@ class Plotter():
 
 
     def __call__(self, X, fig=None, **kwargs):
-        """
+        r"""
         Plot the node using the specified plotting function
 
         Parameters
@@ -1227,7 +1227,7 @@ def matrixplot(A, colorbar=False, axes=None):
 
 
 def contourplot(x1, x2, y, colorbar=False, filled=True, axes=None):
-    """ Plots 2D contour plot. x1 and x2 are 1D vectors, y contains
+    r""" Plots 2D contour plot. x1 and x2 are 1D vectors, y contains
     the function values. y.size must be x1.size*x2.size. """
 
     if axes is None:
@@ -1283,7 +1283,7 @@ def errorplot(y=None, error=None, x=None, lower=None, upper=None,
 
 
 def plotmatrix(X):
-    """
+    r"""
     Creates a matrix of marginal plots.
 
     On diagonal, are marginal plots of each variable. Off-diagonal plot (i,j)
@@ -1293,7 +1293,7 @@ def plotmatrix(X):
 
 
 def _pdf_t(mu, s2, nu, axes=None, scale=4, color='k'):
-    """
+    r"""
     """
     if axes is None:
         axes = plt.gca()
@@ -1307,7 +1307,7 @@ def _pdf_t(mu, s2, nu, axes=None, scale=4, color='k'):
 
 
 def _pdf_gamma(a, b, axes=None, scale=4, color='k'):
-    """
+    r"""
     """
     if axes is None:
         axes = plt.gca()
@@ -1330,7 +1330,7 @@ def _pdf_gamma(a, b, axes=None, scale=4, color='k'):
 
 
 def _contour_t(mu, Cov, nu, axes=None, scale=4, transpose=False, colors='k'):
-    """
+    r"""
     """
     if axes is None:
         axes = plt.gca()
@@ -1362,13 +1362,13 @@ def _contour_t(mu, Cov, nu, axes=None, scale=4, transpose=False, colors='k'):
 
 
 def _contour_gaussian_gamma(mu, s2, a, b, axes=None, transpose=False):
-    """
+    r"""
     """
     pass
 
 
 def ellipse_from_cov(xy, cov, scale=2, **kwargs):
-    """
+    r"""
     Create an ellipse from a covariance matrix.
 
     Parameters
@@ -1393,7 +1393,7 @@ def ellipse_from_cov(xy, cov, scale=2, **kwargs):
 
 
 def ellipse_from_precision(xy, precision, scale=2, **kwargs):
-    """
+    r"""
     Create an ellipse from a covariance matrix.
 
     Parameters

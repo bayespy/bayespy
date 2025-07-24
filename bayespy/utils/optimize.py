@@ -13,7 +13,7 @@ _epsilon = np.sqrt(np.finfo(float).eps)
 
 
 def minimize(f, x0, maxiter=None, verbose=False):
-    """
+    r"""
     Simple wrapper for SciPy's optimize.
 
     The given function must return a tuple: (value, gradient).
@@ -25,7 +25,7 @@ def minimize(f, x0, maxiter=None, verbose=False):
     return opt.x
 
 def check_gradient(f, x0, verbose=True, epsilon=_epsilon, return_abserr=False):
-    """
+    r"""
     Simple wrapper for SciPy's gradient checker.
 
     The given function must return a tuple: (value, gradient).
@@ -50,4 +50,3 @@ def check_gradient(f, x0, verbose=True, epsilon=_epsilon, return_abserr=False):
                abserr))
 
     return (abserr, err)
-

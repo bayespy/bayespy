@@ -13,7 +13,7 @@ from .deterministic import Deterministic
 from .node import Moments
 
 class Concatenate(Deterministic):
-    """
+    r"""
     Concatenate similar nodes along a plate axis.
 
     Nodes must be of same type and dimensionality. Also, plates must be
@@ -78,7 +78,7 @@ class Concatenate(Deterministic):
 
 
     def _get_id_list(self):
-        """
+        r"""
         Parents don't need to be independent for this node so remove duplicates
         """
         return list(set(super()._get_id_list()))

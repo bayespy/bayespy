@@ -60,7 +60,7 @@ def reshape_axes(X, *shapes):
 
 
 def find_set_index(index, set_lengths):
-    """
+    r"""
     Given set sizes and an index, returns the index of the set
 
     The given index is for the concatenated list of the sets.
@@ -77,7 +77,7 @@ def find_set_index(index, set_lengths):
 
 
 def parse_command_line_arguments(mandatory_args, *optional_args_list, argv=None):
-    """
+    r"""
     Parse command line arguments of style "--parameter=value".
 
     Parameter specification is tuple: (name, converter, description).
@@ -269,7 +269,7 @@ def parse_command_line_arguments(mandatory_args, *optional_args_list, argv=None)
 
 
 def composite_function(function_list):
-    """
+    r"""
     Construct a function composition from a list of functions.
 
     Given a list of functions [f,g,h], constructs a function :math:`h \circ g
@@ -284,7 +284,7 @@ def composite_function(function_list):
 
 
 def ceildiv(a, b):
-    """
+    r"""
     Compute a divided by b and rounded up.
     """
     return -(-a // b)
@@ -302,13 +302,13 @@ def atleast_nd(X, d):
     return X
 
 def T(X):
-    """
+    r"""
     Transpose the matrix.
     """
     return np.swapaxes(X, -1, -2)
 
 class TestCase(unittest.TestCase):
-    """
+    r"""
     Simple base class for unit testing.
 
     Adds NumPy's features to Python's unittest.
@@ -437,13 +437,13 @@ class TestCase(unittest.TestCase):
 
 
 def symm(X):
-    """
+    r"""
     Make X symmetric.
     """
     return 0.5 * (X + np.swapaxes(X, -1, -2))
 
 def unique(l):
-    """
+    r"""
     Remove duplicate items from a list while preserving order.
     """
     seen = set()
@@ -454,7 +454,7 @@ def tempfile(prefix='', suffix=''):
     return tmp.NamedTemporaryFile(prefix=prefix, suffix=suffix).name
 
 def write_to_hdf5(group, data, name):
-    """
+    r"""
     Writes the given array into the HDF5 file.
     """
     try:
@@ -488,7 +488,7 @@ def array_to_scalar(x):
 
 
 def put(x, indices, y, axis=-1, ufunc=np.add):
-    """A kind of inverse mapping of `np.take`
+    r"""A kind of inverse mapping of `np.take`
 
     In a simple, the operation can be thought as:
 
@@ -547,7 +547,7 @@ def put(x, indices, y, axis=-1, ufunc=np.add):
 
 
 def put_simple(y, indices, axis=-1, length=None):
-    """An inverse operation of `np.take` with accumulation and broadcasting.
+    r"""An inverse operation of `np.take` with accumulation and broadcasting.
 
     Compared to `put`, the difference is that the result array is initialized
     with an array of zeros whose shape is determined automatically and `np.add`
@@ -586,7 +586,7 @@ def put_simple(y, indices, axis=-1, length=None):
 
 
 def grid(x1, x2):
-    """ Returns meshgrid as a (M*N,2)-shape array. """
+    r""" Returns meshgrid as a (M*N,2)-shape array. """
     (X1, X2) = np.meshgrid(x1, x2)
     return np.hstack((X1.reshape((-1,1)),X2.reshape((-1,1))))
 
@@ -668,7 +668,7 @@ def gaussian_logpdf(y_invcov_y,
 
 
 def zipper_merge(*lists):
-    """
+    r"""
     Combines lists by alternating elements from them.
 
     Combining lists [1,2,3], ['a','b','c'] and [42,666,99] results in
@@ -704,7 +704,7 @@ def is_string(s):
     return isinstance(s, str)
 
 def multiply_shapes(*shapes):
-    """
+    r"""
     Compute element-wise product of lists/tuples.
 
     Shorter lists are concatenated with leading 1s in order to get lists with
@@ -721,7 +721,7 @@ def multiply_shapes(*shapes):
     return tuple(shape)
 
 def make_equal_length(*shapes):
-    """
+    r"""
     Make tuples equal length.
 
     Add leading 1s to shorter tuples.
@@ -737,7 +737,7 @@ def make_equal_length(*shapes):
 
 
 def make_equal_ndim(*arrays):
-    """
+    r"""
     Add trailing unit axes so that arrays have equal ndim
     """
     shapes = [np.shape(array) for array in arrays]
@@ -748,7 +748,7 @@ def make_equal_ndim(*arrays):
 
 
 def sum_to_dim(A, dim):
-    """
+    r"""
     Sum leading axes of A such that A has dim dimensions.
     """
     dimdiff = np.ndim(A) - dim
@@ -759,7 +759,7 @@ def sum_to_dim(A, dim):
 
 
 def broadcasting_multiplier(plates, *args):
-    """
+    r"""
     Compute the plate multiplier for given shapes.
 
     The first shape is compared to all other shapes (using NumPy
@@ -803,7 +803,7 @@ def broadcasting_multiplier(plates, *args):
 
 
 def sum_multiply_to_plates(*arrays, to_plates=(), from_plates=None, ndim=0):
-    """
+    r"""
     Compute the product of the arguments and sum to the target shape.
     """
     arrays = list(arrays)
@@ -945,7 +945,7 @@ def sum_product(*args, axes_to_keep=None, axes_to_sum=None, keepdims=False):
                             keepdims=keepdims)
 
 def moveaxis(A, axis_from, axis_to):
-    """
+    r"""
     Move the axis `axis_from` to position `axis_to`.
     """
     if ((axis_from < 0 and abs(axis_from) > np.ndim(A)) or
@@ -967,7 +967,7 @@ def moveaxis(A, axis_from, axis_to):
 
 
 def safe_indices(inds, shape):
-    """
+    r"""
     Makes sure that indices are valid for given shape.
 
     The shorter shape determines the length.
@@ -993,7 +993,7 @@ def safe_indices(inds, shape):
 
 
 def broadcasted_shape(*shapes):
-    """
+    r"""
     Computes the resulting broadcasted shape for a given set of shapes.
 
     Uses the broadcasting rules of NumPy.  Raises an exception if the shapes do
@@ -1015,7 +1015,7 @@ def broadcasted_shape(*shapes):
     return S
 
 def broadcasted_shape_from_arrays(*arrays):
-    """
+    r"""
     Computes the resulting broadcasted shape for a given set of arrays.
 
     Raises an exception if the shapes do not broadcast.
@@ -1026,7 +1026,7 @@ def broadcasted_shape_from_arrays(*arrays):
 
 
 def is_shape_subset(sub_shape, full_shape):
-    """
+    r"""
     """
     if len(sub_shape) > len(full_shape):
         return False
@@ -1058,7 +1058,7 @@ def nested_iterator(max_inds):
     return itertools.product(*s)
 
 def first(L):
-    """
+    r"""
     """
     for (n,l) in enumerate(L):
         if l:
@@ -1066,7 +1066,7 @@ def first(L):
     return None
 
 def squeeze(X):
-    """
+    r"""
     Remove leading axes that have unit length.
 
     For instance, a shape (1,1,4,1,3) will be reshaped to (4,1,3).
@@ -1100,7 +1100,7 @@ def axes_to_collapse(shape_x, shape_to):
     return tuple(s)
 
 def sum_to_shape(X, s):
-    """
+    r"""
     Sum axes of the array such that the resulting shape is as given.
 
     Thus, the shape of the result will be s or an error is raised.
@@ -1144,7 +1144,7 @@ def repeat_to_shape(A, s):
     return A
 
 def multidigamma(a, d):
-    """
+    r"""
     Returns the derivative of the log of multivariate gamma.
     """
     return np.sum(special.digamma(a[...,None] - 0.5*np.arange(d)),
@@ -1158,7 +1158,7 @@ def diagonal(A):
 
 
 def make_diag(X, ndim=1, ndim_from=0):
-    """
+    r"""
     Create a diagonal array given the diagonal elements.
 
     The diagonal array can be multi-dimensional. By default, the last axis is
@@ -1205,7 +1205,7 @@ def make_diag(X, ndim=1, ndim_from=0):
 
 
 def get_diag(X, ndim=1, ndim_to=0):
-    """
+    r"""
     Get the diagonal of an array.
 
     If ndim>1, take the diagonal of the last 2*ndim axes.
@@ -1251,7 +1251,7 @@ def get_diag(X, ndim=1, ndim_to=0):
 
 
 def diag(X, ndim=1):
-    """
+    r"""
     Create a diagonal array given the diagonal elements.
 
     The diagonal array can be multi-dimensional. By default, the last axis is
@@ -1284,7 +1284,7 @@ def m_dot(A,b):
 
 
 def block_banded(D, B):
-    """
+    r"""
     Construct a symmetric block-banded matrix.
 
     `D` contains square diagonal blocks.
@@ -1364,7 +1364,7 @@ def dist_haversine(c1, c2, radius=6372795):
     return radius * C
 
 def logsumexp(X, axis=None, keepdims=False):
-    """
+    r"""
     Compute log(sum(exp(X)) in a numerically stable way
     """
 
@@ -1386,7 +1386,7 @@ def logsumexp(X, axis=None, keepdims=False):
 
 
 def normalized_exp(phi):
-    """Compute exp(phi) so that exp(phi) sums to one.
+    r"""Compute exp(phi) so that exp(phi) sums to one.
 
     This is useful for computing probabilities from log evidence.
     """
@@ -1453,7 +1453,7 @@ def invgamma(x):
 
 
 def mean(X, axis=None, keepdims=False):
-    """
+    r"""
     Compute the mean, ignoring NaNs.
     """
     if np.ndim(X) == 0:
@@ -1474,7 +1474,7 @@ def gradient(f, x, epsilon=1e-6):
 
 
 def broadcast(*arrays, ignore_axis=None):
-    """
+    r"""
     Explicitly broadcast arrays to same shapes.
 
     It is possible ignore some axes so that the arrays are not broadcasted
@@ -1515,7 +1515,7 @@ def broadcast(*arrays, ignore_axis=None):
 
 
 def block_diag(*arrays):
-    """
+    r"""
     Form a block diagonal array from the given arrays.
 
     Compared to SciPy's block_diag, this utilizes broadcasting and accepts more
@@ -1545,7 +1545,7 @@ def block_diag(*arrays):
 
 
 def concatenate(*arrays, axis=-1):
-    """
+    r"""
     Concatenate arrays along a given axis.
 
     Compared to NumPy's concatenate, this utilizes broadcasting.

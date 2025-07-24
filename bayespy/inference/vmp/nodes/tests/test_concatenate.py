@@ -23,13 +23,13 @@ from bayespy.utils.misc import TestCase
 
 
 class TestConcatenate(TestCase):
-    """
+    r"""
     Unit tests for Concatenate node.
     """
     
 
     def test_init(self):
-        """
+        r"""
         Test the creation of Concatenate node
         """
 
@@ -108,7 +108,7 @@ class TestConcatenate(TestCase):
         
 
     def test_message_to_child(self):
-        """
+        r"""
         Test the message to child of Concatenate node.
         """
 
@@ -188,7 +188,7 @@ class TestConcatenate(TestCase):
 
 
     def test_message_to_parent(self):
-        """
+        r"""
         Test the message to parents of Concatenate node.
         """
 
@@ -271,7 +271,7 @@ class TestConcatenate(TestCase):
 
 
     def test_mask_to_parent(self):
-        """
+        r"""
         Test the mask handling in Concatenate node
         """
 

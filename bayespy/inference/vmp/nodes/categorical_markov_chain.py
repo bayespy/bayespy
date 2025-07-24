@@ -24,13 +24,13 @@ from .dirichlet import (Dirichlet,
 from bayespy.utils import misc, random
 
 class CategoricalMarkovChainMoments(Moments):
-    """
+    r"""
     Class for the moments of categorical Markov chain variables.
     """
 
 
     def __init__(self, categories, length):
-        """
+        r"""
         Create moments object for categorical Markov chain variables.
         """
         self.categories = categories
@@ -40,7 +40,7 @@ class CategoricalMarkovChainMoments(Moments):
 
 
     def compute_fixed_moments(self, x):
-        """
+        r"""
         Compute the moments for a fixed value
         """
 
@@ -68,7 +68,7 @@ class CategoricalMarkovChainMoments(Moments):
 
     @classmethod
     def from_values(cls, x, categories):
-        """
+        r"""
         Return the shape of the moments for a fixed value.
         """
         raise NotImplementedError("from_values not implemented "
@@ -77,13 +77,13 @@ class CategoricalMarkovChainMoments(Moments):
 
 
 class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
-    """
+    r"""
     Class for the VMP formulas of categorical Markov chain variables.
     """
 
 
     def __init__(self, categories, states):
-        """
+        r"""
         Create VMP formula node for a categorical variable
 
         `categories` is the total number of categories.
@@ -93,7 +93,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         self.N = states
 
     def compute_message_to_parent(self, parent, index, u, u_p0, u_P):
-        """
+        r"""
         Compute the message to a parent node.
         """
         if index == 0:
@@ -104,7 +104,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
             raise ValueError("Parent index out of bounds")
 
     def compute_weights_to_parent(self, index, weights):
-        """
+        r"""
         Maps the mask to the plates of a parent.
         """
         if index == 0:
@@ -117,7 +117,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
             raise ValueError("Parent index out of bounds")
 
     def compute_phi_from_parents(self, u_p0, u_P, mask=True):
-        """
+        r"""
         Compute the natural parameter vector given parent moments.
         """
         phi0 = u_p0[0]
@@ -125,7 +125,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         return [phi0, phi1]
 
     def compute_moments_and_cgf(self, phi, mask=True):
-        """
+        r"""
         Compute the moments and :math:`g(\phi)`.
         """
         logp0 = phi[0]
@@ -135,19 +135,19 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
         return (u, cgf)
 
     def compute_cgf_from_parents(self, u_p0, u_P):
-        """
+        r"""
         Compute :math:`\mathrm{E}_{q(p)}[g(p)]`
         """
         return 0
 
     def compute_fixed_moments_and_f(self, x, mask=True):
-        """
+        r"""
         Compute the moments and :math:`f(x)` for a fixed value.
         """
         raise NotImplementedError()
 
     def plates_to_parent(self, index, plates):
-        """
+        r"""
         Resolves the plate mapping to a parent.
 
         Given the plates of the node's moments, this method returns the plates
@@ -161,7 +161,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
             raise ValueError("Parent index out of bounds")
 
     def plates_from_parent(self, index, plates):
-        """
+        r"""
         Resolve the plate mapping from a parent.
 
         Given the plates of a parent's moments, this method returns the plates
@@ -176,7 +176,7 @@ class CategoricalMarkovChainDistribution(ExponentialFamilyDistribution):
 
 
     def random(self, *phi, plates=None):
-        """
+        r"""
         Draw a random sample from the distribution.
         """
         # Convert natural parameters to transition probabilities
@@ -287,7 +287,7 @@ class CategoricalMarkovChain(ExponentialFamily):
 
 
     def __init__(self, pi, A, states=None, **kwargs):
-        """
+        r"""
         Create categorical Markov chain
         """
         super().__init__(pi, A, states=states, **kwargs)
@@ -295,7 +295,7 @@ class CategoricalMarkovChain(ExponentialFamily):
 
     @classmethod
     def _constructor(cls, p0, P, states=None, **kwargs):
-        """
+        r"""
         Constructs distribution and moments objects.
 
         This method is called if useconstructor decorator is used for __init__.
@@ -358,13 +358,13 @@ class CategoricalMarkovChain(ExponentialFamily):
 
 
 class CategoricalMarkovChainToCategorical(Deterministic):
-    """
+    r"""
     A node for converting categorical MC moments to categorical moments.
     """
 
 
     def __init__(self, Z, **kwargs):
-        """
+        r"""
         Create a categorical MC moments to categorical moments conversion node.
         """
         # Convert parent to proper type. Z must be a node.
@@ -377,7 +377,7 @@ class CategoricalMarkovChainToCategorical(Deterministic):
 
 
     def _compute_moments(self, u_Z):
-        """
+        r"""
         Compute the moments given the moments of the parents.
         """
         # Add time axis to p0
@@ -399,7 +399,7 @@ class CategoricalMarkovChainToCategorical(Deterministic):
         return [P]
 
     def _compute_message_to_parent(self, index, m, u_Z):
-        """
+        r"""
         Compute the message to a parent.
         """
         m0 = m[0][...,0,:]
@@ -408,7 +408,7 @@ class CategoricalMarkovChainToCategorical(Deterministic):
 
 
     def _compute_weights_to_parent(self, index, weights):
-        """
+        r"""
         Compute the mask used for messages sent to a parent.
         """
         if index == 0:

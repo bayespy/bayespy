@@ -23,7 +23,7 @@ from .. import misc
 class TestCeilDiv(misc.TestCase):
 
     def test_ceildiv(self):
-        """
+        r"""
         Test the ceil division
         """
 
@@ -67,7 +67,7 @@ class TestCeilDiv(misc.TestCase):
 class TestAddAxes(misc.TestCase):
 
     def test_add_axes(self):
-        """
+        r"""
         Test the add_axes method.
         """
         f = lambda X, **kwargs: np.shape(misc.add_axes(X, **kwargs))
@@ -201,7 +201,7 @@ class TestSumMultiply(unittest.TestCase):
         
 
     def test_sum_multiply(self):
-        """
+        r"""
         Test misc.sum_multiply.
         """
         # Check empty list returns error
@@ -342,7 +342,7 @@ class TestSumMultiply(unittest.TestCase):
 class TestLogSumExp(misc.TestCase):
 
     def test_logsumexp(self):
-        """
+        r"""
         Test the ceil division
         """
 
@@ -389,7 +389,7 @@ class TestLogSumExp(misc.TestCase):
 class TestMean(misc.TestCase):
 
     def test_mean(self):
-        """
+        r"""
         Test the ceil division
         """
 

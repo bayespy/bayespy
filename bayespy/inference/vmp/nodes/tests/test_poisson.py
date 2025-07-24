@@ -21,13 +21,13 @@ from bayespy.utils.misc import TestCase
 
 
 class TestPoisson(TestCase):
-    """
+    r"""
     Unit tests for Poisson node
     """
 
     
     def test_init(self):
-        """
+        r"""
         Test the creation of Poisson nodes.
         """
 
@@ -64,7 +64,7 @@ class TestPoisson(TestCase):
 
     
     def test_moments(self):
-        """
+        r"""
         Test the moments of Poisson nodes.
         """
 

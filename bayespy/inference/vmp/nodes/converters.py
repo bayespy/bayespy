@@ -5,7 +5,7 @@ from .deterministic import Deterministic
 
 
 class NodeConverter(Deterministic):
-    """
+    r"""
     Simple wrapper to transform moment converters into nodes
     """
 

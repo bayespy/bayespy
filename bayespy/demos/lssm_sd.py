@@ -35,7 +35,7 @@ import bayespy.plot as bpplt
 
 
 def model(M=20, N=100, D=10, K=3):
-    """
+    r"""
     Construct the linear state-space model with switching dynamics.
     """
 
@@ -207,7 +207,7 @@ def infer(y, D, K, rotate=False, debug=False, maxiter=100, mask=True,
 
 
 def simulate_data(N):
-    """
+    r"""
     Generate time-series data with switching dynamics.
     """
 
@@ -251,7 +251,7 @@ def simulate_data(N):
 @bpplt.interactive
 def demo(N=1000, maxiter=100, D=3, K=2, seed=42, plot=True, debug=False,
         rotate=False, monitor=True):
-    """
+    r"""
     Run the demo for linear state-space model with switching dynamics.
     """
 
