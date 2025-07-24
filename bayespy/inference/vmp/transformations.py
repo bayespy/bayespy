@@ -254,7 +254,7 @@ class RotateGaussian():
 
     def _compute_bound(self, R, logdet=None, inv=None, gradient=False):
         
-        """
+        r"""
         Rotate q(X) as X->RX: q(X)=N(R*mu, R*Cov*R')
 
         Assume:
