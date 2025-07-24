@@ -278,6 +278,8 @@ class Stochastic(Node):
             u_parents = self._message_from_parents()
             m_children = self._message_from_children()
             if annealing != 1.0:
+                # FIXME? Using annealing here and self.annealing in the method
+                # call below.. Is that ok?
                 m_children = [annealing * m for m in m_children]
             self._update_distribution_and_lowerbound(m_children, *u_parents)
 
