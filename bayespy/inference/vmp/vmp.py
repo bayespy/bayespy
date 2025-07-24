@@ -210,7 +210,7 @@ class VB():
             axes = plt.gca()
 
         D = len(self.l)
-        N = self.iter + 1
+        N = self.iter
         if diff:
             L = np.empty((N-1,D))
             x = np.arange(N-1) + 2
