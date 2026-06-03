@@ -90,9 +90,9 @@ class VB():
         if not autosave_filename:
             date = datetime.datetime.today().strftime('%Y%m%d%H%M%S')
             prefix = 'vb_autosave_%s_' % date
-            tmpfile = tempfile.NamedTemporaryFile(prefix=prefix,
-                                                  suffix='.hdf5')
-            self.autosave_filename = tmpfile.name
+            self._autosave_tmpfile = tempfile.NamedTemporaryFile(prefix=prefix,
+                                                                  suffix='.hdf5')
+            self.autosave_filename = self._autosave_tmpfile.name
             self.filename = None
         else:
             self.autosave_filename = autosave_filename
