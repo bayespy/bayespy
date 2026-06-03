@@ -1076,7 +1076,10 @@ class Slice(Deterministic):
         elif np.ndim(m_child) == 0:
             m_parent[parent_slices] = m_child
         else:
-            m_parent[parent_slices] = m_child[child_slices]
+            val = m_child[child_slices]
+            if val.ndim > 0 and val.size == 1:
+                val = val.item()
+            m_parent[parent_slices] = val
 
         return m_parent
 

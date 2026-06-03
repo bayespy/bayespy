@@ -841,7 +841,7 @@ class TestSlice(misc.TestCase):
         X = V[2,2]
         m = [ np.random.randn(1) ]
         msg = [ np.zeros((3,3)) ]
-        msg[0][2,2] = m[0]
+        msg[0][2,2] = m[0].item()
         Y = ChildNode(X, m, True, dims=((),))
         X._update_mask()
         self.assertMessage(X._message_to_parent(0),
