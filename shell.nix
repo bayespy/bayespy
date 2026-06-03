@@ -26,8 +26,10 @@ mkShell {
               sha256 = "sha256-D6spzLLfdmUaE2+J+A6Va7CZzeb9prJr3nb5SNAWmOg=";
             };
             doCheck = false;
-            buildInputs = [ setuptools_scm ];
+            buildInputs = [ setuptools-scm ];
             propagatedBuildInputs = [ scipy numpy ];
+            pyproject = true;
+            build-system = [ setuptools ];
           };
         in [
 
